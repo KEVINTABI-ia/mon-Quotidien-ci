@@ -270,6 +270,60 @@ alert("Impossible d'accéder à votre position. Vérifiez les autorisations GPS.
 {enableHighAccuracy:true,timeout:15000}
 );
 }
+let carteTransport=null;
+
+async function afficherCarte(depart,destination){
+const zone=document.getElementById("carte");
+zone.style.display="block";
+
+async function trouverCoordonnees(lieu){
+const url="https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(lieu+", Côte d'Ivoire");
+const reponse=await fetch(url);
+const donnees=await reponse.json();
+
+if(!donnees.length)return null;
+
+return [
+parseFloat(donnees[0].lat),
+parseFloat(donnees[0].lon)
+];
+}
+
+try{
+const pointDepart=await trouverCoordonnees(depart);
+const pointArrivee=await trouverCoordonnees(destination);
+
+if(!pointDepart || !pointArrivee){
+alert("Impossible de trouver les deux lieux sur la carte.");
+return;
+}
+
+if(carteTransport){
+carteTransport.remove();
+}
+
+carteTransport=L.map("carte").setView(pointDepart,13);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+attribution:"© OpenStreetMap"
+}).addTo(carteTransport);
+
+const marqueurDepart=L.marker(pointDepart).addTo(carteTransport)
+.bindPopup("Départ : "+depart);
+
+const marqueurArrivee=L.marker(pointArrivee).addTo(carteTransport)
+.bindPopup("Destination : "+destination);
+
+const points=[pointDepart,pointArrivee];
+
+L.polyline(points,{color:"green",weight:4}).addTo(carteTransport);
+
+carteTransport.fitBounds(points,{padding:[30,30]});
+
+}catch(erreur){
+alert("La carte n'a pas pu être chargée. Vérifiez votre connexion Internet.");
+}
+}
 function rechercher(){
 const depart=normaliser(document.getElementById("depart").value);
 const arrivee=normaliser(document.getElementById("arrivee").value);
