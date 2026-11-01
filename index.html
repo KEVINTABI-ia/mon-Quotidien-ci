@@ -203,7 +203,9 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 <label for="depart">Lieu de départ</label>
 
 <div class="depart-wrapper">
-  <input id="depart" placeholder="Ex. : Bagnon">
+<select id="depart" onchange="actualiserDestinationsGares()">
+  <option value="">Choisir une gare de départ</option>
+</select>
   <button type="button" class="localiser-btn"
     onclick="meLocaliser()" aria-label="Me localiser">
     📍
@@ -213,7 +215,9 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 ⇅ Inverser le trajet
 </button>
 <label for="arrivee">Destination</label>
-<input id="arrivee" placeholder="Ex. : Petro Ivoire">
+<select id="arrivee" disabled>
+  <option value="">Choisir d’abord une gare de départ</option>
+</select>
 
 <label for="transport">Moyen de transport</label>
 <select id="transport">
