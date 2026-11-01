@@ -40,7 +40,30 @@ input,select{width:100%;padding:14px;border:1px solid #d8e2dc;border-radius:10px
 button{border:0;border-radius:10px;padding:14px;font-size:15px;font-weight:bold;cursor:pointer}
 .primary{width:100%;background:#087443;color:white;margin-top:16px}
 .result{display:none;background:#eaf5ee;padding:15px;border-radius:12px;margin-top:15px;line-height:1.6}
-.stop{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #d8e8dd}
+.stop{
+  display:block;
+  padding:14px;
+  margin:10px 0;
+  border:1px solid #d8e8dd;
+  border-radius:10px;
+  background:#f8fcf9;
+}
+
+.stop button{
+  display:inline-block;
+  margin:10px 6px 0 0;
+  padding:10px 16px;
+}
+
+.stop button:first-of-type{
+  background:#087443;
+  color:white;
+}
+
+.stop button:last-of-type{
+  background:#b42318;
+  color:white;
+}
 .price{font-weight:bold;color:#087443;white-space:nowrap}
 .notice{color:#6b756f;font-size:12px;line-height:1.5}
 .modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
