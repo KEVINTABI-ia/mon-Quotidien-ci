@@ -111,7 +111,7 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 </header>
 
 <main>
-<section class="card" id="espaceAdmin">
+<section class="card" id="espaceAdmin" style="display:none;">
   <h2>🔐 Espace administrateur</h2>
 
   <label for="emailAdmin">Adresse e-mail</label>
@@ -200,7 +200,7 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 </button>
 </section>
 <section class="card">
-<section class="card" id="calculateur">
+<section class="card" id="calculateur" style="display:none;">
 <section class="card">
 <h2>⭐ Mes trajets favoris</h2>
 <div id="listeFavoris">
@@ -963,7 +963,13 @@ function basculerMenu(){
 function ouvrirSection(id){
   basculerMenu();
 
-  document.getElementById(id).scrollIntoView({
+  document.getElementById("espaceAdmin").style.display = "none";
+  document.getElementById("calculateur").style.display = "none";
+
+  const section = document.getElementById(id);
+  section.style.display = "block";
+
+  section.scrollIntoView({
     behavior:"smooth",
     block:"start"
   });
