@@ -1029,6 +1029,45 @@ function afficherGaresStations(){
   resultat.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
+function afficherTarifs(){
+  const routes = window.MON_TRANSPORT_CI_ROUTES || [];
+  const resultat = document.getElementById("resultat");
+
+  let html = "<strong>💰 Tarifs des transports référencés</strong>";
+
+  if(routes.length === 0){
+    html += "<p class='notice'>Aucun tarif disponible pour le moment.</p>";
+  }
+
+  routes.forEach(route => {
+    html += "<h3>🚌 " + route.transport + "</h3>";
+    html += "<p><strong>" + route.depart + " → " + route.arrivee + "</strong></p>";
+
+    (route.stops || []).forEach((stop, index) => {
+      const nom = Array.isArray(stop) ? stop[0] : stop.nom;
+      const tarif = Array.isArray(stop) ? stop[1] : stop.tarif;
+
+      html += "<div class='stop'>";
+      html += "<span>" + (index + 1) + ". " + nom + "</span>";
+      html += "<span class='price'>" + tarif + " FCFA</span>";
+      html += "</div>";
+    });
+
+    if(route.statut){
+      html += "<p class='notice'>" + route.statut + "</p>";
+    }
+  });
+
+  html += "<p class='notice'>Tarifs communiqués par des usagers, à confirmer auprès des transporteurs. Ils ne constituent pas une certification officielle.</p>";
+
+  resultat.style.display = "block";
+  resultat.innerHTML = html;
+
+  resultat.scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
+}
 
 // COLLER LA NOUVELLE FONCTION ICI
 
