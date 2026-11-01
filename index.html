@@ -43,6 +43,9 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 
 <label for="depart">Lieu de départ</label>
 <input id="depart" placeholder="Ex. : Bagnon">
+<button type="button" onclick="meLocaliser()" style="width:100%;margin-top:8px;">
+📍 Me localiser
+</button>
 <button type="button" onclick="inverserTrajet()" style="width:100%;margin-top:10px;background:#edf6f0;color:#075c36;">
 ⇅ Inverser le trajet
 </button>
@@ -227,6 +230,43 @@ const message=
 const url="https://wa.me/?text="+encodeURIComponent(message);
 
 window.open(url,"_blank");
+}
+function meLocaliser(){
+if(!navigator.geolocation){
+alert("La géolocalisation n'est pas disponible sur cet appareil.");
+return;
+}
+
+navigator.geolocation.getCurrentPosition(
+async function(position){
+const latitude=position.coords.latitude;
+const longitude=position.coords.longitude;
+
+try{
+const reponse=await fetch(
+"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat="+latitude+"&lon="+longitude
+);
+
+const donnees=await reponse.json();
+
+if(donnees.address){
+const adresse=donnees.address;
+const lieu=adresse.suburb || adresse.neighbourhood || adresse.city || adresse.town || adresse.village;
+
+document.getElementById("depart").value=lieu || donnees.display_name;
+alert("Votre position a été détectée !");
+}else{
+alert("Position détectée, mais adresse introuvable.");
+}
+}catch(erreur){
+alert("Impossible de déterminer votre adresse. Réessayez.");
+}
+},
+function(erreur){
+alert("Impossible d'accéder à votre position. Vérifiez les autorisations GPS.");
+},
+{enableHighAccuracy:true,timeout:15000}
+);
 }
 function rechercher(){
 const depart=normaliser(document.getElementById("depart").value);
