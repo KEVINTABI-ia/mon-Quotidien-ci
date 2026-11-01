@@ -47,11 +47,66 @@ button{border:0;border-radius:10px;padding:14px;font-size:15px;font-weight:bold;
 .mode{background:#edf6f0;color:#075c36}
 .quick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .quick button{background:#f0f4f1;color:#24543a}
+.menu-container{
+  position:absolute;
+  top:15px;
+  left:15px;
+  z-index:1000;
+}
+
+.menu-toggle{
+  background:white;
+  color:#087443;
+  font-size:23px;
+  padding:10px 14px;
+  border-radius:10px;
+  box-shadow:0 2px 8px #0002;
+}
+
+.menu-dropdown{
+  display:none;
+  position:absolute;
+  top:52px;
+  left:0;
+  width:230px;
+  background:white;
+  border-radius:12px;
+  box-shadow:0 4px 15px #0003;
+  padding:8px;
+}
+
+.menu-dropdown button{
+  display:block;
+  width:100%;
+  text-align:left;
+  background:white;
+  color:#17251e;
+  padding:14px 10px;
+  margin:3px 0;
+}
+
+.menu-dropdown button:active{
+  background:#edf6f0;
+}
 footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 </style>
 </head>
 <body>
+<body>
 
+<div class="menu-container">
+  <button class="menu-toggle" onclick="basculerMenu()" aria-label="Ouvrir le menu">
+    ☰
+  </button>
+
+  <div class="menu-dropdown" id="menuDropdown">
+    <button onclick="ouvrirSection('espaceAdmin')">🔐 Espace administrateur</button>
+    <button onclick="ouvrirSection('calculateur')">💰 Calculateur de budget</button>
+    <button onclick="signalerProblemeGeneral()">⚠️ Signaler un problème</button>
+  </div>
+</div>
+
+<header>
 <header>
 <div class="brand">🇨🇮 Mon Transport CI</div>
 <div class="tagline">Trouver son transport. Connaître son trajet. Maîtriser son budget.</div>
@@ -147,7 +202,7 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 </button>
 </section>
 <section class="card">
-<h2>💰 Calculateur de budget transport</h2>
+<section class="card" id="calculateur">
 <section class="card">
 <h2>⭐ Mes trajets favoris</h2>
 <div id="listeFavoris">
@@ -899,6 +954,38 @@ afficherCarte(
 document.getElementById("depart").value,
 document.getElementById("arrivee").value
 );
+}
+function basculerMenu(){
+  const menu = document.getElementById("menuDropdown");
+
+  menu.style.display =
+    menu.style.display === "block" ? "none" : "block";
+}
+
+function ouvrirSection(id){
+  basculerMenu();
+
+  document.getElementById(id).scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
+}
+
+function signalerProblemeGeneral(){
+  basculerMenu();
+
+  const message =
+    "🇨🇮 SIGNALEMENT - MON TRANSPORT CI\n\n" +
+    "Je souhaite signaler un problème concernant l'application ou un trajet.\n\n" +
+    "Description du problème : ";
+
+  const numero = "2250719577999";
+
+  window.open(
+    "https://wa.me/" + numero + "?text=" +
+    encodeURIComponent(message),
+    "_blank"
+  );
 }
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
