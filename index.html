@@ -79,6 +79,15 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 <p class="notice">Aucun trajet favori enregistré.</p>
 </div>
 </section>
+<section class="card">
+<h2>🕘 Historique de mes recherches</h2>
+<div id="listeHistorique">
+<p class="notice">Aucune recherche enregistrée.</p>
+</div>
+<button type="button" onclick="effacerHistorique()" style="width:100%;margin-top:10px;background:#fcebea;color:#9b2929;">
+🗑️ Effacer l'historique
+</button>
+</section>
 <label for="nombreTrajets">Nombre de trajets :</label>
 <input type="number" id="nombreTrajets" min="1" value="1">
 
@@ -390,6 +399,54 @@ const url=
 
 window.open(url,"_blank");
 }
+let historique=JSON.parse(localStorage.getItem("monTransportHistorique") || "[]");
+
+function afficherHistorique(){
+const liste=document.getElementById("listeHistorique");
+
+if(historique.length===0){
+liste.innerHTML='<p class="notice">Aucune recherche enregistrée.</p>';
+return;
+}
+
+liste.innerHTML=historique.map((trajet,index)=>`
+<div class="stop">
+<span>${trajet.depart} → ${trajet.destination} (${trajet.transport})</span>
+<button type="button" onclick="rechercherHistorique(${index})">🔎</button>
+</div>
+`).join("");
+}
+
+function effacerHistorique(){
+historique=[];
+localStorage.setItem("monTransportHistorique",JSON.stringify(historique));
+afficherHistorique();
+}
+
+function rechercherHistorique(index){
+const trajet=historique[index];
+if(!trajet)return;
+
+document.getElementById("depart").value=trajet.depart;
+document.getElementById("arrivee").value=trajet.destination;
+document.getElementById("transport").value=trajet.transport;
+
+rechercher();
+}
+
+function enregistrerHistorique(depart,arrivee,transport){
+historique=historique.filter(trajet=>
+!(trajet.depart===depart && trajet.destination===arrivee && trajet.transport===transport)
+);
+
+historique.unshift({depart, destination:arrivee, transport});
+historique=historique.slice(0,10);
+
+localStorage.setItem("monTransportHistorique",JSON.stringify(historique));
+afficherHistorique();
+}
+
+afficherHistorique();
 function rechercher(){
 const depart=normaliser(document.getElementById("depart").value);
 const arrivee=normaliser(document.getElementById("arrivee").value);
@@ -433,6 +490,11 @@ if(trouvees.length===0){
 resultat.textContent="Aucun trajet correspondant n'a été trouvé dans notre base actuelle. D'autres lignes seront ajoutées progressivement.";
 return;
 }
+enregistrerHistorique(
+document.getElementById("depart").value,
+document.getElementById("arrivee").value,
+document.getElementById("transport").value
+);
 window.trajetsTrouves=trouvees;
 let html="<strong>Résultat de votre recherche</strong>";
 
