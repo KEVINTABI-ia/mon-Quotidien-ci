@@ -64,7 +64,12 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 </section>
 <section class="card">
 <h2>💰 Calculateur de budget transport</h2>
-
+<section class="card">
+<h2>⭐ Mes trajets favoris</h2>
+<div id="listeFavoris">
+<p class="notice">Aucun trajet favori enregistré.</p>
+</div>
+</section>
 <label for="nombreTrajets">Nombre de trajets :</label>
 <input type="number" id="nombreTrajets" min="1" value="1">
 
@@ -141,6 +146,53 @@ const total=tarif*nombre;
 document.getElementById("budgetTotal").textContent=
 "Budget total : "+total.toLocaleString("fr-FR")+" FCFA";
 }
+let favoris=JSON.parse(localStorage.getItem("monTransportFavoris") || "[]");
+
+function afficherFavoris(){
+const liste=document.getElementById("listeFavoris");
+
+if(favoris.length===0){
+liste.innerHTML='<p class="notice">Aucun trajet favori enregistré.</p>';
+return;
+}
+
+liste.innerHTML=favoris.map((trajet,index)=>`
+<div class="stop">
+<span>${trajet.depart} → ${trajet.destination} (${trajet.transport})</span>
+<button type="button" onclick="supprimerFavori(${index})">🗑️</button>
+</div>
+`).join("");
+}
+
+function ajouterFavori(index){
+const item=window.trajetsTrouves[index];
+
+if(!item)return;
+
+const trajet={
+depart:item.route.depart,
+destination:item.route.stops[item.index][0],
+transport:item.route.transport
+};
+
+if(favoris.some(f=>f.depart===trajet.depart && f.destination===trajet.destination && f.transport===trajet.transport)){
+alert("Ce trajet est déjà dans vos favoris.");
+return;
+}
+
+favoris.push(trajet);
+localStorage.setItem("monTransportFavoris",JSON.stringify(favoris));
+afficherFavoris();
+alert("Trajet ajouté aux favoris !");
+}
+
+function supprimerFavori(index){
+favoris.splice(index,1);
+localStorage.setItem("monTransportFavoris",JSON.stringify(favoris));
+afficherFavoris();
+}
+
+afficherFavoris();
 function rechercher(){
 const depart=normaliser(document.getElementById("depart").value);
 const arrivee=normaliser(document.getElementById("arrivee").value);
@@ -184,10 +236,10 @@ if(trouvees.length===0){
 resultat.textContent="Aucun trajet correspondant n'a été trouvé dans notre base actuelle. D'autres lignes seront ajoutées progressivement.";
 return;
 }
-
+window.trajetsTrouves=trouvees;
 let html="<strong>Résultat de votre recherche</strong>";
 
-trouvees.forEach(item=>{
+trouvees.forEach((item,index)=>{
 const route=item.route;
 const stop=route.stops[item.index];
 
@@ -197,6 +249,7 @@ html+=`<p class="notice"><strong>Information :</strong> ${route.statut}. Parcour
 }
 html+=`<p>Destination recherchée : ${stop[0]}</p>`;
 html+=`<p><strong>Tarif indiqué : ${stop[1]} FCFA</strong></p>`;
+html+=`<button type="button" onclick="ajouterFavori(${index})">⭐ Ajouter aux favoris</button>`;
 html+="<h4>Arrêts et tarifs</h4>";
 
 route.stops.forEach((s,i)=>{
