@@ -236,44 +236,52 @@ function deconnexionAdmin() {
 // GESTION DES ITINERAIRES FIRESTORE
 let routeEnEdition = null;
 let routesFirestore = [];
+let firestoreInitialise = false;
+let arretEcouteRoutes = null;
+
+const routesInitiales = JSON.parse(
+  JSON.stringify(window.MON_TRANSPORT_CI_ROUTES || [])
+);
 
 auth.onAuthStateChanged((user) => {
   const autorise = !!user && user.uid === ADMIN_UID;
   const panneau = document.getElementById("gestionRoutes");
 
-  if (panneau) {
-    panneau.style.display = autorise ? "block" : "none";
-  }
+  panneau.style.display = autorise ? "block" : "none";
 
   if (autorise) {
     chargerRoutesFirestore();
+  } else if (arretEcouteRoutes) {
+    arretEcouteRoutes();
+    arretEcouteRoutes = null;
   }
 });
 
 function chargerRoutesFirestore() {
-  db.collection("routes").onSnapshot((snapshot) => {
-    routesFirestore = snapshot.docs.map(doc => ({
-      ...doc.data(),
-      firestoreId: doc.id
-    }));
+  if (arretEcouteRoutes) return;
 
-    afficherRoutesAdmin();
-  }, (erreur) => {
-    document.getElementById("statutRoutes").textContent =
-      "Erreur : " + erreur.message;
-  });
-}
-routesFirestore = snapshot.docs.map(doc => ({
-  ...doc.data(),
-  firestoreId: doc.id
-}));
+  arretEcouteRoutes = db.collection("routes").onSnapshot(
+    (snapshot) => {
+      routesFirestore = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        firestoreId: doc.id
+      }));
 
-if (routesFirestore.length > 0) {
-  window.MON_TRANSPORT_CI_ROUTES = routesFirestore.map(
-    ({ firestoreId, ...route }) => route
+      if (snapshot.size > 0 || firestoreInitialise) {
+        window.MON_TRANSPORT_CI_ROUTES = routesFirestore.map(
+          ({ firestoreId, ...route }) => route
+        );
+      }
+
+      afficherRoutesAdmin();
+    },
+    (erreur) => {
+      document.getElementById("statutRoutes").textContent =
+        "Erreur : " + erreur.message;
+    }
   );
 }
-afficherRoutesAdmin();
+
 function afficherRoutesAdmin() {
   const zone = document.getElementById("listeRoutesAdmin");
 
@@ -286,6 +294,7 @@ function afficherRoutesAdmin() {
     </div>
   `).join("");
 }
+
 // ENREGISTRER UN ITINERAIRE
 function enregistrerRoute() {
   const statut = document.getElementById("statutRoutes");
@@ -310,7 +319,8 @@ function enregistrerRoute() {
       const nom = morceaux[0].trim();
       const tarif = Number(morceaux[1]);
 
-      if (!nom || morceaux.length < 2 || !Number.isFinite(tarif) || tarif < 0) {
+      if (!nom || morceaux.length < 2 ||
+          !Number.isFinite(tarif) || tarif < 0) {
         throw new Error("Format incorrect. Utilise : Arrêt | 200");
       }
 
@@ -319,10 +329,10 @@ function enregistrerRoute() {
 
     const route = {
       transport: document.getElementById("routeTransport").value,
-      depart: depart,
-      arrivee: arrivee,
+      depart,
+      arrivee,
       statut: document.getElementById("routeStatut").value.trim(),
-      stops: stops
+      stops
     };
 
     const operation = routeEnEdition
@@ -372,9 +382,13 @@ function annulerEditionRoute() {
   document.getElementById("statutRoutes").textContent =
     "Formulaire prêt pour un nouvel itinéraire.";
 }
+
 // SUPPRIMER UN ITINERAIRE
 async function supprimerRoute(id) {
+  const statut = document.getElementById("statutRoutes");
+
   if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    statut.textContent = "Connexion administrateur requise.";
     return;
   }
 
@@ -382,18 +396,14 @@ async function supprimerRoute(id) {
 
   try {
     await db.collection("routes").doc(id).delete();
-    document.getElementById("statutRoutes").textContent =
-      "Itinéraire supprimé avec succès.";
+    statut.textContent = "Itinéraire supprimé avec succès.";
   } catch (erreur) {
-    document.getElementById("statutRoutes").textContent =
-      "Erreur : " + erreur.message;
+    statut.textContent = "Erreur : " + erreur.message;
   }
 }
 
 // IMPORTER LES ITINERAIRES EXISTANTS
 async function importerRoutesInitiales() {
-  // SUPPRIMER UN ITINERAIRE
-async function supprimerRoute(id) {
   const statut = document.getElementById("statutRoutes");
 
   if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
@@ -406,9 +416,7 @@ async function supprimerRoute(id) {
     return;
   }
 
-  const initiales = window.MON_TRANSPORT_CI_ROUTES || [];
-
-  if (initiales.length === 0) {
+  if (routesInitiales.length === 0) {
     statut.textContent = "Aucun itinéraire à importer.";
     return;
   }
@@ -416,20 +424,20 @@ async function supprimerRoute(id) {
   try {
     const lot = db.batch();
 
-    initiales.forEach(route => {
+    routesInitiales.forEach(route => {
       const reference = db.collection("routes").doc();
       lot.set(reference, route);
     });
 
     await lot.commit();
+    firestoreInitialise = true;
 
     statut.textContent =
-      initiales.length + " itinéraires importés avec succès.";
+      routesInitiales.length + " itinéraires importés avec succès.";
   } catch (erreur) {
     statut.textContent = "Erreur : " + erreur.message;
   }
 }
-function normaliser(texte){
 return texte.toLowerCase()
 .normalize("NFD")
 .replace(/[\u0300-\u036f]/g,"")
