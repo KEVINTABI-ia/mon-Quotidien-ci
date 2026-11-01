@@ -438,12 +438,13 @@ async function importerRoutesInitiales() {
     statut.textContent = "Erreur : " + erreur.message;
   }
 }
-return texte.toLowerCase()
-.normalize("NFD")
-.replace(/[\u0300-\u036f]/g,"")
-.replace(/[-–]/g," ")
-.replace(/\s+/g," ")
-.trim();
+function normaliser(texte) {
+  return texte.toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[-–]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function choisir(mode){
