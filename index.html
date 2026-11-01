@@ -155,7 +155,10 @@ trouvees.forEach(item=>{
 const route=item.route;
 const stop=route.stops[item.index];
 
-html+=`<h3>${route.transport} : ${route.depart} → ${route.arrivee}</h3>`;
+html+=`<h3>🚌 ${route.transport} : ${route.depart} → ${route.arrivee}</h3>`;
+if(route.statut){
+html+=`<p class="notice"><strong>Information :</strong> ${route.statut}. Parcours et tarif à confirmer auprès de la SOTRA.</p>`;
+}
 html+=`<p>Destination recherchée : ${stop[0]}</p>`;
 html+=`<p><strong>Tarif indiqué : ${stop[1]} FCFA</strong></p>`;
 html+="<h4>Arrêts et tarifs</h4>";
