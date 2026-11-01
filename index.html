@@ -322,7 +322,7 @@ const urlRoute=
 "https://router.project-osrm.org/route/v1/driving/"+
 pointDepart[1]+","+pointDepart[0]+";"+
 pointArrivee[1]+","+pointArrivee[0]+
-"?overview=full&geometries=geojson";
+"?overview=full&geometries=geojson&steps=true";
 
 const reponseRoute=await fetch(urlRoute);
 const donneesRoute=await reponseRoute.json();
