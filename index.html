@@ -268,9 +268,11 @@ routesFirestore = snapshot.docs.map(doc => ({
   firestoreId: doc.id
 }));
 
-window.MON_TRANSPORT_CI_ROUTES = routesFirestore.map(
-  ({ firestoreId, ...route }) => route
-);
+if (routesFirestore.length > 0) {
+  window.MON_TRANSPORT_CI_ROUTES = routesFirestore.map(
+    ({ firestoreId, ...route }) => route
+  );
+}
 
 afficherRoutesAdmin();
 function afficherRoutesAdmin() {
