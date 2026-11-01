@@ -792,7 +792,48 @@ function normaliser(texte) {
     .replace(/\s+/g, " ")
     .trim();
 }
+function chargerGaresPourRecherche() {
+  const depart = document.getElementById("depart");
 
+  db.collection("gares").orderBy("nom").get()
+    .then(snapshot => {
+      depart.innerHTML = '<option value="">Choisir une gare de départ</option>';
+
+      snapshot.forEach(doc => {
+        const gare = doc.data();
+        const option = document.createElement("option");
+        option.value = gare.nom;
+        option.textContent = gare.nom;
+        depart.appendChild(option);
+      });
+    })
+    .catch(error => {
+      console.error("Erreur de chargement des gares :", error);
+    });
+}
+
+function actualiserDestinationsGares() {
+  const depart = document.getElementById("depart").value;
+  const arrivee = document.getElementById("arrivee");
+
+  arrivee.innerHTML = '<option value="">Choisir une destination</option>';
+  arrivee.disabled = true;
+
+  const gare = garesFirestore.find(g =>
+    normaliser(g.nom) === normaliser(depart)
+  );
+
+  if (!gare || !gare.destinations) return;
+
+  gare.destinations.forEach(destination => {
+    const option = document.createElement("option");
+    option.value = destination;
+    option.textContent = destination;
+    arrivee.appendChild(option);
+  });
+
+  arrivee.disabled = gare.destinations.length === 0;
+}
 function choisir(mode){
 document.getElementById("transport").value=mode;
 document.getElementById("depart").focus();
