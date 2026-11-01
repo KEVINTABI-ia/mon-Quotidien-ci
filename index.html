@@ -57,6 +57,39 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
   </button>
 
   <p id="statutAdmin" class="notice"></p>
+<div id="gestionRoutes" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
+  <h3>Gestion des itinéraires</h3>
+
+  <label>Moyen de transport</label>
+  <select id="routeTransport">
+    <option>Gbaka</option>
+    <option>Woro-woro</option>
+    <option>Taxi communal</option>
+    <option>SOTRA</option>
+    <option>Car interurbain</option>
+  </select>
+
+  <label>Départ</label>
+  <input id="routeDepart" placeholder="Ex. Yopougon">
+
+  <label>Destination</label>
+  <input id="routeArrivee" placeholder="Ex. Adjamé">
+
+  <label>Précision (facultatif)</label>
+  <input id="routeStatut">
+
+  <label>Arrêts et tarifs</label>
+  <textarea id="routeArrets" rows="6" placeholder="Arrêt 1 | 200&#10;Arrêt 2 | 300" style="width:100%;padding:12px;"></textarea>
+
+  <button class="primary" onclick="enregistrerRoute()">Enregistrer l'itinéraire</button>
+
+  <button type="button" onclick="importerRoutesInitiales()" style="width:100%;margin-top:10px;">
+    Importer les itinéraires existants
+  </button>
+
+  <p id="statutRoutes" class="notice"></p>
+  <div id="listeRoutesAdmin"></div>
+</div>
 </section>
 <section class="card">
 <h2>Où souhaitez-vous aller ?</h2>
@@ -199,6 +232,201 @@ function deconnexionAdmin() {
       document.getElementById("statutAdmin").textContent =
         "Vous êtes déconnecté.";
     });
+}
+// GESTION DES ITINERAIRES FIRESTORE
+let routeEnEdition = null;
+let routesFirestore = [];
+
+auth.onAuthStateChanged((user) => {
+  const autorise = !!user && user.uid === ADMIN_UID;
+  const panneau = document.getElementById("gestionRoutes");
+
+  if (panneau) {
+    panneau.style.display = autorise ? "block" : "none";
+  }
+
+  if (autorise) {
+    chargerRoutesFirestore();
+  }
+});
+
+function chargerRoutesFirestore() {
+  db.collection("routes").onSnapshot((snapshot) => {
+    routesFirestore = snapshot.docs.map(doc => ({
+      ...doc.data(),
+      firestoreId: doc.id
+    }));
+
+    afficherRoutesAdmin();
+  }, (erreur) => {
+    document.getElementById("statutRoutes").textContent =
+      "Erreur : " + erreur.message;
+  });
+}
+routesFirestore = snapshot.docs.map(doc => ({
+  ...doc.data(),
+  firestoreId: doc.id
+}));
+
+window.MON_TRANSPORT_CI_ROUTES = routesFirestore.map(
+  ({ firestoreId, ...route }) => route
+);
+
+afficherRoutesAdmin();
+function afficherRoutesAdmin() {
+  const zone = document.getElementById("listeRoutesAdmin");
+
+  zone.innerHTML = routesFirestore.map((route, index) => `
+    <div class="stop">
+      <strong>${route.transport}</strong><br>
+      ${route.depart} → ${route.arrivee}<br>
+      <button onclick="chargerRouteEdition(${index})">Modifier</button>
+      <button onclick="supprimerRoute('${route.firestoreId}')">Supprimer</button>
+    </div>
+  `).join("");
+}
+// ENREGISTRER UN ITINERAIRE
+function enregistrerRoute() {
+  const statut = document.getElementById("statutRoutes");
+
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    statut.textContent = "Connexion administrateur requise.";
+    return;
+  }
+
+  const depart = document.getElementById("routeDepart").value.trim();
+  const arrivee = document.getElementById("routeArrivee").value.trim();
+  const lignes = document.getElementById("routeArrets").value.trim();
+
+  if (!depart || !arrivee || !lignes) {
+    statut.textContent = "Remplis le départ, la destination et les arrêts.";
+    return;
+  }
+
+  try {
+    const stops = lignes.split("\n").map(ligne => {
+      const morceaux = ligne.split("|");
+      const nom = morceaux[0].trim();
+      const tarif = Number(morceaux[1]);
+
+      if (!nom || morceaux.length < 2 || !Number.isFinite(tarif) || tarif < 0) {
+        throw new Error("Format incorrect. Utilise : Arrêt | 200");
+      }
+
+      return [nom, tarif];
+    });
+
+    const route = {
+      transport: document.getElementById("routeTransport").value,
+      depart: depart,
+      arrivee: arrivee,
+      statut: document.getElementById("routeStatut").value.trim(),
+      stops: stops
+    };
+
+    const operation = routeEnEdition
+      ? db.collection("routes").doc(routeEnEdition).set(route)
+      : db.collection("routes").add(route);
+
+    operation.then(() => {
+      statut.textContent = "Itinéraire enregistré avec succès.";
+      annulerEditionRoute();
+    }).catch(erreur => {
+      statut.textContent = "Erreur : " + erreur.message;
+    });
+
+  } catch (erreur) {
+    statut.textContent = erreur.message;
+  }
+}
+
+// MODIFIER UN ITINERAIRE
+function chargerRouteEdition(index) {
+  const route = routesFirestore[index];
+  if (!route) return;
+
+  routeEnEdition = route.firestoreId;
+
+  document.getElementById("routeTransport").value =
+    route.transport.startsWith("SOTRA") ? "SOTRA" : route.transport;
+
+  document.getElementById("routeDepart").value = route.depart;
+  document.getElementById("routeArrivee").value = route.arrivee;
+  document.getElementById("routeStatut").value = route.statut || "";
+
+  document.getElementById("routeArrets").value =
+    route.stops.map(stop => stop[0] + " | " + stop[1]).join("\n");
+
+  document.getElementById("statutRoutes").textContent =
+    "Modification de l'itinéraire sélectionné.";
+}
+
+// ANNULER LA MODIFICATION
+function annulerEditionRoute() {
+  routeEnEdition = null;
+
+  ["routeDepart", "routeArrivee", "routeStatut", "routeArrets"]
+    .forEach(id => document.getElementById(id).value = "");
+
+  document.getElementById("statutRoutes").textContent =
+    "Formulaire prêt pour un nouvel itinéraire.";
+}
+// SUPPRIMER UN ITINERAIRE
+async function supprimerRoute(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    return;
+  }
+
+  if (!confirm("Supprimer définitivement cet itinéraire ?")) return;
+
+  try {
+    await db.collection("routes").doc(id).delete();
+    document.getElementById("statutRoutes").textContent =
+      "Itinéraire supprimé avec succès.";
+  } catch (erreur) {
+    document.getElementById("statutRoutes").textContent =
+      "Erreur : " + erreur.message;
+  }
+}
+
+// IMPORTER LES ITINERAIRES EXISTANTS
+async function importerRoutesInitiales() {
+  // SUPPRIMER UN ITINERAIRE
+async function supprimerRoute(id) {
+  const statut = document.getElementById("statutRoutes");
+
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    statut.textContent = "Connexion administrateur requise.";
+    return;
+  }
+
+  if (routesFirestore.length > 0) {
+    statut.textContent = "Des itinéraires sont déjà présents dans la base.";
+    return;
+  }
+
+  const initiales = window.MON_TRANSPORT_CI_ROUTES || [];
+
+  if (initiales.length === 0) {
+    statut.textContent = "Aucun itinéraire à importer.";
+    return;
+  }
+
+  try {
+    const lot = db.batch();
+
+    initiales.forEach(route => {
+      const reference = db.collection("routes").doc();
+      lot.set(reference, route);
+    });
+
+    await lot.commit();
+
+    statut.textContent =
+      initiales.length + " itinéraires importés avec succès.";
+  } catch (erreur) {
+    statut.textContent = "Erreur : " + erreur.message;
+  }
 }
 function normaliser(texte){
 return texte.toLowerCase()
