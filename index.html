@@ -399,14 +399,17 @@ auth.onAuthStateChanged((user) => {
   if (autorise) {
     chargerRoutesFirestore();
     chargerGaresFirestore();
-  } else if (arretEcouteRoutes) {
-    arretEcouteRoutes();
-    arretEcouteRoutes = null;
+  } else {
+    if (arretEcouteRoutes) {
+      arretEcouteRoutes();
+      arretEcouteRoutes = null;
+    }
+
+    if (arretEcouteGares) {
+      arretEcouteGares();
+      arretEcouteGares = null;
+    }
   }
-  if (arretEcouteGares) {
-  arretEcouteGares();
-  arretEcouteGares = null;
-}
 });
 
 function chargerRoutesFirestore() {
