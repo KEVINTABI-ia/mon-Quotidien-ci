@@ -382,6 +382,27 @@ detailRues;
 alert("La carte n'a pas pu être chargée. Vérifiez votre connexion Internet.");
 }
 }
+function signalerTrajet(index){
+const item=window.trajetsTrouves[index];
+
+if(!item)return;
+
+const route=item.route;
+const stop=route.stops[item.index];
+
+const message=
+"🇨🇮 SIGNALEMENT - MON TRANSPORT CI\n\n"+
+"Transport : "+route.transport+"\n"+
+"Départ : "+route.depart+"\n"+
+"Destination : "+stop[0]+"\n"+
+"Tarif indiqué : "+stop[1]+" FCFA\n\n"+
+"Problème constaté : ";
+
+const numero="2250719577999";
+const url="https://wa.me/"+numero+"?text="+encodeURIComponent(message);
+
+window.open(url,"_blank");
+}
 function ouvrirDansGoogleMaps(){
 const depart=document.getElementById("depart").value;
 const arrivee=document.getElementById("arrivee").value;
@@ -510,6 +531,7 @@ html+=`<p>Destination recherchée : ${stop[0]}</p>`;
 html+=`<p><strong>Tarif indiqué : ${stop[1]} FCFA</strong></p>`;
 html+=`<button type="button" onclick="ajouterFavori(${index})">⭐ Ajouter aux favoris</button>`;
 html+=`<button type="button" onclick="partagerTrajet(${index})">📲 Partager sur WhatsApp</button>`;
+html+=`<button type="button" onclick="signalerTrajet(${index})" style="margin-top:10px;background:#fff0e8;color:#a34416;">⚠️ Signaler un problème</button>`;
 html+="<h4>Arrêts et tarifs</h4>";
 
 route.stops.forEach((s,i)=>{
