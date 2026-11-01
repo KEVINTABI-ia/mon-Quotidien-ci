@@ -39,6 +39,25 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 </header>
 
 <main>
+<section class="card" id="espaceAdmin">
+  <h2>🔐 Espace administrateur</h2>
+
+  <label for="emailAdmin">Adresse e-mail</label>
+  <input type="email" id="emailAdmin" placeholder="Ton adresse Gmail">
+
+  <label for="motDePasseAdmin">Mot de passe</label>
+  <input type="password" id="motDePasseAdmin" placeholder="Ton mot de passe">
+
+  <button class="primary" onclick="connexionAdmin()">
+    Se connecter
+  </button>
+
+  <button type="button" onclick="deconnexionAdmin()">
+    Se déconnecter
+  </button>
+
+  <p id="statutAdmin" class="notice"></p>
+</section>
 <section class="card">
 <h2>Où souhaitez-vous aller ?</h2>
 
@@ -127,9 +146,60 @@ Les tarifs affichés sont des informations de terrain communiquées par des usag
 </main>
 
 <footer>Mon Transport CI · La mobilité en Côte d'Ivoire</footer>
-
+<script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore-compat.js"></script>
 <script src="routes.js"></script>
 <script>
+// CONFIGURATION FIREBASE
+const firebaseConfig = {
+  apiKey: "AIzaSyBJFCyGS-cEaEm0_c_-p0CzunNcME9-uQ7",
+  authDomain: "mon-transport-ci.firebaseapp.com",
+  projectId: "mon-transport-ci",
+  storageBucket: "mon-transport-ci.firebasestorage.app",
+  messagingSenderId: "326599026854",
+  appId: "1:326599026854:web:73a33f95f427854aec6c67"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+// CONNEXION ADMINISTRATEUR
+const ADMIN_UID = "3LpoTLyQdtVcdtnSMAJFc7Cvnpz2";
+
+function connexionAdmin() {
+  const email = document.getElementById("emailAdmin").value;
+  const motDePasse = document.getElementById("motDePasseAdmin").value;
+  const statut = document.getElementById("statutAdmin");
+
+  if (!email || !motDePasse) {
+    statut.textContent = "Veuillez remplir les deux champs.";
+    return;
+  }
+
+  auth.signInWithEmailAndPassword(email, motDePasse)
+    .then((resultat) => {
+      if (resultat.user.uid !== ADMIN_UID) {
+        return auth.signOut().then(() => {
+          throw new Error("Ce compte n'est pas autorisé.");
+        });
+      }
+
+      statut.textContent = "Connexion administrateur réussie.";
+    })
+    .catch((erreur) => {
+      statut.textContent = "Connexion impossible : " + erreur.message;
+    });
+}
+
+function deconnexionAdmin() {
+  auth.signOut()
+    .then(() => {
+      document.getElementById("statutAdmin").textContent =
+        "Vous êtes déconnecté.";
+    });
+}
 function normaliser(texte){
 return texte.toLowerCase()
 .normalize("NFD")
