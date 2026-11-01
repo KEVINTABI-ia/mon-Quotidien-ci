@@ -136,6 +136,33 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
   </button>
 
   <p id="statutAdmin" class="notice"></p>
+<div id="gestionGares" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
+  <h3>📍 Gestion des gares et terminus</h3>
+
+  <label>Nom de la gare</label>
+  <input id="gareNom" placeholder="Ex. : Gare de Bagnon">
+
+  <label>Commune</label>
+  <input id="gareCommune" placeholder="Ex. : Yopougon">
+
+  <label>Quartier (facultatif)</label>
+  <input id="gareQuartier" placeholder="Ex. : Bagnon">
+
+  <label>Moyens de transport</label>
+  <input id="gareTransports" placeholder="Ex. : Gbaka, Woro-woro">
+
+  <label>Description (facultatif)</label>
+  <textarea id="gareDescription" rows="3" style="width:100%;padding:12px;"></textarea>
+
+  <button class="primary" onclick="enregistrerGare()">Enregistrer la gare</button>
+
+  <button type="button" onclick="importerGaresExistantes()" style="width:100%;margin-top:10px;">
+    Importer les gares des itinéraires existants
+  </button>
+
+  <p id="statutGares" class="notice"></p>
+  <div id="listeGaresAdmin"></div>
+</div>
 <div id="gestionRoutes" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
   <h3>Gestion des itinéraires</h3>
 
@@ -322,6 +349,8 @@ let routeEnEdition = null;
 let routesFirestore = [];
 let firestoreInitialise = false;
 let arretEcouteRoutes = null;
+let arretEcouteGares = null;
+
 
 const routesInitiales = JSON.parse(
   JSON.stringify(window.MON_TRANSPORT_CI_ROUTES || [])
@@ -330,15 +359,22 @@ const routesInitiales = JSON.parse(
 auth.onAuthStateChanged((user) => {
   const autorise = !!user && user.uid === ADMIN_UID;
   const panneau = document.getElementById("gestionRoutes");
+  const panneauGares = document.getElementById("gestionGares");
 
   panneau.style.display = autorise ? "block" : "none";
+  panneauGares.style.display = autorise ? "block" : "none";
 
   if (autorise) {
     chargerRoutesFirestore();
+    chargerGaresFirestore();
   } else if (arretEcouteRoutes) {
     arretEcouteRoutes();
     arretEcouteRoutes = null;
   }
+  if (arretEcouteGares) {
+  arretEcouteGares();
+  arretEcouteGares = null;
+}
 });
 
 function chargerRoutesFirestore() {
@@ -542,6 +578,206 @@ routesInitiales.forEach(route => {
       routesInitiales.length + " itinéraires importés avec succès.";
   } catch (erreur) {
     statut.textContent = "Erreur : " + erreur.message;
+  }
+}
+// GESTION DES GARES DANS FIREBASE
+let garesFirestore = [];
+let gareEnEdition = null;
+
+function chargerGaresFirestore() {
+  if (arretEcouteGares) return;
+
+  arretEcouteGares = db.collection("gares")
+    .orderBy("nom")
+    .onSnapshot(snapshot => {
+      garesFirestore = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        firestoreId: doc.id
+      }));
+
+      afficherGaresAdmin();
+    }, erreur => {
+      console.error("Erreur chargement gares :", erreur);
+    });
+}
+
+function afficherGaresAdmin() {
+  const zone = document.getElementById("listeGaresAdmin");
+  if (!zone) return;
+
+  zone.innerHTML = garesFirestore.map((gare, index) => `
+    <div class="stop">
+      <strong>${gare.nom}</strong><br>
+      ${gare.commune || ""}
+      ${gare.quartier ? " - " + gare.quartier : ""}<br>
+      ${(gare.transports || []).join(", ")}<br>
+      <button onclick="chargerGareEdition(${index})">Modifier</button>
+      <button onclick="supprimerGare('${gare.firestoreId}')">Supprimer</button>
+    </div>
+  `).join("");
+}
+
+function enregistrerGare() {
+  const statut = document.getElementById("statutGares");
+
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    statut.textContent = "Connexion administrateur requise.";
+    return;
+  }
+
+  const nom = document.getElementById("gareNom").value.trim();
+  const commune = document.getElementById("gareCommune").value.trim();
+  const quartier = document.getElementById("gareQuartier").value.trim();
+  const transports = document.getElementById("gareTransports").value
+    .split(",").map(t => t.trim()).filter(Boolean);
+  const description = document.getElementById("gareDescription").value.trim();
+
+  if (!nom) {
+    statut.textContent = "Indique le nom de la gare.";
+    return;
+  }
+
+  const gare = {
+    nom,
+    commune,
+    quartier,
+    transports,
+    description,
+    destinations: [],
+    dateModification: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  let operation;
+
+  if (gareEnEdition) {
+    operation = db.collection("gares").doc(gareEnEdition).update(gare);
+  } else {
+    gare.dateCreation = firebase.firestore.FieldValue.serverTimestamp();
+    operation = db.collection("gares").add(gare);
+  }
+
+  operation.then(() => {
+    statut.textContent = "Gare enregistrée avec succès.";
+    annulerEditionGare();
+  }).catch(erreur => {
+    statut.textContent = "Erreur : " + erreur.message;
+  });
+}
+
+function chargerGareEdition(index) {
+  const gare = garesFirestore[index];
+  if (!gare) return;
+
+  gareEnEdition = gare.firestoreId;
+
+  document.getElementById("gareNom").value = gare.nom || "";
+  document.getElementById("gareCommune").value = gare.commune || "";
+  document.getElementById("gareQuartier").value = gare.quartier || "";
+  document.getElementById("gareTransports").value =
+    (gare.transports || []).join(", ");
+  document.getElementById("gareDescription").value = gare.description || "";
+
+  document.getElementById("statutGares").textContent =
+    "Modification de la gare sélectionnée.";
+}
+
+function annulerEditionGare() {
+  gareEnEdition = null;
+
+  ["gareNom", "gareCommune", "gareQuartier",
+   "gareTransports", "gareDescription"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+}
+
+function supprimerGare(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
+
+  if (!confirm("Supprimer cette gare du répertoire ? Les itinéraires ne seront pas supprimés.")) return;
+
+  db.collection("gares").doc(id).delete()
+    .then(() => {
+      document.getElementById("statutGares").textContent =
+        "Gare supprimée du répertoire.";
+    })
+    .catch(erreur => {
+      document.getElementById("statutGares").textContent =
+        "Erreur : " + erreur.message;
+    });
+}
+
+async function importerGaresExistantes() {
+  const statut = document.getElementById("statutGares");
+
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    statut.textContent = "Connexion administrateur requise.";
+    return;
+  }
+
+  try {
+    const routes = routesFirestore.length
+      ? routesFirestore
+      : routesInitiales;
+
+    const gares = new Map();
+
+    routes.forEach(route => {
+      [
+        {nom: route.depart, destination: route.arrivee},
+        {nom: route.arrivee, destination: route.depart}
+      ].forEach(point => {
+        if (!point.nom) return;
+
+        const cle = normaliser(point.nom);
+
+        if (!gares.has(cle)) {
+          gares.set(cle, {
+            nom: point.nom,
+            commune: "",
+            quartier: "",
+            transports: [],
+            description: "Gare issue des itinéraires existants.",
+            destinations: []
+          });
+        }
+
+        const gare = gares.get(cle);
+
+        if (!gare.transports.includes(route.transport)) {
+          gare.transports.push(route.transport);
+        }
+
+        if (!gare.destinations.includes(point.destination)) {
+          gare.destinations.push(point.destination);
+        }
+      });
+    });
+
+    const lot = db.batch();
+    let ajouts = 0;
+
+    for (const gare of gares.values()) {
+      const existe = garesFirestore.some(
+        ancienne => normaliser(ancienne.nom) === normaliser(gare.nom)
+      );
+
+      if (!existe) {
+        const reference = db.collection("gares").doc();
+        lot.set(reference, {
+          ...gare,
+          dateCreation: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        ajouts++;
+      }
+    }
+
+    if (ajouts > 0) await lot.commit();
+
+    statut.textContent = ajouts +
+      " gares importées. Les arrêts intermédiaires sont conservés dans les itinéraires.";
+
+  } catch (erreur) {
+    statut.textContent = "Erreur d'importation : " + erreur.message;
   }
 }
 function normaliser(texte) {
@@ -1003,28 +1239,44 @@ function signalerProblemeGeneral(){
 }
 
 // COLLE ICI LA NOUVELLE FONCTION
-function afficherGaresStations(){
-  const lieux = new Set();
-  const routes = window.MON_TRANSPORT_CI_ROUTES || [];
-
-  routes.forEach(route => {
-    lieux.add(route.depart);
-    lieux.add(route.arrivee);
-
-    (route.stops || []).forEach(stop => {
-      const nom = Array.isArray(stop) ? stop[0] : stop.nom;
-      if(nom) lieux.add(nom);
-    });
-  });
-
-  const liste = [...lieux].sort((a,b) => a.localeCompare(b,"fr"));
+async function afficherGaresStations(){
   const resultat = document.getElementById("resultat");
 
   resultat.style.display = "block";
-  resultat.innerHTML =
-    "<strong>📍 Gares, terminus et stations référencés</strong>" +
-    "<p class='notice'>" + liste.length + " lieux recensés dans les itinéraires enregistrés.</p>" +
-    liste.map(lieu => "<div class='stop'>" + lieu + "</div>").join("");
+  resultat.innerHTML = "<p>Chargement du répertoire des gares...</p>";
+
+  try {
+    const snapshot = await db.collection("gares").orderBy("nom").get();
+
+    if(snapshot.empty){
+      resultat.innerHTML =
+        "<strong>📍 Gares et stations</strong>" +
+        "<p class='notice'>Le répertoire des gares est en préparation.</p>";
+      return;
+    }
+
+    let html = "<strong>📍 Gares et terminus enregistrés</strong>";
+
+    snapshot.forEach(doc => {
+      const gare = doc.data();
+
+      html += "<div class='stop'>";
+      html += "<strong>" + gare.nom + "</strong>";
+
+      if(gare.commune) html += "<p>Commune : " + gare.commune + "</p>";
+      if(gare.quartier) html += "<p>Quartier : " + gare.quartier + "</p>";
+      if(gare.transports) html += "<p>Transports : " + gare.transports.join(", ") + "</p>";
+
+      html += "</div>";
+    });
+
+    resultat.innerHTML = html;
+
+  } catch(error) {
+    resultat.innerHTML =
+      "<strong>📍 Gares et stations</strong>" +
+      "<p class='notice'>Le répertoire des gares n'est pas encore accessible.</p>";
+  }
 
   resultat.scrollIntoView({behavior:"smooth", block:"start"});
 }
