@@ -1027,7 +1027,11 @@ function afficherGaresStations(){
   resultat.scrollIntoView({behavior:"smooth", block:"start"});
 }
 function afficherTarifs(){
-  const routes = window.MON_TRANSPORT_CI_ROUTES || [];
+  const routesActuelles = window.MON_TRANSPORT_CI_ROUTES || [];
+  const routes = routesActuelles.length > 0
+    ? routesActuelles
+    : routesInitiales;
+
   const resultat = document.getElementById("resultat");
 
   let html = "<strong>💰 Tarifs des transports enregistrés</strong>";
@@ -1046,12 +1050,13 @@ function afficherTarifs(){
 
       html += "<div class='stop'>";
       html += "<span>" + nom + "</span>";
-      html += "<span class='price'>" + Number(tarif).toLocaleString("fr-FR") + " FCFA</span>";
+      html += "<span class='price'>" +
+        Number(tarif).toLocaleString("fr-FR") + " FCFA</span>";
       html += "</div>";
     });
   });
 
-  html += "<p class='notice'>Tarifs indicatifs issus des données enregistrées. À confirmer auprès du transporteur.</p>";
+  html += "<p class='notice'>Tarifs indicatifs à confirmer auprès du transporteur.</p>";
 
   resultat.style.display = "block";
   resultat.innerHTML = html;
