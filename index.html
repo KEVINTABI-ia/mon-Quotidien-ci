@@ -159,6 +159,7 @@ return;
 liste.innerHTML=favoris.map((trajet,index)=>`
 <div class="stop">
 <span>${trajet.depart} → ${trajet.destination} (${trajet.transport})</span>
+<button type="button" onclick="rechercherFavori(${index})">🔎</button>
 <button type="button" onclick="supprimerFavori(${index})">🗑️</button>
 </div>
 `).join("");
@@ -189,6 +190,19 @@ alert("Trajet ajouté aux favoris !");
 function supprimerFavori(index){
 favoris.splice(index,1);
 localStorage.setItem("monTransportFavoris",JSON.stringify(favoris));
+function rechercherFavori(index){
+const trajet=favoris[index];
+
+if(!trajet)return;
+
+document.getElementById("depart").value=trajet.depart;
+document.getElementById("arrivee").value=trajet.destination;
+
+document.getElementById("transport").value=
+trajet.transport.startsWith("SOTRA") ? "SOTRA" : trajet.transport;
+
+rechercher();
+}
 afficherFavoris();
 }
 
