@@ -797,10 +797,15 @@ function chargerGaresPourRecherche() {
 
   db.collection("gares").orderBy("nom").get()
     .then(snapshot => {
-      depart.innerHTML = '<option value="">Choisir une gare de départ</option>';
+      garesFirestore = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        firestoreId: doc.id
+      }));
 
-      snapshot.forEach(doc => {
-        const gare = doc.data();
+      depart.innerHTML =
+        '<option value="">Choisir une gare de départ</option>';
+
+      garesFirestore.forEach(gare => {
         const option = document.createElement("option");
         option.value = gare.nom;
         option.textContent = gare.nom;
