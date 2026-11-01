@@ -996,6 +996,37 @@ function signalerProblemeGeneral(){
     "_blank"
   );
 }
+function signalerProblemeGeneral(){
+  // Le code existant reste ici.
+}
+
+// COLLE ICI LA NOUVELLE FONCTION
+function afficherGaresStations(){
+  const lieux = new Set();
+  const routes = window.MON_TRANSPORT_CI_ROUTES || [];
+
+  routes.forEach(route => {
+    lieux.add(route.depart);
+    lieux.add(route.arrivee);
+
+    (route.stops || []).forEach(stop => {
+      const nom = Array.isArray(stop) ? stop[0] : stop.nom;
+      if(nom) lieux.add(nom);
+    });
+  });
+
+  const liste = [...lieux].sort((a,b) => a.localeCompare(b,"fr"));
+  const resultat = document.getElementById("resultat");
+
+  resultat.style.display = "block";
+  resultat.innerHTML =
+    "<strong>📍 Gares, terminus et stations référencés</strong>" +
+    "<p class='notice'>" + liste.length + " lieux recensés dans les itinéraires enregistrés.</p>" +
+    liste.map(lieu => "<div class='stop'>" + lieu + "</div>").join("");
+
+  resultat.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
