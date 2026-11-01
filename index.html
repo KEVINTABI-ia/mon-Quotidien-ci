@@ -43,7 +43,9 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 
 <label for="depart">Lieu de départ</label>
 <input id="depart" placeholder="Ex. : Bagnon">
-
+<button type="button" onclick="inverserTrajet()" style="width:100%;margin-top:10px;background:#edf6f0;color:#075c36;">
+⇅ Inverser le trajet
+</button>
 <label for="arrivee">Destination</label>
 <input id="arrivee" placeholder="Ex. : Petro Ivoire">
 
@@ -104,7 +106,13 @@ function choisir(mode){
 document.getElementById("transport").value=mode;
 document.getElementById("depart").focus();
 }
-
+function inverserTrajet(){
+const depart=document.getElementById("depart");
+const arrivee=document.getElementById("arrivee");
+const temporaire=depart.value;
+depart.value=arrivee.value;
+arrivee.value=temporaire;
+}
 function rechercher(){
 const depart=normaliser(document.getElementById("depart").value);
 const arrivee=normaliser(document.getElementById("arrivee").value);
