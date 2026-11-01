@@ -983,19 +983,6 @@ function ouvrirSection(id){
     block:"start"
   });
 }
-  basculerMenu();
-
-  document.getElementById("espaceAdmin").style.display = "none";
-  document.getElementById("calculateur").style.display = "none";
-
-  const section = document.getElementById(id);
-  section.style.display = "block";
-
-  section.scrollIntoView({
-    behavior:"smooth",
-    block:"start"
-  });
-}
 
 function signalerProblemeGeneral(){
   basculerMenu();
