@@ -2,158 +2,173 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#087443">
-  <meta name="description" content="Mon Transport CI : trouvez vos itinéraires et moyens de transport en Côte d'Ivoire.">
-  <title>Mon Transport CI</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f3f7f5;
-      color: #17251e;
-    }
-    header {
-      background: #087443;
-      color: white;
-      padding: 25px 20px 30px;
-      border-radius: 0 0 24px 24px;
-    }
-    .brand { font-size: 23px; font-weight: 800; }
-    .tagline { font-size: 13px; margin-top: 8px; opacity: .9; }
-    main { padding: 18px; max-width: 650px; margin: auto; }
-    .search-card, .section {
-      background: white;
-      padding: 18px;
-      border-radius: 16px;
-      margin-bottom: 17px;
-      box-shadow: 0 3px 12px #173c2510;
-    }
-    h2 { font-size: 18px; margin: 0 0 15px; }
-    label { display: block; font-size: 13px; font-weight: bold; margin: 12px 0 6px; }
-    input, select {
-      width: 100%;
-      padding: 14px;
-      border: 1px solid #d8e2dc;
-      border-radius: 10px;
-      font-size: 15px;
-      background: white;
-    }
-    button {
-      border: 0;
-      border-radius: 10px;
-      padding: 14px;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .primary { width: 100%; background: #087443; color: white; margin-top: 16px; }
-    .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .mode {
-      background: #edf6f0;
-      color: #075c36;
-      padding: 15px 8px;
-      text-align: center;
-      border: 1px solid #d9ebdf;
-    }
-    .mode:focus, .mode.active { background: #087443; color: white; }
-    .result { display: none; background: #eaf5ee; padding: 15px; border-radius: 12px; margin-top: 15px; line-height: 1.6; }
-    .notice { color: #6b756f; font-size: 12px; line-height: 1.5; }
-    .quick-links { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .quick-links button { background: #f0f4f1; color: #24543a; }
-    footer { text-align: center; padding: 20px; color: #78827c; font-size: 12px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#087443">
+<title>Mon Transport CI</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f3f7f5;color:#17251e}
+header{background:#087443;color:white;padding:25px 20px 30px;border-radius:0 0 24px 24px}
+.brand{font-size:24px;font-weight:800}
+.tagline{font-size:13px;margin-top:8px}
+main{padding:18px;max-width:650px;margin:auto}
+.card{background:white;padding:18px;border-radius:16px;margin-bottom:17px;box-shadow:0 3px 12px #173c2510}
+h2{font-size:18px;margin:0 0 15px}
+label{display:block;font-size:13px;font-weight:bold;margin:12px 0 6px}
+input,select{width:100%;padding:14px;border:1px solid #d8e2dc;border-radius:10px;font-size:15px;background:white}
+button{border:0;border-radius:10px;padding:14px;font-size:15px;font-weight:bold;cursor:pointer}
+.primary{width:100%;background:#087443;color:white;margin-top:16px}
+.result{display:none;background:#eaf5ee;padding:15px;border-radius:12px;margin-top:15px;line-height:1.6}
+.stop{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #d8e8dd}
+.price{font-weight:bold;color:#087443;white-space:nowrap}
+.notice{color:#6b756f;font-size:12px;line-height:1.5}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mode{background:#edf6f0;color:#075c36}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quick button{background:#f0f4f1;color:#24543a}
+footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
+</style>
 </head>
 <body>
-  <header>
-    <div class="brand">🇨🇮 Mon Transport CI</div>
-    <div class="tagline">Trouver son transport. Connaître son trajet. Maîtriser son budget.</div>
-  </header>
 
-  <main>
-    <section class="search-card">
-      <h2>Où souhaitez-vous aller ?</h2>
-      <label for="depart">Lieu de départ</label>
-      <input id="depart" placeholder="Ex. : Yopougon">
+<header>
+<div class="brand">🇨🇮 Mon Transport CI</div>
+<div class="tagline">Trouver son transport. Connaître son trajet. Maîtriser son budget.</div>
+</header>
 
-      <label for="arrivee">Destination</label>
-      <input id="arrivee" placeholder="Ex. : Plateau">
+<main>
+<section class="card">
+<h2>Où souhaitez-vous aller ?</h2>
 
-      <label for="transport">Moyen de transport</label>
-      <select id="transport">
-        <option value="Tous">Tous les transports</option>
-        <option>Gbaka</option>
-        <option>Woro-woro</option>
-        <option>Taxi communal</option>
-        <option>SOTRA</option>
-        <option>Car interurbain</option>
-      </select>
+<label for="depart">Lieu de départ</label>
+<input id="depart" placeholder="Ex. : Bagnon">
 
-      <button class="primary" onclick="rechercher()">Rechercher un trajet</button>
-      <div class="result" id="resultat" aria-live="polite"></div>
-    </section>
+<label for="arrivee">Destination</label>
+<input id="arrivee" placeholder="Ex. : Petro Ivoire">
 
-    <section class="section">
-      <h2>Nos moyens de transport</h2>
-      <div class="modes">
-        <button class="mode" onclick="choisir('Gbaka')">🚐 Gbaka</button>
-        <button class="mode" onclick="choisir('Woro-woro')">🚕 Woro-woro</button>
-        <button class="mode" onclick="choisir('Taxi communal')">🚖 Taxi communal</button>
-        <button class="mode" onclick="choisir('SOTRA')">🚌 SOTRA</button>
-        <button class="mode" onclick="choisir('Car interurbain')">🚍 Cars interurbains</button>
-      </div>
-    </section>
+<label for="transport">Moyen de transport</label>
+<select id="transport">
+<option value="Tous">Tous les transports</option>
+<option value="Gbaka">Gbaka</option>
+<option value="Woro-woro">Woro-woro</option>
+<option value="Taxi communal">Taxi communal</option>
+<option value="SOTRA">SOTRA</option>
+<option value="Car interurbain">Car interurbain</option>
+</select>
 
-    <section class="section">
-      <h2>Explorer</h2>
-      <div class="quick-links">
-        <button onclick="message('Les gares et stations seront ajoutées après vérification.')">📍 Gares et stations</button>
-        <button onclick="message('Les tarifs seront renseignés après vérification.')">💰 Tarifs</button>
-        <button onclick="message('La carte interactive sera intégrée dans une prochaine étape.')">🗺️ Carte</button>
-        <button onclick="message('Le réseau national sera progressivement ajouté.')">🇨🇮 Réseau national</button>
-      </div>
-    </section>
+<button class="primary" onclick="rechercher()">Rechercher un trajet</button>
+<div class="result" id="resultat" aria-live="polite"></div>
+</section>
 
-    <p class="notice">Les itinéraires et tarifs réels ne sont pas encore intégrés. Cette première version constitue l'interface de départ : aucune estimation n'est présentée comme un tarif officiel.</p>
-  </main>
+<section class="card">
+<h2>Nos moyens de transport</h2>
+<div class="modes">
+<button class="mode" onclick="choisir('Gbaka')">🚐 Gbaka</button>
+<button class="mode" onclick="choisir('Woro-woro')">🚕 Woro-woro</button>
+<button class="mode" onclick="choisir('Taxi communal')">🚖 Taxi communal</button>
+<button class="mode" onclick="choisir('SOTRA')">🚌 SOTRA</button>
+<button class="mode" onclick="choisir('Car interurbain')">🚍 Cars interurbains</button>
+</div>
+</section>
 
-  <footer>Mon Transport CI · La mobilité en Côte d'Ivoire</footer>
+<section class="card">
+<h2>Explorer</h2>
+<div class="quick">
+<button onclick="alert('Les gares et stations seront ajoutées progressivement.')">📍 Gares et stations</button>
+<button onclick="alert('Les tarifs disponibles sont accessibles avec la recherche.')">💰 Tarifs</button>
+<button onclick="alert('La carte interactive sera intégrée prochainement.')">🗺️ Carte</button>
+<button onclick="alert('Le réseau national sera progressivement ajouté.')">🇨🇮 Réseau national</button>
+</div>
+</section>
 
-  <script>
-    function choisir(mode) {
-      document.getElementById('transport').value = mode;
-      document.getElementById('depart').focus();
-    }
+<p class="notice">
+Les tarifs affichés sont des informations de terrain communiquées par des usagers. Ils ne constituent pas une certification officielle.
+</p>
+</main>
 
-    function rechercher() {
-      const depart = document.getElementById('depart').value.trim();
-      const arrivee = document.getElementById('arrivee').value.trim();
-      const transport = document.getElementById('transport').value;
-      const resultat = document.getElementById('resultat');
+<footer>Mon Transport CI · La mobilité en Côte d'Ivoire</footer>
 
-      resultat.style.display = 'block';
-      if (!depart || !arrivee) {
-        resultat.textContent = 'Veuillez renseigner le départ et la destination.';
-        return;
-      }
+<script src="routes.js"></script>
+<script>
+function normaliser(texte){
+return texte.toLowerCase()
+.normalize("NFD")
+.replace(/[\u0300-\u036f]/g,"")
+.replace(/[-–]/g," ")
+.replace(/\s+/g," ")
+.trim();
+}
 
-      resultat.innerHTML = '<strong>Votre recherche</strong><br>Départ : ' +
-        echapper(depart) + '<br>Destination : ' + echapper(arrivee) +
-        '<br>Transport : ' + echapper(transport) +
-        '<br><br>Les lignes et tarifs correspondants seront disponibles après intégration des données vérifiées.';
-    }
+function choisir(mode){
+document.getElementById("transport").value=mode;
+document.getElementById("depart").focus();
+}
 
-    function echapper(texte) {
-      return texte.replace(/[&<>"']/g, function(c) {
-        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-      });
-    }
+function rechercher(){
+const depart=normaliser(document.getElementById("depart").value);
+const arrivee=normaliser(document.getElementById("arrivee").value);
+const transport=document.getElementById("transport").value;
+const resultat=document.getElementById("resultat");
 
-    function message(texte) {
-      alert(texte);
-    }
-  </script>
+resultat.style.display="block";
+
+if(!depart || !arrivee){
+resultat.textContent="Veuillez renseigner le départ et la destination.";
+return;
+}
+
+if(typeof MON_TRANSPORT_CI_ROUTES==="undefined"){
+resultat.textContent="Les données de transport ne sont pas encore chargées.";
+return;
+}
+
+const lignes=MON_TRANSPORT_CI_ROUTES.filter(route=>{
+return (transport==="Tous" || route.transport===transport)
+&& normaliser(route.depart)===depart;
+});
+
+let trouvees=[];
+
+lignes.forEach(route=>{
+const destination=normaliser(route.arrivee);
+const index=route.stops.findIndex(stop=>{
+return normaliser(stop[0])===arrivee
+|| normaliser(stop[0]).includes(arrivee);
+});
+
+if(destination===arrivee && route.stops.length){
+trouvees.push({route,index:route.stops.length-1});
+}else if(index!==-1){
+trouvees.push({route,index});
+}
+});
+
+if(trouvees.length===0){
+resultat.textContent="Aucun trajet correspondant n'a été trouvé dans notre base actuelle. D'autres lignes seront ajoutées progressivement.";
+return;
+}
+
+let html="<strong>Résultat de votre recherche</strong>";
+
+trouvees.forEach(item=>{
+const route=item.route;
+const stop=route.stops[item.index];
+
+html+=`<h3>${route.transport} : ${route.depart} → ${route.arrivee}</h3>`;
+html+=`<p>Destination recherchée : ${stop[0]}</p>`;
+html+=`<p><strong>Tarif indiqué : ${stop[1]} FCFA</strong></p>`;
+html+="<h4>Arrêts et tarifs</h4>";
+
+route.stops.forEach((s,i)=>{
+html+=`<div class="stop"><span>${i+1}. ${s[0]}</span><span class="price">${s[1]} F</span></div>`;
+});
+
+});
+
+html+="<p class='notice'>Tarifs issus de données de terrain communiquées par un usager. À confirmer auprès du transporteur.</p>";
+resultat.innerHTML=html;
+}
+</script>
 </body>
 </html>
