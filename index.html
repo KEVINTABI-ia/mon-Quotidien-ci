@@ -352,8 +352,8 @@ const duree=Math.round(trajet.duration/60);
 
 document.getElementById("infoRoute").innerHTML=
 "📏 Distance : "+distance+" km<br>"+
-"⏱️ Durée estimée : "+duree+" minutes";
-
+"⏱️ Durée estimée : "+duree+" minutes<br>"+
+"⚠️ Attention : cette durée est indicative et ne tient pas compte des embouteillages en temps réel.";
 }catch(erreur){
 alert("La carte n'a pas pu être chargée. Vérifiez votre connexion Internet.");
 }
