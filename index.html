@@ -392,6 +392,10 @@ html+=`<div class="stop"><span>${i+1}. ${s[0]}</span><span class="price">${s[1]}
 
 html+="<p class='notice'>Tarifs issus de données de terrain communiquées par un usager. À confirmer auprès du transporteur.</p>";
 resultat.innerHTML=html;
+afficherCarte(
+document.getElementById("depart").value,
+document.getElementById("arrivee").value
+);
 }
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
