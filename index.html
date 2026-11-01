@@ -640,6 +640,10 @@ function enregistrerGare() {
   const transports = document.getElementById("gareTransports").value
     .split(",").map(t => t.trim()).filter(Boolean);
   const description = document.getElementById("gareDescription").value.trim();
+const destinations = document.getElementById("gareDestinations").value
+  .split(",")
+  .map(d => d.trim())
+  .filter(Boolean);
 
   if (!nom) {
     statut.textContent = "Indique le nom de la gare.";
@@ -652,7 +656,7 @@ function enregistrerGare() {
     quartier,
     transports,
     description,
-    destinations: [],
+    destinations,
     dateModification: firebase.firestore.FieldValue.serverTimestamp()
   };
 
@@ -684,6 +688,8 @@ function chargerGareEdition(index) {
   document.getElementById("gareQuartier").value = gare.quartier || "";
   document.getElementById("gareTransports").value =
     (gare.transports || []).join(", ");
+    document.getElementById("gareDestinations").value =
+  (gare.destinations || []).join(", ");
   document.getElementById("gareDescription").value = gare.description || "";
 
   document.getElementById("statutGares").textContent =
@@ -693,10 +699,19 @@ function chargerGareEdition(index) {
 function annulerEditionGare() {
   gareEnEdition = null;
 
-  ["gareNom", "gareCommune", "gareQuartier",
-   "gareTransports", "gareDescription"].forEach(id => {
+  [
+    "gareNom",
+    "gareCommune",
+    "gareQuartier",
+    "gareTransports",
+    "gareDestinations",
+    "gareDescription"
+  ].forEach(id => {
     document.getElementById(id).value = "";
   });
+
+  document.getElementById("btnEnregistrerGare").textContent =
+    "Enregistrer la gare";
 }
 
 function supprimerGare(id) {
