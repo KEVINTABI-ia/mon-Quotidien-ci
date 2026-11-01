@@ -190,6 +190,9 @@ alert("Trajet ajouté aux favoris !");
 function supprimerFavori(index){
 favoris.splice(index,1);
 localStorage.setItem("monTransportFavoris",JSON.stringify(favoris));
+afficherFavoris();
+}
+
 function rechercherFavori(index){
 const trajet=favoris[index];
 
@@ -203,11 +206,8 @@ trajet.transport.startsWith("SOTRA") ? "SOTRA" : trajet.transport;
 
 rechercher();
 }
-afficherFavoris();
-}
 
 afficherFavoris();
-function rechercher(){
 const depart=normaliser(document.getElementById("depart").value);
 const arrivee=normaliser(document.getElementById("arrivee").value);
 const transport=document.getElementById("transport").value;
