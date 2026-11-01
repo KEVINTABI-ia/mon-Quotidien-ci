@@ -968,6 +968,21 @@ function basculerMenu(){
 }
 
 function ouvrirSection(id){
+  document.getElementById("menuDropdown").style.display = "none";
+
+  document.getElementById("espaceAdmin").style.display = "none";
+  document.getElementById("calculateur").style.display = "none";
+  document.getElementById("favoris").style.display = "none";
+  document.getElementById("historique").style.display = "none";
+
+  const section = document.getElementById(id);
+  section.style.display = "block";
+
+  section.scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
+}
   basculerMenu();
 
   document.getElementById("espaceAdmin").style.display = "none";
