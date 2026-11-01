@@ -18,6 +18,25 @@ main{padding:18px;max-width:650px;margin:auto}
 h2{font-size:18px;margin:0 0 15px}
 label{display:block;font-size:13px;font-weight:bold;margin:12px 0 6px}
 input,select{width:100%;padding:14px;border:1px solid #d8e2dc;border-radius:10px;font-size:15px;background:white}
+.depart-wrapper{
+  position:relative;
+}
+
+.depart-wrapper input{
+  padding-right:55px;
+}
+
+.localiser-btn{
+  position:absolute;
+  right:6px;
+  top:50%;
+  transform:translateY(-50%);
+  background:transparent;
+  color:#087443;
+  padding:8px;
+  font-size:20px;
+  border-radius:8px;
+}
 button{border:0;border-radius:10px;padding:14px;font-size:15px;font-weight:bold;cursor:pointer}
 .primary{width:100%;background:#087443;color:white;margin-top:16px}
 .result{display:none;background:#eaf5ee;padding:15px;border-radius:12px;margin-top:15px;line-height:1.6}
@@ -95,10 +114,14 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 <h2>Où souhaitez-vous aller ?</h2>
 
 <label for="depart">Lieu de départ</label>
-<input id="depart" placeholder="Ex. : Bagnon">
-<button type="button" onclick="meLocaliser()" style="width:100%;margin-top:8px;">
-📍 Me localiser
-</button>
+
+<div class="depart-wrapper">
+  <input id="depart" placeholder="Ex. : Bagnon">
+  <button type="button" class="localiser-btn"
+    onclick="meLocaliser()" aria-label="Me localiser">
+    📍
+  </button>
+</div>
 <button type="button" onclick="inverserTrajet()" style="width:100%;margin-top:10px;background:#edf6f0;color:#075c36;">
 ⇅ Inverser le trajet
 </button>
