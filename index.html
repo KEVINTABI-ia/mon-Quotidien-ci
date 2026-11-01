@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#087443">
 <title>Mon Transport CI</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#f3f7f5;color:#17251e}
@@ -64,6 +65,7 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 
 <button class="primary" onclick="rechercher()">Rechercher un trajet</button>
 <div class="result" id="resultat" aria-live="polite"></div>
+<div id="carte" style="width:100%;height:350px;margin-top:15px;border-radius:12px;display:none;"></div>
 </section>
 <section class="card">
 <h2>💰 Calculateur de budget transport</h2>
@@ -338,5 +340,6 @@ html+="<p class='notice'>Tarifs issus de données de terrain communiquées par u
 resultat.innerHTML=html;
 }
 </script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
 </html>
