@@ -262,10 +262,17 @@ function chargerRoutesFirestore() {
 
   arretEcouteRoutes = db.collection("routes").onSnapshot(
     (snapshot) => {
-      routesFirestore = snapshot.docs.map(doc => ({
-        ...doc.data(),
-        firestoreId: doc.id
-      }));
+routesFirestore = snapshot.docs.map(doc => {
+  const data = doc.data();
+
+  return {
+    ...data,
+    stops: (data.stops || []).map(stop =>
+      Array.isArray(stop) ? stop : [stop.nom, stop.tarif]
+    ),
+    firestoreId: doc.id
+  };
+});
 
       if (snapshot.size > 0 || firestoreInitialise) {
         window.MON_TRANSPORT_CI_ROUTES = routesFirestore.map(
@@ -335,9 +342,17 @@ function enregistrerRoute() {
       stops
     };
 
-    const operation = routeEnEdition
-      ? db.collection("routes").doc(routeEnEdition).set(route)
-      : db.collection("routes").add(route);
+const routeFirestore = {
+  ...route,
+  stops: route.stops.map(stop => ({
+    nom: stop[0],
+    tarif: stop[1]
+  }))
+};
+
+const operation = routeEnEdition
+  ? db.collection("routes").doc(routeEnEdition).set(routeFirestore)
+  : db.collection("routes").add(routeFirestore);
 
     operation.then(() => {
       statut.textContent = "Itinéraire enregistré avec succès.";
@@ -424,10 +439,17 @@ async function importerRoutesInitiales() {
   try {
     const lot = db.batch();
 
-    routesInitiales.forEach(route => {
-      const reference = db.collection("routes").doc();
-      lot.set(reference, route);
-    });
+routesInitiales.forEach(route => {
+  const reference = db.collection("routes").doc();
+
+  lot.set(reference, {
+    ...route,
+    stops: route.stops.map(stop => ({
+      nom: stop[0],
+      tarif: stop[1]
+    }))
+  });
+});
 
     await lot.commit();
     firestoreInitialise = true;
