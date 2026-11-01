@@ -62,7 +62,21 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 <button class="primary" onclick="rechercher()">Rechercher un trajet</button>
 <div class="result" id="resultat" aria-live="polite"></div>
 </section>
+<section class="card">
+<h2>💰 Calculateur de budget transport</h2>
 
+<label for="nombreTrajets">Nombre de trajets :</label>
+<input type="number" id="nombreTrajets" min="1" value="1">
+
+<label for="tarifUnitaire">Tarif par trajet (FCFA) :</label>
+<input type="number" id="tarifUnitaire" min="0" placeholder="Ex. : 200">
+
+<button type="button" onclick="calculerBudget()">
+Calculer mon budget
+</button>
+
+<p id="budgetTotal">Votre budget s'affichera ici.</p>
+</section>
 <section class="card">
 <h2>Nos moyens de transport</h2>
 <div class="modes">
@@ -112,6 +126,20 @@ const arrivee=document.getElementById("arrivee");
 const temporaire=depart.value;
 depart.value=arrivee.value;
 arrivee.value=temporaire;
+}
+function calculerBudget(){
+const tarif=Number(document.getElementById("tarifUnitaire").value);
+const nombre=Number(document.getElementById("nombreTrajets").value);
+
+if(tarif<=0 || nombre<=0){
+document.getElementById("budgetTotal").textContent="Veuillez saisir un tarif et un nombre de trajets valides.";
+return;
+}
+
+const total=tarif*nombre;
+
+document.getElementById("budgetTotal").textContent=
+"Budget total : "+total.toLocaleString("fr-FR")+" FCFA";
 }
 function rechercher(){
 const depart=normaliser(document.getElementById("depart").value);
