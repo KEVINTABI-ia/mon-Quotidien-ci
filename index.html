@@ -1026,42 +1026,31 @@ function afficherGaresStations(){
 
   resultat.scrollIntoView({behavior:"smooth", block:"start"});
 }
-function afficherTarifs(){
-  const routesActuelles = window.MON_TRANSPORT_CI_ROUTES || [];
-  const routes = routesActuelles.length > 0
-    ? routesActuelles
-    : routesInitiales;
-
-  const resultat = document.getElementById("resultat");
-
-  let html = "<strong>💰 Tarifs des transports enregistrés</strong>";
-
-  if(routes.length === 0){
-    html += "<p class='notice'>Aucun tarif disponible pour le moment.</p>";
-  }
-
-  routes.forEach(route => {
-    html += "<h3>🚌 " + route.transport + "</h3>";
-    html += "<p><strong>" + route.depart + " → " + route.arrivee + "</strong></p>";
-
-    (route.stops || []).forEach(stop => {
-      const nom = Array.isArray(stop) ? stop[0] : stop.nom;
-      const tarif = Array.isArray(stop) ? stop[1] : stop.tarif;
-
-      html += "<div class='stop'>";
-      html += "<span>" + nom + "</span>";
-      html += "<span class='price'>" +
-        Number(tarif).toLocaleString("fr-FR") + " FCFA</span>";
-      html += "</div>";
-    });
-  });
-
-  html += "<p class='notice'>Tarifs indicatifs à confirmer auprès du transporteur.</p>";
-
   resultat.style.display = "block";
   resultat.innerHTML = html;
   resultat.scrollIntoView({behavior:"smooth", block:"start"});
 }
+
+// COLLER LA NOUVELLE FONCTION ICI
+
+function ouvrirCarteItineraire(){
+  const depart = document.getElementById("depart");
+  const resultat = document.getElementById("resultat");
+
+  resultat.style.display = "block";
+  resultat.innerHTML =
+    "<strong>🗺️ Préparer votre itinéraire</strong>" +
+    "<p>Indiquez votre lieu de départ et votre destination, " +
+    "puis appuyez sur Rechercher un trajet pour afficher la carte.</p>";
+
+  depart.scrollIntoView({
+    behavior:"smooth",
+    block:"center"
+  });
+
+  depart.focus();
+}
+</script>
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
