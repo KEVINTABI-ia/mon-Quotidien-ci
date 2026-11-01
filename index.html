@@ -66,6 +66,7 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 <button class="primary" onclick="rechercher()">Rechercher un trajet</button>
 <div class="result" id="resultat" aria-live="polite"></div>
 <div id="carte" style="width:100%;height:350px;margin-top:15px;border-radius:12px;display:none;"></div>
+<div id="infoRoute" style="margin-top:10px;font-weight:bold;"></div>
 </section>
 <section class="card">
 <h2>💰 Calculateur de budget transport</h2>
@@ -314,11 +315,41 @@ const marqueurDepart=L.marker(pointDepart).addTo(carteTransport)
 const marqueurArrivee=L.marker(pointArrivee).addTo(carteTransport)
 .bindPopup("Destination : "+destination);
 
-const points=[pointDepart,pointArrivee];
+const urlRoute=
+"https://router.project-osrm.org/route/v1/driving/"+
+pointDepart[1]+","+pointDepart[0]+";"+
+pointArrivee[1]+","+pointArrivee[0]+
+"?overview=full&geometries=geojson";
 
-L.polyline(points,{color:"green",weight:4}).addTo(carteTransport);
+const reponseRoute=await fetch(urlRoute);
+const donneesRoute=await reponseRoute.json();
 
-carteTransport.fitBounds(points,{padding:[30,30]});
+if(donneesRoute.code!=="Ok"){
+alert("Impossible de calculer le trajet routier.");
+return;
+}
+
+const trajet=donneesRoute.routes[0];
+
+const parcours=trajet.geometry.coordinates.map(point=>[
+point[1],point[0]
+]);
+
+const ligne=L.polyline(parcours,{
+color:"green",
+weight:5
+}).addTo(carteTransport);
+
+carteTransport.fitBounds(ligne.getBounds(),{
+padding:[30,30]
+});
+
+const distance=(trajet.distance/1000).toFixed(1);
+const duree=Math.round(trajet.duration/60);
+
+document.getElementById("infoRoute").innerHTML=
+"📏 Distance : "+distance+" km<br>"+
+"⏱️ Durée estimée : "+duree+" minutes";
 
 }catch(erreur){
 alert("La carte n'a pas pu être chargée. Vérifiez votre connexion Internet.");
