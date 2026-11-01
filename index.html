@@ -1266,6 +1266,14 @@ async function afficherGaresStations(){
       if(gare.commune) html += "<p>Commune : " + gare.commune + "</p>";
       if(gare.quartier) html += "<p>Quartier : " + gare.quartier + "</p>";
       if(gare.transports) html += "<p>Transports : " + gare.transports.join(", ") + "</p>";
+if(gare.destinations && gare.destinations.length){
+  html += "<p><strong>Destinations desservies :</strong></p>";
+  html += "<ul>";
+  gare.destinations.forEach(destination => {
+    html += "<li>" + destination + "</li>";
+  });
+  html += "</ul>";
+}
 
       html += "</div>";
     });
