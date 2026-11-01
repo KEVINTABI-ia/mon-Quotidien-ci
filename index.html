@@ -200,8 +200,6 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 </button>
 </section>
 <section class="card">
-<section class="card" id="calculateur" style="display:none;">
-<section class="card">
 <h2>⭐ Mes trajets favoris</h2>
 <div id="listeFavoris">
 <p class="notice">Aucun trajet favori enregistré.</p>
@@ -226,7 +224,37 @@ footer{text-align:center;padding:20px;color:#78827c;font-size:12px}
 Calculer mon budget
 </button>
 
+<section class="card" id="calculateur" style="display:none;">
+<h2>💰 Calculateur de budget transport</h2>
+
+<label for="nombreTrajets">Nombre de trajets :</label>
+<input type="number" id="nombreTrajets" min="1" value="1">
+
+<label for="tarifUnitaire">Tarif par trajet (FCFA) :</label>
+<input type="number" id="tarifUnitaire" min="0" placeholder="Ex. : 200">
+
+<button type="button" onclick="calculerBudget()">
+Calculer mon budget
+</button>
+
 <p id="budgetTotal">Votre budget s'affichera ici.</p>
+</section>
+
+<section class="card" id="favoris" style="display:none;">
+<h2>⭐ Mes trajets favoris</h2>
+<div id="listeFavoris">
+<p class="notice">Aucun trajet favori enregistré.</p>
+</div>
+</section>
+
+<section class="card" id="historique" style="display:none;">
+<h2>🕘 Historique de mes recherches</h2>
+<div id="listeHistorique">
+<p class="notice">Aucune recherche enregistrée.</p>
+</div>
+<button type="button" onclick="effacerHistorique()" style="width:100%;margin-top:10px;background:#fcebea;color:#9b2929;">
+🗑️ Effacer l'historique
+</button>
 </section>
 <section class="card">
 <h2>Nos moyens de transport</h2>
