@@ -333,6 +333,19 @@ return;
 }
 
 const trajet=donneesRoute.routes[0];
+const rues=[];
+
+trajet.legs.forEach(leg=>{
+leg.steps.forEach(etape=>{
+if(etape.name && !rues.includes(etape.name)){
+rues.push(etape.name);
+}
+});
+});
+
+const detailRues=rues.length
+? rues.map((rue,index)=>(index+1)+". "+rue).join("<br>")
+: "Aucun nom de rue disponible pour ce trajet.";
 
 const parcours=trajet.geometry.coordinates.map(point=>[
 point[1],point[0]
@@ -353,7 +366,9 @@ const duree=Math.round(trajet.duration/60);
 document.getElementById("infoRoute").innerHTML=
 "📏 Distance : "+distance+" km<br>"+
 "⏱️ Durée estimée : "+duree+" minutes<br>"+
-"⚠️ Attention : cette durée est indicative et ne tient pas compte des embouteillages en temps réel.";
+"⚠️ Durée indicative, sans prise en compte des embouteillages en temps réel.<br><br>"+
+"<strong>🛣️ Rues et routes empruntées :</strong><br>"+
+detailRues;
 }catch(erreur){
 alert("La carte n'a pas pu être chargée. Vérifiez votre connexion Internet.");
 }
