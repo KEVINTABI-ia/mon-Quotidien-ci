@@ -124,7 +124,7 @@ return;
 }
 
 const lignes=MON_TRANSPORT_CI_ROUTES.filter(route=>{
-return (transport==="Tous" || route.transport===transport)
+return (transport==="Tous" || route.transport===transport || (transport==="SOTRA" && route.transport.startsWith("SOTRA")))
 && normaliser(route.depart)===depart;
 });
 
