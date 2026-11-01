@@ -1047,6 +1047,46 @@ function ouvrirCarteItineraire(){
 
   depart.focus();
 }
+function afficherReseauNational(){
+  const routes = window.MON_TRANSPORT_CI_ROUTES || [];
+  const resultat = document.getElementById("resultat");
+
+  const reseaux = {};
+
+  routes.forEach(route => {
+    if(!reseaux[route.transport]){
+      reseaux[route.transport] = [];
+    }
+
+    reseaux[route.transport].push(
+      route.depart + " → " + route.arrivee
+    );
+  });
+
+  let html = "<strong>🇨🇮 Réseau de transport référencé</strong>";
+
+  if(routes.length === 0){
+    html += "<p class='notice'>Aucun itinéraire disponible pour le moment.</p>";
+  }
+
+  Object.keys(reseaux).sort().forEach(transport => {
+    html += "<h3>🚌 " + transport + "</h3>";
+
+    reseaux[transport].forEach(itineraire => {
+      html += "<div class='stop'>" + itineraire + "</div>";
+    });
+  });
+
+  html += "<p class='notice'>Ce répertoire présente uniquement les itinéraires enregistrés dans Mon Transport CI. D'autres villes et régions seront ajoutées progressivement.</p>";
+
+  resultat.style.display = "block";
+  resultat.innerHTML = html;
+
+  resultat.scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
+}
 </script>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
