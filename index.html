@@ -524,7 +524,7 @@ main > section.card:nth-of-type(2) .result {
 <textarea id="gareDestinations" rows="4"
   placeholder="Ex. : Adjamé, Cocody, Riviera"
   style="width:100%;padding:12px;"></textarea>
-<p class="notice">Sépare les destinations par des virgules.</p>
+<p class="notice">Une ligne par tarif : Destination | Moyen de transport | Prix en FCFA. Exemple : Adjamé | Gbaka | 500. Ajoute une ligne par transport desservant la même destination.</p>
 
   <label>Description (facultatif)</label>
   <textarea id="gareDescription" rows="3" style="width:100%;padding:12px;"></textarea>
@@ -657,7 +657,36 @@ main > section.card:nth-of-type(2) .result {
 <option value="SOTRA">SOTRA</option>
 <option value="Car interurbain">Car interurbain</option>
 </select>
+<script>
+document.getElementById("arrivee").addEventListener("change", actualiserTarifGare);
+document.getElementById("transport").addEventListener("change", actualiserTarifGare);
 
+function actualiserTarifGare() {
+  const depart = document.getElementById("depart").value;
+  const arrivee = document.getElementById("arrivee").value;
+  const transport = document.getElementById("transport").value;
+
+  const gare = garesFirestore.find(g =>
+    normaliser(g.nom) === normaliser(depart)
+  );
+
+  if (!gare || !arrivee) return;
+
+  const destinations = destinationsGareNormalisees(gare);
+  const tarifs = destinations.filter(d =>
+    normaliser(d.nom) === normaliser(arrivee) &&
+    (transport === "Tous" || normaliser(d.transport) === normaliser(transport))
+  );
+
+  if (tarifs.length) {
+    document.getElementById("resultat").innerHTML =
+      "<h3>Tarifs disponibles</h3>" +
+      tarifs.map(d =>
+        `<p>${d.transport} : <strong>${d.prix} FCFA</strong></p>`
+      ).join("");
+  }
+}
+</script>
 <button class="primary" onclick="rechercher()">Rechercher un trajet</button>
 <div class="result" id="resultat" aria-live="polite"></div>
 <div id="carte" style="width:100%;height:350px;margin-top:15px;border-radius:12px;display:none;"></div>
@@ -1091,9 +1120,16 @@ function enregistrerGare() {
     .split(",").map(t => t.trim()).filter(Boolean);
   const description = document.getElementById("gareDescription").value.trim();
 const destinations = document.getElementById("gareDestinations").value
-  .split(",")
-  .map(d => d.trim())
-  .filter(Boolean);
+  .split("\n")
+  .map(ligne => {
+    const [nom, transport, prix] = ligne.split("|").map(v => v.trim());
+    return {
+      nom,
+      transport,
+      prix: Number(prix)
+    };
+  })
+  .filter(d => d.nom && d.transport && Number.isFinite(d.prix) && d.prix > 0);
 
   if (!nom) {
     statut.textContent = "Indique le nom de la gare.";
@@ -1139,7 +1175,11 @@ function chargerGareEdition(index) {
   document.getElementById("gareTransports").value =
     (gare.transports || []).join(", ");
     document.getElementById("gareDestinations").value =
-  (gare.destinations || []).join(", ");
+  (gare.destinations || []).map(d =>
+  typeof d === "string"
+    ? `${d} | Gbaka | 500`
+    : `${d.nom} | ${d.transport} | ${d.prix}`
+).join("\n");
   document.getElementById("gareDescription").value = gare.description || "";
 
   document.getElementById("statutGares").textContent =
@@ -1287,6 +1327,15 @@ function chargerGaresPourRecherche() {
     });
 }
 
+function destinationsGareNormalisees(gare) {
+  return (gare.destinations || []).map(d => {
+    if (typeof d === "string") {
+      return { nom: d, transport: "Gbaka", prix: 500 };
+    }
+    return d;
+  });
+}
+
 function actualiserDestinationsGares() {
   const depart = document.getElementById("depart").value;
   const arrivee = document.getElementById("arrivee");
@@ -1298,16 +1347,19 @@ function actualiserDestinationsGares() {
     normaliser(g.nom) === normaliser(depart)
   );
 
-  if (!gare || !gare.destinations) return;
+  if (!gare) return;
 
-  gare.destinations.forEach(destination => {
+  const destinations = destinationsGareNormalisees(gare);
+  const noms = [...new Set(destinations.map(d => d.nom))];
+
+  noms.forEach(nom => {
     const option = document.createElement("option");
-    option.value = destination;
-    option.textContent = destination;
+    option.value = nom;
+    option.textContent = nom;
     arrivee.appendChild(option);
   });
 
-  arrivee.disabled = gare.destinations.length === 0;
+  arrivee.disabled = noms.length === 0;
 }
 chargerGaresPourRecherche();
 function choisir(mode){
@@ -1815,9 +1867,15 @@ if(gare.destinations && gare.destinations.length){
   html += "<p><strong>Destinations desservies :</strong></p>";
   html += "<ul>";
   gare.destinations.forEach(destination => {
+  if (typeof destination === "string") {
     html += "<li>" + destination + "</li>";
-  });
-  html += "</ul>";
+  } else {
+    html += "<li><strong>" + destination.nom + "</strong> — " +
+      destination.transport + " : <strong>" +
+      destination.prix + " FCFA</strong></li>";
+  }
+});
+html += "</ul>";
 }
 
       html += "</div>";
