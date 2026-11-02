@@ -2413,8 +2413,10 @@ const logoHTML = /^https:\/\/\S+$/i.test(logoURL)
 
 const numeroWhatsApp = String(compagnie.telephone || "").replace(/\D/g, "");
 
+const messageVoyageur = `Bonjour ${compagnie.nom}, je vous contacte depuis Mon Transport CI. Je souhaiterais obtenir des informations sur vos voyages, vos horaires et vos tarifs. Merci.`;
+
 const boutonWhatsApp = numeroWhatsApp
-  ? `<a href="https://wa.me/${numeroWhatsApp}"
+  ? `<a href="https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(messageVoyageur)}"
       target="_blank" rel="noopener noreferrer">
       Contacter sur WhatsApp
     </a>`
