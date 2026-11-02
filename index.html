@@ -1906,7 +1906,6 @@ function afficherReseauNational(){
     block:"start"
   });
 }
-</script>
 // GESTION DES COMPAGNIES DE VOYAGE
 const tarifsAbonnements = {
   Essentielle: { Mensuel: 5000, Annuel: 50000 },
@@ -2032,6 +2031,7 @@ async function chargerCompagniesAdmin() {
       zone.innerHTML = "<p class='notice'>Aucune compagnie enregistrée.</p>";
       return;
     }
+    </script>
 
     zone.innerHTML = snapshot.docs.map(doc => {
       const compagnie = doc.data();
@@ -2061,6 +2061,7 @@ async function chargerCompagniesAdmin() {
     zone.textContent = "Erreur de chargement : " + erreur.message;
   }
 }
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
 </html>
