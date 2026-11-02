@@ -2031,19 +2031,35 @@ async function chargerCompagniesAdmin() {
       return;
     }
 
+    const maintenant = new Date();
+
+    const misesAJour = snapshot.docs.map(async doc => {
+      const compagnie = doc.data();
+
+      if (
+        compagnie.statutAbonnement === "Actif" &&
+        compagnie.dateExpiration &&
+        compagnie.dateExpiration.toDate() <= maintenant
+      ) {
+        await doc.ref.update({
+          statutAbonnement: "Expiré"
+        });
+
+        compagnie.statutAbonnement = "Expiré";
+      }
+
+      return { doc, compagnie };
+    });
+
+    const compagnies = await Promise.all(misesAJour);
+
     function afficherDate(date) {
       if (!date) return "Non définie";
 
-      const valeur = date.toDate
-        ? date.toDate()
-        : new Date(date);
-
-      return valeur.toLocaleDateString("fr-FR");
+      return date.toDate().toLocaleDateString("fr-FR");
     }
 
-    zone.innerHTML = snapshot.docs.map(doc => {
-      const compagnie = doc.data();
-
+    zone.innerHTML = compagnies.map(({ doc, compagnie }) => {
       const destinations = (compagnie.destinations || []).map(destination =>
         "<li>" + echapperTexteCompagnie(destination.ville) +
         " : " + Number(destination.prix).toLocaleString("fr-FR") +
