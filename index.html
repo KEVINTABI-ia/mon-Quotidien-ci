@@ -2350,7 +2350,7 @@ async function preparerRappelWhatsApp(id) {
 
     const lien = "https://wa.me/" + numero + "?text=" + encodeURIComponent(message);
 
-    window.open(lien, "_blank");
+    window.location.href = lien;
 
   } catch (erreur) {
     alert("Erreur : " + erreur.message);
