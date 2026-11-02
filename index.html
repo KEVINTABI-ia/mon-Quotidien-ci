@@ -2379,10 +2379,9 @@ async function afficherCompagniesPubliques() {
   zone.innerHTML = "<p>Chargement des compagnies...</p>";
 
   try {
-    const snapshot = await db.collection("compagnies")
-      .where("statutAbonnement", "==", "Actif")
-      .orderBy("nom")
-      .get();
+const snapshot = await db.collection("compagnies")
+  .where("statutAbonnement", "==", "Actif")
+  .get();
 
     if (snapshot.empty) {
       zone.innerHTML =
