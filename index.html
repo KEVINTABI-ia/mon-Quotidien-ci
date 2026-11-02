@@ -2206,6 +2206,39 @@ async function demanderRenouvellementCompagnie(id) {
     alert("Erreur : " + erreur.message);
   }
 }
+async function preparerRappelWhatsApp(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès administrateur requis.");
+    return;
+  }
+
+  try {
+    const document = await db.collection("compagnies").doc(id).get();
+
+    if (!document.exists) {
+      alert("Compagnie introuvable.");
+      return;
+    }
+
+    const compagnie = document.data();
+
+    if (!compagnie.telephone) {
+      alert("Aucun numéro WhatsApp enregistré.");
+      return;
+    }
+
+    const numero = compagnie.telephone.replace(/\D/g, "");
+
+    const message = `Bonjour ${compagnie.nom}, votre abonnement Mon Transport CI est actuellement ${compagnie.statutAbonnement}. Formule : ${compagnie.formule}. Montant : ${Number(compagnie.montant).toLocaleString("fr-FR")} FCFA. Merci de nous contacter pour toute information concernant votre abonnement.`;
+
+    const lien = "https://wa.me/" + numero + "?text=" + encodeURIComponent(message);
+
+    window.open(lien, "_blank");
+
+  } catch (erreur) {
+    alert("Erreur : " + erreur.message);
+  }
+}
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
