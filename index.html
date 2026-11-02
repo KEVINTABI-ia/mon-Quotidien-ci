@@ -2103,6 +2103,16 @@ if (compagnie.statutAbonnement === "Expiré") {
           Expiration : ${afficherDate(compagnie.dateExpiration)}
           <ul>${destinations}</ul>
           ${bouton}
+
+<button type="button" class="primary"
+  onclick="preparerRappelWhatsApp('${doc.id}')">
+  Préparer le rappel WhatsApp
+</button>
+
+<button type="button" class="primary"
+  onclick="preparerRappelEmail('${doc.id}')">
+  Préparer le rappel par e-mail
+</button>
         </div>
       `;
     }).join("");
