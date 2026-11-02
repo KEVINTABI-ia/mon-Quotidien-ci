@@ -1755,7 +1755,32 @@ trouvees.push({route,index});
 });
 
 if(trouvees.length===0){
-resultat.textContent="Aucun trajet correspondant n'a été trouvé dans notre base actuelle. D'autres lignes seront ajoutées progressivement.";
+
+const gare = garesFirestore.find(g =>
+normaliser(g.nom)===depart
+);
+
+if(gare){
+const tarifs = destinationsGareNormalisees(gare).filter(d =>
+normaliser(d.nom)===arrivee &&
+(transport==="Tous" || normaliser(d.transport)===normaliser(transport))
+);
+
+if(tarifs.length){
+let html="<strong>Tarif disponible pour ce trajet</strong>";
+
+tarifs.forEach(d=>{
+html+=`<p>🚌 ${d.transport} : <strong>${d.prix} FCFA</strong></p>`;
+});
+
+html+="<p class='notice'>Tarif enregistré dans le répertoire des gares. Le parcours détaillé n'est pas encore référencé.</p>";
+
+resultat.innerHTML=html;
+return;
+}
+}
+
+resultat.textContent="Aucun trajet ni tarif correspondant n'a été trouvé pour cette sélection.";
 return;
 }
 enregistrerHistorique(
