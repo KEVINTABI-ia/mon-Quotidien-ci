@@ -1917,11 +1917,19 @@ const tarifsAbonnements = {
 function actualiserPrixCompagnie() {
   const formule = document.getElementById("compagnieFormule").value;
   const periodicite = document.getElementById("compagniePeriodicite").value;
-  const prix = tarifsAbonnements[formule][periodicite];
+
+  const tarifs = {
+    Essentielle: { Mensuel: 5000, Annuel: 50000 },
+    Professionnelle: { Mensuel: 10000, Annuel: 100000 },
+    Premium: { Mensuel: 15000, Annuel: 150000 }
+  };
+
+  const prix = tarifs[formule][periodicite];
 
   document.getElementById("compagniePrix").textContent =
     "Tarif : " + prix.toLocaleString("fr-FR") +
     " FCFA / " + periodicite.toLowerCase();
+}
 }
 
 document.getElementById("compagnieFormule")
