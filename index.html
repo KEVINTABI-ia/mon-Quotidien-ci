@@ -2239,6 +2239,51 @@ async function preparerRappelWhatsApp(id) {
     alert("Erreur : " + erreur.message);
   }
 }
+async function preparerRappelEmail(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès administrateur requis.");
+    return;
+  }
+
+  try {
+    const document = await db.collection("compagnies").doc(id).get();
+
+    if (!document.exists) {
+      alert("Compagnie introuvable.");
+      return;
+    }
+
+    const compagnie = document.data();
+
+    if (!compagnie.email) {
+      alert("Aucune adresse e-mail enregistrée.");
+      return;
+    }
+
+    const sujet = "Rappel concernant votre abonnement Mon Transport CI";
+
+    const message = `Bonjour ${compagnie.nom},
+
+Votre abonnement Mon Transport CI est actuellement : ${compagnie.statutAbonnement}.
+
+Formule : ${compagnie.formule}
+Montant : ${Number(compagnie.montant).toLocaleString("fr-FR")} FCFA.
+
+Merci de nous contacter pour toute information concernant votre abonnement.
+
+Cordialement,
+L'équipe Mon Transport CI`;
+
+    const lien = "mailto:" + encodeURIComponent(compagnie.email) +
+      "?subject=" + encodeURIComponent(sujet) +
+      "&body=" + encodeURIComponent(message);
+
+    window.location.href = lien;
+
+  } catch (erreur) {
+    alert("Erreur : " + erreur.message);
+  }
+}
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
