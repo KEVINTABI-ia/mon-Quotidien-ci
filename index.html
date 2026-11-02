@@ -846,7 +846,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 // CONNEXION ADMINISTRATEUR
 const ADMIN_UID = "3LpoTLyQdtVcdtnSMAJFc7Cvnpz2";
-
+const WORKER_URL = "https://red-mountain-3e59.tabikevin57.workers.dev";
 function connexionAdmin() {
   const email = document.getElementById("emailAdmin").value;
   const motDePasse = document.getElementById("motDePasseAdmin").value;
@@ -1898,16 +1898,22 @@ function ouvrirInscriptionLivreur(){
     <h3>🚚 Inscription – Livreur indépendant</h3>
 
     <label>Nom et prénoms</label>
-    <input type="text" id="livreurNom" placeholder="Nom complet" required>
+    <input type="text" id="livreurNom" required>
 
-    <label>Numéro de téléphone</label>
-    <input type="tel" id="livreurTelephone" placeholder="07XXXXXXXX" required>
+    <label>Téléphone</label>
+    <input type="tel" id="livreurTelephone" required>
+
+    <label>Adresse e-mail</label>
+    <input type="email" id="livreurEmail" required>
+
+    <label>Mot de passe (6 caractères minimum)</label>
+    <input type="password" id="livreurMotDePasse" minlength="6" required>
 
     <label>Commune desservie</label>
-    <input type="text" id="livreurCommune" placeholder="Ex. : Yopougon" required>
+    <input type="text" id="livreurCommune" required>
 
     <label>Quartiers desservis</label>
-    <textarea id="livreurQuartiers" placeholder="Précise les quartiers concernés" required></textarea>
+    <textarea id="livreurQuartiers" required></textarea>
 
     <label>Photo de profil</label>
     <input type="file" id="livreurPhoto" accept="image/*" required>
@@ -1919,17 +1925,24 @@ function ouvrirInscriptionLivreur(){
     <input type="file" id="livreurIdentite" accept="image/*,.pdf" required>
 
     <p class="notice">
-      Tes documents seront privés et soumis à vérification par l'administration.
+      Ton compte sera créé avec le statut « En attente ».
+      Les documents ne sont pas encore téléversés.
     </p>
 
     <button type="button" class="primary"
-      onclick="alert('Le dépôt sécurisé sera activé après configuration du stockage privé.')">
-      Envoyer mon dossier
-    </button>
-  `;
+      onclick="
+        creerComptePartenaire('livreur_independant', {
+    nom: document.getElementById('livreurNom').value,
+    telephone: document.getElementById('livreurTelephone').value,
+    email: document.getElementById('livreurEmail').value,
+    motDePasse: document.getElementById('livreurMotDePasse').value,
+    commune: document.getElementById('livreurCommune').value,
+    quartiers: document.getElementById('livreurQuartiers').value,
 
-  zone.scrollIntoView({behavior:"smooth", block:"start"});
-}
+    photo: document.getElementById('livreurPhoto').files[0],
+    permis: document.getElementById('livreurPermis').files[0],
+    identite: document.getElementById('livreurIdentite').files[0]
+})
 
 function ouvrirInscriptionGare(){
   const section = document.getElementById("transportColis");
@@ -1946,16 +1959,22 @@ function ouvrirInscriptionGare(){
     <h3>🏢 Inscription – Représentant de gare</h3>
 
     <label>Nom et prénoms</label>
-    <input type="text" id="gareNom" placeholder="Nom complet" required>
+    <input type="text" id="gareNom" required>
 
     <label>Numéro de téléphone</label>
-    <input type="tel" id="gareTelephone" placeholder="07XXXXXXXX" required>
+    <input type="tel" id="gareTelephone" required>
+
+    <label>Adresse e-mail</label>
+    <input type="email" id="gareEmail" required>
+
+    <label>Mot de passe (6 caractères minimum)</label>
+    <input type="password" id="gareMotDePasse" minlength="6" required>
 
     <label>Nom de la gare</label>
-    <input type="text" id="gareNomStation" placeholder="Nom de la gare" required>
+    <input type="text" id="gareNomStation" required>
 
     <label>Commune</label>
-    <input type="text" id="gareCommune" placeholder="Ex. : Yopougon" required>
+    <input type="text" id="gareCommune" required>
 
     <label>Photo de profil</label>
     <input type="file" id="garePhoto" accept="image/*" required>
@@ -1967,12 +1986,25 @@ function ouvrirInscriptionGare(){
     <input type="file" id="gareIdentite" accept="image/*,.pdf" required>
 
     <p class="notice">
-      Tes documents seront privés et soumis à vérification par l'administration.
+      Ton compte sera créé avec le statut « En attente ».
+      Les documents ne sont pas encore téléversés.
     </p>
 
     <button type="button" class="primary"
-      onclick="alert('Le dépôt sécurisé sera activé après configuration du stockage privé.')">
-      Envoyer mon dossier
+      onclick="
+        creerComptePartenaire('representant_gare', {
+  nom: document.getElementById('gareNom').value,
+  telephone: document.getElementById('gareTelephone').value,
+  email: document.getElementById('gareEmail').value,
+  motDePasse: document.getElementById('gareMotDePasse').value,
+  commune: document.getElementById('gareCommune').value,
+  nomGare: document.getElementById('gareNomStation').value,
+  photo: document.getElementById('garePhoto').files[0],
+  carte: document.getElementById('gareCarte').files[0],
+  identite: document.getElementById('gareIdentite').files[0]
+})
+      ">
+      Créer mon compte
     </button>
   `;
 
@@ -1994,23 +2026,166 @@ function ouvrirConnexionPartenaire(){
 
     <label>Adresse e-mail</label>
     <input type="email" id="partenaireEmail"
-      placeholder="Votre adresse e-mail" required>
+      placeholder="Votre adresse e-mail">
 
     <label>Mot de passe</label>
     <input type="password" id="partenaireMotDePasse"
-      placeholder="Votre mot de passe" required>
+      placeholder="Votre mot de passe">
 
     <button type="button" class="primary"
-      onclick="alert('La connexion sécurisée sera activée après la configuration des comptes partenaires.')">
+      onclick="connecterPartenaire()">
       Se connecter
     </button>
 
-    <p class="notice">
-      L'accès sera réservé aux partenaires dont le dossier a été approuvé.
-    </p>
+    <p id="statutConnexionPartenaire" class="notice"></p>
   `;
 
   zone.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+async function connecterPartenaire(){
+  const email = document.getElementById("partenaireEmail").value.trim();
+  const motDePasse = document.getElementById("partenaireMotDePasse").value;
+  const statut = document.getElementById("statutConnexionPartenaire");
+
+  if(!email || !motDePasse){
+    statut.textContent = "Remplissez les deux champs.";
+    return;
+  }
+
+  try {
+    const resultat = await auth.signInWithEmailAndPassword(email, motDePasse);
+    const uid = resultat.user.uid;
+
+    const documentPartenaire = await db
+      .collection("partenaires")
+      .doc(uid)
+      .get();
+
+    if(!documentPartenaire.exists){
+      await auth.signOut();
+      statut.textContent = "Aucun dossier partenaire trouvé.";
+      return;
+    }
+
+    const dossier = documentPartenaire.data();
+
+    if(dossier.statut !== "approuve"){
+      await auth.signOut();
+      statut.textContent = "Votre dossier est encore en attente de validation.";
+      return;
+    }
+
+    statut.textContent = "Connexion réussie. Votre compte est approuvé.";
+
+  } catch(erreur) {
+    statut.textContent = "Connexion impossible : " + erreur.message;
+  }
+}
+// CREATION DU COMPTE PARTENAIRE
+async function envoyerFichierCloudflare(fichier, categorie = "document") {
+    if (!fichier) return null;
+
+    const utilisateur = auth.currentUser;
+    if (!utilisateur) {
+        throw new Error("Vous devez être connecté.");
+    }
+
+    const token = await utilisateur.getIdToken();
+    const formulaire = new FormData();
+
+    formulaire.append("file", fichier);
+    formulaire.append("category", categorie);
+
+    const reponse = await fetch(`${WORKER_URL}/upload`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`
+        },
+        body: formulaire
+    });
+
+    const resultat = await reponse.json();
+
+    if (!reponse.ok || !resultat.ok || !resultat.key) {
+        throw new Error(resultat.error || "Échec de l'envoi du fichier.");
+    }
+
+    return resultat.key;
+}
+async function creerComptePartenaire(type, donnees) {
+  const email = donnees.email.trim();
+  const motDePasse = donnees.motDePasse;
+
+  if (!email || !motDePasse || motDePasse.length < 6) {
+    alert("Vérifie ton adresse e-mail et ton mot de passe (6 caractères minimum).");
+    return;
+  }
+
+  const fichiers = type === "livreur_independant"
+    ? {
+        photo: donnees.photo,
+        permis: donnees.permis,
+        identite: donnees.identite
+      }
+    : {
+        photo: donnees.photo || document.getElementById("garePhoto")?.files[0],
+        carte: donnees.carte || document.getElementById("gareCarte")?.files[0],
+        identite: donnees.identite || document.getElementById("gareIdentite")?.files[0]
+      };
+
+  if (Object.values(fichiers).some(fichier => !fichier)) {
+    alert("Merci de sélectionner tous les documents demandés.");
+    return;
+  }
+
+  try {
+    const resultat = await auth.createUserWithEmailAndPassword(
+      email,
+      motDePasse
+    );
+
+    const uid = resultat.user.uid;
+
+    const documents = {};
+
+    for (const [nom, fichier] of Object.entries(fichiers)) {
+      documents[nom] = await envoyerFichierCloudflare(fichier, "document");
+    }
+
+    const dossier = {
+      uid: uid,
+      type: type,
+      nom: donnees.nom,
+      telephone: donnees.telephone,
+      commune: donnees.commune,
+      email: email,
+      documents: documents,
+      statut: "en_attente",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    if (type === "livreur_independant") {
+      dossier.quartiers = donnees.quartiers;
+    }
+
+    if (type === "representant_gare") {
+      dossier.nomGare = donnees.nomGare;
+    }
+
+    await db.collection("partenaires").doc(uid).set(dossier);
+
+    await auth.signOut();
+
+    alert("Compte créé et documents transmis. Ton dossier est en attente de validation.");
+
+  } catch (erreur) {
+    if (auth.currentUser) {
+      await auth.signOut();
+    }
+
+    alert("Erreur lors de la création : " + erreur.message);
+  }
 }
 function basculerMenu(){
   const menu = document.getElementById("menuDropdown");
@@ -2416,9 +2591,9 @@ async function enregistrerCompagnie() {
   const agence = document.getElementById("compagnieAgence").value.trim();
   const localisation = document.getElementById("compagnieLocalisation").value.trim();
   const telephone = document.getElementById("compagnieTelephone").value.trim();
-const email = document.getElementById("compagnieEmail").value.trim();
-const fichierLogo = document.getElementById("compagnieLogo").files[0];
-  
+  const email = document.getElementById("compagnieEmail").value.trim();
+  const fichierLogo = document.getElementById("compagnieLogo").files[0];
+
   const texteDestinations = document.getElementById("compagnieDestinations").value.trim();
   const formule = document.getElementById("compagnieFormule").value;
   const periodicite = document.getElementById("compagniePeriodicite").value;
@@ -2429,6 +2604,8 @@ const fichierLogo = document.getElementById("compagnieLogo").files[0];
   }
 
   try {
+    statut.textContent = "Enregistrement en cours...";
+
     const destinations = texteDestinations.split("\n").map(ligne => {
       const morceaux = ligne.split("|");
       const ville = morceaux[0].trim();
@@ -2443,19 +2620,25 @@ const fichierLogo = document.getElementById("compagnieLogo").files[0];
     });
 
     const montant = tarifsAbonnements[formule][periodicite];
-    const logo = fichierLogo ? await compresserImage(fichierLogo) : "";
+
+    let logo = "";
+
+    if (fichierLogo) {
+      const cleLogo = await envoyerFichierCloudflare(fichierLogo, "logo");
+      logo = `${WORKER_URL}/public/logo/${encodeURIComponent(cleLogo)}`;
+    }
 
     await db.collection("compagnies").add({
-  nom,
-  agence,
-  localisation,
-  telephone,
-  email,
-  logo,
-  destinations,
-  formule,
-  periodicite,
-  montant,
+      nom,
+      agence,
+      localisation,
+      telephone,
+      email,
+      logo,
+      destinations,
+      formule,
+      periodicite,
+      montant,
       statutAbonnement: "En attente",
       dateCreation: firebase.firestore.FieldValue.serverTimestamp(),
       dateDebut: null,
@@ -2629,7 +2812,8 @@ if (remplacerLogo) {
   }
 
   try {
-    nouveauLogo = await compresserImage(fichier);
+    const cleLogo = await envoyerFichierCloudflare(fichier, "logo");
+nouveauLogo = `${WORKER_URL}/public/logo/${encodeURIComponent(cleLogo)}`;
   } catch (erreur) {
     alert(erreur.message);
     return;
