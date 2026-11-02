@@ -2437,6 +2437,7 @@ const boutonWhatsApp = numeroWhatsApp
 
           <p><strong>Téléphone :</strong>
             ${echapperTexteCompagnie(compagnie.telephone)}</p>
+          ${boutonWhatsApp ? `<p>${boutonWhatsApp}</p>` : ""}
 
           <p><strong>Destinations et tarifs :</strong></p>
           <ul>${destinations}</ul>
