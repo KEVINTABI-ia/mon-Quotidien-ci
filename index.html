@@ -172,9 +172,14 @@ button:active {
 }
 
 .price {
+  display: inline-block;
   font-weight: 800;
-  color: var(--vert-fonce);
+  color: #087C62;
+  background: #E2F5EB;
+  padding: 5px 10px;
+  border-radius: 8px;
   white-space: nowrap;
+  margin: 3px 0;
 }
 
 .notice {
@@ -1950,7 +1955,7 @@ html += "<input type='text' id='rechercheGare' placeholder='Ex. : Bagnon, Niango
               "</strong> — " + destination.transport + " : ";
 
             html += prixValide
-              ? "<strong>" + destination.prix + " FCFA</strong>"
+              ? "<span class='price'>" + Number(destination.prix).toLocaleString("fr-FR") + " FCFA</span>"
               : "Tarif à préciser";
 
             html += "</li>";
