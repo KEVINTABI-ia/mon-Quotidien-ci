@@ -520,7 +520,9 @@ main > section.card:nth-of-type(2) .result {
   <button class="primary" onclick="ouvrirInscriptionLivreur()">
   🚚 S'inscrire comme livreur indépendant
 </button>
-
+<button class="primary" onclick="ouvrirInscriptionGare()">
+  🏢 S'inscrire comme représentant de gare
+</button>
   <p class="notice">
     Les inscriptions et réservations seront ouvertes après la mise en place des espaces sécurisés.
   </p>
@@ -1883,6 +1885,54 @@ function ouvrirInscriptionLivreur(){
     zone.id = "formulaireLivreur";
     section.appendChild(zone);
   }
+  function ouvrirInscriptionGare(){
+  const section = document.getElementById("transportColis");
+
+  let zone = document.getElementById("formulaireGare");
+
+  if(!zone){
+    zone = document.createElement("div");
+    zone.id = "formulaireGare";
+    section.appendChild(zone);
+  }
+
+  zone.innerHTML = `
+    <hr>
+    <h3>🏢 Inscription – Représentant de gare</h3>
+
+    <label>Nom et prénoms</label>
+    <input type="text" id="gareNom" placeholder="Nom complet" required>
+
+    <label>Numéro de téléphone</label>
+    <input type="tel" id="gareTelephone" placeholder="07XXXXXXXX" required>
+
+    <label>Nom de la gare</label>
+    <input type="text" id="gareNomStation" placeholder="Nom de la gare" required>
+
+    <label>Commune</label>
+    <input type="text" id="gareCommune" placeholder="Ex. : Yopougon" required>
+
+    <label>Photo de profil</label>
+    <input type="file" id="garePhoto" accept="image/*" required>
+
+    <label>Carte professionnelle de la gare</label>
+    <input type="file" id="gareCarte" accept="image/*,.pdf" required>
+
+    <label>Carte nationale d'identité</label>
+    <input type="file" id="gareIdentite" accept="image/*,.pdf" required>
+
+    <p class="notice">
+      Tes documents seront privés et soumis à vérification par l'administration.
+    </p>
+
+    <button type="button" class="primary"
+      onclick="alert('Le dépôt sécurisé des documents sera activé après configuration du stockage privé.')">
+      Envoyer mon dossier
+    </button>
+  `;
+
+  zone.scrollIntoView({behavior:"smooth", block:"start"});
+}
 
   zone.innerHTML = `
     <hr>
