@@ -2031,6 +2031,16 @@ async function chargerCompagniesAdmin() {
       return;
     }
 
+    function afficherDate(date) {
+      if (!date) return "Non définie";
+
+      const valeur = date.toDate
+        ? date.toDate()
+        : new Date(date);
+
+      return valeur.toLocaleDateString("fr-FR");
+    }
+
     zone.innerHTML = snapshot.docs.map(doc => {
       const compagnie = doc.data();
 
@@ -2056,7 +2066,9 @@ async function chargerCompagniesAdmin() {
           Formule : ${echapperTexteCompagnie(compagnie.formule)}<br>
           Périodicité : ${echapperTexteCompagnie(compagnie.periodicite)}<br>
           Montant : ${Number(compagnie.montant).toLocaleString("fr-FR")} FCFA<br>
-          Statut : ${echapperTexteCompagnie(compagnie.statutAbonnement)}
+          Statut : <strong>${echapperTexteCompagnie(compagnie.statutAbonnement)}</strong><br>
+          Début : ${afficherDate(compagnie.dateDebut)}<br>
+          Expiration : ${afficherDate(compagnie.dateExpiration)}
           <ul>${destinations}</ul>
           ${bouton}
         </div>
