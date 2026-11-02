@@ -1865,7 +1865,7 @@ async function afficherGaresStations(){
   const resultat = document.getElementById("resultat");
 
   resultat.style.display = "block";
-  resultat.innerHTML = "<p>Chargement du répertoire des gares...</p>";
+  resultat.innerHTML = "<p>Chargement des gares et terminus...</p>";
 
   try {
     const snapshot = await db.collection("gares").orderBy("nom").get();
@@ -1873,35 +1873,58 @@ async function afficherGaresStations(){
     if(snapshot.empty){
       resultat.innerHTML =
         "<strong>📍 Gares et stations</strong>" +
-        "<p class='notice'>Le répertoire des gares est en préparation.</p>";
+        "<p class='notice'>Aucune gare enregistrée pour le moment.</p>";
       return;
     }
 
-    let html = "<strong>📍 Gares et terminus enregistrés</strong>";
+    let html = "<strong>📍 Répertoire des gares et terminus</strong>";
 
     snapshot.forEach(doc => {
       const gare = doc.data();
 
       html += "<div class='stop'>";
-      html += "<strong>" + gare.nom + "</strong>";
+      html += "<h3>📍 " + gare.nom + "</h3>";
 
-      if(gare.commune) html += "<p>Commune : " + gare.commune + "</p>";
-      if(gare.quartier) html += "<p>Quartier : " + gare.quartier + "</p>";
-      if(gare.transports) html += "<p>Transports : " + gare.transports.join(", ") + "</p>";
-if(gare.destinations && gare.destinations.length){
-  html += "<p><strong>Destinations desservies :</strong></p>";
-  html += "<ul>";
-  gare.destinations.forEach(destination => {
-  if (typeof destination === "string") {
-    html += "<li>" + destination + "</li>";
-  } else {
-    html += "<li><strong>" + destination.nom + "</strong> — " +
-      destination.transport + " : <strong>" +
-      destination.prix + " FCFA</strong></li>";
-  }
-});
-html += "</ul>";
-}
+      if(gare.commune){
+        html += "<p>Commune : " + gare.commune + "</p>";
+      }
+
+      if(gare.quartier){
+        html += "<p>Quartier : " + gare.quartier + "</p>";
+      }
+
+      if(gare.transports && gare.transports.length){
+        html += "<p>Moyens de transport : " +
+          gare.transports.join(", ") + "</p>";
+      }
+
+      if(gare.destinations && gare.destinations.length){
+        html += "<h4>Destinations et tarifs</h4><ul>";
+
+        gare.destinations.forEach(destination => {
+          if(typeof destination === "string"){
+            html += "<li><strong>" + destination +
+              "</strong> — Tarif à préciser</li>";
+          } else {
+            const prixValide =
+              Number.isFinite(Number(destination.prix)) &&
+              Number(destination.prix) > 0;
+
+            html += "<li><strong>" + destination.nom +
+              "</strong> — " + destination.transport + " : ";
+
+            html += prixValide
+              ? "<strong>" + destination.prix + " FCFA</strong>"
+              : "Tarif à préciser";
+
+            html += "</li>";
+          }
+        });
+
+        html += "</ul>";
+      } else {
+        html += "<p class='notice'>Destinations à renseigner.</p>";
+      }
 
       html += "</div>";
     });
@@ -1909,14 +1932,18 @@ html += "</ul>";
     resultat.innerHTML = html;
 
   } catch(error) {
+    console.error("Erreur du répertoire :", error);
+
     resultat.innerHTML =
       "<strong>📍 Gares et stations</strong>" +
-      "<p class='notice'>Le répertoire des gares n'est pas encore accessible.</p>";
+      "<p class='notice'>Impossible de charger le répertoire actuellement.</p>";
   }
 
-  resultat.scrollIntoView({behavior:"smooth", block:"start"});
+  resultat.scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
 }
-
 function afficherTarifs(){
   const routes = window.MON_TRANSPORT_CI_ROUTES || [];
   const resultat = document.getElementById("resultat");
