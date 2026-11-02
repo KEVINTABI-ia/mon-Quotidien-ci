@@ -2403,7 +2403,22 @@ const snapshot = await db.collection("compagnies")
 
     snapshot.forEach(doc => {
       const compagnie = doc.data();
+const logoURL = String(compagnie.logo || "");
 
+const logoHTML = /^https:\/\/\S+$/i.test(logoURL)
+  ? `<img src="${echapperTexteCompagnie(logoURL)}"
+      alt="Logo de ${echapperTexteCompagnie(compagnie.nom)}"
+      style="width:80px;height:80px;object-fit:contain;border-radius:12px;">`
+  : "";
+
+const numeroWhatsApp = String(compagnie.telephone || "").replace(/\D/g, "");
+
+const boutonWhatsApp = numeroWhatsApp
+  ? `<a href="https://wa.me/${numeroWhatsApp}"
+      target="_blank" rel="noopener noreferrer">
+      Contacter sur WhatsApp
+    </a>`
+  : "";
       const destinations = (compagnie.destinations || []).map(d =>
         "<li>" + echapperTexteCompagnie(d.ville) +
         " : " + Number(d.prix).toLocaleString("fr-FR") +
