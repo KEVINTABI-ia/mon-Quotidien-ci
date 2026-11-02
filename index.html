@@ -2030,7 +2030,7 @@ async function chargerCompagniesAdmin() {
       zone.innerHTML = "<p class='notice'>Aucune compagnie enregistrée.</p>";
       return;
     }
-    
+
     zone.innerHTML = snapshot.docs.map(doc => {
       const compagnie = doc.data();
 
@@ -2039,6 +2039,13 @@ async function chargerCompagniesAdmin() {
         " : " + Number(destination.prix).toLocaleString("fr-FR") +
         " FCFA</li>"
       ).join("");
+
+      const bouton = compagnie.statutAbonnement === "En attente"
+        ? `<button type="button" class="primary"
+            onclick="validerPaiementCompagnie('${doc.id}')">
+            Valider le paiement
+          </button>`
+        : "";
 
       return `
         <div class="stop">
@@ -2051,12 +2058,57 @@ async function chargerCompagniesAdmin() {
           Montant : ${Number(compagnie.montant).toLocaleString("fr-FR")} FCFA<br>
           Statut : ${echapperTexteCompagnie(compagnie.statutAbonnement)}
           <ul>${destinations}</ul>
+          ${bouton}
         </div>
       `;
     }).join("");
 
   } catch (erreur) {
     zone.textContent = "Erreur de chargement : " + erreur.message;
+  }
+}
+async function validerPaiementCompagnie(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès administrateur requis.");
+    return;
+  }
+
+  const confirmation = confirm(
+    "Confirme-tu avoir vérifié le paiement de cette compagnie ?"
+  );
+
+  if (!confirmation) return;
+
+  try {
+    const reference = db.collection("compagnies").doc(id);
+    const document = await reference.get();
+
+    if (!document.exists) {
+      alert("Compagnie introuvable.");
+      return;
+    }
+
+    const compagnie = document.data();
+    const dateDebut = new Date();
+    const dateExpiration = new Date(dateDebut);
+
+    if (compagnie.periodicite === "Annuel") {
+      dateExpiration.setFullYear(dateExpiration.getFullYear() + 1);
+    } else {
+      dateExpiration.setMonth(dateExpiration.getMonth() + 1);
+    }
+
+    await reference.update({
+      statutAbonnement: "Actif",
+      dateDebut: firebase.firestore.Timestamp.fromDate(dateDebut),
+      dateExpiration: firebase.firestore.Timestamp.fromDate(dateExpiration)
+    });
+
+    alert("Paiement validé. Abonnement activé.");
+    chargerCompagniesAdmin();
+
+  } catch (erreur) {
+    alert("Erreur lors de la validation : " + erreur.message);
   }
 }
 </script>
