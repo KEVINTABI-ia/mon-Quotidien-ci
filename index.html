@@ -1896,10 +1896,25 @@ async function afficherGaresStations(){
 
     let html = "<strong>📍 Répertoire des gares et terminus</strong>";
 
+const communes = [...new Set(
+  snapshot.docs
+    .map(doc => (doc.data().commune || "").trim())
+    .filter(commune => commune !== "")
+)].sort();
+
+html += "<p><strong>Filtrer par commune :</strong></p>";
+html += "<select id='filtreCommune' onchange='filtrerGaresParCommune()'>";
+html += "<option value=''>Toutes les communes</option>";
+
+communes.forEach(commune => {
+  html += `<option value="${commune}">${commune}</option>`;
+});
+
+html += "</select>";
     snapshot.forEach(doc => {
       const gare = doc.data();
 
-      html += "<div class='stop'>";
+      html += `<div class="stop" data-commune="${(gare.commune || "").trim()}">`;
       html += "<h3>📍 " + gare.nom + "</h3>";
 
       if(gare.commune){
@@ -1959,6 +1974,19 @@ async function afficherGaresStations(){
   resultat.scrollIntoView({
     behavior:"smooth",
     block:"start"
+  });
+}
+function filtrerGaresParCommune(){
+  const commune = document.getElementById("filtreCommune").value;
+  const gares = document.querySelectorAll("#resultat .stop");
+
+  gares.forEach(gare => {
+    const communeGare = gare.getAttribute("data-commune") || "";
+
+    gare.style.display =
+      commune === "" || communeGare === commune
+        ? "block"
+        : "none";
   });
 }
 function afficherTarifs(){
