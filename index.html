@@ -2242,7 +2242,31 @@ async function modifierCompagnie(id) {
 
  const email = prompt("Adresse e-mail :", compagnie.email || "");
 if (email === null) return;
+const remplacerLogo = confirm(
+  "Voulez-vous remplacer le logo de cette compagnie ?"
+);
 
+let nouveauLogo = compagnie.logo || "";
+
+if (remplacerLogo) {
+  const inputLogo = document.createElement("input");
+  inputLogo.type = "file";
+  inputLogo.accept = "image/*";
+
+  const fichier = await new Promise((resolve) => {
+    inputLogo.onchange = () => resolve(inputLogo.files[0] || null);
+    inputLogo.click();
+  });
+
+  if (!fichier) return;
+
+  try {
+    nouveauLogo = await compresserImage(fichier);
+  } catch (erreur) {
+    alert(erreur.message);
+    return;
+  }
+}
     const texteDestinations = (compagnie.destinations || [])
       .map(d => d.ville + " | " + d.prix)
       .join("\n");
@@ -2299,7 +2323,7 @@ if (email === null) return;
       localisation: localisation.trim(),
       telephone: telephone.trim(),
 email: email.trim(),
-logo: compagnie.logo || "",
+logo: nouveauLogo,
 destinations,
       formule,
       periodicite,
