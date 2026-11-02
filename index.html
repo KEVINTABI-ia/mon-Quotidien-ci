@@ -595,7 +595,7 @@ main > section.card:nth-of-type(2) .result {
   <p class="notice">Une destination par ligne, au format : Ville | Prix en FCFA.</p>
 
   <label>Formule d'abonnement</label>
-  <select id="compagnieFormule">
+  <select id="compagnieFormule" onchange="actualiserPrixCompagnie()">
     <option value="Essentielle">Essentielle</option>
     <option value="Professionnelle">Professionnelle</option>
     <option value="Premium">Premium</option>
