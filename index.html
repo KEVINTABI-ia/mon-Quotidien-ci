@@ -7,6 +7,46 @@
 <meta name="theme-color" content="#087443">
 <title>Mon Transport CI</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 23px;
+  font-weight: 850;
+  letter-spacing: 0.3px;
+}
+
+.brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: #FFFFFF18;
+  border: 1px solid #FFFFFF35;
+  border-radius: 14px;
+  font-size: 25px;
+}
+
+.header-badge {
+  display: inline-block;
+  margin-top: 22px;
+  padding: 6px 11px;
+  border: 1px solid #D5A84B80;
+  border-radius: 30px;
+  color: #F0D89F;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.tagline {
+  max-width: 340px;
+  font-size: 14px;
+  color: #D5E3DE;
+  margin-top: 12px;
+  line-height: 1.7;
+}
 <style>
 * {
   box-sizing: border-box;
@@ -293,8 +333,17 @@ footer {
 </div>
 
 <header>
-<div class="brand">🇨🇮 Mon Transport CI</div>
-<div class="tagline">Trouver son transport. Connaître son trajet. Maîtriser son budget.</div>
+  <div class="brand">
+    <span class="brand-icon">🇨🇮</span>
+    <span>MON TRANSPORT CI</span>
+  </div>
+
+  <div class="header-badge">VOTRE GUIDE DE MOBILITÉ</div>
+
+  <div class="tagline">
+    Trouvez votre trajet. Comparez les transports.
+    Maîtrisez votre budget.
+  </div>
 </header>
 
 <main>
