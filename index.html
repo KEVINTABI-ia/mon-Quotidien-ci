@@ -2148,6 +2148,47 @@ async function validerPaiementCompagnie(id) {
     alert("Erreur lors de la validation : " + erreur.message);
   }
 }
+async function demanderRenouvellementCompagnie(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès administrateur requis.");
+    return;
+  }
+
+  const confirmation = confirm(
+    "Confirmer la demande de renouvellement de cet abonnement ?"
+  );
+
+  if (!confirmation) return;
+
+  try {
+    const reference = db.collection("compagnies").doc(id);
+    const document = await reference.get();
+
+    if (!document.exists) {
+      alert("Compagnie introuvable.");
+      return;
+    }
+
+    const compagnie = document.data();
+
+    if (compagnie.statutAbonnement !== "Expiré") {
+      alert("Cette compagnie n'a pas un abonnement expiré.");
+      return;
+    }
+
+    await reference.update({
+      statutAbonnement: "En attente",
+      dateDemandeRenouvellement:
+        firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    alert("Demande enregistrée. Vérifie le paiement avant validation.");
+    chargerCompagniesAdmin();
+
+  } catch (erreur) {
+    alert("Erreur : " + erreur.message);
+  }
+}
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
