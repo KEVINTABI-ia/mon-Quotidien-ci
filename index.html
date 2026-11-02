@@ -665,6 +665,7 @@ function actualiserTarifGare() {
   const depart = document.getElementById("depart").value;
   const arrivee = document.getElementById("arrivee").value;
   const transport = document.getElementById("transport").value;
+  const resultat = document.getElementById("resultat");
 
   const gare = garesFirestore.find(g =>
     normaliser(g.nom) === normaliser(depart)
@@ -673,17 +674,25 @@ function actualiserTarifGare() {
   if (!gare || !arrivee) return;
 
   const destinations = destinationsGareNormalisees(gare);
+
   const tarifs = destinations.filter(d =>
     normaliser(d.nom) === normaliser(arrivee) &&
-    (transport === "Tous" || normaliser(d.transport) === normaliser(transport))
+    d.transport &&
+    Number.isFinite(Number(d.prix)) &&
+    Number(d.prix) > 0 &&
+    (transport === "Tous" ||
+      normaliser(d.transport) === normaliser(transport))
   );
 
   if (tarifs.length) {
-    document.getElementById("resultat").innerHTML =
+    resultat.innerHTML =
       "<h3>Tarifs disponibles</h3>" +
       tarifs.map(d =>
-        `<p>${d.transport} : <strong>${d.prix} FCFA</strong></p>`
+        `<p>${d.transport} : <strong>${Number(d.prix).toLocaleString("fr-FR")} FCFA</strong></p>`
       ).join("");
+  } else {
+    resultat.innerHTML =
+      "<p class='notice'>Aucun tarif confirmé pour cette destination et ce moyen de transport.</p>";
   }
 }
 </script>
@@ -1177,7 +1186,7 @@ function chargerGareEdition(index) {
     document.getElementById("gareDestinations").value =
   (gare.destinations || []).map(d =>
   typeof d === "string"
-    ? `${d} | Gbaka | 500`
+    ? `${d}`
     : `${d.nom} | ${d.transport} | ${d.prix}`
 ).join("\n");
   document.getElementById("gareDescription").value = gare.description || "";
@@ -1330,8 +1339,13 @@ function chargerGaresPourRecherche() {
 function destinationsGareNormalisees(gare) {
   return (gare.destinations || []).map(d => {
     if (typeof d === "string") {
-      return { nom: d, transport: "Gbaka", prix: 500 };
+      return {
+        nom: d,
+        transport: "",
+        prix: null
+      };
     }
+
     return d;
   });
 }
@@ -1763,6 +1777,9 @@ normaliser(g.nom)===depart
 if(gare){
 const tarifs = destinationsGareNormalisees(gare).filter(d =>
 normaliser(d.nom)===arrivee &&
+d.transport &&
+Number.isFinite(Number(d.prix)) &&
+Number(d.prix)>0 &&
 (transport==="Tous" || normaliser(d.transport)===normaliser(transport))
 );
 
