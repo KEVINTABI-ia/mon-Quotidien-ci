@@ -1972,7 +1972,66 @@ function echapperTexteCompagnie(texte) {
     "'": "&#39;"
   })[caractere]);
 }
+function compresserImage(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith("image/")) {
+      reject(new Error("Veuillez sélectionner une image valide."));
+      return;
+    }
 
+    const reader = new FileReader();
+
+    reader.onerror = () => {
+      reject(new Error("Impossible de lire cette image."));
+    };
+
+    reader.onload = () => {
+      const img = new Image();
+
+      img.onerror = () => {
+        reject(new Error("Impossible de charger cette image."));
+      };
+
+      img.onload = () => {
+        const max = 300;
+        const ratio = Math.min(
+          1,
+          max / Math.max(img.width, img.height)
+        );
+
+        const largeur = Math.round(img.width * ratio);
+        const hauteur = Math.round(img.height * ratio);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = largeur;
+        canvas.height = hauteur;
+
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) {
+          reject(new Error("Compression impossible."));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, largeur, hauteur);
+
+        const imageCompressee =
+          canvas.toDataURL("image/jpeg", 0.65);
+
+        if (imageCompressee.length > 700000) {
+          reject(new Error("Image trop volumineuse."));
+          return;
+        }
+
+        resolve(imageCompressee);
+      };
+
+      img.src = reader.result;
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
 async function enregistrerCompagnie() {
   const statut = document.getElementById("statutCompagnie");
 
