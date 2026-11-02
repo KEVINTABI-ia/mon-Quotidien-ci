@@ -1985,6 +1985,11 @@ function filtrerGaresParCommune(){
     .toLowerCase();
 
   const gares = document.querySelectorAll("#resultat .stop");
+  const ancienMessage = document.getElementById("aucuneGareTrouvee");
+
+  if(ancienMessage) ancienMessage.remove();
+
+  let nombreVisible = 0;
 
   gares.forEach(gare => {
     const communeGare = gare.getAttribute("data-commune") || "";
@@ -2005,11 +2010,22 @@ function filtrerGaresParCommune(){
       nomGare.includes(recherche) ||
       quartierGare.includes(recherche);
 
-    gare.style.display =
-      communeCorrespond && rechercheCorrespond
-        ? "block"
-        : "none";
+    const correspond =
+      communeCorrespond && rechercheCorrespond;
+
+    gare.style.display = correspond ? "block" : "none";
+
+    if(correspond) nombreVisible++;
   });
+
+  if(nombreVisible === 0){
+    const message = document.createElement("p");
+    message.id = "aucuneGareTrouvee";
+    message.className = "notice";
+    message.textContent = "Aucune gare trouvée pour cette recherche.";
+
+    document.getElementById("resultat").appendChild(message);
+  }
 }
 function afficherTarifs(){
   const routes = window.MON_TRANSPORT_CI_ROUTES || [];
