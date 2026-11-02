@@ -2031,8 +2031,7 @@ async function chargerCompagniesAdmin() {
       zone.innerHTML = "<p class='notice'>Aucune compagnie enregistrée.</p>";
       return;
     }
-    </script>
-
+    
     zone.innerHTML = snapshot.docs.map(doc => {
       const compagnie = doc.data();
 
@@ -2061,7 +2060,7 @@ async function chargerCompagniesAdmin() {
     zone.textContent = "Erreur de chargement : " + erreur.message;
   }
 }
-
+</script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
 </html>
