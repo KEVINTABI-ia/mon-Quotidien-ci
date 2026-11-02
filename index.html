@@ -2373,10 +2373,7 @@ async function preparerRappelWhatsApp(id) {
     alert("Erreur : " + erreur.message);
   }
 }
-const snapshot = await db.collection("compagnies")
-  .where("statutAbonnement", "==", "Actif")
-  .orderBy("nom")
-  .get();
+
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
