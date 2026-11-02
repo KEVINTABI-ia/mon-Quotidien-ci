@@ -1986,6 +1986,7 @@ async function enregistrerCompagnie() {
   const localisation = document.getElementById("compagnieLocalisation").value.trim();
   const telephone = document.getElementById("compagnieTelephone").value.trim();
   const email = document.getElementById("compagnieEmail").value.trim();
+  const logo = document.getElementById("compagnieLogo").value.trim();
   
   const texteDestinations = document.getElementById("compagnieDestinations").value.trim();
   const formule = document.getElementById("compagnieFormule").value;
@@ -2018,6 +2019,7 @@ async function enregistrerCompagnie() {
   localisation,
   telephone,
   email,
+  logo,
   destinations,
   formule,
   periodicite,
