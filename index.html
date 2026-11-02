@@ -1911,6 +1911,8 @@ communes.forEach(commune => {
 });
 
 html += "</select>";
+html += "<p><strong>Rechercher une gare ou un quartier :</strong></p>";
+html += "<input type='text' id='rechercheGare' placeholder='Ex. : Bagnon, Niangon, Adjamé...' oninput='filtrerGaresParCommune()'>";
     snapshot.forEach(doc => {
       const gare = doc.data();
 
@@ -1978,13 +1980,33 @@ html += "</select>";
 }
 function filtrerGaresParCommune(){
   const commune = document.getElementById("filtreCommune").value;
+  const recherche = document.getElementById("rechercheGare").value
+    .trim()
+    .toLowerCase();
+
   const gares = document.querySelectorAll("#resultat .stop");
 
   gares.forEach(gare => {
     const communeGare = gare.getAttribute("data-commune") || "";
 
+    const nomGare = (
+      gare.querySelector("h3")?.textContent || ""
+    ).toLowerCase();
+
+    const quartierGare = [...gare.querySelectorAll("p")]
+      .find(p => p.textContent.toLowerCase().startsWith("quartier :"))
+      ?.textContent.toLowerCase() || "";
+
+    const communeCorrespond =
+      commune === "" || communeGare === commune;
+
+    const rechercheCorrespond =
+      recherche === "" ||
+      nomGare.includes(recherche) ||
+      quartierGare.includes(recherche);
+
     gare.style.display =
-      commune === "" || communeGare === commune
+      communeCorrespond && rechercheCorrespond
         ? "block"
         : "none";
   });
