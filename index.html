@@ -1874,7 +1874,52 @@ document.getElementById("arrivee").value
 );
 }
 function ouvrirInscriptionLivreur(){
-  alert("Le formulaire d'inscription du livreur indépendant sera bientôt disponible.");
+  const section = document.getElementById("transportColis");
+
+  let zone = document.getElementById("formulaireLivreur");
+
+  if(!zone){
+    zone = document.createElement("div");
+    zone.id = "formulaireLivreur";
+    section.appendChild(zone);
+  }
+
+  zone.innerHTML = `
+    <hr>
+    <h3>🚚 Inscription – Livreur indépendant</h3>
+
+    <label>Nom et prénoms</label>
+    <input type="text" id="livreurNom" placeholder="Nom complet" required>
+
+    <label>Numéro de téléphone</label>
+    <input type="tel" id="livreurTelephone" placeholder="Ex. : 07XXXXXXXX" required>
+
+    <label>Commune desservie</label>
+    <input type="text" id="livreurCommune" placeholder="Ex. : Yopougon" required>
+
+    <label>Quartiers desservis</label>
+    <textarea id="livreurQuartiers" placeholder="Précise les quartiers concernés" required></textarea>
+
+    <label>Photo de profil</label>
+    <input type="file" id="livreurPhoto" accept="image/*" required>
+
+    <label>Permis de conduire</label>
+    <input type="file" id="livreurPermis" accept="image/*,.pdf" required>
+
+    <label>Carte nationale d'identité</label>
+    <input type="file" id="livreurIdentite" accept="image/*,.pdf" required>
+
+    <p class="notice">
+      Tes documents seront privés et soumis à vérification par l'administration.
+    </p>
+
+    <button type="button" class="primary"
+      onclick="alert('Le dépôt sécurisé des documents sera activé après configuration de Firebase Storage.')">
+      Envoyer mon dossier
+    </button>
+  `;
+
+  zone.scrollIntoView({behavior:"smooth", block:"start"});
 }
 function basculerMenu(){
   const menu = document.getElementById("menuDropdown");
