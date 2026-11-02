@@ -1940,6 +1940,8 @@ html += "<input type='text' id='rechercheGare' placeholder='Ex. : Bagnon, Niango
       }
 
       if(gare.destinations && gare.destinations.length){
+        html += "<details>";
+html += "<summary>Voir les tarifs</summary>";
         html += "<h4>Destinations et tarifs</h4><ul>";
 
         gare.destinations.forEach(destination => {
@@ -1963,6 +1965,7 @@ html += "<input type='text' id='rechercheGare' placeholder='Ex. : Bagnon, Niango
         });
 
         html += "</ul>";
+        html += "</details>";
       } else {
         html += "<p class='notice'>Destinations à renseigner.</p>";
       }
