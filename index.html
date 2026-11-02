@@ -2249,7 +2249,7 @@ const remplacerLogo = confirm(
 let nouveauLogo = compagnie.logo || "";
 
 if (remplacerLogo) {
-  const inputLogo = document.createElement("input");
+const inputLogo = window.document.createElement("input");
   inputLogo.type = "file";
   inputLogo.accept = "image/*";
 
