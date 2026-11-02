@@ -571,6 +571,53 @@ main > section.card:nth-of-type(2) .result {
   <p id="statutRoutes" class="notice"></p>
   <div id="listeRoutesAdmin"></div>
 </div>
+<div id="gestionCompagnies" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;">
+
+  <h3>🚍 Gestion des compagnies de voyage</h3>
+
+  <label>Nom de la compagnie</label>
+  <input id="compagnieNom" placeholder="Ex. : UTB">
+
+  <label>Nom de l'agence</label>
+  <input id="compagnieAgence" placeholder="Ex. : Yopougon BAE">
+
+  <label>Commune et quartier</label>
+  <input id="compagnieLocalisation" placeholder="Ex. : Yopougon, BAE">
+
+  <label>Numéro de téléphone</label>
+  <input id="compagnieTelephone" type="tel" placeholder="Ex. : 0700000000">
+
+  <label>Destinations et prix des tickets</label>
+  <textarea id="compagnieDestinations" rows="5"
+    placeholder="Bouaké | 5000&#10;Yamoussoukro | 4000&#10;Daloa | 7000"
+    style="width:100%;padding:12px;"></textarea>
+
+  <p class="notice">Une destination par ligne, au format : Ville | Prix en FCFA.</p>
+
+  <label>Formule d'abonnement</label>
+  <select id="compagnieFormule">
+    <option value="Essentielle">Essentielle</option>
+    <option value="Professionnelle">Professionnelle</option>
+    <option value="Premium">Premium</option>
+  </select>
+
+  <label>Périodicité</label>
+  <select id="compagniePeriodicite">
+    <option value="Mensuel">Mensuel</option>
+    <option value="Annuel">Annuel</option>
+  </select>
+
+  <p id="compagniePrix" class="notice">Tarif : 5 000 FCFA / mois</p>
+
+  <button class="primary" onclick="enregistrerCompagnie()">
+    Enregistrer la compagnie
+  </button>
+
+  <p id="statutCompagnie" class="notice"></p>
+
+  <div id="listeCompagniesAdmin"></div>
+
+</div>
 </section>
 <section class="card">
 <h2>Où souhaitez-vous aller ?</h2>
@@ -736,10 +783,16 @@ auth.onAuthStateChanged((user) => {
   const autorise = !!user && user.uid === ADMIN_UID;
   const panneau = document.getElementById("gestionRoutes");
   const panneauGares = document.getElementById("gestionGares");
-
+const panneauCompagnies = document.getElementById("gestionCompagnies");
   panneau.style.display = autorise ? "block" : "none";
   panneauGares.style.display = autorise ? "block" : "none";
+panneauCompagnies.style.display = autorise ? "block" : "none";
 
+if (autorise) {
+  chargerCompagniesAdmin();
+} else {
+  document.getElementById("listeCompagniesAdmin").innerHTML = "";
+}
   if (autorise) {
     chargerRoutesFirestore();
     chargerGaresFirestore();
@@ -1854,7 +1907,152 @@ function afficherReseauNational(){
   });
 }
 </script>
+// GESTION DES COMPAGNIES DE VOYAGE
+const tarifsAbonnements = {
+  Essentielle: { Mensuel: 5000, Annuel: 50000 },
+  Professionnelle: { Mensuel: 10000, Annuel: 100000 },
+  Premium: { Mensuel: 15000, Annuel: 150000 }
+};
 
+function actualiserPrixCompagnie() {
+  const formule = document.getElementById("compagnieFormule").value;
+  const periodicite = document.getElementById("compagniePeriodicite").value;
+  const prix = tarifsAbonnements[formule][periodicite];
+
+  document.getElementById("compagniePrix").textContent =
+    "Tarif : " + prix.toLocaleString("fr-FR") +
+    " FCFA / " + periodicite.toLowerCase();
+}
+
+document.getElementById("compagnieFormule")
+  .addEventListener("change", actualiserPrixCompagnie);
+
+document.getElementById("compagniePeriodicite")
+  .addEventListener("change", actualiserPrixCompagnie);
+
+function echapperTexteCompagnie(texte) {
+  return String(texte || "").replace(/[&<>"']/g, caractere => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[caractere]);
+}
+
+async function enregistrerCompagnie() {
+  const statut = document.getElementById("statutCompagnie");
+
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    statut.textContent = "Connexion administrateur requise.";
+    return;
+  }
+
+  const nom = document.getElementById("compagnieNom").value.trim();
+  const agence = document.getElementById("compagnieAgence").value.trim();
+  const localisation = document.getElementById("compagnieLocalisation").value.trim();
+  const telephone = document.getElementById("compagnieTelephone").value.trim();
+  const texteDestinations = document.getElementById("compagnieDestinations").value.trim();
+  const formule = document.getElementById("compagnieFormule").value;
+  const periodicite = document.getElementById("compagniePeriodicite").value;
+
+  if (!nom || !agence || !localisation || !texteDestinations) {
+    statut.textContent = "Remplis le nom, l'agence, la localisation et les destinations.";
+    return;
+  }
+
+  try {
+    const destinations = texteDestinations.split("\n").map(ligne => {
+      const morceaux = ligne.split("|");
+      const ville = morceaux[0].trim();
+      const prix = Number(morceaux[1]);
+
+      if (!ville || morceaux.length < 2 ||
+          !Number.isFinite(prix) || prix <= 0) {
+        throw new Error("Format incorrect. Utilise : Ville | Prix");
+      }
+
+      return { ville, prix };
+    });
+
+    const montant = tarifsAbonnements[formule][periodicite];
+
+    await db.collection("compagnies").add({
+      nom,
+      agence,
+      localisation,
+      telephone,
+      destinations,
+      formule,
+      periodicite,
+      montant,
+      statutAbonnement: "En attente",
+      dateCreation: firebase.firestore.FieldValue.serverTimestamp(),
+      dateDebut: null,
+      dateExpiration: null
+    });
+
+    statut.textContent =
+      "Compagnie enregistrée. Abonnement en attente de validation du paiement.";
+
+    [
+      "compagnieNom",
+      "compagnieAgence",
+      "compagnieLocalisation",
+      "compagnieTelephone",
+      "compagnieDestinations"
+    ].forEach(id => document.getElementById(id).value = "");
+
+    chargerCompagniesAdmin();
+
+  } catch (erreur) {
+    statut.textContent = "Erreur : " + erreur.message;
+  }
+}
+
+async function chargerCompagniesAdmin() {
+  const zone = document.getElementById("listeCompagniesAdmin");
+
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
+
+  try {
+    const snapshot = await db.collection("compagnies")
+      .orderBy("nom")
+      .get();
+
+    if (snapshot.empty) {
+      zone.innerHTML = "<p class='notice'>Aucune compagnie enregistrée.</p>";
+      return;
+    }
+
+    zone.innerHTML = snapshot.docs.map(doc => {
+      const compagnie = doc.data();
+
+      const destinations = (compagnie.destinations || []).map(destination =>
+        "<li>" + echapperTexteCompagnie(destination.ville) +
+        " : " + Number(destination.prix).toLocaleString("fr-FR") +
+        " FCFA</li>"
+      ).join("");
+
+      return `
+        <div class="stop">
+          <strong>${echapperTexteCompagnie(compagnie.nom)}</strong><br>
+          Agence : ${echapperTexteCompagnie(compagnie.agence)}<br>
+          Localisation : ${echapperTexteCompagnie(compagnie.localisation)}<br>
+          Téléphone : ${echapperTexteCompagnie(compagnie.telephone)}<br>
+          Formule : ${echapperTexteCompagnie(compagnie.formule)}<br>
+          Périodicité : ${echapperTexteCompagnie(compagnie.periodicite)}<br>
+          Montant : ${Number(compagnie.montant).toLocaleString("fr-FR")} FCFA<br>
+          Statut : ${echapperTexteCompagnie(compagnie.statutAbonnement)}
+          <ul>${destinations}</ul>
+        </div>
+      `;
+    }).join("");
+
+  } catch (erreur) {
+    zone.textContent = "Erreur de chargement : " + erreur.message;
+  }
+}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
 </html>
