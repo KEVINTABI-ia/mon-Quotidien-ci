@@ -673,7 +673,7 @@ function actualiserTarifGare() {
   const arrivee = document.getElementById("arrivee").value;
   const transport = document.getElementById("transport").value;
   const resultat = document.getElementById("resultat");
-
+resultat.style.display = "block";
   const gare = garesFirestore.find(g =>
     normaliser(g.nom) === normaliser(depart)
   );
