@@ -2418,6 +2418,57 @@ L'équipe Mon Transport CI`;
     alert("Erreur : " + erreur.message);
   }
 }
+async function afficherCompagniesPubliques() {
+  const zone = document.getElementById("listeCompagniesPubliques");
+
+  zone.innerHTML = "<p>Chargement des compagnies...</p>";
+
+  try {
+    const snapshot = await db.collection("compagnies")
+      .where("statutAbonnement", "in", ["Actif", "Expiré"])
+      .orderBy("nom")
+      .get();
+
+    if (snapshot.empty) {
+      zone.innerHTML =
+        "<p class='notice'>Aucune compagnie disponible pour le moment.</p>";
+      return;
+    }
+
+    let html = "";
+
+    snapshot.forEach(doc => {
+      const compagnie = doc.data();
+
+      const destinations = (compagnie.destinations || []).map(d =>
+        "<li>" + echapperTexteCompagnie(d.ville) +
+        " : " + Number(d.prix).toLocaleString("fr-FR") +
+        " FCFA</li>"
+      ).join("");
+
+      html += `
+        <div class="stop">
+          <h3>${echapperTexteCompagnie(compagnie.nom)}</h3>
+          <p><strong>Agence :</strong>
+            ${echapperTexteCompagnie(compagnie.agence)}</p>
+          <p><strong>Localisation :</strong>
+            ${echapperTexteCompagnie(compagnie.localisation)}</p>
+          <p><strong>Téléphone :</strong>
+            ${echapperTexteCompagnie(compagnie.telephone)}</p>
+          <p><strong>Destinations et tarifs :</strong></p>
+          <ul>${destinations}</ul>
+        </div>
+      `;
+    });
+
+    zone.innerHTML = html;
+
+  } catch (erreur) {
+    zone.innerHTML =
+      "<p class='notice'>Impossible de charger les compagnies : " +
+      echapperTexteCompagnie(erreur.message) + "</p>";
+  }
+}
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
