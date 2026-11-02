@@ -2066,12 +2066,21 @@ async function chargerCompagniesAdmin() {
         " FCFA</li>"
       ).join("");
 
-      const bouton = compagnie.statutAbonnement === "En attente"
-        ? `<button type="button" class="primary"
-            onclick="validerPaiementCompagnie('${doc.id}')">
-            Valider le paiement
-          </button>`
-        : "";
+      let bouton = "";
+
+if (compagnie.statutAbonnement === "En attente") {
+  bouton = `<button type="button" class="primary"
+    onclick="validerPaiementCompagnie('${doc.id}')">
+    Valider le paiement
+  </button>`;
+}
+
+if (compagnie.statutAbonnement === "Expiré") {
+  bouton = `<button type="button" class="primary"
+    onclick="demanderRenouvellementCompagnie('${doc.id}')">
+    Renouveler l'abonnement
+  </button>`;
+}
 
       return `
         <div class="stop">
