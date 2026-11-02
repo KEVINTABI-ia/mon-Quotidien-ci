@@ -994,41 +994,65 @@ const url="https://wa.me/?text="+encodeURIComponent(message);
 window.open(url,"_blank");
 }
 function meLocaliser(){
-if(!navigator.geolocation){
-alert("La géolocalisation n'est pas disponible sur cet appareil.");
-return;
-}
+  if(!navigator.geolocation){
+    alert("La géolocalisation n'est pas disponible sur cet appareil.");
+    return;
+  }
 
-navigator.geolocation.getCurrentPosition(
-async function(position){
-const latitude=position.coords.latitude;
-const longitude=position.coords.longitude;
+  navigator.geolocation.getCurrentPosition(
+    async function(position){
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
 
-try{
-const reponse=await fetch(
-"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat="+latitude+"&lon="+longitude
-);
+      try{
+        const reponse = await fetch(
+          "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat="+latitude+"&lon="+longitude
+        );
 
-const donnees=await reponse.json();
+        const donnees = await reponse.json();
 
-if(donnees.address){
-const adresse=donnees.address;
-const lieu=adresse.suburb || adresse.neighbourhood || adresse.city || adresse.town || adresse.village;
+        if(!donnees.address){
+          alert("Position détectée, mais adresse introuvable.");
+          return;
+        }
 
-document.getElementById("depart").value=lieu || donnees.display_name;
-alert("Votre position a été détectée !");
-}else{
-alert("Position détectée, mais adresse introuvable.");
-}
-}catch(erreur){
-alert("Impossible de déterminer votre adresse. Réessayez.");
-}
-},
-function(erreur){
-alert("Impossible d'accéder à votre position. Vérifiez les autorisations GPS.");
-},
-{enableHighAccuracy:true,timeout:15000}
-);
+        const adresse = donnees.address;
+        const lieu =
+          adresse.suburb ||
+          adresse.neighbourhood ||
+          adresse.city_district ||
+          adresse.city ||
+          adresse.town ||
+          adresse.village ||
+          donnees.display_name;
+
+        const depart = document.getElementById("depart");
+
+        let option = Array.from(depart.options).find(
+          o => normaliser(o.value) === normaliser(lieu)
+        );
+
+        if(!option){
+          option = document.createElement("option");
+          option.value = lieu;
+          option.textContent = "📍 " + lieu;
+          depart.appendChild(option);
+        }
+
+        depart.value = lieu;
+        actualiserDestinationsGares();
+
+        alert("Votre position a été détectée : " + lieu);
+
+      }catch(erreur){
+        alert("Impossible de déterminer votre adresse. Réessayez.");
+      }
+    },
+    function(erreur){
+      alert("Impossible d'accéder à votre position. Vérifiez les autorisations GPS.");
+    },
+    {enableHighAccuracy:true,timeout:15000}
+  );
 }
 let carteTransport=null;
 
