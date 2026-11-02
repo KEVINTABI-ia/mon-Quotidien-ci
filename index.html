@@ -2124,6 +2124,120 @@ if (compagnie.statutAbonnement === "Expiré") {
     zone.textContent = "Erreur de chargement : " + erreur.message;
   }
 }
+async function modifierCompagnie(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès administrateur requis.");
+    return;
+  }
+
+  try {
+    const reference = db.collection("compagnies").doc(id);
+    const document = await reference.get();
+
+    if (!document.exists) {
+      alert("Compagnie introuvable.");
+      return;
+    }
+
+    const compagnie = document.data();
+
+    const nom = prompt("Nom de la compagnie :", compagnie.nom || "");
+    if (nom === null) return;
+
+    const agence = prompt("Nom de l'agence :", compagnie.agence || "");
+    if (agence === null) return;
+
+    const localisation = prompt("Localisation :", compagnie.localisation || "");
+    if (localisation === null) return;
+
+    const telephone = prompt("Téléphone WhatsApp :", compagnie.telephone || "");
+    if (telephone === null) return;
+
+    const email = prompt("Adresse e-mail :", compagnie.email || "");
+    if (email === null) return;
+
+    const texteDestinations = (compagnie.destinations || [])
+      .map(d => d.ville + " | " + d.prix)
+      .join("\n");
+
+    const destinationsTexte = prompt(
+      "Destinations et prix (une ligne par destination : Ville | Prix) :",
+      texteDestinations
+    );
+    if (destinationsTexte === null) return;
+
+    const formule = prompt(
+      "Formule : Essentielle, Professionnelle ou Premium",
+      compagnie.formule || "Essentielle"
+    );
+    if (formule === null) return;
+
+    if (!["Essentielle", "Professionnelle", "Premium"].includes(formule)) {
+      alert("Formule invalide.");
+      return;
+    }
+
+    const periodicite = prompt(
+      "Périodicité : Mensuel ou Annuel",
+      compagnie.periodicite || "Mensuel"
+    );
+    if (periodicite === null) return;
+
+    if (!["Mensuel", "Annuel"].includes(periodicite)) {
+      alert("Périodicité invalide.");
+      return;
+    }
+
+    const destinations = destinationsTexte.split("\n").map(ligne => {
+      const morceaux = ligne.split("|");
+      const ville = morceaux[0].trim();
+      const prix = Number(morceaux[1]);
+
+      if (!ville || morceaux.length < 2 || !Number.isFinite(prix) || prix <= 0) {
+        throw new Error("Format incorrect. Utilise : Ville | Prix");
+      }
+
+      return { ville, prix };
+    });
+
+    const changementForfait =
+      formule !== compagnie.formule ||
+      periodicite !== compagnie.periodicite;
+
+    const montant = tarifsAbonnements[formule][periodicite];
+
+    const donnees = {
+      nom: nom.trim(),
+      agence: agence.trim(),
+      localisation: localisation.trim(),
+      telephone: telephone.trim(),
+      email: email.trim(),
+      destinations,
+      formule,
+      periodicite,
+      montant
+    };
+
+    if (changementForfait) {
+      donnees.statutAbonnement = "En attente";
+      donnees.dateDebut = null;
+      donnees.dateExpiration = null;
+    }
+
+    await reference.update(donnees);
+
+    alert(
+      changementForfait
+        ? "Informations modifiées. Le nouveau forfait est en attente de validation du paiement."
+        : "Informations de la compagnie modifiées."
+    );
+
+    chargerCompagniesAdmin();
+
+  } catch (erreur) {
+    alert("Erreur : " + erreur.message);
+  }
+}
 async function validerPaiementCompagnie(id) {
   if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
     alert("Accès administrateur requis.");
