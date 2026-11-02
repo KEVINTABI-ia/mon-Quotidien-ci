@@ -1961,6 +1961,8 @@ async function enregistrerCompagnie() {
   const agence = document.getElementById("compagnieAgence").value.trim();
   const localisation = document.getElementById("compagnieLocalisation").value.trim();
   const telephone = document.getElementById("compagnieTelephone").value.trim();
+  const email = document.getElementById("compagnieEmail").value.trim();
+  
   const texteDestinations = document.getElementById("compagnieDestinations").value.trim();
   const formule = document.getElementById("compagnieFormule").value;
   const periodicite = document.getElementById("compagniePeriodicite").value;
@@ -1987,14 +1989,15 @@ async function enregistrerCompagnie() {
     const montant = tarifsAbonnements[formule][periodicite];
 
     await db.collection("compagnies").add({
-      nom,
-      agence,
-      localisation,
-      telephone,
-      destinations,
-      formule,
-      periodicite,
-      montant,
+  nom,
+  agence,
+  localisation,
+  telephone,
+  email,
+  destinations,
+  formule,
+  periodicite,
+  montant,
       statutAbonnement: "En attente",
       dateCreation: firebase.firestore.FieldValue.serverTimestamp(),
       dateDebut: null,
