@@ -2044,8 +2044,8 @@ async function enregistrerCompagnie() {
   const agence = document.getElementById("compagnieAgence").value.trim();
   const localisation = document.getElementById("compagnieLocalisation").value.trim();
   const telephone = document.getElementById("compagnieTelephone").value.trim();
-  const email = document.getElementById("compagnieEmail").value.trim();
-  const logo = document.getElementById("compagnieLogo").value.trim();
+const email = document.getElementById("compagnieEmail").value.trim();
+const fichierLogo = document.getElementById("compagnieLogo").files[0];
   
   const texteDestinations = document.getElementById("compagnieDestinations").value.trim();
   const formule = document.getElementById("compagnieFormule").value;
@@ -2071,6 +2071,7 @@ async function enregistrerCompagnie() {
     });
 
     const montant = tarifsAbonnements[formule][periodicite];
+    const logo = fichierLogo ? await compresserImage(fichierLogo) : "";
 
     await db.collection("compagnies").add({
   nom,
@@ -2239,13 +2240,8 @@ async function modifierCompagnie(id) {
     const telephone = prompt("Téléphone WhatsApp :", compagnie.telephone || "");
     if (telephone === null) return;
 
-    const email = prompt("Adresse e-mail :", compagnie.email || "");
-    const logo = prompt(
-  "Lien public du logo (URL HTTPS) :",
-  compagnie.logo || ""
-);
-if (logo === null) return;
-    if (email === null) return;
+ const email = prompt("Adresse e-mail :", compagnie.email || "");
+if (email === null) return;
 
     const texteDestinations = (compagnie.destinations || [])
       .map(d => d.ville + " | " + d.prix)
@@ -2303,7 +2299,7 @@ if (logo === null) return;
       localisation: localisation.trim(),
       telephone: telephone.trim(),
 email: email.trim(),
-logo: logo.trim(),
+logo: compagnie.logo || "",
 destinations,
       formule,
       periodicite,
@@ -2470,7 +2466,11 @@ const snapshot = await db.collection("compagnies")
       const compagnie = doc.data();
 const logoURL = String(compagnie.logo || "");
 
-const logoHTML = /^https:\/\/\S+$/i.test(logoURL)
+const logoValide =
+  /^https:\/\/\S+$/i.test(logoURL) ||
+  /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(logoURL);
+
+const logoHTML = logoValide
   ? `<img src="${echapperTexteCompagnie(logoURL)}"
       alt="Logo de ${echapperTexteCompagnie(compagnie.nom)}"
       style="width:80px;height:80px;object-fit:contain;border-radius:12px;">`
