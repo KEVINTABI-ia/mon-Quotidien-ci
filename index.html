@@ -472,6 +472,9 @@ main > section.card:nth-of-type(2) .result {
   </button>
 
 <div class="menu-dropdown" id="menuDropdown">
+  <button onclick="ouvrirSection('transportColis')">
+  📦 Transport Colis CI
+</button>
   <button onclick="ouvrirSection('espaceAdmin')">🔐 Espace administrateur</button>
   <button onclick="ouvrirSection('calculateur')">💰 Calculateur de budget</button>
   <button onclick="ouvrirSection('favoris')">⭐ Mes trajets favoris</button>
@@ -495,6 +498,33 @@ main > section.card:nth-of-type(2) .result {
 </header>
 
 <main>
+  <section class="card" id="transportColis" style="display:none;">
+  <div style="text-align:center;padding:15px;">
+    <h2 style="color:#D97706;">📦 Transport Colis CI</h2>
+    <p><strong>Un service de Mon Transport CI</strong></p>
+    <p>Envoyez et recevez vos colis partout à Abidjan.</p>
+  </div>
+
+  <hr>
+
+  <h3>👤 Espace client</h3>
+  <p>Réservez un transport et suivez vos colis.</p>
+  <button class="primary" onclick="alert('Espace client en préparation')">
+    Accéder à mon espace client
+  </button>
+
+  <hr>
+
+  <h3>🚚 Devenir partenaire</h3>
+  <p>Rejoignez notre réseau de livreurs et représentants de gare.</p>
+  <button class="primary" onclick="alert('Inscription partenaire en préparation')">
+    Devenir partenaire
+  </button>
+
+  <p class="notice">
+    Les inscriptions et réservations seront ouvertes après la mise en place des espaces sécurisés.
+  </p>
+</section>
 <section class="card" id="espaceAdmin" style="display:none;">
   <h2>🔐 Espace administrateur</h2>
 
