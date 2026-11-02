@@ -2181,6 +2181,11 @@ async function modifierCompagnie(id) {
     if (telephone === null) return;
 
     const email = prompt("Adresse e-mail :", compagnie.email || "");
+    const logo = prompt(
+  "Lien public du logo (URL HTTPS) :",
+  compagnie.logo || ""
+);
+if (logo === null) return;
     if (email === null) return;
 
     const texteDestinations = (compagnie.destinations || [])
