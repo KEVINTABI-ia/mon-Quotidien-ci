@@ -2373,102 +2373,10 @@ async function preparerRappelWhatsApp(id) {
     alert("Erreur : " + erreur.message);
   }
 }
-async function preparerRappelEmail(id) {
-  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
-    alert("Accès administrateur requis.");
-    return;
-  }
-
-  try {
-    const document = await db.collection("compagnies").doc(id).get();
-
-    if (!document.exists) {
-      alert("Compagnie introuvable.");
-      return;
-    }
-
-    const compagnie = document.data();
-
-    if (!compagnie.email) {
-      alert("Aucune adresse e-mail enregistrée.");
-      return;
-    }
-
-    const sujet = "Rappel concernant votre abonnement Mon Transport CI";
-
-    const message = `Bonjour ${compagnie.nom},
-
-Votre abonnement Mon Transport CI est actuellement : ${compagnie.statutAbonnement}.
-
-Formule : ${compagnie.formule}
-Montant : ${Number(compagnie.montant).toLocaleString("fr-FR")} FCFA.
-
-Merci de nous contacter pour toute information concernant votre abonnement.
-
-Cordialement,
-L'équipe Mon Transport CI`;
-
-    const lien = "mailto:" + encodeURIComponent(compagnie.email) +
-      "?subject=" + encodeURIComponent(sujet) +
-      "&body=" + encodeURIComponent(message);
-
-    window.location.href = lien;
-
-  } catch (erreur) {
-    alert("Erreur : " + erreur.message);
-  }
-}
-async function afficherCompagniesPubliques() {
-  const zone = document.getElementById("listeCompagniesPubliques");
-
-  zone.innerHTML = "<p>Chargement des compagnies...</p>";
-
-  try {
-    const snapshot = await db.collection("compagnies")
-      .where("statutAbonnement", "in", ["Actif", "Expiré"])
-      .orderBy("nom")
-      .get();
-
-    if (snapshot.empty) {
-      zone.innerHTML =
-        "<p class='notice'>Aucune compagnie disponible pour le moment.</p>";
-      return;
-    }
-
-    let html = "";
-
-    snapshot.forEach(doc => {
-      const compagnie = doc.data();
-
-      const destinations = (compagnie.destinations || []).map(d =>
-        "<li>" + echapperTexteCompagnie(d.ville) +
-        " : " + Number(d.prix).toLocaleString("fr-FR") +
-        " FCFA</li>"
-      ).join("");
-
-      html += `
-        <div class="stop">
-          <h3>${echapperTexteCompagnie(compagnie.nom)}</h3>
-          <p><strong>Agence :</strong>
-            ${echapperTexteCompagnie(compagnie.agence)}</p>
-          <p><strong>Localisation :</strong>
-            ${echapperTexteCompagnie(compagnie.localisation)}</p>
-          <p><strong>Téléphone :</strong>
-            ${echapperTexteCompagnie(compagnie.telephone)}</p>
-          <p><strong>Destinations et tarifs :</strong></p>
-          <ul>${destinations}</ul>
-        </div>
-      `;
-    });
-
-    zone.innerHTML = html;
-
-  } catch (erreur) {
-    zone.innerHTML =
-      "<p class='notice'>Impossible de charger les compagnies : " +
-      echapperTexteCompagnie(erreur.message) + "</p>";
-  }
-}
+const snapshot = await db.collection("compagnies")
+  .where("statutAbonnement", "==", "Actif")
+  .orderBy("nom")
+  .get();
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
