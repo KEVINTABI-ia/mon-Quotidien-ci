@@ -2249,16 +2249,12 @@ const remplacerLogo = confirm(
 let nouveauLogo = compagnie.logo || "";
 
 if (remplacerLogo) {
-const inputLogo = window.document.createElement("input");
-  inputLogo.type = "file";
-  inputLogo.accept = "image/*";
+  const fichier = window.document.getElementById("compagnieLogo").files[0];
 
-  const fichier = await new Promise((resolve) => {
-    inputLogo.onchange = () => resolve(inputLogo.files[0] || null);
-    inputLogo.click();
-  });
-
-  if (!fichier) return;
+  if (!fichier) {
+    alert("Sélectionne d'abord le nouveau logo dans le champ Logo de la compagnie.");
+    return;
+  }
 
   try {
     nouveauLogo = await compresserImage(fichier);
