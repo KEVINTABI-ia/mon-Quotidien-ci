@@ -659,6 +659,23 @@ main > section.card:nth-of-type(2) .result {
 🗺️ Ouvrir l’itinéraire dans Google Maps
 </button>
 </section>
+<section class="card" id="repertoireCompagnies">
+  <h2>🚍 Compagnies de voyage</h2>
+  <p class="notice">
+    Consultez les agences, les destinations et les tarifs des compagnies.
+  </p>
+
+  <button type="button" class="primary"
+    onclick="afficherCompagniesPubliques()">
+    Voir les compagnies
+  </button>
+
+  <div id="listeCompagniesPubliques">
+    <p class="notice">
+      Appuyez sur le bouton pour consulter les compagnies enregistrées.
+    </p>
+  </div>
+</section>
 <section class="card" id="calculateur" style="display:none;">
 <h2>💰 Calculateur de budget transport</h2>
 <label for="nombreTrajets">Nombre de trajets :</label>
