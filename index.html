@@ -3054,12 +3054,10 @@ if (compagnie.statutAbonnement === "En attente") {
   </button>`;
 }
 
-if (compagnie.statutAbonnement === "Expiré") {
-  bouton = `<button type="button" class="primary"
-    onclick="demanderRenouvellementCompagnie('${doc.id}')">
-    Renouveler l'abonnement
-  </button>`;
-}
+if (
+  compagnie.statutAbonnement === "Actif" ||
+  compagnie.statutAbonnement === "Expiré"
+) {
 
       return `
         <div class="stop">
@@ -3254,8 +3252,18 @@ async function validerPaiementCompagnie(id) {
     }
 
     const compagnie = document.data();
-    const dateDebut = new Date();
-    const dateExpiration = new Date(dateDebut);
+    const maintenant = new Date();
+
+const ancienneExpiration = compagnie.dateExpiration
+  ? compagnie.dateExpiration.toDate()
+  : null;
+
+const dateDebut =
+  ancienneExpiration && ancienneExpiration > maintenant
+    ? ancienneExpiration
+    : maintenant;
+
+const dateExpiration = new Date(dateDebut);
 
     if (compagnie.periodicite === "Annuel") {
       dateExpiration.setFullYear(dateExpiration.getFullYear() + 1);
@@ -3299,10 +3307,10 @@ async function demanderRenouvellementCompagnie(id) {
 
     const compagnie = document.data();
 
-    if (compagnie.statutAbonnement !== "Expiré") {
-      alert("Cette compagnie n'a pas un abonnement expiré.");
-      return;
-    }
+    if (!["Actif", "Expiré"].includes(compagnie.statutAbonnement)) {
+  alert("Cette compagnie ne peut pas être renouvelée dans son état actuel.");
+  return;
+}
 
     await reference.update({
       statutAbonnement: "En attente",
