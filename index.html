@@ -3189,54 +3189,156 @@ resultat.features.forEach(function(lieu){
         bouton.style.color = "#222";
         bouton.style.border = "1px solid #ddd";
 
-        bouton.onclick = function(){
+        
+bouton.onclick = function(){
 
-          const coordonnees = lieu.geometry.coordinates;
+  const coordonnees = lieu.geometry.coordinates;
 
-          champ.value = adresse;
+  champ.value = adresse;
 
-          window.positionsCommande[type] = {
-  longitude: coordonnees[0],
-  latitude: coordonnees[1],
-  adresse: adresse
+  window.positionsCommande[type] = {
+    longitude: coordonnees[0],
+    latitude: coordonnees[1],
+    adresse: adresse
+  };
+
+  synchroniserAdressesCommande();
+
+  zone.innerHTML = "";
+  zone.style.display = "none";
+
+  afficherItineraireCommande();
 };
 
-// Positionner automatiquement le marqueur sur la carte
-if(window.cartesCommande[type]){
 
-  const position = [
-    coordonnees[1],
-    coordonnees[0]
+// CARTE AUTOMATIQUE ET CALCUL DE L'ITINERAIRE
+window.carteItineraireCommande = null;
+window.couchesItineraireCommande = null;
+window.elementCarteItineraireCommande = null;
+
+async function afficherItineraireCommande(){
+
+  const recuperation = window.positionsCommande?.recuperation;
+  const destination = window.positionsCommande?.destination;
+
+  const zone = document.getElementById("zoneCarteItineraire");
+  const resume = document.getElementById("resumeItineraire");
+
+  if(!recuperation || !destination){
+    zone.style.display = "none";
+    return;
+  }
+
+  const depart = [
+    recuperation.latitude,
+    recuperation.longitude
   ];
 
-  window.cartesCommande[type].carte.setView(position,17);
+  const arrivee = [
+    destination.latitude,
+    destination.longitude
+  ];
 
-  window.cartesCommande[type].marqueur.setLatLng(position);
-}
+  if(!depart.every(Number.isFinite) ||
+     !arrivee.every(Number.isFinite)){
+    resume.textContent = "Coordonnées des adresses invalides.";
+    zone.style.display = "block";
+    return;
+  }
 
-          synchroniserAdressesCommande();
+  zone.style.display = "block";
+  resume.textContent = "Calcul de votre itinéraire...";
 
-          zone.innerHTML = "";
-zone.style.display = "none";
-        };
+  const element = document.getElementById("carteItineraire");
 
-        zone.appendChild(bouton);
+  try{
 
-      });
-
-      if(!zone.children.length){
-        zone.textContent = "Aucune adresse trouvée.";
-      }
-
-    }catch(erreur){
-
-      console.error("Erreur suggestions :", erreur);
-      zone.textContent = "Recherche momentanément indisponible.";
-
+    if(
+      window.carteItineraireCommande &&
+      window.elementCarteItineraireCommande !== element
+    ){
+      window.carteItineraireCommande.remove();
+      window.carteItineraireCommande = null;
+      window.couchesItineraireCommande = null;
     }
 
-  },500);
+    if(!window.carteItineraireCommande){
+
+      window.carteItineraireCommande = L.map(element).setView(depart,13);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+        attribution:"© OpenStreetMap"
+      }).addTo(window.carteItineraireCommande);
+
+      window.couchesItineraireCommande = L.layerGroup()
+        .addTo(window.carteItineraireCommande);
+
+      window.elementCarteItineraireCommande = element;
+    }
+
+    const carte = window.carteItineraireCommande;
+    const couches = window.couchesItineraireCommande;
+
+    couches.clearLayers();
+
+    setTimeout(function(){
+      carte.invalidateSize();
+    },300);
+
+    const url =
+      "https://router.project-osrm.org/route/v1/driving/"
+      + recuperation.longitude + "," + recuperation.latitude
+      + ";" + destination.longitude + "," + destination.latitude
+      + "?overview=full&geometries=geojson";
+
+    const reponse = await fetch(url);
+    const resultat = await reponse.json();
+
+    if(!resultat.routes || !resultat.routes.length){
+      resume.textContent = "Aucun itinéraire routier trouvé pour ces adresses.";
+      return;
+    }
+
+    const trajet = resultat.routes[0];
+
+    const points = trajet.geometry.coordinates.map(function(point){
+      return [point[1],point[0]];
+    });
+
+    L.marker(depart)
+      .bindPopup("Lieu de récupération")
+      .addTo(couches);
+
+    L.marker(arrivee)
+      .bindPopup("Lieu de destination")
+      .addTo(couches);
+
+    L.polyline(points,{
+      color:"#1976d2",
+      weight:5
+    }).addTo(couches);
+
+    carte.fitBounds(L.latLngBounds(points),{
+      padding:[30,30]
+    });
+
+    const distance = (trajet.distance / 1000).toFixed(1);
+    const duree = Math.round(trajet.duration / 60);
+
+    resume.innerHTML =
+      "<strong>Distance :</strong> " + distance + " km"
+      + "<br><strong>Durée estimée :</strong> " + duree + " minutes";
+
+  }catch(erreur){
+
+    console.error("Erreur itinéraire :",erreur);
+
+    resume.textContent =
+      "Impossible de calculer le trajet. Vérifiez votre connexion et réessayez.";
+
+  }
 }
+
 async function enregistrerCommande(){
 
   const user = auth.currentUser;
