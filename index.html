@@ -3105,6 +3105,11 @@ function confirmerLieuCommande(type){
   alert("Lieu confirmé avec succès.");
 }
 // RECHERCHE AUTOMATIQUE DES ADRESSES
+// INITIALISATION DES POSITIONS DES ADRESSES
+window.positionsCommande = window.positionsCommande || {
+  recuperation: null,
+  destination: null
+};
 window.delaisSuggestionsCommande = {};
 window.requetesSuggestionsCommande = {};
 
