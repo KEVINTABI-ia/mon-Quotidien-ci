@@ -1957,17 +1957,7 @@ function ouvrirInscriptionLivreur(){
 lieuNaissance: document.getElementById('livreurLieuNaissance').value,
 numeroIdentite: document.getElementById('livreurNumeroIdentite').value.trim(),
 numeroPermis: document.getElementById('livreurNumeroPermis').value.trim(),
-          <label>Date de naissance</label>
-<input type="date" id="livreurDateNaissance" required>
-
-<label>Lieu de naissance</label>
-<input type="text" id="livreurLieuNaissance" required>
-
-<label>Numéro NNI ou numéro de la carte nationale d'identité</label>
-<input type="text" id="livreurNumeroIdentite" required>
-
-<label>Numéro du permis de conduire</label>
-<input type="text" id="livreurNumeroPermis" required>
+          
         })
       ">
       Créer mon compte
@@ -2370,7 +2360,7 @@ numeroIdentite: donnees.numeroIdentite,
 
     await auth.signOut();
 
-    Inscription réussie. Ton dossier est en attente de validation.
+alert("Inscription réussie. Ton dossier est en attente de validation.");
 
   } catch (erreur) {
     if (auth.currentUser) {
