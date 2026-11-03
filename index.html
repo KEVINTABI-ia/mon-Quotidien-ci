@@ -3058,6 +3058,11 @@ if (
   compagnie.statutAbonnement === "Actif" ||
   compagnie.statutAbonnement === "Expiré"
 ) {
+  bouton = `<button type="button" class="primary"
+    onclick="demanderRenouvellementCompagnie('${doc.id}')">
+    Renouveler l'abonnement
+  </button>`;
+}
 
       return `
         <div class="stop">
