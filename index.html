@@ -2693,6 +2693,7 @@ async function connecterClient(){
     message.textContent = "Connexion impossible : " + erreur.message;
   }
 }
+
 async function afficherAccueilClient(user){
   const zone = document.getElementById("zoneEspaceClient");
 
@@ -2708,19 +2709,86 @@ async function afficherAccueilClient(user){
     console.error(erreur);
   }
 
+  nom = nom.replace(/[&<>"']/g,"");
+
   zone.innerHTML = `
     <hr>
-    <h3>👋 Bienvenue ${nom.replace(/[&<>"']/g,"")}</h3>
+    <h3>👋 Bienvenue ${nom}</h3>
     <p>Votre espace client est ouvert.</p>
 
-    <div class="stop">
-      <strong>📦 Mes commandes</strong>
-      <p>Vos demandes de transport et leur suivi apparaîtront ici.</p>
-      <p>La réservation et le suivi seront ajoutés à l'étape suivante.</p>
-    </div>
+    <button type="button" class="primary"
+      onclick="chargerHistoriqueCommandes()">
+      📦 Historique des commandes
+    </button>
 
-    <button type="button" onclick="deconnecterClient()">Se déconnecter</button>
+    <div id="zoneHistoriqueCommandes"></div>
+
+    <button type="button" onclick="deconnecterClient()">
+      Se déconnecter
+    </button>
   `;
+}
+
+async function chargerHistoriqueCommandes(){
+  const zone = document.getElementById("zoneHistoriqueCommandes");
+  const user = auth.currentUser;
+
+  if(!user){
+    zone.innerHTML = "<p>Veuillez vous connecter.</p>";
+    return;
+  }
+
+  zone.innerHTML = "<p>Chargement de votre historique...</p>";
+
+  try{
+    const resultat = await db.collection("commandes_colis")
+      .where("clientId","==",user.uid)
+      .get();
+
+    if(resultat.empty){
+      zone.innerHTML = "<p>Aucune commande enregistrée pour le moment.</p>";
+      return;
+    }
+
+    const commandes = resultat.docs.map(doc => doc.data());
+
+    commandes.sort((a,b) => {
+      const dateA = a.createdAt ? a.createdAt.toMillis() : 0;
+      const dateB = b.createdAt ? b.createdAt.toMillis() : 0;
+      return dateB - dateA;
+    });
+
+    const statuts = {
+      en_attente: "En attente",
+      livreur_affecte: "Livreur affecté",
+      colis_recupere: "Colis récupéré",
+      en_transit: "En transit",
+      livre: "Livré"
+    };
+
+    zone.innerHTML = "<h3>📋 Mes anciennes commandes</h3>";
+
+    commandes.forEach(commande => {
+      const carte = document.createElement("div");
+      carte.className = "stop";
+
+      const numero = document.createElement("strong");
+      numero.textContent = "Commande : " + (commande.trackingNumber || "Non disponible");
+
+      const statut = document.createElement("p");
+      statut.textContent = "Statut : " + (statuts[commande.statut] || commande.statut || "Non renseigné");
+
+      const trajet = document.createElement("p");
+      trajet.textContent = (commande.depart || "") + " → " + (commande.destination || "");
+
+      carte.append(numero, statut, trajet);
+      zone.appendChild(carte);
+    });
+
+  }catch(erreur){
+    console.error(erreur);
+    zone.innerHTML = "<p>Impossible de charger votre historique. Réessayez.</p>";
+  }
 }
 
 async function deconnecterClient(){
