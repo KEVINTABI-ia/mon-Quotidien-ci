@@ -2322,7 +2322,26 @@ async function creerComptePartenaire(type, donnees) {
   }
 
   try {
-    const resultat = await auth.createUserWithEmailAndPassword(
+    let resultat;
+
+try {
+const resultat = await auth.createUserWithEmailAndPassword(
+  email,
+  motDePasse
+);
+    email,
+    motDePasse
+  );
+} catch (erreur) {
+  if (erreur.code !== "auth/email-already-in-use") {
+    throw erreur;
+  }
+
+  resultat = await auth.signInWithEmailAndPassword(
+    email,
+    motDePasse
+  );
+}
       email,
       motDePasse
     );
