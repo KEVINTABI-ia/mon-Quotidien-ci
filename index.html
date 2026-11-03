@@ -557,10 +557,10 @@ main > section.card:nth-of-type(2) .result {
   <h3>📍 Gestion des gares et terminus</h3>
 
   <label>Nom de la gare</label>
-  <input id="gareNom" placeholder="Ex. : Gare de Bagnon">
+  <input id="gareNomAdmin" placeholder="Ex. : Gare de Bagnon">
 
   <label>Commune</label>
-  <input id="gareCommune" placeholder="Ex. : Yopougon">
+  <input id="gareCommuneAdmin" placeholder="Ex. : Yopougon">
 
   <label>Quartier (facultatif)</label>
   <input id="gareQuartier" placeholder="Ex. : Bagnon">
@@ -675,6 +675,19 @@ main > section.card:nth-of-type(2) .result {
   <div id="listeCompagniesAdmin"></div>
 
 </div>
+
+</div>
+
+<div id="gestionPartenaires" style="margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;">
+  <h3>👥 Gestion des partenaires</h3>
+  <p>Consulte les demandes d'inscription des livreurs et représentants de gare.</p>
+  <div id="listePartenairesAdmin">
+    <p class="notice">Chargement des dossiers partenaires...</p>
+  </div>
+</div>
+
+</section>
+
 </section>
 <section class="card">
 <h2>Où souhaitez-vous aller ?</h2>
@@ -902,8 +915,10 @@ panneauCompagnies.style.display = autorise ? "block" : "none";
 
 if (autorise) {
   chargerCompagniesAdmin();
+  chargerPartenairesAdmin();
 } else {
   document.getElementById("listeCompagniesAdmin").innerHTML = "";
+  document.getElementById("listePartenairesAdmin").innerHTML = "";
 }
   if (autorise) {
     chargerRoutesFirestore();
@@ -1169,8 +1184,8 @@ function enregistrerGare() {
     return;
   }
 
-  const nom = document.getElementById("gareNom").value.trim();
-  const commune = document.getElementById("gareCommune").value.trim();
+  const nom = document.getElementById("gareNomAdmin").value.trim();
+const commune = document.getElementById("gareCommuneAdmin").value.trim();
   const quartier = document.getElementById("gareQuartier").value.trim();
   const transports = document.getElementById("gareTransports").value
     .split(",").map(t => t.trim()).filter(Boolean);
@@ -1225,8 +1240,8 @@ function chargerGareEdition(index) {
 
   gareEnEdition = gare.firestoreId;
 
-  document.getElementById("gareNom").value = gare.nom || "";
-  document.getElementById("gareCommune").value = gare.commune || "";
+  document.getElementById("gareNomAdmin").value = gare.nom || "";
+document.getElementById("gareCommuneAdmin").value = gare.commune || "";
   document.getElementById("gareQuartier").value = gare.quartier || "";
   document.getElementById("gareTransports").value =
     (gare.transports || []).join(", ");
@@ -1887,7 +1902,7 @@ function ouvrirInscriptionLivreur(){
   const section = document.getElementById("transportColis");
   let zone = document.getElementById("formulaireLivreur");
 
-  if(!zone){
+  if (!zone) {
     zone = document.createElement("div");
     zone.id = "formulaireLivreur";
     section.appendChild(zone);
@@ -1926,24 +1941,32 @@ function ouvrirInscriptionLivreur(){
 
     <p class="notice">
       Ton compte sera créé avec le statut « En attente ».
-      Les documents ne sont pas encore téléversés.
+      Tes documents seront transmis pour vérification.
     </p>
 
     <button type="button" class="primary"
       onclick="
         creerComptePartenaire('livreur_independant', {
-    nom: document.getElementById('livreurNom').value,
-    telephone: document.getElementById('livreurTelephone').value,
-    email: document.getElementById('livreurEmail').value,
-    motDePasse: document.getElementById('livreurMotDePasse').value,
-    commune: document.getElementById('livreurCommune').value,
-    quartiers: document.getElementById('livreurQuartiers').value,
+          nom: document.getElementById('livreurNom').value,
+          telephone: document.getElementById('livreurTelephone').value,
+          email: document.getElementById('livreurEmail').value,
+          motDePasse: document.getElementById('livreurMotDePasse').value,
+          commune: document.getElementById('livreurCommune').value,
+          quartiers: document.getElementById('livreurQuartiers').value,
+          photo: document.getElementById('livreurPhoto').files[0],
+          permis: document.getElementById('livreurPermis').files[0],
+          identite: document.getElementById('livreurIdentite').files[0]
+        })
+      ">
+      Créer mon compte
+    </button>
+  `;
 
-    photo: document.getElementById('livreurPhoto').files[0],
-    permis: document.getElementById('livreurPermis').files[0],
-    identite: document.getElementById('livreurIdentite').files[0]
-})
-
+  zone.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+}
 function ouvrirInscriptionGare(){
   const section = document.getElementById("transportColis");
   let zone = document.getElementById("formulaireGare");
@@ -2080,6 +2103,154 @@ async function connecterPartenaire(){
 
   } catch(erreur) {
     statut.textContent = "Connexion impossible : " + erreur.message;
+  }
+}
+async function ouvrirDocumentPartenaire(cle) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès réservé à l'administrateur.");
+    return;
+  }
+
+  const fenetre = window.open("about:blank", "_blank");
+
+  if (!fenetre) {
+    alert("Autorise les fenêtres pop-up pour consulter les documents.");
+    return;
+  }
+
+  try {
+    const token = await auth.currentUser.getIdToken();
+
+    const reponse = await fetch(
+      `${WORKER_URL}/file?key=${encodeURIComponent(cle)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!reponse.ok) {
+      throw new Error("Impossible de récupérer le document.");
+    }
+
+    const fichier = await reponse.blob();
+    const url = URL.createObjectURL(fichier);
+
+    fenetre.location.href = url;
+
+  } catch (erreur) {
+    fenetre.close();
+    alert("Erreur : " + erreur.message);
+  }
+}
+async function chargerPartenairesAdmin() {
+  const zone = document.getElementById("listePartenairesAdmin");
+
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    return;
+  }
+
+  zone.innerHTML = "<p>Chargement des dossiers...</p>";
+
+  try {
+    const snapshot = await db.collection("partenaires")
+      .orderBy("createdAt", "desc")
+      .get();
+
+    if (snapshot.empty) {
+      zone.innerHTML = "<p class='notice'>Aucun partenaire inscrit pour le moment.</p>";
+      return;
+    }
+
+    let html = "";
+
+    snapshot.forEach(doc => {
+      const partenaire = doc.data();
+const documents = partenaire.documents || {};
+      const type = partenaire.type === "livreur_independant"
+        ? "Livreur indépendant"
+        : "Représentant de gare";
+
+      html += `
+        <div class="stop">
+          <h3>${echapperTexteCompagnie(partenaire.nom)}</h3>
+          <p><strong>Profil :</strong> ${type}</p>
+          <p><strong>Téléphone :</strong> ${echapperTexteCompagnie(partenaire.telephone)}</p>
+          <p><strong>E-mail :</strong> ${echapperTexteCompagnie(partenaire.email)}</p>
+          <p><strong>Commune :</strong> ${echapperTexteCompagnie(partenaire.commune)}</p>
+          <p><strong>Statut :</strong> ${echapperTexteCompagnie(partenaire.statut)}</p>
+<div style="margin-top:10px;">
+  <strong>Documents transmis :</strong><br>
+
+  ${documents.photo ? `<button type="button" onclick="ouvrirDocumentPartenaire('${documents.photo}')">Voir la photo</button>` : ""}
+
+  ${documents.permis ? `<button type="button" onclick="ouvrirDocumentPartenaire('${documents.permis}')">Voir le permis</button>` : ""}
+
+  ${documents.identite ? `<button type="button" onclick="ouvrirDocumentPartenaire('${documents.identite}')">Voir la pièce d'identité</button>` : ""}
+
+  ${documents.carte ? `<button type="button" onclick="ouvrirDocumentPartenaire('${documents.carte}')">Voir la carte professionnelle</button>` : ""}
+</div>
+          <button type="button" class="primary"
+            onclick="validerPartenaire('${doc.id}')">
+            Approuver
+          </button>
+
+          <button type="button"
+            onclick="refuserPartenaire('${doc.id}')">
+            Refuser
+          </button>
+        </div>
+      `;
+    });
+
+    zone.innerHTML = html;
+
+  } catch (erreur) {
+    zone.innerHTML =
+      "<p>Erreur de chargement : " +
+      echapperTexteCompagnie(erreur.message) + "</p>";
+  }
+}
+async function validerPartenaire(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès réservé à l'administrateur.");
+    return;
+  }
+
+  if (!confirm("Confirmer l'approbation de ce partenaire ?")) return;
+
+  try {
+    await db.collection("partenaires").doc(id).update({
+      statut: "approuve"
+    });
+
+    alert("Partenaire approuvé avec succès.");
+    chargerPartenairesAdmin();
+
+  } catch (erreur) {
+    alert("Erreur : " + erreur.message);
+  }
+}
+
+async function refuserPartenaire(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès réservé à l'administrateur.");
+    return;
+  }
+
+  if (!confirm("Confirmer le refus de ce partenaire ?")) return;
+
+  try {
+    await db.collection("partenaires").doc(id).update({
+      statut: "refuse"
+    });
+
+    alert("Demande refusée.");
+    chargerPartenairesAdmin();
+
+  } catch (erreur) {
+    alert("Erreur : " + erreur.message);
   }
 }
 // CREATION DU COMPTE PARTENAIRE
@@ -3013,6 +3184,51 @@ async function preparerRappelWhatsApp(id) {
     const message = `Bonjour ${compagnie.nom}, votre abonnement Mon Transport CI est actuellement ${compagnie.statutAbonnement}. Formule : ${compagnie.formule}. Montant : ${Number(compagnie.montant).toLocaleString("fr-FR")} FCFA. Merci de nous contacter pour toute information concernant votre abonnement.`;
 
     const lien = "https://wa.me/" + numero + "?text=" + encodeURIComponent(message);
+
+    window.location.href = lien;
+
+  } catch (erreur) {
+    alert("Erreur : " + erreur.message);
+  }
+}
+async function preparerRappelEmail(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès administrateur requis.");
+    return;
+  }
+
+  try {
+    const document = await db.collection("compagnies").doc(id).get();
+
+    if (!document.exists) {
+      alert("Compagnie introuvable.");
+      return;
+    }
+
+    const compagnie = document.data();
+
+    if (!compagnie.email) {
+      alert("Aucune adresse e-mail enregistrée.");
+      return;
+    }
+
+    const sujet = "Rappel concernant votre abonnement Mon Transport CI";
+
+    const message = `Bonjour ${compagnie.nom},
+
+Votre abonnement Mon Transport CI est actuellement : ${compagnie.statutAbonnement}.
+
+Formule : ${compagnie.formule}
+Montant : ${Number(compagnie.montant).toLocaleString("fr-FR")} FCFA.
+
+Merci de nous contacter pour toute information concernant votre abonnement.
+
+Cordialement,
+L'équipe Mon Transport CI.`;
+
+    const lien = "mailto:" + encodeURIComponent(compagnie.email)
+      + "?subject=" + encodeURIComponent(sujet)
+      + "&body=" + encodeURIComponent(message);
 
     window.location.href = lien;
 
