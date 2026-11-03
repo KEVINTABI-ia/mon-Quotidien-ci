@@ -3108,6 +3108,7 @@ function confirmerLieuCommande(type){
 window.delaisSuggestionsCommande = {};
 window.requetesSuggestionsCommande = {};
 
+
 async function proposerAdressesCommande(type){
 
   const idChamp = type === "recuperation"
@@ -3121,6 +3122,8 @@ async function proposerAdressesCommande(type){
   const champ = document.getElementById(idChamp);
   const zone = document.getElementById(idZone);
 
+  if(!champ || !zone) return;
+
   const recherche = champ.value.trim();
 
   clearTimeout(window.delaisSuggestionsCommande[type]);
@@ -3131,84 +3134,102 @@ async function proposerAdressesCommande(type){
   window.requetesSuggestionsCommande[type] = numeroRequete;
 
   if(recherche.length < 3){
+    zone.innerHTML = "";
+    zone.style.display = "none";
+    return;
+  }
 
-  zone.innerHTML = "";
+  zone.style.display = "block";
 
-  zone.style.display = "none";
+  window.delaisSuggestionsCommande[type] =
+    setTimeout(async function(){
 
-  return;
+      try{
 
+        const url =
+          "https://photon.komoot.io/api/?q="
+          + encodeURIComponent(recherche + ", Côte d'Ivoire")
+          + "&lat=5.35&lon=-4.00&limit=5&lang=fr";
+
+        const reponse = await fetch(url);
+        const resultat = await reponse.json();
+
+        if(numeroRequete !== window.requetesSuggestionsCommande[type]){
+          return;
+        }
+
+        zone.innerHTML = "";
+        zone.style.display = "block";
+
+        resultat.features.forEach(function(lieu){
+
+          const p = lieu.properties;
+
+          const nom = [
+            p.name,
+            p.street,
+            p.housenumber,
+            p.district,
+            p.city || p.locality,
+            p.state
+          ].filter(Boolean);
+
+          const adresse = [...new Set(nom)].join(", ");
+
+          if(!adresse) return;
+
+          const bouton = document.createElement("button");
+
+          bouton.type = "button";
+          bouton.textContent = "📍 " + adresse;
+
+          bouton.style.display = "block";
+          bouton.style.width = "100%";
+          bouton.style.padding = "12px";
+          bouton.style.textAlign = "left";
+          bouton.style.background = "white";
+          bouton.style.color = "#222";
+          bouton.style.border = "1px solid #ddd";
+
+          bouton.onclick = function(){
+
+            const coordonnees = lieu.geometry.coordinates;
+
+            champ.value = adresse;
+
+            window.positionsCommande[type] = {
+              longitude: coordonnees[0],
+              latitude: coordonnees[1],
+              adresse: adresse
+            };
+
+            synchroniserAdressesCommande();
+
+            zone.innerHTML = "";
+            zone.style.display = "none";
+
+            afficherItineraireCommande();
+          };
+
+          zone.appendChild(bouton);
+
+        });
+
+        if(!zone.children.length){
+          zone.textContent = "Aucune adresse trouvée.";
+        }
+
+      }catch(erreur){
+
+        console.error("Erreur suggestions :",erreur);
+
+        zone.textContent =
+          "Recherche momentanément indisponible.";
+
+      }
+
+    },500);
 }
-
-zone.style.display = "block";
-
-  window.delaisSuggestionsCommande[type] = setTimeout(async function(){
-
-    try{
-
-      const url =
-        "https://photon.komoot.io/api/?q="
-        + encodeURIComponent(recherche + ", Côte d'Ivoire")
-        + "&lat=5.35&lon=-4.00&limit=5&lang=fr";
-
-      const reponse = await fetch(url);
-      const resultat = await reponse.json();
-
-      if(numeroRequete !== window.requetesSuggestionsCommande[type]){
-  return;
-}
-
-zone.innerHTML = "";
-zone.style.display = "block";
-
-resultat.features.forEach(function(lieu){
-        const p = lieu.properties;
-        const nom = [
-          p.name,
-          p.street,
-          p.housenumber,
-          p.district,
-          p.city || p.locality,
-          p.state
-        ].filter(Boolean);
-
-        const adresse = [...new Set(nom)].join(", ");
-
-        if(!adresse) return;
-
-        const bouton = document.createElement("button");
-
-        bouton.type = "button";
-        bouton.textContent = "📍 " + adresse;
-
-        bouton.style.display = "block";
-        bouton.style.width = "100%";
-        bouton.style.padding = "12px";
-        bouton.style.textAlign = "left";
-        bouton.style.background = "white";
-        bouton.style.color = "#222";
-        bouton.style.border = "1px solid #ddd";
-
-        
-bouton.onclick = function(){
-
-  const coordonnees = lieu.geometry.coordinates;
-
-  champ.value = adresse;
-
-  window.positionsCommande[type] = {
-    longitude: coordonnees[0],
-    latitude: coordonnees[1],
-    adresse: adresse
-  };
-
-  synchroniserAdressesCommande();
-
-  zone.innerHTML = "";
-  zone.style.display = "none";
-
-  afficherItineraireCommande();
-};
 
 // CARTE AUTOMATIQUE ET CALCUL DE L'ITINERAIRE
 window.carteItineraireCommande = null;
