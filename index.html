@@ -1953,9 +1953,21 @@ function ouvrirInscriptionLivreur(){
           motDePasse: document.getElementById('livreurMotDePasse').value,
           commune: document.getElementById('livreurCommune').value,
           quartiers: document.getElementById('livreurQuartiers').value,
-          photo: document.getElementById('livreurPhoto').files[0],
-          permis: document.getElementById('livreurPermis').files[0],
-          identite: document.getElementById('livreurIdentite').files[0]
+          dateNaissance: document.getElementById('livreurDateNaissance').value,
+lieuNaissance: document.getElementById('livreurLieuNaissance').value,
+numeroIdentite: document.getElementById('livreurNumeroIdentite').value.trim(),
+numeroPermis: document.getElementById('livreurNumeroPermis').value.trim(),
+          <label>Date de naissance</label>
+<input type="date" id="livreurDateNaissance" required>
+
+<label>Lieu de naissance</label>
+<input type="text" id="livreurLieuNaissance" required>
+
+<label>Numéro NNI ou numéro de la carte nationale d'identité</label>
+<input type="text" id="livreurNumeroIdentite" required>
+
+<label>Numéro du permis de conduire</label>
+<input type="text" id="livreurNumeroPermis" required>
         })
       ">
       Créer mon compte
@@ -1999,14 +2011,17 @@ function ouvrirInscriptionGare(){
     <label>Commune</label>
     <input type="text" id="gareCommune" required>
 
-    <label>Photo de profil</label>
-    <input type="file" id="garePhoto" accept="image/*" required>
+  <label>Date de naissance</label>
+<input type="date" id="gareDateNaissance" required>
 
-    <label>Carte professionnelle de la gare</label>
-    <input type="file" id="gareCarte" accept="image/*,.pdf" required>
+<label>Lieu de naissance</label>
+<input type="text" id="gareLieuNaissance" required>
 
-    <label>Carte nationale d'identité</label>
-    <input type="file" id="gareIdentite" accept="image/*,.pdf" required>
+<label>Numéro NNI ou numéro de la carte nationale d'identité</label>
+<input type="text" id="gareNumeroIdentite" required>
+
+<label>Poste occupé dans la gare</label>
+<input type="text" id="garePosteOccupe" required>
 
     <p class="notice">
       Ton compte sera créé avec le statut « En attente ».
@@ -2022,9 +2037,10 @@ function ouvrirInscriptionGare(){
   motDePasse: document.getElementById('gareMotDePasse').value,
   commune: document.getElementById('gareCommune').value,
   nomGare: document.getElementById('gareNomStation').value,
-  photo: document.getElementById('garePhoto').files[0],
-  carte: document.getElementById('gareCarte').files[0],
-  identite: document.getElementById('gareIdentite').files[0]
+  dateNaissance: document.getElementById('gareDateNaissance').value,
+lieuNaissance: document.getElementById('gareLieuNaissance').value,
+numeroIdentite: document.getElementById('gareNumeroIdentite').value.trim(),
+posteOccupe: document.getElementById('garePosteOccupe').value.trim(),
 })
       ">
       Créer mon compte
@@ -2303,23 +2319,7 @@ async function creerComptePartenaire(type, donnees) {
     alert("Vérifie ton adresse e-mail et ton mot de passe (6 caractères minimum).");
     return;
   }
-
-  const fichiers = type === "livreur_independant"
-    ? {
-        photo: donnees.photo,
-        permis: donnees.permis,
-        identite: donnees.identite
-      }
-    : {
-        photo: donnees.photo || document.getElementById("garePhoto")?.files[0],
-        carte: donnees.carte || document.getElementById("gareCarte")?.files[0],
-        identite: donnees.identite || document.getElementById("gareIdentite")?.files[0]
-      };
-
-  if (Object.values(fichiers).some(fichier => !fichier)) {
-    alert("Merci de sélectionner tous les documents demandés.");
-    return;
-  }
+const fichiers = {};
 
   try {
     let resultat;
@@ -2342,16 +2342,6 @@ async function creerComptePartenaire(type, donnees) {
     
     const uid = resultat.user.uid;
 
-    const documents = {};
-
-    for (const [nom, fichier] of Object.entries(fichiers)) {
-documents[nom] = await envoyerFichierCloudflare(
-  fichier,
-  "document",
-  resultat.user
-);
-    }
-
     const dossier = {
       uid: uid,
       type: type,
@@ -2359,24 +2349,28 @@ documents[nom] = await envoyerFichierCloudflare(
       telephone: donnees.telephone,
       commune: donnees.commune,
       email: email,
-      documents: documents,
+      dateNaissance: donnees.dateNaissance,
+lieuNaissance: donnees.lieuNaissance,
+numeroIdentite: donnees.numeroIdentite,
       statut: "en_attente",
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
     if (type === "livreur_independant") {
       dossier.quartiers = donnees.quartiers;
+      dossier.numeroPermis = donnees.numeroPermis;
     }
 
     if (type === "representant_gare") {
       dossier.nomGare = donnees.nomGare;
+      dossier.posteOccupe = donnees.posteOccupe;
     }
 
     await db.collection("partenaires").doc(uid).set(dossier);
 
     await auth.signOut();
 
-    alert("Compte créé et documents transmis. Ton dossier est en attente de validation.");
+    Inscription réussie. Ton dossier est en attente de validation.
 
   } catch (erreur) {
     if (auth.currentUser) {
