@@ -1916,6 +1916,26 @@ function validerNumeroIdentite(champ, idErreur) {
   message.textContent = "";
   return true;
 }
+function validerTelephone(champ, idErreur) {
+  let numero = champ.value.replace(/\s/g, "");
+
+  if (numero.startsWith("+225")) {
+    numero = numero.substring(4);
+  }
+
+  const valide = /^(01|05|07)[0-9]{8}$/.test(numero);
+  const message = document.getElementById(idErreur);
+
+  if (!valide) {
+    message.textContent =
+      "Saisis un numéro ivoirien valide (10 chiffres ou +225 suivi des 10 chiffres).";
+    return false;
+  }
+
+  champ.value = numero;
+  message.textContent = "";
+  return true;
+}
 function ouvrirInscriptionLivreur(){
   const section = document.getElementById("transportColis");
   let zone = document.getElementById("formulaireLivreur");
@@ -1934,7 +1954,9 @@ function ouvrirInscriptionLivreur(){
     <input type="text" id="livreurNom" required>
 
     <label>Téléphone</label>
-    <input type="tel" id="livreurTelephone" required>
+   <input type="tel" id="livreurTelephone"
+  onblur="validerTelephone(this, 'erreurLivreurTelephone')" required>
+<span id="erreurLivreurTelephone" style="color:red;"></span>
 
     <label>Adresse e-mail</label>
     <input type="email" id="livreurEmail" required>
@@ -2009,7 +2031,9 @@ function ouvrirInscriptionGare(){
     <input type="text" id="gareNom" required>
 
     <label>Numéro de téléphone</label>
-    <input type="tel" id="gareTelephone" required>
+   <input type="tel" id="gareTelephone"
+  onblur="validerTelephone(this, 'erreurGareTelephone')" required>
+<span id="erreurGareTelephone" style="color:red;"></span>
 
     <label>Adresse e-mail</label>
     <input type="email" id="gareEmail" required>
@@ -2327,6 +2351,22 @@ async function envoyerFichierCloudflare(
   return resultat.key;
 }
 async function creerComptePartenaire(type, donnees) {
+  const telephoneChampId = type === "livreur_independant"
+  ? "livreurTelephone"
+  : "gareTelephone";
+
+const telephoneErreurId = type === "livreur_independant"
+  ? "erreurLivreurTelephone"
+  : "erreurGareTelephone";
+
+const champTelephone = document.getElementById(telephoneChampId);
+
+if (!validerTelephone(champTelephone, telephoneErreurId)) {
+  champTelephone.focus();
+  return;
+}
+
+donnees.telephone = champTelephone.value;
   const email = donnees.email.trim();
   const motDePasse = donnees.motDePasse;
 const idChamp = type === "livreur_independant"
