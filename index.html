@@ -1979,7 +1979,10 @@ function ouvrirInscriptionLivreur(){
 <span id="erreurLivreurEmail" style="color:red;"></span>
 
     <label>Mot de passe (6 caractères minimum)</label>
-    <input type="password" id="livreurMotDePasse" minlength="6" required>
+<input type="password" id="livreurMotDePasse"
+  onblur="validerMotDePasse(this, 'erreurLivreurMotDePasse')"
+  minlength="6" required>
+<span id="erreurLivreurMotDePasse" style="color:red;"></span>
 
     <label>Commune desservie</label>
     <input type="text" id="livreurCommune" required>
@@ -2030,6 +2033,18 @@ numeroPermis: document.getElementById('livreurNumeroPermis').value.trim(),
     block: "start"
   });
 }
+function validerMotDePasse(champ, idErreur) {
+  const motDePasse = champ.value;
+  const message = document.getElementById(idErreur);
+
+  if (motDePasse.length < 6) {
+    message.textContent = "Ton mot de passe doit contenir au moins 6 caractères.";
+    return false;
+  }
+
+  message.textContent = "";
+  return true;
+}
 function ouvrirInscriptionGare(){
   const section = document.getElementById("transportColis");
   let zone = document.getElementById("formulaireGare");
@@ -2058,7 +2073,10 @@ function ouvrirInscriptionGare(){
 <span id="erreurGareEmail" style="color:red;"></span>
 
     <label>Mot de passe (6 caractères minimum)</label>
-    <input type="password" id="gareMotDePasse" minlength="6" required>
+<input type="password" id="gareMotDePasse"
+  onblur="validerMotDePasse(this, 'erreurGareMotDePasse')"
+  minlength="6" required>
+<span id="erreurGareMotDePasse" style="color:red;"></span>
 
     <label>Nom de la gare</label>
     <input type="text" id="gareNomStation" required>
@@ -2404,6 +2422,20 @@ if (!validerEmail(champEmail, emailErreurId)) {
 
 donnees.email = champEmail.value;
   const motDePasse = donnees.motDePasse;
+  const motDePasseChampId = type === "livreur_independant"
+  ? "livreurMotDePasse"
+  : "gareMotDePasse";
+
+const motDePasseErreurId = type === "livreur_independant"
+  ? "erreurLivreurMotDePasse"
+  : "erreurGareMotDePasse";
+
+const champMotDePasse = document.getElementById(motDePasseChampId);
+
+if (!validerMotDePasse(champMotDePasse, motDePasseErreurId)) {
+  champMotDePasse.focus();
+  return;
+}
 const idChamp = type === "livreur_independant"
   ? "livreurNumeroIdentite"
   : "gareNumeroIdentite";
