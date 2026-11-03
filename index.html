@@ -2716,6 +2716,13 @@ async function afficherAccueilClient(user){
     <h3>👋 Bienvenue ${nom}</h3>
     <p>Votre espace client est ouvert.</p>
 
+<button type="button" class="primary"
+  onclick="afficherFormulaireCommande()">
+  ➕ Nouvelle commande
+</button>
+
+<div id="zoneFormulaireCommande"></div>
+
     <button type="button" class="primary"
       onclick="chargerHistoriqueCommandes()">
       📦 Historique des commandes
@@ -2728,7 +2735,284 @@ async function afficherAccueilClient(user){
     </button>
   `;
 }
+function afficherFormulaireCommande(){
 
+  const zone = document.getElementById("zoneFormulaireCommande");
+
+  zone.innerHTML = `
+    <hr>
+    <h3>📦 Nouvelle commande</h3>
+
+    <label>Choisissez votre service</label>
+    <select id="serviceCommande" onchange="changerServiceCommande()">
+      <option value="">-- Sélectionner --</option>
+      <option value="compagnie">Expédier ou récupérer un colis</option>
+      <option value="livraison">Livraison classique</option>
+      <option value="livraison_programmee">Réserver une livraison</option>
+    </select>
+
+    <div id="detailsServiceCommande"></div>
+
+    <div id="statutCommande"></div>
+  `;
+}
+
+function changerServiceCommande(){
+
+  const service = document.getElementById("serviceCommande").value;
+  const zone = document.getElementById("detailsServiceCommande");
+
+  if(!service){
+    zone.innerHTML = "";
+    return;
+  }
+
+  let html = "";
+
+  if(service === "compagnie"){
+    html = `
+      <label>Opération</label>
+      <select id="operationCommande">
+        <option value="expedition">Expédier un colis</option>
+        <option value="recuperation">Récupérer un colis arrivé</option>
+      </select>
+
+      <label>Compagnie de transport</label>
+      <input id="compagnieCommande" placeholder="Nom de la compagnie">
+
+      <label>Gare ou station</label>
+      <input id="gareCommande" placeholder="Nom de la gare">
+
+      <label>Provenance / ville de départ</label>
+      <input id="provenanceCommande" placeholder="Ex : Bouaké">
+
+      <label>Code du colis (pour une récupération)</label>
+      <input id="codeColisCommande" placeholder="Code fourni par la compagnie">
+    `;
+  }
+
+  if(service === "livraison" || service === "livraison_programmee"){
+    html = `
+      <label>Lieu de récupération</label>
+      <input id="departCommande" placeholder="Commune, quartier, adresse">
+
+      <label>Lieu de livraison</label>
+      <input id="destinationCommande" placeholder="Commune, quartier, adresse">
+    `;
+  }
+
+  html += `
+    <label>Téléphone de l'expéditeur</label>
+    <input id="telephoneExpediteurCommande" type="tel" placeholder="07XXXXXXXX">
+
+    <label>Adresse de récupération</label>
+    <input id="adresseRecuperationCommande" placeholder="Adresse complète">
+
+    <label>Téléphone du destinataire</label>
+    <input id="telephoneDestinataireCommande" type="tel" placeholder="07XXXXXXXX">
+
+    <label>Adresse de livraison</label>
+    <input id="adresseLivraisonCommande" placeholder="Adresse complète">
+
+    <label>Description du colis</label>
+    <textarea id="descriptionColisCommande" placeholder="Décrivez le colis"></textarea>
+  `;
+
+  if(service === "livraison_programmee"){
+    html += `
+      <label>Date et heure souhaitées</label>
+      <input id="dateHeureCommande" type="datetime-local">
+      <small>La livraison doit être programmée entre 1 heure et 24 heures après la réservation.</small>
+    `;
+  }
+
+  html += `
+    <button type="button" class="primary" onclick="enregistrerCommande()">
+      Confirmer ma commande
+    </button>
+  `;
+
+  zone.innerHTML = html;
+}
+async function enregistrerCommande(){
+
+  const user = auth.currentUser;
+
+  if(!user){
+    alert("Veuillez vous connecter à votre compte client.");
+    return;
+  }
+
+  const lire = id => {
+    const element = document.getElementById(id);
+    return element ? element.value.trim() : "";
+  };
+
+  const service = lire("serviceCommande");
+
+  if(!service){
+    alert("Veuillez choisir un service.");
+    return;
+  }
+
+  const telephoneExpediteur = lire("telephoneExpediteurCommande");
+  const telephoneDestinataire = lire("telephoneDestinataireCommande");
+
+  function telephoneValide(numero){
+    let n = numero.replace(/\D/g,"");
+    if(n.startsWith("225") && n.length === 13){
+      n = n.substring(3);
+    }
+    return /^(01|05|07)\d{8}$/.test(n);
+  }
+
+  if(!telephoneValide(telephoneExpediteur) ||
+     !telephoneValide(telephoneDestinataire)){
+    alert("Vérifiez les deux numéros. Format attendu : 10 chiffres commençant par 01, 05 ou 07.");
+    return;
+  }
+
+  const adresseRecuperation = lire("adresseRecuperationCommande");
+  const adresseLivraison = lire("adresseLivraisonCommande");
+
+  if(!adresseRecuperation || !adresseLivraison){
+    alert("Veuillez renseigner les deux adresses.");
+    return;
+  }
+
+  let depart = "";
+  let destination = "";
+  let operation = "";
+  let compagnie = "";
+  let gare = "";
+  let provenance = "";
+  let codeColis = "";
+
+  if(service === "compagnie"){
+
+    operation = lire("operationCommande");
+    compagnie = lire("compagnieCommande");
+    gare = lire("gareCommande");
+    provenance = lire("provenanceCommande");
+    codeColis = lire("codeColisCommande");
+
+    if(!compagnie || !gare){
+      alert("Veuillez renseigner la compagnie et la gare.");
+      return;
+    }
+
+    if(operation === "recuperation" &&
+       (!provenance || !codeColis)){
+      alert("Pour récupérer un colis, le code et la provenance sont obligatoires.");
+      return;
+    }
+
+    if(operation === "expedition"){
+      depart = adresseRecuperation;
+      destination = compagnie + " - " + gare;
+    }else{
+      depart = compagnie + " - " + gare;
+      destination = adresseLivraison;
+    }
+  }
+
+  if(service === "livraison" ||
+     service === "livraison_programmee"){
+
+    depart = lire("departCommande");
+    destination = lire("destinationCommande");
+
+    if(!depart || !destination){
+      alert("Veuillez renseigner le lieu de départ et la destination.");
+      return;
+    }
+  }
+
+  const description = lire("descriptionColisCommande");
+
+  let dateSouhaitee = null;
+
+  if(service === "livraison_programmee"){
+
+    const valeurDate = lire("dateHeureCommande");
+
+    if(!valeurDate){
+      alert("Veuillez choisir une date et une heure.");
+      return;
+    }
+
+    const dateChoisie = new Date(valeurDate);
+    const maintenant = Date.now();
+    const delai = dateChoisie.getTime() - maintenant;
+
+    if(isNaN(dateChoisie.getTime()) ||
+       delai < 60 * 60 * 1000 ||
+       delai > 24 * 60 * 60 * 1000){
+      alert("La livraison doit être programmée entre 1 heure et 24 heures après la réservation.");
+      return;
+    }
+
+    dateSouhaitee = firebase.firestore.Timestamp.fromDate(dateChoisie);
+  }
+
+  try{
+
+    const profilDoc = await db.collection("clients").doc(user.uid).get();
+
+    const profil = profilDoc.exists ? profilDoc.data() : {};
+
+    const numeroSuivi =
+      "TCI-" + Date.now().toString(36).toUpperCase()
+      + "-" + Math.floor(1000 + Math.random() * 9000);
+
+    const commande = {
+      clientId: user.uid,
+      clientNom: profil.nom || "Client",
+      clientTelephone: profil.telephone || "",
+      service: service,
+      depart: depart,
+      destination: destination,
+      telephoneExpediteur: telephoneExpediteur,
+      telephoneDestinataire: telephoneDestinataire,
+      adresseRecuperation: adresseRecuperation,
+      adresseLivraison: adresseLivraison,
+      descriptionColis: description,
+      trackingNumber: numeroSuivi,
+      statut: "en_attente",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    if(operation) commande.operation = operation;
+    if(compagnie) commande.compagnie = compagnie;
+    if(gare) commande.gare = gare;
+    if(provenance) commande.provenance = provenance;
+    if(codeColis) commande.codeColis = codeColis;
+    if(dateSouhaitee) commande.dateHeureSouhaitee = dateSouhaitee;
+
+    await db.collection("commandes_colis").add(commande);
+
+    document.getElementById("zoneFormulaireCommande").innerHTML = `
+      <hr>
+      <h3>✅ Commande enregistrée !</h3>
+      <p><strong>Numéro de suivi :</strong></p>
+      <h3>${numeroSuivi}</h3>
+      <p><strong>Statut :</strong> En attente</p>
+      <p>Votre commande a bien été enregistrée.</p>
+      <button type="button" onclick="afficherFormulaireCommande()">
+        Nouvelle commande
+      </button>
+    `;
+
+    await chargerHistoriqueCommandes();
+
+  }catch(erreur){
+
+    console.error("Erreur commande :", erreur);
+
+    alert("Impossible d'enregistrer la commande. Vérifiez votre connexion et réessayez.");
+
+  }
+}
 async function chargerHistoriqueCommandes(){
   const zone = document.getElementById("zoneHistoriqueCommandes");
   const user = auth.currentUser;
