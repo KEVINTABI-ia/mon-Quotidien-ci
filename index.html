@@ -2324,28 +2324,25 @@ async function creerComptePartenaire(type, donnees) {
   try {
     let resultat;
 
-try {
-const resultat = await auth.createUserWithEmailAndPassword(
-  email,
-  motDePasse
-);
-    email,
-    motDePasse
-  );
-} catch (erreur) {
-  if (erreur.code !== "auth/email-already-in-use") {
-    throw erreur;
-  }
+  try {
+    let resultat;
 
-  resultat = await auth.signInWithEmailAndPassword(
-    email,
-    motDePasse
-  );
-}
-      email,
-      motDePasse
-    );
+    try {
+      resultat = await auth.createUserWithEmailAndPassword(
+        email,
+        motDePasse
+      );
+    } catch (erreurCreation) {
+      if (erreurCreation.code !== "auth/email-already-in-use") {
+        throw erreurCreation;
+      }
 
+      resultat = await auth.signInWithEmailAndPassword(
+        email,
+        motDePasse
+      );
+    }
+    
     const uid = resultat.user.uid;
 
     const documents = {};
