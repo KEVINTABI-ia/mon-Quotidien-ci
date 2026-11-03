@@ -2851,7 +2851,7 @@ function changerServiceCommande(){
         onclick="rechercherLieuCommande('recuperation')">
         Rechercher
       </button>
-      <div id="carteRecuperation"
+     <div id="carteRecuperation" style="height:350px;width:100%;min-height:350px;z-index:1;"></div>
         style="height:280px;width:100%;margin-top:8px;"></div>
       <button type="button"
         onclick="confirmerLieuCommande('recuperation')">
@@ -2883,7 +2883,7 @@ function changerServiceCommande(){
   </button>
 
 </div>
-    <div id="zoneCarteDestination" style="display:none;margin:10px 0;">
+    <div id="carteDestination" style="height:350px;width:100%;min-height:350px;z-index:1;"></div>
       <input id="rechercheCarteDestination"
         placeholder="Rechercher une adresse ou un quartier">
       <button type="button"
@@ -3172,9 +3172,16 @@ async function proposerAdressesCommande(type){
   window.requetesSuggestionsCommande[type] = numeroRequete;
 
   if(recherche.length < 3){
-    zone.innerHTML = "";
-    return;
-  }
+
+  zone.innerHTML = "";
+
+  zone.style.display = "none";
+
+  return;
+
+}
+
+zone.style.display = "block";
 
   window.delaisSuggestionsCommande[type] = setTimeout(async function(){
 
@@ -3193,6 +3200,7 @@ async function proposerAdressesCommande(type){
       }
 
       zone.innerHTML = "";
+zone.style.display = "none";
 
       resultat.features.forEach(function(lieu){
 
