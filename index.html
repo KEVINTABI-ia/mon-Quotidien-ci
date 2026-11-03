@@ -3196,14 +3196,13 @@ zone.style.display = "block";
       const resultat = await reponse.json();
 
       if(numeroRequete !== window.requetesSuggestionsCommande[type]){
-        return;
-      }
+  return;
+}
 
-      zone.innerHTML = "";
-zone.style.display = "none";
+zone.innerHTML = "";
+zone.style.display = "block";
 
-      resultat.features.forEach(function(lieu){
-
+resultat.features.forEach(function(lieu){
         const p = lieu.properties;
         const nom = [
           p.name,
@@ -3259,6 +3258,7 @@ if(window.cartesCommande[type]){
           synchroniserAdressesCommande();
 
           zone.innerHTML = "";
+zone.style.display = "none";
         };
 
         zone.appendChild(bouton);
