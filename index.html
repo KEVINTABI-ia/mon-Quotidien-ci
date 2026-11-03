@@ -2254,35 +2254,38 @@ async function refuserPartenaire(id) {
   }
 }
 // CREATION DU COMPTE PARTENAIRE
-async function envoyerFichierCloudflare(fichier, categorie = "document") {
-    if (!fichier) return null;
+async function envoyerFichierCloudflare(
+  fichier,
+  categorie = "document",
+  utilisateur = auth.currentUser
+) {
+  if (!fichier) return null;
 
-    const utilisateur = auth.currentUser;
-    if (!utilisateur) {
-        throw new Error("Vous devez être connecté.");
-    }
+  if (!utilisateur) {
+    throw new Error("Connexion Firebase requise.");
+  }
 
-    const token = await utilisateur.getIdToken();
-    const formulaire = new FormData();
+  const token = await utilisateur.getIdToken();
+  const formulaire = new FormData();
 
-    formulaire.append("file", fichier);
-    formulaire.append("category", categorie);
+  formulaire.append("file", fichier);
+  formulaire.append("category", categorie);
 
-    const reponse = await fetch(`${WORKER_URL}/upload`, {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${token}`
-        },
-        body: formulaire
-    });
+  const reponse = await fetch(`${WORKER_URL}/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`
+    },
+    body: formulaire
+  });
 
-    const resultat = await reponse.json();
+  const resultat = await reponse.json();
 
-    if (!reponse.ok || !resultat.ok || !resultat.key) {
-        throw new Error(resultat.error || "Échec de l'envoi du fichier.");
-    }
+  if (!reponse.ok || !resultat.ok || !resultat.key) {
+    throw new Error(resultat.error || "Échec de l'envoi du fichier.");
+  }
 
-    return resultat.key;
+  return resultat.key;
 }
 async function creerComptePartenaire(type, donnees) {
   const email = donnees.email.trim();
@@ -2321,7 +2324,11 @@ async function creerComptePartenaire(type, donnees) {
     const documents = {};
 
     for (const [nom, fichier] of Object.entries(fichiers)) {
-      documents[nom] = await envoyerFichierCloudflare(fichier, "document");
+documents[nom] = await envoyerFichierCloudflare(
+  fichier,
+  "document",
+  resultat.user
+);
     }
 
     const dossier = {
