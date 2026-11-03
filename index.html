@@ -1929,19 +1929,20 @@ function ouvrirInscriptionLivreur(){
 
     <label>Quartiers desservis</label>
     <textarea id="livreurQuartiers" required></textarea>
+<label>Date de naissance</label>
+<input type="date" id="livreurDateNaissance" required>
 
-    <label>Photo de profil</label>
-    <input type="file" id="livreurPhoto" accept="image/*" required>
+<label>Lieu de naissance</label>
+<input type="text" id="livreurLieuNaissance" required>
 
-    <label>Permis de conduire</label>
-    <input type="file" id="livreurPermis" accept="image/*,.pdf" required>
+<label>Numéro NNI ou numéro de la carte nationale d'identité</label>
+<input type="text" id="livreurNumeroIdentite" required>
 
-    <label>Carte nationale d'identité</label>
-    <input type="file" id="livreurIdentite" accept="image/*,.pdf" required>
-
+<label>Numéro du permis de conduire</label>
+<input type="text" id="livreurNumeroPermis" required>
     <p class="notice">
       Ton compte sera créé avec le statut « En attente ».
-      Tes documents seront transmis pour vérification.
+    « Tes informations seront vérifiées avant validation. »
     </p>
 
     <button type="button" class="primary"
