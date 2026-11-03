@@ -2814,30 +2814,80 @@ function changerServiceCommande(){
   }
 
   if(service === "livraison" || service === "livraison_programmee"){
-    html = `
-      <label>Lieu de récupération</label>
-      <input id="departCommande" placeholder="Commune, quartier, adresse">
-
-      <label>Lieu de livraison</label>
-      <input id="destinationCommande" placeholder="Commune, quartier, adresse">
+    html += `
+      <input type="hidden" id="departCommande">
+      <input type="hidden" id="destinationCommande">
     `;
   }
 
   html += `
-    <label>Téléphone de l'expéditeur</label>
-    <input id="telephoneExpediteurCommande" type="tel" placeholder="07XXXXXXXX">
+    <label>Lieu de récupération</label>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <input id="adresseRecuperationCommande"
+        placeholder="Commune, quartier, adresse"
+        style="flex:1;"
+        oninput="synchroniserAdressesCommande()">
+      <button type="button"
+        onclick="ouvrirCarteCommande('recuperation')"
+        title="Choisir le lieu de récupération"
+        style="font-size:22px;padding:8px;">
+        📍
+      </button>
+    </div>
+    <div id="zoneCarteRecuperation" style="display:none;margin:10px 0;">
+      <input id="rechercheCarteRecuperation"
+        placeholder="Rechercher une adresse ou un quartier">
+      <button type="button"
+        onclick="rechercherLieuCommande('recuperation')">
+        Rechercher
+      </button>
+      <div id="carteRecuperation"
+        style="height:280px;width:100%;margin-top:8px;"></div>
+      <button type="button"
+        onclick="confirmerLieuCommande('recuperation')">
+        Confirmer ce lieu
+      </button>
+    </div>
 
-    <label>Adresse de récupération</label>
-    <input id="adresseRecuperationCommande" placeholder="Adresse complète">
+    <label>Lieu de destination</label>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <input id="adresseLivraisonCommande"
+        placeholder="Commune, quartier, adresse"
+        style="flex:1;"
+        oninput="synchroniserAdressesCommande()">
+      <button type="button"
+        onclick="ouvrirCarteCommande('destination')"
+        title="Choisir le lieu de destination"
+        style="font-size:22px;padding:8px;">
+        📍
+      </button>
+    </div>
+    <div id="zoneCarteDestination" style="display:none;margin:10px 0;">
+      <input id="rechercheCarteDestination"
+        placeholder="Rechercher une adresse ou un quartier">
+      <button type="button"
+        onclick="rechercherLieuCommande('destination')">
+        Rechercher
+      </button>
+      <div id="carteDestination"
+        style="height:280px;width:100%;margin-top:8px;"></div>
+      <button type="button"
+        onclick="confirmerLieuCommande('destination')">
+        Confirmer ce lieu
+      </button>
+    </div>
+
+    <label>Téléphone de l'expéditeur</label>
+    <input id="telephoneExpediteurCommande"
+      type="tel" placeholder="07XXXXXXXX">
 
     <label>Téléphone du destinataire</label>
-    <input id="telephoneDestinataireCommande" type="tel" placeholder="07XXXXXXXX">
-
-    <label>Adresse de livraison</label>
-    <input id="adresseLivraisonCommande" placeholder="Adresse complète">
+    <input id="telephoneDestinataireCommande"
+      type="tel" placeholder="07XXXXXXXX">
 
     <label>Description du colis</label>
-    <textarea id="descriptionColisCommande" placeholder="Décrivez le colis"></textarea>
+    <textarea id="descriptionColisCommande"
+      placeholder="Décrivez le colis"></textarea>
   `;
 
   if(service === "livraison_programmee"){
@@ -2849,12 +2899,215 @@ function changerServiceCommande(){
   }
 
   html += `
-    <button type="button" class="primary" onclick="enregistrerCommande()">
+    <button type="button" class="primary"
+      onclick="enregistrerCommande()">
       Confirmer ma commande
     </button>
   `;
 
   zone.innerHTML = html;
+
+  synchroniserAdressesCommande();
+}
+
+function synchroniserAdressesCommande(){
+
+  const depart = document.getElementById("departCommande");
+  const destination = document.getElementById("destinationCommande");
+  const recuperation = document.getElementById("adresseRecuperationCommande");
+  const livraison = document.getElementById("adresseLivraisonCommande");
+
+  if(depart && recuperation){
+    depart.value = recuperation.value;
+  }
+
+  if(destination && livraison){
+    destination.value = livraison.value;
+  }
+}
+window.cartesCommande = window.cartesCommande || {};
+window.positionsCommande = window.positionsCommande || {
+  recuperation: null,
+  destination: null
+};
+
+function ouvrirCarteCommande(type){
+
+  const zone = document.getElementById(
+    type === "recuperation"
+      ? "zoneCarteRecuperation"
+      : "zoneCarteDestination"
+  );
+
+  zone.style.display = "block";
+
+  if(window.cartesCommande[type]){
+    setTimeout(function(){
+      window.cartesCommande[type].invalidateSize();
+    },300);
+    return;
+  }
+
+  const centre = [5.35,-4.00];
+
+  const carte = L.map(
+    type === "recuperation"
+      ? "carteRecuperation"
+      : "carteDestination"
+  ).setView(centre,13);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    attribution:"© OpenStreetMap"
+  }).addTo(carte);
+
+  const marqueur = L.marker(centre,{
+    draggable:true
+  }).addTo(carte);
+
+  window.cartesCommande[type] = {
+    carte: carte,
+    marqueur: marqueur
+  };
+
+  carte.on("click",function(e){
+    mettreAJourPositionCommande(type,e.latlng);
+  });
+
+  marqueur.on("dragend",function(){
+    mettreAJourPositionCommande(
+      type,
+      marqueur.getLatLng()
+    );
+  });
+
+  setTimeout(function(){
+    carte.invalidateSize();
+  },300);
+}
+
+async function rechercherLieuCommande(type){
+
+  const id = type === "recuperation"
+    ? "rechercheCarteRecuperation"
+    : "rechercheCarteDestination";
+
+  const recherche = document.getElementById(id).value.trim();
+
+  if(!recherche){
+    alert("Saisissez une adresse à rechercher.");
+    return;
+  }
+
+  try{
+
+    const url =
+      "https://nominatim.openstreetmap.org/search?format=json&limit=1&q="
+      + encodeURIComponent(recherche + ", Côte d'Ivoire");
+
+    const reponse = await fetch(url);
+    const resultats = await reponse.json();
+
+    if(!resultats.length){
+      alert("Adresse introuvable. Essayez avec un autre nom.");
+      return;
+    }
+
+    const position = [
+      parseFloat(resultats[0].lat),
+      parseFloat(resultats[0].lon)
+    ];
+
+    const carte = window.cartesCommande[type];
+
+    carte.carte.setView(position,17);
+    mettreAJourPositionCommande(type,{
+      lat:position[0],
+      lng:position[1]
+    },resultats[0].display_name);
+
+  }catch(erreur){
+    console.error(erreur);
+    alert("Impossible de rechercher cette adresse.");
+  }
+}
+
+async function mettreAJourPositionCommande(type,position,adresseConnue){
+
+  const carte = window.cartesCommande[type];
+
+  if(!carte) return;
+
+  carte.marqueur.setLatLng(position);
+
+  window.positionsCommande[type] = {
+    latitude: position.lat,
+    longitude: position.lng,
+    adresse: adresseConnue || ""
+  };
+
+  if(adresseConnue){
+    afficherAdressePositionCommande(type,adresseConnue);
+    return;
+  }
+
+  try{
+
+    const url =
+      "https://nominatim.openstreetmap.org/reverse?format=json&lat="
+      + position.lat
+      + "&lon="
+      + position.lng;
+
+    const reponse = await fetch(url);
+    const resultat = await reponse.json();
+
+    const adresse = resultat.display_name || "";
+
+    window.positionsCommande[type].adresse = adresse;
+
+    afficherAdressePositionCommande(type,adresse);
+
+  }catch(erreur){
+    console.error(erreur);
+    afficherAdressePositionCommande(
+      type,
+      "Position GPS sélectionnée"
+    );
+  }
+}
+
+function afficherAdressePositionCommande(type,adresse){
+
+  const id = type === "recuperation"
+    ? "adresseRecuperationCommande"
+    : "adresseLivraisonCommande";
+
+  const champ = document.getElementById(id);
+
+  if(champ){
+    champ.value = adresse;
+    synchroniserAdressesCommande();
+  }
+}
+
+function confirmerLieuCommande(type){
+
+  const position = window.positionsCommande[type];
+
+  if(!position){
+    alert("Veuillez choisir un point sur la carte.");
+    return;
+  }
+
+  const zone = document.getElementById(
+    type === "recuperation"
+      ? "zoneCarteRecuperation"
+      : "zoneCarteDestination"
+  );
+
+  zone.style.display = "none";
+
+  alert("Lieu confirmé avec succès.");
 }
 async function enregistrerCommande(){
 
