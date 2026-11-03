@@ -2259,7 +2259,7 @@ async function chargerPartenairesAdmin() {
 
     snapshot.forEach(doc => {
       const partenaire = doc.data();
-const documents = partenaire.documents || {};
+      
       const type = partenaire.type === "livreur_independant"
         ? "Livreur indépendant"
         : "Représentant de gare";
@@ -2271,18 +2271,18 @@ const documents = partenaire.documents || {};
           <p><strong>Téléphone :</strong> ${echapperTexteCompagnie(partenaire.telephone)}</p>
           <p><strong>E-mail :</strong> ${echapperTexteCompagnie(partenaire.email)}</p>
           <p><strong>Commune :</strong> ${echapperTexteCompagnie(partenaire.commune)}</p>
+<p><strong>Date de naissance :</strong> ${echapperTexteCompagnie(partenaire.dateNaissance || "Non renseignée")}</p>
+<p><strong>Lieu de naissance :</strong> ${echapperTexteCompagnie(partenaire.lieuNaissance || "Non renseigné")}</p>
+<p><strong>NNI / Carte d'identité :</strong> ${echapperTexteCompagnie(partenaire.numeroIdentite || "Non renseigné")}</p>
+${partenaire.type === "livreur_independant" ? `
+  <p><strong>Quartiers desservis :</strong> ${echapperTexteCompagnie(partenaire.quartiers || "Non renseignés")}</p>
+  <p><strong>Numéro du permis :</strong> ${echapperTexteCompagnie(partenaire.numeroPermis || "Non renseigné")}</p>
+` : `
+  <p><strong>Gare :</strong> ${echapperTexteCompagnie(partenaire.nomGare || "Non renseignée")}</p>
+  <p><strong>Poste occupé :</strong> ${echapperTexteCompagnie(partenaire.posteOccupe || "Non renseigné")}</p>
+`}
           <p><strong>Statut :</strong> ${echapperTexteCompagnie(partenaire.statut)}</p>
-<div style="margin-top:10px;">
-  <strong>Documents transmis :</strong><br>
 
-  ${documents.photo ? `<button type="button" onclick="ouvrirDocumentPartenaire('${documents.photo}')">Voir la photo</button>` : ""}
-
-  ${documents.permis ? `<button type="button" onclick="ouvrirDocumentPartenaire('${documents.permis}')">Voir le permis</button>` : ""}
-
-  ${documents.identite ? `<button type="button" onclick="ouvrirDocumentPartenaire('${documents.identite}')">Voir la pièce d'identité</button>` : ""}
-
-  ${documents.carte ? `<button type="button" onclick="ouvrirDocumentPartenaire('${documents.carte}')">Voir la carte professionnelle</button>` : ""}
-</div>
           <button type="button" class="primary"
             onclick="validerPartenaire('${doc.id}')">
             Approuver
