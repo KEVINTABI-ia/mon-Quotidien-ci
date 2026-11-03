@@ -2257,17 +2257,23 @@ async function refuserPartenaire(id) {
 async function envoyerFichierCloudflare(
   fichier,
   categorie = "document",
-  utilisateur = auth.currentUser
+  utilisateur = null
 ) {
   if (!fichier) return null;
 
-  if (!utilisateur) {
-    throw new Error("Connexion Firebase requise.");
+  const user = utilisateur || auth.currentUser;
+
+  if (!user) {
+    throw new Error(
+      "Session Firebase introuvable après création du compte."
+    );
   }
 
-  const token = await utilisateur.getIdToken();
-  const formulaire = new FormData();
+  await user.reload();
 
+  const token = await user.getIdToken(true);
+
+  const formulaire = new FormData();
   formulaire.append("file", fichier);
   formulaire.append("category", categorie);
 
@@ -2282,7 +2288,9 @@ async function envoyerFichierCloudflare(
   const resultat = await reponse.json();
 
   if (!reponse.ok || !resultat.ok || !resultat.key) {
-    throw new Error(resultat.error || "Échec de l'envoi du fichier.");
+    throw new Error(
+      resultat.error || "Échec de l'envoi du fichier."
+    );
   }
 
   return resultat.key;
