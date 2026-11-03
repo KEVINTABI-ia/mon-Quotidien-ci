@@ -2741,20 +2741,42 @@ function afficherFormulaireCommande(){
 
   zone.innerHTML = `
     <hr>
-    <h3>📦 Nouvelle commande</h3>
+    <h3>📦 Que souhaitez-vous faire ?</h3>
 
-    <label>Choisissez votre service</label>
-    <select id="serviceCommande" onchange="changerServiceCommande()">
-      <option value="">-- Sélectionner --</option>
-      <option value="compagnie">Expédier ou récupérer un colis</option>
-      <option value="livraison">Livraison classique</option>
-      <option value="livraison_programmee">Réserver une livraison</option>
-    </select>
+    <div style="display:grid;gap:12px;margin:15px 0;">
 
+      <button type="button" class="primary"
+        style="padding:18px;text-align:left;"
+        onclick="selectionnerServiceCommande('compagnie')">
+        📦 Expédier ou récupérer un colis
+      </button>
+
+      <button type="button" class="primary"
+        style="padding:18px;text-align:left;"
+        onclick="selectionnerServiceCommande('livraison')">
+        🛵 Livraison classique
+      </button>
+
+      <button type="button" class="primary"
+        style="padding:18px;text-align:left;"
+        onclick="selectionnerServiceCommande('livraison_programmee')">
+        🗓️ Réserver une livraison
+      </button>
+
+    </div>
+
+    <input type="hidden" id="serviceCommande">
     <div id="detailsServiceCommande"></div>
-
     <div id="statutCommande"></div>
   `;
+}
+
+function selectionnerServiceCommande(service){
+
+  document.getElementById("serviceCommande").value = service;
+
+  changerServiceCommande();
+
 }
 
 function changerServiceCommande(){
