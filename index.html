@@ -1898,6 +1898,24 @@ document.getElementById("depart").value,
 document.getElementById("arrivee").value
 );
 }
+function validerNumeroIdentite(champ, idErreur) {
+  const numero = champ.value.trim().toUpperCase();
+  const message = document.getElementById(idErreur);
+
+  champ.value = numero;
+
+  const estNNI = /^[0-9]{11}$/.test(numero);
+  const estCarte = /^CI.+$/.test(numero);
+
+  if (!estNNI && !estCarte) {
+    message.textContent =
+      "Saisis un NNI de 11 chiffres ou un numéro de carte d'identité commençant par CI.";
+    return false;
+  }
+
+  message.textContent = "";
+  return true;
+}
 function ouvrirInscriptionLivreur(){
   const section = document.getElementById("transportColis");
   let zone = document.getElementById("formulaireLivreur");
@@ -1936,7 +1954,10 @@ function ouvrirInscriptionLivreur(){
 <input type="text" id="livreurLieuNaissance" required>
 
 <label>Numéro NNI ou numéro de la carte nationale d'identité</label>
-<input type="text" id="livreurNumeroIdentite" required>
+<input type="text" id="livreurNumeroIdentite"
+  onblur="validerNumeroIdentite(this, 'erreurLivreurIdentite')"
+  required>
+<span id="erreurLivreurIdentite" style="color:red;"></span>
 
 <label>Numéro du permis de conduire</label>
 <input type="text" id="livreurNumeroPermis" required>
@@ -2009,7 +2030,10 @@ function ouvrirInscriptionGare(){
 <input type="text" id="gareLieuNaissance" required>
 
 <label>Numéro NNI ou numéro de la carte nationale d'identité</label>
-<input type="text" id="gareNumeroIdentite" required>
+<input type="text" id="gareNumeroIdentite"
+  onblur="validerNumeroIdentite(this, 'erreurGareIdentite')"
+  required>
+<span id="erreurGareIdentite" style="color:red;"></span>
 
 <label>Poste occupé dans la gare</label>
 <input type="text" id="garePosteOccupe" required>
@@ -2305,7 +2329,22 @@ async function envoyerFichierCloudflare(
 async function creerComptePartenaire(type, donnees) {
   const email = donnees.email.trim();
   const motDePasse = donnees.motDePasse;
+const idChamp = type === "livreur_independant"
+  ? "livreurNumeroIdentite"
+  : "gareNumeroIdentite";
 
+const idErreur = type === "livreur_independant"
+  ? "erreurLivreurIdentite"
+  : "erreurGareIdentite";
+
+const champIdentite = document.getElementById(idChamp);
+
+if (!validerNumeroIdentite(champIdentite, idErreur)) {
+  champIdentite.focus();
+  return;
+}
+
+donnees.numeroIdentite = champIdentite.value;
   if (!email || !motDePasse || motDePasse.length < 6) {
     alert("Vérifie ton adresse e-mail et ton mot de passe (6 caractères minimum).");
     return;
