@@ -1936,6 +1936,21 @@ function validerTelephone(champ, idErreur) {
   message.textContent = "";
   return true;
 }
+function validerEmail(champ, idErreur) {
+  const email = champ.value.trim();
+  const message = document.getElementById(idErreur);
+
+  const formatValide = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  if (!formatValide) {
+    message.textContent = "Saisis une adresse e-mail valide, par exemple nom@gmail.com.";
+    return false;
+  }
+
+  champ.value = email.toLowerCase();
+  message.textContent = "";
+  return true;
+}
 function ouvrirInscriptionLivreur(){
   const section = document.getElementById("transportColis");
   let zone = document.getElementById("formulaireLivreur");
@@ -1959,7 +1974,9 @@ function ouvrirInscriptionLivreur(){
 <span id="erreurLivreurTelephone" style="color:red;"></span>
 
     <label>Adresse e-mail</label>
-    <input type="email" id="livreurEmail" required>
+    <input type="email" id="livreurEmail"
+  onblur="validerEmail(this, 'erreurLivreurEmail')" required>
+<span id="erreurLivreurEmail" style="color:red;"></span>
 
     <label>Mot de passe (6 caractères minimum)</label>
     <input type="password" id="livreurMotDePasse" minlength="6" required>
@@ -2036,7 +2053,9 @@ function ouvrirInscriptionGare(){
 <span id="erreurGareTelephone" style="color:red;"></span>
 
     <label>Adresse e-mail</label>
-    <input type="email" id="gareEmail" required>
+ <input type="email" id="gareEmail"
+  onblur="validerEmail(this, 'erreurGareEmail')" required>
+<span id="erreurGareEmail" style="color:red;"></span>
 
     <label>Mot de passe (6 caractères minimum)</label>
     <input type="password" id="gareMotDePasse" minlength="6" required>
@@ -2368,6 +2387,22 @@ if (!validerTelephone(champTelephone, telephoneErreurId)) {
 
 donnees.telephone = champTelephone.value;
   const email = donnees.email.trim();
+  const emailChampId = type === "livreur_independant"
+  ? "livreurEmail"
+  : "gareEmail";
+
+const emailErreurId = type === "livreur_independant"
+  ? "erreurLivreurEmail"
+  : "erreurGareEmail";
+
+const champEmail = document.getElementById(emailChampId);
+
+if (!validerEmail(champEmail, emailErreurId)) {
+  champEmail.focus();
+  return;
+}
+
+donnees.email = champEmail.value;
   const motDePasse = donnees.motDePasse;
 const idChamp = type === "livreur_independant"
   ? "livreurNumeroIdentite"
