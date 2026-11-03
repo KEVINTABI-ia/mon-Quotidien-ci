@@ -2924,12 +2924,27 @@ function synchroniserAdressesCommande(){
   if(destination && livraison){
     destination.value = livraison.value;
   }
+
+  // Effacer les anciennes coordonnées si l'adresse est modifiée manuellement
+  if(window.positionsCommande){
+
+    if(
+      recuperation &&
+      window.positionsCommande.recuperation &&
+      recuperation.value !== window.positionsCommande.recuperation.adresse
+    ){
+      window.positionsCommande.recuperation = null;
+    }
+
+    if(
+      livraison &&
+      window.positionsCommande.destination &&
+      livraison.value !== window.positionsCommande.destination.adresse
+    ){
+      window.positionsCommande.destination = null;
+    }
+  }
 }
-window.cartesCommande = window.cartesCommande || {};
-window.positionsCommande = window.positionsCommande || {
-  recuperation: null,
-  destination: null
-};
 
 function ouvrirCarteCommande(type){
 
@@ -2941,12 +2956,12 @@ function ouvrirCarteCommande(type){
 
   zone.style.display = "block";
 
-  if(window.cartesCommande[type]){
-    setTimeout(function(){
-      window.cartesCommande[type].invalidateSize();
-    },300);
-    return;
-  }
+ if(window.cartesCommande[type]){
+  setTimeout(function(){
+    window.cartesCommande[type].carte.invalidateSize();
+  },300);
+  return;
+}
 
   const centre = [5.35,-4.00];
 
@@ -3256,6 +3271,18 @@ async function enregistrerCommande(){
       statut: "en_attente",
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
+    const positionRecuperation = window.positionsCommande?.recuperation;
+const positionLivraison = window.positionsCommande?.destination;
+
+if(positionRecuperation){
+  commande.latitudeRecuperation = positionRecuperation.latitude;
+  commande.longitudeRecuperation = positionRecuperation.longitude;
+}
+
+if(positionLivraison){
+  commande.latitudeLivraison = positionLivraison.latitude;
+  commande.longitudeLivraison = positionLivraison.longitude;
+}
 
     if(operation) commande.operation = operation;
     if(compagnie) commande.compagnie = compagnie;
