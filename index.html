@@ -607,6 +607,29 @@ footer { color: #718076; }
   .brand { font-size: 21px; }
 }
 
+
+/* NAVIGATION ENTRE LES PARCOURS */
+.btn-retour-accueil {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  min-height: 44px;
+  margin: 0 0 18px;
+  padding: 11px 16px;
+  color: #17663D !important;
+  background: #F0F7F1 !important;
+  border: 1px solid #CFE3D3 !important;
+  border-radius: 13px !important;
+  box-shadow: none !important;
+  font-size: 14px;
+  font-weight: 800;
+}
+.btn-retour-accueil:active {
+  background: #E2F0E5 !important;
+}
+
 </style>
 </head>
 <body>
@@ -3398,16 +3421,40 @@ function basculerMenu(){
     menu.style.display === "block" ? "none" : "block";
 }
 
+function masquerParcours(){
+  ["espaceAdmin","calculateur","favoris","historique","transportColis"].forEach(id => {
+    const section = document.getElementById(id);
+    if(section) section.style.display = "none";
+  });
+}
+
+function retourAccueil(){
+  document.getElementById("menuDropdown").style.display = "none";
+  masquerParcours();
+  document.getElementById("zoneEspaceClient")?.replaceChildren();
+  document.getElementById("connexionPartenaire")?.remove();
+  window.scrollTo({top: 0, behavior: "smooth"});
+}
+
 function ouvrirSection(id){
   document.getElementById("menuDropdown").style.display = "none";
+  masquerParcours();
 
-  document.getElementById("espaceAdmin").style.display = "none";
-  document.getElementById("calculateur").style.display = "none";
-  document.getElementById("favoris").style.display = "none";
-  document.getElementById("historique").style.display = "none";
-document.getElementById("transportColis").style.display = "none";
   const section = document.getElementById(id);
+  if(!section) return;
+
   section.style.display = "block";
+
+  // Un seul bouton de retour par écran, même après plusieurs ouvertures.
+  let boutonRetour = section.querySelector(":scope > .btn-retour-accueil");
+  if(!boutonRetour){
+    boutonRetour = document.createElement("button");
+    boutonRetour.type = "button";
+    boutonRetour.className = "btn-retour-accueil";
+    boutonRetour.textContent = "← Retour à l’accueil";
+    boutonRetour.onclick = retourAccueil;
+    section.insertBefore(boutonRetour, section.firstChild);
+  }
 
   section.scrollIntoView({
     behavior:"smooth",
