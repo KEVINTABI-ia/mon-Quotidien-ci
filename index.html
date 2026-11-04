@@ -2579,7 +2579,8 @@ async function chargerCommandesAdmin() {
 }
 
 async function affecterCommandePartenaire(commandeId, partenaireId) {
-  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+  const admin = auth.currentUser;
+  if (!admin || admin.uid !== ADMIN_UID) {
     alert("Accès réservé à l'administrateur.");
     return;
   }
@@ -2588,44 +2589,55 @@ async function affecterCommandePartenaire(commandeId, partenaireId) {
     return;
   }
 
+  const commandeRef = db.collection("commandes_colis").doc(commandeId);
+  const partenaireRef = db.collection("partenaires").doc(partenaireId);
+  const verrouRef = partenaireRef.collection("verrous").doc("missionActive");
+
   try {
-    const commandeRef = db.collection("commandes_colis").doc(commandeId);
-    const partenaireRef = db.collection("partenaires").doc(partenaireId);
-    const [commandeDoc, partenaireDoc] = await Promise.all([commandeRef.get(), partenaireRef.get()]);
-    if (!commandeDoc.exists || !partenaireDoc.exists) throw new Error("Commande ou partenaire introuvable.");
+    await db.runTransaction(async tx => {
+      // Toutes les lectures sont effectuées avant les écritures.
+      const [commandeSnap, partenaireSnap, verrouSnap] = await Promise.all([
+        tx.get(commandeRef), tx.get(partenaireRef), tx.get(verrouRef)
+      ]);
+      if (!commandeSnap.exists || !partenaireSnap.exists) {
+        throw new Error("Commande ou partenaire introuvable.");
+      }
+      const commande = commandeSnap.data();
+      const partenaire = partenaireSnap.data();
+      if (commande.statut !== "en_attente" || commande.partenaireId) {
+        throw new Error("Cette commande n'est plus disponible. Actualise la liste.");
+      }
+      if (verrouSnap.exists) {
+        throw new Error("Ce partenaire a déjà une mission active.");
+      }
+      if (!partenaireAbonnementValide(partenaire)) {
+        throw new Error("Ce partenaire doit être approuvé et avoir un abonnement valide.");
+      }
+      const typeAttendu = commande.service === "compagnie"
+        ? "representant_gare" : "livreur_independant";
+      if (partenaire.type !== typeAttendu) {
+        throw new Error("Le profil du partenaire ne correspond pas au service.");
+      }
 
-    const commande = commandeDoc.data();
-    const partenaire = partenaireDoc.data();
-    const maintenant = new Date();
-    const finEssai = partenaire.dateFinEssai && partenaire.dateFinEssai.toDate ? partenaire.dateFinEssai.toDate() : (partenaire.dateFinEssai ? new Date(partenaire.dateFinEssai) : null);
-    const finAbonnement = partenaire.dateExpirationAbonnement && partenaire.dateExpirationAbonnement.toDate ? partenaire.dateExpirationAbonnement.toDate() : (partenaire.dateExpirationAbonnement ? new Date(partenaire.dateExpirationAbonnement) : null);
-    const abonnementValide = (partenaire.statutAbonnementPartenaire === "Essai" && finEssai && finEssai > maintenant)
-      || (partenaire.statutAbonnementPartenaire === "Actif" && finAbonnement && finAbonnement > maintenant);
-    const typeAttendu = commande.service === "compagnie" ? "representant_gare" : "livreur_independant";
-
-    if (partenaire.statut !== "approuve" || (partenaire.etatCompte || "actif") !== "actif" || !abonnementValide) {
-      throw new Error("Ce partenaire n'est plus éligible : vérifie son approbation, sa suspension et son abonnement.");
-    }
-    if (partenaire.type !== typeAttendu) {
-      throw new Error("Le profil du partenaire ne correspond pas au type de commande.");
-    }
-    if (commande.statut === "livre" || commande.statut === "annule") {
-      throw new Error("Cette commande est déjà clôturée.");
-    }
-
-    await commandeRef.update({
-      partenaireId: partenaireId,
-      partenaireNom: partenaire.nom || "",
-      partenaireTelephone: partenaire.telephone || "",
-      partenaireType: partenaire.type,
-      statut: "livreur_affecte",
-      dateAffectation: firebase.firestore.FieldValue.serverTimestamp(),
-      affectePar: auth.currentUser.uid
+      tx.update(commandeRef, {
+        partenaireId: partenaireId,
+        partenaireNom: partenaire.nom || "",
+        partenaireType: partenaire.type,
+        statut: "livreur_affecte",
+        dateAffectation: firebase.firestore.FieldValue.serverTimestamp(),
+        affectePar: admin.uid
+      });
+      tx.set(verrouRef, {
+        commandeId: commandeId,
+        statut: "active",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
     });
 
-    alert("Commande attribuée à " + (partenaire.nom || "ce partenaire") + ".");
-    chargerCommandesAdmin();
+    alert("Commande attribuée. Le partenaire dispose maintenant d'une mission active.");
+    await chargerCommandesAdmin();
   } catch (erreur) {
+    console.error("Attribution administrative :", erreur);
     alert("Attribution impossible : " + erreur.message);
   }
 }
