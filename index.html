@@ -816,6 +816,22 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 .admin-retour-menu{display:block;width:100%;margin:0 0 16px;background:#FFF4E8!important;color:#17663D!important;border:1px solid #F2C58F!important}
 #espaceAdmin.admin-rubrique-ouverte>h2{margin-bottom:12px}
 
+/* FOND ANIMÉ DE L'ONGLET COMPAGNIES DE VOYAGE */
+.carte-compagnies-voyage{
+  background:linear-gradient(125deg,#e8f7ef,#f4f8ff,#fff2df,#e4f4f0);
+  background-size:300% 300%;
+  animation:fondAnimeCompagnies 12s ease-in-out infinite;
+  border:1px solid rgba(22,131,74,.22);
+}
+@keyframes fondAnimeCompagnies{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+@media(prefers-reduced-motion:reduce){
+  .carte-compagnies-voyage{animation:none;background-position:50% 50%}
+}
+
 /* ESPACE PUBLICITAIRE ACCUEIL : images et vidéos */
 .espace-publicitaire{width:100%;max-width:none;margin:0 auto 18px;padding:10px;background:#fff;border:1px solid #dce8df;border-radius:16px;box-shadow:0 5px 18px rgba(20,65,40,.08);overflow:hidden}
 .publicite-entete{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 2px 9px;color:#17663D}
@@ -1691,7 +1707,7 @@ resultat.style.display = "block";
   </button>
 </section>
 </div>
-<section class="card" id="repertoireCompagnies" style="display:none;">
+<section class="card carte-compagnies-voyage" id="repertoireCompagnies" style="display:none;">
   <h2>🚍 Compagnies de voyage</h2>
   <p class="notice">
     Consultez les agences, les destinations et les tarifs des compagnies.
