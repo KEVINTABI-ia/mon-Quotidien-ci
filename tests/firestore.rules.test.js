@@ -85,6 +85,43 @@ describe("Mon Transport CI — règles Firestore", function () {
     if (testEnv) await testEnv.cleanup();
   });
 
+
+  it("autorise un utilisateur à créer son profil de ramassage mais pas à s'auto-attribuer un abonnement compagnie", async () => {
+    const db = testEnv.authenticatedContext(CLIENT_UID, {email:"client@example.test"}).firestore();
+    const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
+    await assertSucceeds(setDoc(doc(db,"comptes_ramassage",CLIENT_UID),{
+      uid:CLIENT_UID,role:"usager",nom:"Utilisateur test",telephone:"0100000000",
+      email:"client@example.test",statut:"actif",abonnement:"non_applicable",createdAt:serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(db,"comptes_ramassage","fake-company"),{
+      uid:"fake-company",role:"compagnie",nom:"Fausse compagnie",telephone:"0100000000",
+      email:"client@example.test",statut:"approuve",abonnement:"actif",createdAt:serverTimestamp()
+    }));
+  });
+
+  it("refuse à une compagnie non approuvée de publier une offre de ramassage", async () => {
+    const db=testEnv.authenticatedContext(PARTNER_UID,{email:"partner@example.test"}).firestore();
+    const {collection,addDoc,serverTimestamp}=require("firebase/firestore");
+    await assertFails(addDoc(collection(db,"offres_ramassage"),{
+      compagnieId:PARTNER_UID,compagnieNom:"Compagnie test",communeDepart:"Yopougon",
+      points:"Bagnon",destination:"Plateau",jours:"Lundi-vendredi",heure:"06:00",
+      placesDisponibles:12,tarif:25000,statut:"publiee",createdAt:serverTimestamp()
+    }));
+  });
+
+  it("autorise un utilisateur à publier une demande mais protège sa lecture des autres utilisateurs", async () => {
+    const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+    const {doc,setDoc,serverTimestamp,getDoc}=require("firebase/firestore");
+    const ref=doc(db,"demandes_ramassage","demande-test");
+    await assertSucceeds(setDoc(ref,{
+      userId:CLIENT_UID,communeDepart:"Yopougon",pointDepart:"Bagnon",
+      destination:"Plateau",jours:"Lundi-vendredi",heure:"06:00",
+      places:1,statut:"ouverte",createdAt:serverTimestamp()
+    }));
+    const other=testEnv.authenticatedContext(OTHER_UID).firestore();
+    await assertFails(getDoc(doc(other,"demandes_ramassage","demande-test")));
+  });
+
   it("autorise le client à créer ensemble la commande publique et ses détails privés", async () => {
     const db = testEnv.authenticatedContext(CLIENT_UID, {
       email: "client@example.test"
