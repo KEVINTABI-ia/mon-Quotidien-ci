@@ -2379,7 +2379,7 @@ ${partenaire.type === "livreur_independant" ? `
             <button type="button" class="primary" onclick="validerPartenaire('${doc.id}')">Approuver</button>
             <button type="button" onclick="refuserPartenaire('${doc.id}')">Refuser</button>
           ` : ""}
-          ${partenaire.statut === "approuve" && partenaire.etatCompte !== "suspendu_definitivement" ? `
+          ${partenaire.statut === "approuve" && (partenaire.etatCompte || "actif") === "actif" ? `
             <button type="button" class="primary" onclick="avertirPartenaire('${doc.id}')">Envoyer un avertissement</button>
             <button type="button" onclick="suspendrePartenaireTemporairement('${doc.id}')">Suspendre temporairement</button>
             <button type="button" style="background:#B42318;color:white;" onclick="suspendrePartenaireDefinitivement('${doc.id}')">Suspendre définitivement</button>
@@ -2458,8 +2458,7 @@ async function avertirPartenaire(id) {
         motif: motif.trim(),
         date: firebase.firestore.FieldValue.serverTimestamp(),
         lu: false
-      },
-      etatCompte: "actif"
+      }
     });
     alert("Avertissement enregistré. Le partenaire pourra toujours recevoir des commandes.");
     chargerPartenairesAdmin();
