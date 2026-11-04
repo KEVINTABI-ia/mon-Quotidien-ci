@@ -2024,10 +2024,15 @@ function ouvrirInscriptionLivreur(){
 <label>Numéro du permis de conduire</label>
 <input type="text" id="livreurNumeroPermis" required>
 <label>Photo de profil (selfie)</label>
-<input type="file" id="livreurPhotoProfil"
-  accept="image/*" capture="user" required
-  onchange="previsualiserPhotoProfil('livreurPhotoProfil', 'apercuPhotoLivreur')">
-
+<input
+  type="file"
+  id="livreurPhotoProfil"
+  accept="image/*"
+  capture="user"
+  required
+  style="display:block !important; visibility:visible !important; opacity:1 !important; width:100%; margin:12px 0;"
+  onchange="previsualiserPhotoProfil('livreurPhotoProfil', 'apercuPhotoLivreur')"
+>
 <img id="apercuPhotoLivreur"
   style="display:none;width:120px;height:120px;object-fit:cover;border-radius:50%;">
     <p class="notice">
@@ -2126,10 +2131,15 @@ function ouvrirInscriptionGare(){
 <label>Poste occupé dans la gare</label>
 <input type="text" id="garePosteOccupe" required>
 <label>Photo de profil (selfie)</label>
-<input type="file" id="garePhotoProfil"
-  accept="image/*" capture="user" required
-  onchange="previsualiserPhotoProfil('garePhotoProfil', 'apercuPhotoGare')">
-
+<input
+  type="file"
+  id="garePhotoProfil"
+  accept="image/*"
+  capture="user"
+  required
+  style="display:block !important; visibility:visible !important; opacity:1 !important; width:100%; margin:12px 0;"
+  onchange="previsualiserPhotoProfil('garePhotoProfil', 'apercuPhotoGare')"
+>
 <img id="apercuPhotoGare"
   style="display:none;width:120px;height:120px;object-fit:cover;border-radius:50%;">
 
