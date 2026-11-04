@@ -631,55 +631,63 @@ footer { color: #718076; }
 }
 
 
-/* ACCÈS DIRECT AU SERVICE TRANSPORT COLIS DEPUIS L'ACCUEIL */
+/* CARTE TRANSPORT COLIS COMPACTE SUR L'ACCUEIL */
 .carte-acces-colis {
-  display: block;
-  min-height: 250px;
-  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 150px;
+  flex: 1 1 48%;
+  padding: 14px;
   border: 0;
-  border-radius: 22px;
+  border-radius: 18px;
   overflow: hidden;
   background-image:
-    linear-gradient(110deg, rgba(20, 48, 31, .88), rgba(20, 48, 31, .42)),
+    linear-gradient(110deg, rgba(20, 48, 31, .90), rgba(20, 48, 31, .48)),
     url("https://images.pexels.com/photos/6170470/pexels-photo-6170470.jpeg?cs=srgb&dl=pexels-tima-miroshnichenko-6170470.jpg&fm=jpg");
   background-size: cover;
   background-position: center 38%;
-  box-shadow: 0 10px 26px rgba(28,63,40,.18);
+  box-shadow: 0 8px 20px rgba(28,63,40,.16);
+  margin: 0;
 }
-.acces-colis-contenu {
+.carte-acces-colis .acces-colis-contenu {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
-.acces-colis-icone {
-  flex: 0 0 58px;
-  width: 58px;
-  height: 58px;
+.carte-acces-colis .acces-colis-icone {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
-  border-radius: 18px;
+  border-radius: 13px;
   color: #FFFFFF;
   background: rgba(242,140,40,.92);
   border: 1px solid rgba(255,255,255,.55);
-  font-size: 30px;
+  font-size: 23px;
 }
-.acces-colis-texte h2 {
-  margin: 0 0 6px;
+.carte-acces-colis .acces-colis-texte h2 {
+  margin: 0 0 4px;
   color: #FFFFFF !important;
+  font-size: 17px;
   text-shadow: 0 2px 8px rgba(0,0,0,.28);
 }
-.acces-colis-texte p {
+.carte-acces-colis .acces-colis-texte p {
   margin: 0;
   color: #FFFFFF;
-  line-height: 1.55;
+  font-size: 12px;
+  line-height: 1.35;
   text-shadow: 0 2px 8px rgba(0,0,0,.35);
 }
-.bouton-acces-colis {
+.carte-acces-colis .bouton-acces-colis {
   display: block;
   width: 100%;
-  min-height: 50px;
+  min-height: 40px;
+  padding: 9px;
   font-weight: 800;
+  font-size: 13px;
 }
 
 
@@ -813,21 +821,11 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
     <p>Envoyez et recevez vos colis partout à Abidjan.</p>
   </div>
   <div class="colis-choix">
-    <button type="button" class="colis-choix-bouton" onclick="afficherSousMenuColis('client')">👤 Espace client</button>
-    <button type="button" class="colis-choix-bouton" onclick="afficherSousMenuColis('partenaire')">🤝 Espace partenaire</button>
+    <button type="button" class="colis-choix-bouton" onclick="ouvrirEspaceClient()">👤 Espace client</button>
+    <button type="button" class="colis-choix-bouton" onclick="ouvrirConnexionPartenaire()">🤝 Espace partenaire</button>
   </div>
-  <div id="zoneMenuColisClient">
-    <h3>👤 Espace client</h3>
-    <p>Réservez un transport et suivez vos colis.</p>
-    <button class="primary" onclick="ouvrirEspaceClient()">Accéder à mon espace client</button>
-    <div id="zoneEspaceClient"></div>
-  </div>
-  <div id="zoneMenuColisPartenaire" style="display:none;">
-    <h3>🤝 Espace partenaire</h3>
-    <p>Déjà inscrit ? Connectez-vous pour accéder à vos missions et à votre espace partenaire.</p>
-    <button class="primary" onclick="ouvrirConnexionPartenaire()">Se connecter à mon espace partenaire</button>
-    <div id="connexionPartenaire"></div>
-  </div>
+  <div id="zoneMenuColisClient"><div id="zoneEspaceClient"></div></div>
+  <div id="zoneMenuColisPartenaire" style="display:none;"><div id="connexionPartenaire"></div></div>
 </section>
 
 <section class="card" id="devenirPartenaire" style="display:none;">
@@ -909,19 +907,6 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
   <p class="notice">Les comptes des compagnies sont soumis à validation et à l'activation d'un abonnement mensuel par l'administration. Le paiement en ligne sera ajouté après validation du fonctionnement et du tarif de l'abonnement.</p>
 </section>
 
-<section class="card carte-acces-colis" aria-label="Accès au service Transport Colis">
-  <div class="acces-colis-contenu">
-    <div class="acces-colis-icone">📦</div>
-    <div class="acces-colis-texte">
-      <h2>Transport Colis</h2>
-      <p>Envoyez et récupérez vos colis facilement grâce à notre réseau de partenaires.</p>
-    </div>
-  </div>
-  <button type="button" class="primary bouton-acces-colis"
-    onclick="ouvrirSection('transportColis')">
-    Accéder au service Transport Colis →
-  </button>
-</section>
 
 <section class="card" id="espaceAdmin" style="display:none;">
   <h2>🔐 Espace administrateur</h2>
@@ -1162,11 +1147,19 @@ resultat.style.display = "block";
 <div id="infoRoute" style="margin-top:10px;font-weight:bold;"></div>
 </section>
 <div class="accueil-raccourcis">
-  <section class="accueil-raccourci carte-colis">
-    <div class="raccourci-icone">📦</div>
-    <div class="raccourci-texte"><strong>Transport Colis CI</strong><small>Envoyer ou récupérer un colis</small></div>
-    <button type="button" onclick="ouvrirSectionPleinEcran('transportColis','Transport Colis CI')">Ouvrir</button>
-  </section>
+<section class="card carte-acces-colis" aria-label="Accès au service Transport Colis">
+  <div class="acces-colis-contenu">
+    <div class="acces-colis-icone">📦</div>
+    <div class="acces-colis-texte">
+      <h2>Transport Colis</h2>
+      <p>Envoyez et récupérez vos colis facilement grâce à notre réseau de partenaires.</p>
+    </div>
+  </div>
+  <button type="button" class="primary bouton-acces-colis"
+    onclick="ouvrirSection('transportColis')">
+    Accéder au service Transport Colis →
+  </button>
+</section>
   <section class="accueil-raccourci carte-compagnies">
     <div class="raccourci-icone">🚍</div>
     <div class="raccourci-texte"><strong>Compagnies de voyage</strong><small>Agences, destinations et tarifs</small></div>
