@@ -3,8 +3,6 @@ name: Firestore Rules Tests
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [securisation-commandes-partenaires]
 
 jobs:
   firestore-rules:
