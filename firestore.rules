@@ -132,6 +132,7 @@ service cloud.firestore {
           && request.resource.data.createdAt == request.time
           && getAfter(commandePath(request.resource.data.commandeId)).data.partenaireId == partenaireId
           && (getAfter(commandePath(request.resource.data.commandeId)).data.statut == "livreur_affecte" || getAfter(commandePath(request.resource.data.commandeId)).data.statut == "colis_recupere" || getAfter(commandePath(request.resource.data.commandeId)).data.statut == "en_transit")
+          && partenaire(partenaireId).type == (getAfter(commandePath(request.resource.data.commandeId)).data.service == "compagnie" ? "representant_gare" : "livreur_independant")
           && abonnementValide(partenaire(partenaireId));
         allow delete: if estAdmin()
           || (estConnecte()
@@ -203,6 +204,7 @@ service cloud.firestore {
           && request.resource.data.statut == "livreur_affecte"
           && request.resource.data.partenaireId is string
           && request.resource.data.partenaireType == (resource.data.service == "compagnie" ? "representant_gare" : "livreur_independant")
+          && partenaire(request.resource.data.partenaireId).type == (resource.data.service == "compagnie" ? "representant_gare" : "livreur_independant")
           && request.resource.data.dateAffectation == request.time
           && request.resource.data.affectePar == request.auth.uid
           && abonnementValide(partenaire(request.resource.data.partenaireId))
