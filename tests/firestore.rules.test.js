@@ -200,4 +200,60 @@ describe("Mon Transport CI — règles Firestore", function () {
       derniereActivite: serverTimestamp()
     }));
   });
+
+  it("autorise uniquement le partenaire affecté à lire les détails privés", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await db.doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, partenaireId: PARTNER_UID,
+        service: "livraison", statut: "livreur_affecte"
+      });
+      await db.doc(`commandes_colis/${ORDER_ID}/informations_privees/details`).set(privateFixture());
+    });
+    const { doc, getDoc } = require("firebase/firestore");
+    const assigned = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const notAssigned = testEnv.authenticatedContext(OTHER_UID).firestore();
+    const privateRef = db => doc(db, "commandes_colis", ORDER_ID, "informations_privees", "details");
+    await assertSucceeds(getDoc(privateRef(assigned)));
+    await assertFails(getDoc(privateRef(notAssigned)));
+  });
+
+  it("autorise un partenaire approuvé, abonné et en ligne à consulter une commande en attente", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        depart: "Yopougon", destination: "Adjamé"
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { doc, getDoc } = require("firebase/firestore");
+    await assertSucceeds(getDoc(doc(db, "commandes_colis", ORDER_ID)));
+  });
+
+  it("interdit à un partenaire hors ligne de consulter les nouvelles commandes", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await db.doc(`partenaires/${PARTNER_UID}`).update({ enLigne: false });
+      await db.doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        depart: "Yopougon", destination: "Adjamé"
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { doc, getDoc } = require("firebase/firestore");
+    await assertFails(getDoc(doc(db, "commandes_colis", ORDER_ID)));
+  });
+
+  it("interdit au livreur indépendant de consulter une commande réservée à une gare", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, service: "compagnie", statut: "en_attente",
+        depart: "Gare test", destination: "Gare destination"
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { doc, getDoc } = require("firebase/firestore");
+    await assertFails(getDoc(doc(db, "commandes_colis", ORDER_ID)));
+  });
+
 });
