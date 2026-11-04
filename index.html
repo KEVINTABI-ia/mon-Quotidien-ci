@@ -2269,10 +2269,35 @@ async function connecterPartenaire(){
       return;
     }
 
+    const maintenant = new Date();
+    const dateFinEssai = dossier.dateFinEssai && dossier.dateFinEssai.toDate
+      ? dossier.dateFinEssai.toDate()
+      : (dossier.dateFinEssai ? new Date(dossier.dateFinEssai) : null);
+    const dateExpirationAbonnement = dossier.dateExpirationAbonnement && dossier.dateExpirationAbonnement.toDate
+      ? dossier.dateExpirationAbonnement.toDate()
+      : (dossier.dateExpirationAbonnement ? new Date(dossier.dateExpirationAbonnement) : null);
+    const abonnementActif = dossier.statutAbonnementPartenaire === "Actif"
+      && dateExpirationAbonnement && dateExpirationAbonnement > maintenant;
+    const essaiActif = dossier.statutAbonnementPartenaire === "Essai"
+      && dateFinEssai && dateFinEssai > maintenant;
+
+    if (!abonnementActif && !essaiActif) {
+      if (dossier.statutAbonnementPartenaire === "Essai" && dateFinEssai && dateFinEssai <= maintenant) {
+        await documentPartenaire.ref.update({ statutAbonnementPartenaire: "Expiré" });
+      }
+      await auth.signOut();
+      statut.textContent = "Votre période d'essai ou votre abonnement est terminé. Contactez l'administrateur pour activer ou renouveler votre abonnement.";
+      return;
+    }
+
     const avertissement = dossier.avertissementDernier;
-    statut.textContent = avertissement
-      ? "Connexion réussie. Avertissement de l'administrateur : " + (avertissement.motif || "Veuillez respecter les règles de la plateforme.")
-      : "Connexion réussie. Votre compte est approuvé.";
+    const accesAbonnement = abonnementActif
+      ? "Abonnement actif jusqu'au " + dateExpirationAbonnement.toLocaleDateString("fr-FR") + "."
+      : "Essai gratuit jusqu'au " + dateFinEssai.toLocaleDateString("fr-FR") + ".";
+    statut.textContent = (avertissement
+      ? "Connexion réussie. Avertissement de l'administrateur : " + (avertissement.motif || "Veuillez respecter les règles de la plateforme.") + " "
+      : "Connexion réussie. Votre compte est approuvé. ")
+      + accesAbonnement;
 
   } catch(erreur) {
     statut.textContent = "Connexion impossible : " + erreur.message;
@@ -2371,6 +2396,15 @@ ${partenaire.type === "livreur_independant" ? `
 `}
           <p><strong>Statut du dossier :</strong> ${echapperTexteCompagnie(partenaire.statut || "en_attente")}</p>
           <p><strong>État du compte :</strong> ${echapperTexteCompagnie(partenaire.etatCompte || "actif")}</p>
+          ${(() => {
+            const finEssai = partenaire.dateFinEssai && partenaire.dateFinEssai.toDate ? partenaire.dateFinEssai.toDate() : (partenaire.dateFinEssai ? new Date(partenaire.dateFinEssai) : null);
+            const finAbonnement = partenaire.dateExpirationAbonnement && partenaire.dateExpirationAbonnement.toDate ? partenaire.dateExpirationAbonnement.toDate() : (partenaire.dateExpirationAbonnement ? new Date(partenaire.dateExpirationAbonnement) : null);
+            const essaiEnCours = partenaire.statutAbonnementPartenaire === "Essai" && finEssai && finEssai > new Date();
+            const abonnementEnCours = partenaire.statutAbonnementPartenaire === "Actif" && finAbonnement && finAbonnement > new Date();
+            const statutAbonnement = abonnementEnCours ? "Actif" : essaiEnCours ? "Essai gratuit" : (partenaire.statutAbonnementPartenaire === "En attente" ? "Paiement en attente" : (partenaire.statut === "approuve" ? "Expiré / à activer" : "Non commencé"));
+            const dateAffichee = abonnementEnCours ? finAbonnement : (finEssai || finAbonnement);
+            return `<p><strong>Abonnement :</strong> ${statutAbonnement}${dateAffichee ? " — échéance : " + dateAffichee.toLocaleDateString("fr-FR") : ""}</p>`;
+          })()}
           ${partenaire.motifModeration ? `<p><strong>Motif :</strong> ${echapperTexteCompagnie(partenaire.motifModeration)}</p>` : ""}
           ${partenaire.suspensionFin ? `<p><strong>Fin de suspension :</strong> ${new Date(partenaire.suspensionFin.toDate ? partenaire.suspensionFin.toDate() : partenaire.suspensionFin).toLocaleString("fr-FR")}</p>` : ""}
           ${partenaire.avertissementDernier ? `<p><strong>Dernier avertissement :</strong> ${echapperTexteCompagnie(partenaire.avertissementDernier.motif || "")}</p>` : ""}
@@ -2378,6 +2412,9 @@ ${partenaire.type === "livreur_independant" ? `
           ${partenaire.statut === "en_attente" || !partenaire.statut ? `
             <button type="button" class="primary" onclick="validerPartenaire('${doc.id}')">Approuver</button>
             <button type="button" onclick="refuserPartenaire('${doc.id}')">Refuser</button>
+          ` : ""}
+          ${partenaire.statut === "approuve" ? `
+            <button type="button" class="primary" onclick="activerAbonnementPartenaire('${doc.id}')">Activer / renouveler l'abonnement</button>
           ` : ""}
           ${partenaire.statut === "approuve" && (partenaire.etatCompte || "actif") === "actif" ? `
             <button type="button" class="primary" onclick="avertirPartenaire('${doc.id}')">Envoyer un avertissement</button>
@@ -2408,15 +2445,85 @@ async function validerPartenaire(id) {
   if (!confirm("Confirmer l'approbation de ce partenaire ?")) return;
 
   try {
+    const debutEssai = new Date();
+    const finEssai = new Date(debutEssai.getTime() + 21 * 24 * 60 * 60 * 1000);
     await db.collection("partenaires").doc(id).update({
-      statut: "approuve"
+      statut: "approuve",
+      etatCompte: "actif",
+      statutAbonnementPartenaire: "Essai",
+      dateDebutEssai: firebase.firestore.Timestamp.fromDate(debutEssai),
+      dateFinEssai: firebase.firestore.Timestamp.fromDate(finEssai)
     });
 
-    alert("Partenaire approuvé avec succès.");
+    alert("Partenaire approuvé. Son essai gratuit de 21 jours commence maintenant et se termine le " + finEssai.toLocaleDateString("fr-FR") + ".");
     chargerPartenairesAdmin();
 
   } catch (erreur) {
     alert("Erreur : " + erreur.message);
+  }
+}
+
+async function activerAbonnementPartenaire(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès réservé à l'administrateur.");
+    return;
+  }
+
+  const choix = prompt(
+    "Choisis la formule après vérification du paiement :\n1 = 1 mois : 10 000 FCFA\n2 = 3 mois : 27 000 FCFA\n3 = 6 mois : 55 000 FCFA",
+    "1"
+  );
+  if (choix === null) return;
+
+  const formules = {
+    "1": { mois: 1, montant: 10000, libelle: "1 mois" },
+    "2": { mois: 3, montant: 27000, libelle: "3 mois" },
+    "3": { mois: 6, montant: 55000, libelle: "6 mois" }
+  };
+  const formule = formules[choix.trim()];
+  if (!formule) {
+    alert("Choix invalide.");
+    return;
+  }
+
+  if (!confirm("Confirmer que le paiement de " + formule.montant.toLocaleString("fr-FR") + " FCFA a bien été reçu pour " + formule.libelle + " ?")) return;
+
+  try {
+    const reference = db.collection("partenaires").doc(id);
+    const document = await reference.get();
+    if (!document.exists) {
+      alert("Partenaire introuvable.");
+      return;
+    }
+
+    const partenaire = document.data();
+    const maintenant = new Date();
+    const ancienneFin = partenaire.dateExpirationAbonnement && partenaire.dateExpirationAbonnement.toDate
+      ? partenaire.dateExpirationAbonnement.toDate()
+      : (partenaire.dateExpirationAbonnement ? new Date(partenaire.dateExpirationAbonnement) : null);
+    const base = ancienneFin && ancienneFin > maintenant ? ancienneFin : maintenant;
+    const expiration = new Date(base);
+    expiration.setMonth(expiration.getMonth() + formule.mois);
+
+    await reference.update({
+      statutAbonnementPartenaire: "Actif",
+      formuleAbonnementPartenaire: formule.libelle,
+      montantAbonnementPartenaire: formule.montant,
+      dateDebutAbonnement: firebase.firestore.Timestamp.fromDate(maintenant),
+      dateExpirationAbonnement: firebase.firestore.Timestamp.fromDate(expiration),
+      historiqueAbonnements: firebase.firestore.FieldValue.arrayUnion({
+        formule: formule.libelle,
+        montant: formule.montant,
+        dateValidation: firebase.firestore.Timestamp.fromDate(maintenant),
+        dateExpiration: firebase.firestore.Timestamp.fromDate(expiration),
+        validePar: auth.currentUser.uid
+      })
+    });
+
+    alert("Abonnement activé jusqu'au " + expiration.toLocaleDateString("fr-FR") + ".");
+    chargerPartenairesAdmin();
+  } catch (erreur) {
+    alert("Erreur lors de l'activation : " + erreur.message);
   }
 }
 
