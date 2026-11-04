@@ -120,7 +120,7 @@ service cloud.firestore {
         allow read: if estAdmin()
           || (estConnecte() && request.auth.uid == partenaireId);
         allow create: if estConnecte()
-          && request.auth.uid == partenaireId
+          && (request.auth.uid == partenaireId || estAdmin())
           && verrouId == "missionActive"
           && request.resource.data.keys().hasOnly(["commandeId", "statut", "createdAt"])
           && request.resource.data.commandeId is string
@@ -209,7 +209,16 @@ service cloud.firestore {
           && partenaireEnLignePour(resource.data.service));
 
       // Acceptation ou attribution : l'ordre et le verrou doivent être écrits dans la même transaction.
-      allow update: if estAdmin()
+      allow update: if (
+          estAdmin()
+          && resource.data.statut == "en_attente"
+          && request.resource.data.statut == "livreur_affecte"
+          && request.resource.data.partenaireId is string
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation", "affectePar"])
+          && existsAfter(verrouPath(request.resource.data.partenaireId))
+          && getAfter(verrouPath(request.resource.data.partenaireId)).data.commandeId == commandeId
+        )
         || (
           estConnecte()
           && resource.data.statut == "en_attente"
