@@ -132,7 +132,7 @@ service cloud.firestore {
           && request.resource.data.createdAt == request.time
           && getAfter(commandePath(request.resource.data.commandeId)).data.partenaireId == partenaireId
           && (getAfter(commandePath(request.resource.data.commandeId)).data.statut == "livreur_affecte" || getAfter(commandePath(request.resource.data.commandeId)).data.statut == "colis_recupere" || getAfter(commandePath(request.resource.data.commandeId)).data.statut == "en_transit")
-          && ((getAfter(commandePath(request.resource.data.commandeId)).data.service == "compagnie" && partenaire(partenaireId).type == "representant_gare") || (getAfter(commandePath(request.resource.data.commandeId)).data.service != "compagnie" && partenaire(partenaireId).type == "livreur_independant"))
+          && ((getAfter(commandePath(request.resource.data.commandeId)).data['service'] == "compagnie" && partenaire(partenaireId).type == "representant_gare") || (getAfter(commandePath(request.resource.data.commandeId)).data['service'] != "compagnie" && partenaire(partenaireId).type == "livreur_independant"))
           && abonnementValide(partenaire(partenaireId));
         allow delete: if estAdmin()
           || (estConnecte()
@@ -177,15 +177,15 @@ service cloud.firestore {
           "clientId", "service", "depart", "destination", "statut", "createdAt",
           "dateHeureSouhaitee"
         ])
-        && (request.resource.data.service == "compagnie"
-          || request.resource.data.service == "livraison"
-          || request.resource.data.service == "livraison_programmee")
+        && (request.resource.data['service'] == "compagnie"
+          || request.resource.data['service'] == "livraison"
+          || request.resource.data['service'] == "livraison_programmee")
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time
         && existsAfter(detailsPrivesPath(commandeId))
         && getAfter(detailsPrivesPath(commandeId)).data.clientId == request.auth.uid
         && (
-          request.resource.data.service != "livraison_programmee"
+          request.resource.data['service'] != "livraison_programmee"
           || (request.resource.data.dateHeureSouhaitee is timestamp
             && request.resource.data.dateHeureSouhaitee >= request.time + duration.value(1, "h")
             && request.resource.data.dateHeureSouhaitee <= request.time + duration.value(1, "d"))
@@ -195,7 +195,7 @@ service cloud.firestore {
         || (estConnecte() && resource.data.clientId == request.auth.uid)
         || (estConnecte() && resource.data.partenaireId == request.auth.uid)
         || (resource.data.statut == "en_attente"
-          && partenaireEnLignePour(resource.data.service));
+          && partenaireEnLignePour(resource.data['service']));
 
       // Acceptation ou attribution : l'ordre et le verrou doivent être écrits dans la même transaction.
       allow update: if (
@@ -203,7 +203,7 @@ service cloud.firestore {
           && resource.data.statut == "en_attente"
           && request.resource.data.statut == "livreur_affecte"
           && request.resource.data.partenaireId is string
-          && ((resource.data.service == "compagnie" && request.resource.data.partenaireType == "representant_gare" && partenaire(request.resource.data.partenaireId).type == "representant_gare") || (resource.data.service != "compagnie" && request.resource.data.partenaireType == "livreur_independant" && partenaire(request.resource.data.partenaireId).type == "livreur_independant"))
+          && ((resource.data['service'] == "compagnie" && request.resource.data.partenaireType == "representant_gare" && partenaire(request.resource.data.partenaireId).type == "representant_gare") || (resource.data['service'] != "compagnie" && request.resource.data.partenaireType == "livreur_independant" && partenaire(request.resource.data.partenaireId).type == "livreur_independant"))
           && request.resource.data.dateAffectation == request.time
           && request.resource.data.affectePar == request.auth.uid
           && abonnementValide(partenaire(request.resource.data.partenaireId))
@@ -223,7 +223,7 @@ service cloud.firestore {
             .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation"])
           && existsAfter(verrouPath(request.auth.uid))
           && getAfter(verrouPath(request.auth.uid)).data.commandeId == commandeId
-          && partenaireEnLignePour(resource.data.service)
+          && partenaireEnLignePour(resource.data['service'])
         )
         || (
           estConnecte()
