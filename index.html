@@ -3726,7 +3726,10 @@ async function afficherEspaceRamassage(user,profil=null){
   document.getElementById(company?"ramassageCompagnieAuth":"ramassageUsagerAuth").style.display="none";
   document.getElementById(company?"ramassageCompagnieEspace":"ramassageUsagerEspace").style.display="block";
   if(company){
-    const active=p.statut==="approuve"&&p.abonnement==="actif";
+    const expirationAbonnement = p.dateExpirationAbonnement && typeof p.dateExpirationAbonnement.toDate === "function"
+      ? p.dateExpirationAbonnement.toDate().getTime()
+      : 0;
+    const active=p.statut==="approuve"&&p.abonnement==="actif"&&expirationAbonnement>Date.now();
     document.getElementById("ramassageCompanyStatus").textContent=active?"Compagnie approuvée — abonnement actif. Vous pouvez publier vos trajets et consulter les demandes.":p.statut!=="approuve"?"Votre dossier est en attente de validation par l'administration.":"Votre abonnement n'est pas encore actif. Contactez l'administration.";
     document.getElementById("ramassageCompanyActions").style.display=active?"block":"none";
     if(active)await chargerDemandesRamassage();
