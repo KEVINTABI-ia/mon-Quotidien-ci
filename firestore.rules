@@ -130,10 +130,7 @@ service cloud.firestore {
           && request.resource.data.commandeId is string
           && request.resource.data.statut == "active"
           && request.resource.data.createdAt == request.time
-          && exists(commandePath(request.resource.data.commandeId))
-          && get(commandePath(request.resource.data.commandeId)).data.statut == "en_attente"
-          && get(commandePath(request.resource.data.commandeId)).data.get("partenaireId", null) == null
-          && ((get(commandePath(request.resource.data.commandeId)).data['service'] == "compagnie" && partenaire(partenaireId).type == "representant_gare") || (get(commandePath(request.resource.data.commandeId)).data['service'] != "compagnie" && partenaire(partenaireId).type == "livreur_independant"))
+          && partenaire(partenaireId).enLigne == true
           && abonnementValide(partenaire(partenaireId));
         allow delete: if estAdmin()
           || (estConnecte()
@@ -207,6 +204,7 @@ service cloud.firestore {
           && ((resource.data['service'] == "compagnie" && request.resource.data.partenaireType == "representant_gare" && partenaire(request.resource.data.partenaireId).type == "representant_gare") || (resource.data['service'] != "compagnie" && request.resource.data.partenaireType == "livreur_independant" && partenaire(request.resource.data.partenaireId).type == "livreur_independant"))
           && request.resource.data.dateAffectation == request.time
           && request.resource.data.affectePar == request.auth.uid
+          && partenaire(request.resource.data.partenaireId).enLigne == true
           && abonnementValide(partenaire(request.resource.data.partenaireId))
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation", "affectePar"])
