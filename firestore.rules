@@ -55,6 +55,16 @@ service cloud.firestore {
       return /databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details;
     }
 
+    function contientChampsPrives(data) {
+      return data.keys().hasAny([
+        "clientNom", "clientTelephone", "telephoneExpediteur", "telephoneDestinataire",
+        "adresseRecuperation", "adresseLivraison", "descriptionColis", "trackingNumber",
+        "provenance", "codeColis", "typeColis", "livreurId", "operation", "compagnie",
+        "gare", "latitudeRecuperation", "longitudeRecuperation",
+        "latitudeLivraison", "longitudeLivraison"
+      ]);
+    }
+
     match /routes/{routeId} {
       allow read: if true;
       allow create, update, delete: if estAdmin();
@@ -172,16 +182,17 @@ service cloud.firestore {
       allow create: if estConnecte()
         && request.resource.data.clientId == request.auth.uid
         && request.resource.data.keys().hasAll([
-          "clientId", "service", "depart", "destination", "statut", "createdAt"
+          "clientId", "service", "depart", "destination", "statut", "createdAt", "publicVersion"
         ])
         && request.resource.data.keys().hasOnly([
           "clientId", "service", "depart", "destination", "statut", "createdAt",
-          "dateHeureSouhaitee"
+          "dateHeureSouhaitee", "publicVersion"
         ])
         && (request.resource.data['service'] == "compagnie"
           || request.resource.data['service'] == "livraison"
           || request.resource.data['service'] == "livraison_programmee")
         && request.resource.data.statut == "en_attente"
+        && request.resource.data.publicVersion == true
         && request.resource.data.createdAt == request.time
         && existsAfter(detailsPrivesPath(commandeId))
         && getAfter(detailsPrivesPath(commandeId)).data.clientId == request.auth.uid
@@ -195,19 +206,15 @@ service cloud.firestore {
       allow read: if estAdmin()
         || (estConnecte() && resource.data.clientId == request.auth.uid)
         || (estConnecte() && resource.data.partenaireId == request.auth.uid)
-        || (resource.data.statut == "en_attente"
-          && !resource.data.keys().hasAny([
-            "clientNom", "clientTelephone", "telephoneExpediteur", "telephoneDestinataire",
-            "adresseRecuperation", "adresseLivraison", "descriptionColis", "trackingNumber",
-            "provenance", "codeColis", "typeColis", "livreurId", "operation", "compagnie",
-            "gare", "latitudeRecuperation", "longitudeRecuperation",
-            "latitudeLivraison", "longitudeLivraison"
-          ])
+        || (resource.data.publicVersion == true
+          && resource.data.statut == "en_attente"
+          && !contientChampsPrives(resource.data)
           && partenaireEnLignePour(resource.data['service']));
 
       // Acceptation ou attribution : l'ordre et le verrou doivent être écrits dans la même transaction.
       allow update: if (
           estAdmin()
+          && resource.data.publicVersion == true
           && resource.data.statut == "en_attente"
           && request.resource.data.statut == "livreur_affecte"
           && request.resource.data.partenaireId is string
@@ -223,6 +230,7 @@ service cloud.firestore {
         )
         || (
           estConnecte()
+          && resource.data.publicVersion == true
           && resource.data.statut == "en_attente"
           && !("partenaireId" in resource.data)
           && request.resource.data.partenaireId == request.auth.uid
@@ -270,17 +278,24 @@ service cloud.firestore {
         // Migration administrative contrôlée des anciennes commandes vers le document privé.
         || (
           estAdmin()
+          && request.resource.data.publicVersion == true
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             "clientNom", "clientTelephone", "telephoneExpediteur", "telephoneDestinataire",
             "adresseRecuperation", "adresseLivraison", "descriptionColis", "trackingNumber",
             "provenance", "codeColis", "typeColis", "livreurId", "operation", "compagnie",
             "gare", "latitudeRecuperation", "longitudeRecuperation",
-            "latitudeLivraison", "longitudeLivraison"
+            "latitudeLivraison", "longitudeLivraison", "publicVersion"
           ])
-          && existsAfter(detailsPrivesPath(commandeId))
-          && getAfter(detailsPrivesPath(commandeId)).data.clientId == resource.data.clientId
-          && getAfter(detailsPrivesPath(commandeId)).data.trackingNumber
-            == (resource.data.get("trackingNumber", commandeId) is string ? resource.data.get("trackingNumber", commandeId) : commandeId)
+          && !contientChampsPrives(request.resource.data)
+          && (
+            (existsAfter(detailsPrivesPath(commandeId))
+              && getAfter(detailsPrivesPath(commandeId)).data.clientId == resource.data.clientId
+              && getAfter(detailsPrivesPath(commandeId)).data.trackingNumber is string
+              && (!(resource.data.get("trackingNumber", null) is string)
+                || getAfter(detailsPrivesPath(commandeId)).data.trackingNumber == resource.data.trackingNumber))
+            || (!existsAfter(detailsPrivesPath(commandeId))
+              && !contientChampsPrives(resource.data))
+          )
         );
 
       allow delete: if estAdmin();
