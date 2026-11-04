@@ -179,26 +179,6 @@ service cloud.firestore {
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time
         && (
-          !request.resource.data.keys().hasAny(["latitudeRecuperation", "longitudeRecuperation"])
-          || (request.resource.data.keys().hasAll(["latitudeRecuperation", "longitudeRecuperation"])
-            && request.resource.data.latitudeRecuperation is number
-            && request.resource.data.longitudeRecuperation is number
-            && request.resource.data.latitudeRecuperation >= -90
-            && request.resource.data.latitudeRecuperation <= 90
-            && request.resource.data.longitudeRecuperation >= -180
-            && request.resource.data.longitudeRecuperation <= 180)
-        )
-        && (
-          !request.resource.data.keys().hasAny(["latitudeLivraison", "longitudeLivraison"])
-          || (request.resource.data.keys().hasAll(["latitudeLivraison", "longitudeLivraison"])
-            && request.resource.data.latitudeLivraison is number
-            && request.resource.data.longitudeLivraison is number
-            && request.resource.data.latitudeLivraison >= -90
-            && request.resource.data.latitudeLivraison <= 90
-            && request.resource.data.longitudeLivraison >= -180
-            && request.resource.data.longitudeLivraison <= 180)
-        )
-        && (
           request.resource.data.service != "livraison_programmee"
           || (request.resource.data.dateHeureSouhaitee is timestamp
             && request.resource.data.dateHeureSouhaitee >= request.time + duration.value(1, "h")
