@@ -231,7 +231,7 @@ service cloud.firestore {
           && request.resource.data.statut == "en_attente"
           && !("partenaireId" in request.resource.data)
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation"])
+            .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation", "statut"])
           && exists(verrouPath(request.auth.uid))
           && get(verrouPath(request.auth.uid)).data.commandeId == commandeId
           && get(verrouPath(request.auth.uid)).data.statut == "active"
