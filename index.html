@@ -2132,6 +2132,17 @@ function validerEmail(champ, idErreur) {
   message.textContent = "";
   return true;
 }
+function retourEspaceColis(zoneId){
+  const zone = document.getElementById(zoneId);
+  if(zone){
+    if(zoneId === "zoneEspaceClient") zone.replaceChildren();
+    else zone.style.display = "none";
+  }
+  const section = document.getElementById("transportColis");
+  section.style.display = "block";
+  section.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
 function ouvrirInscriptionLivreur(){
   const section = document.getElementById("transportColis");
   let zone = document.getElementById("formulaireLivreur");
@@ -2143,6 +2154,7 @@ function ouvrirInscriptionLivreur(){
   }
 
   zone.innerHTML = `
+    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('formulaireLivreur')">← Retour à Transport Colis</button>
     <hr>
     <h3>🚚 Inscription – Livreur indépendant</h3>
 
@@ -2249,6 +2261,7 @@ function ouvrirInscriptionGare(){
   }
 
   zone.innerHTML = `
+    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('formulaireGare')">← Retour à Transport Colis</button>
     <hr>
     <h3>🏢 Inscription – Représentant de gare</h3>
 
@@ -2341,6 +2354,7 @@ function ouvrirConnexionPartenaire(){
   }
 
   zone.innerHTML = `
+    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('connexionPartenaire')">← Retour à Transport Colis</button>
     <hr>
     <h3>🔐 Connexion partenaire</h3>
 
@@ -3481,6 +3495,7 @@ function afficherConnexionClient(message=""){
   const zone = document.getElementById("zoneEspaceClient");
 
   zone.innerHTML = `
+    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('zoneEspaceClient')">← Retour à Transport Colis</button>
     <hr>
     <h3>👤 Connexion à mon espace client</h3>
     <p>Connectez-vous pour retrouver vos commandes.</p>
@@ -3503,6 +3518,7 @@ function afficherInscriptionClient(message=""){
   const zone = document.getElementById("zoneEspaceClient");
 
   zone.innerHTML = `
+    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('zoneEspaceClient')">← Retour à Transport Colis</button>
     <hr>
     <h3>📝 Créer mon compte client</h3>
     <p>Votre compte conservera vos commandes et votre historique.</p>
