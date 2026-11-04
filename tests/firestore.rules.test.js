@@ -185,6 +185,28 @@ describe("Mon Transport CI — règles Firestore", function () {
       await assertSucceeds(getDoc(ref));
       await assertSucceeds(updateDoc(ref,{statut:"en_transit"}));
     });
+
+    it("autorise une ancienne mission affectée à enregistrer la récupération et la livraison", async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const db=context.firestore();
+        await db.doc("commandes_colis/legacy-dated").set({
+          clientId:CLIENT_UID,partenaireId:PARTNER_UID,service:"livraison",
+          statut:"livreur_affecte",trackingNumber:"TCI-LEGACY-DATED"
+        });
+        await db.doc(`partenaires/${PARTNER_UID}/verrous/missionActive`).set({
+          commandeId:"legacy-dated",statut:"active"
+        });
+      });
+      const db=testEnv.authenticatedContext(PARTNER_UID).firestore();
+      const {doc,updateDoc,serverTimestamp}=require("firebase/firestore");
+      const ref=doc(db,"commandes_colis","legacy-dated");
+      await assertSucceeds(updateDoc(ref,{
+        statut:"colis_recupere",dateRecuperation:serverTimestamp()
+      }));
+      await assertSucceeds(updateDoc(ref,{
+        statut:"livre",dateLivraison:serverTimestamp()
+      }));
+    });
   }
 
   it("autorise le client à créer ensemble la commande publique et ses détails privés", async () => {
