@@ -630,6 +630,47 @@ footer { color: #718076; }
   background: #E2F0E5 !important;
 }
 
+
+/* ACCÈS DIRECT AU SERVICE TRANSPORT COLIS DEPUIS L'ACCUEIL */
+.carte-acces-colis {
+  display: block;
+  padding: 20px;
+  border: 1px solid #F2D2B2;
+  border-top: 5px solid #F28C28;
+  background: linear-gradient(135deg, #FFFFFF 0%, #F2F8F2 100%);
+}
+.acces-colis-contenu {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.acces-colis-icone {
+  flex: 0 0 58px;
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: #FFF0E1;
+  font-size: 30px;
+}
+.acces-colis-texte h2 {
+  margin: 0 0 6px;
+  color: #17663D !important;
+}
+.acces-colis-texte p {
+  margin: 0;
+  color: #53645A;
+  line-height: 1.5;
+}
+.bouton-acces-colis {
+  display: block;
+  width: 100%;
+  min-height: 50px;
+  font-weight: 800;
+}
+
 </style>
 </head>
 <body>
@@ -703,6 +744,21 @@ footer { color: #718076; }
     Les inscriptions et réservations seront ouvertes après la mise en place des espaces sécurisés.
   </p>
 </section>
+
+<section class="card carte-acces-colis" aria-label="Accès au service Transport Colis">
+  <div class="acces-colis-contenu">
+    <div class="acces-colis-icone">📦</div>
+    <div class="acces-colis-texte">
+      <h2>Transport Colis</h2>
+      <p>Envoyez et récupérez vos colis facilement grâce à notre réseau de partenaires.</p>
+    </div>
+  </div>
+  <button type="button" class="primary bouton-acces-colis"
+    onclick="ouvrirSection('transportColis')">
+    Accéder au service Transport Colis →
+  </button>
+</section>
+
 <section class="card" id="espaceAdmin" style="display:none;">
   <h2>🔐 Espace administrateur</h2>
 
