@@ -382,13 +382,34 @@ describe("Mon Transport CI — règles Firestore", function () {
   });
 
 
-  it("permet de créer le verrou d'un partenaire éligible", async () => {
+  it("refuse un verrou qui ne correspond à aucune commande attribuée", async () => {
     const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
     const { doc, setDoc, serverTimestamp } = require("firebase/firestore");
-    await assertSucceeds(setDoc(
+    await assertFails(setDoc(
       doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive"),
       { commandeId: ORDER_ID, statut: "active", createdAt: serverTimestamp() }
     ));
+  });
+
+  it("autorise le verrou uniquement avec la commande attribuée dans la même opération", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        depart: "Yopougon", destination: "Adjamé"
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { doc, writeBatch, serverTimestamp } = require("firebase/firestore");
+    const batch = writeBatch(db);
+    batch.update(doc(db, "commandes_colis", ORDER_ID), {
+      partenaireId: PARTNER_UID, partenaireNom: "Partenaire test",
+      partenaireType: "livreur_independant", statut: "livreur_affecte",
+      dateAffectation: serverTimestamp()
+    });
+    batch.set(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive"), {
+      commandeId: ORDER_ID, statut: "active", createdAt: serverTimestamp()
+    });
+    await assertSucceeds(batch.commit());
   });
 
 
