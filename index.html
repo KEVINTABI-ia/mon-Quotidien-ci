@@ -6161,7 +6161,7 @@ async function terminerExpeditionGare(commandeId) {
   const lire=id=>{const el=document.getElementById(id);return el?el.value.trim():"";};
   const compagnie=lire("refCompagnieExpedition"), gareDestination=lire("refGareDestination"), codeColis=lire("refCodeColisExpedition");
   if(!compagnie||!gareDestination||!codeColis) return alert("Les trois références sont obligatoires.");
-  if(!confirm("Enregistrer les références d'expédition et terminer la course ?")) return;
+  if(!confirm("Confirmez-vous que le règlement Mon Transport CI a été effectué ? Les frais éventuels du service courrier de la gare restent distincts et convenus directement avec le client.\n\nEnregistrer les références d'expédition et terminer la course ?")) return;
   const ref=db.collection("commandes_colis").doc(commandeId);
   const lock=db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
   try{
