@@ -502,9 +502,9 @@ service cloud.firestore {
     }
 
     match /publicites/{publiciteId} {
-      allow read: if resource.data.statut == "publiee"
+      allow read: if estAdmin() || (resource.data.statut == "publiee"
         && resource.data.dateFin is timestamp
-        && resource.data.dateFin > request.time;
+        && resource.data.dateFin > request.time);
       allow create, update, delete: if estAdmin();
     }
 
