@@ -207,7 +207,7 @@ service cloud.firestore {
           && partenaire(request.resource.data.partenaireId).enLigne == true
           && abonnementValide(partenaire(request.resource.data.partenaireId))
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation", "affectePar"])
+            .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation", "affectePar", "statut"])
           && existsAfter(verrouPath(request.resource.data.partenaireId))
           && getAfter(verrouPath(request.resource.data.partenaireId)).data.commandeId == commandeId
         )
@@ -219,7 +219,7 @@ service cloud.firestore {
           && request.resource.data.statut == "livreur_affecte"
           && request.resource.data.dateAffectation == request.time
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation"])
+            .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation", "statut"])
           && existsAfter(verrouPath(request.auth.uid))
           && getAfter(verrouPath(request.auth.uid)).data.commandeId == commandeId
           && partenaireEnLignePour(resource.data['service'])
