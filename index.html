@@ -1278,10 +1278,13 @@ const panneauCompagnies = document.getElementById("gestionCompagnies");
 panneauCompagnies.style.display = autorise ? "block" : "none";
 
 if (autorise) {
+  chargerCompagniesRamassageAdmin();
   chargerCompagniesAdmin();
   chargerPartenairesAdmin();
   chargerCommandesAdmin();
 } else {
+  const panneauRamassageAdmin = document.getElementById("gestionAbonnementsRamassage");
+  if (panneauRamassageAdmin) panneauRamassageAdmin.style.display = "none";
   document.getElementById("listeCompagniesAdmin").innerHTML = "";
   document.getElementById("listePartenairesAdmin").innerHTML = "";
   const commandesAdmin = document.getElementById("listeCommandesAdmin");
