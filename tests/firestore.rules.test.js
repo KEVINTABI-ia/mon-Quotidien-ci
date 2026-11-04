@@ -357,7 +357,6 @@ describe("Mon Transport CI — règles Firestore", function () {
     const q = query(
       collection(db, "commandes_colis"),
       where("publicVersion", "==", true),
-      where("publicVersion", "==", true),
       where("statut", "==", "en_attente"),
       where("service", "in", ["livraison", "livraison_programmee"]),
       limit(30)
