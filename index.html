@@ -4728,168 +4728,147 @@ function signalerProblemeGeneral(){
 }
 
 // COLLE ICI LA NOUVELLE FONCTION
-async function afficherGaresStations(typeTransport){
+async async function afficherGaresStations(typeTransport){
   const resultat = document.getElementById("resultat");
   const typeChoisi = typeTransport || "Gbaka";
-
+  window.garesStationsTypeActuel = typeChoisi;
   resultat.style.display = "block";
-  resultat.innerHTML = "<p>Chargement des gares et terminus...</p>";
+  resultat.innerHTML = "<p>Chargement des gares...</p>";
 
   try {
     const snapshot = await db.collection("gares").orderBy("nom").get();
+    const garesType = snapshot.docs
+      .map(doc => ({...doc.data(), firestoreId: doc.id}))
+      .filter(gare => {
+        const transports = Array.isArray(gare.transports)
+          ? gare.transports
+          : (gare.transports ? [gare.transports] : []);
+        return transports.some(t => normaliser(String(t)) === normaliser(typeChoisi));
+      });
 
-    if(snapshot.empty){
-      resultat.innerHTML =
-        "<strong>📍 Gares et stations</strong>" +
-        "<p class='notice'>Aucune gare enregistrée pour le moment.</p>";
+    const titre = typeChoisi === "Gbaka" ? "Gares de Gbaka" : "Gares de taxi communal";
+    if (!garesType.length) {
+      resultat.innerHTML = "<strong>📍 " + titre + "</strong><p class='notice'>Aucune gare n'est encore enregistrée pour ce transport.</p>";
       return;
     }
 
-    const garesType = snapshot.docs.filter(doc => {
-      const transports = doc.data().transports || [];
-      return transports.some(t => normaliser(String(t)) === normaliser(typeChoisi));
+    window.garesStationsListe = garesType;
+    const communes = [...new Set(garesType.map(g => String(g.commune || "").trim()).filter(Boolean))]
+      .sort((a,b) => a.localeCompare(b, "fr"));
+    let html = "<strong>📍 " + titre + "</strong>";
+    html += "<p>Sélectionnez d'abord une commune, puis une gare pour consulter ses destinations et les prix.</p>";
+    html += "<label for='gareStationCommune'>Commune :</label>";
+    html += "<select id='gareStationCommune' onchange='actualiserListeGaresStations()'>";
+    html += "<option value=''>Choisir une commune</option>";
+    communes.forEach(commune => {
+      const safe = echapperTexteCompagnie(commune);
+      html += "<option value='" + safe + "'>" + safe + "</option>";
     });
-
-    if(garesType.length === 0){
-      resultat.innerHTML = "<strong>📍 Gare de " + typeChoisi + "</strong><p class=\"notice\">Aucune gare de ce type n’est encore enregistrée.</p>";
-      return;
-    }
-
-    let html = "<strong>📍 Répertoire — " + (typeChoisi === "Gbaka" ? "Gares de Gbaka" : "Gares de taxi communal") + "</strong>";
-
-const communes = [...new Set(
-  garesType
-    .map(doc => (doc.data().commune || "").trim())
-    .filter(commune => commune !== "")
-)].sort();
-
-html += "<p><strong>Filtrer par commune :</strong></p>";
-html += "<select id='filtreCommune' onchange='filtrerGaresParCommune()'>";
-html += "<option value=''>Toutes les communes</option>";
-
-communes.forEach(commune => {
-  html += `<option value="${commune}">${commune}</option>`;
-});
-
-html += "</select>";
-html += "<p><strong>Rechercher une gare ou un quartier :</strong></p>";
-html += "<input type='text' id='rechercheGare' placeholder='Ex. : Bagnon, Niangon, Adjamé...' oninput='filtrerGaresParCommune()'>";
-    garesType.forEach(doc => {
-      const gare = doc.data();
-
-      html += `<div class="stop" data-commune="${(gare.commune || "").trim()}">`;
-      html += "<h3>📍 " + gare.nom + "</h3>";
-
-      if(gare.commune){
-        html += "<p>Commune : " + gare.commune + "</p>";
-      }
-
-      if(gare.quartier){
-        html += "<p>Quartier : " + gare.quartier + "</p>";
-      }
-
-      if(gare.transports && gare.transports.length){
-        html += "<p>Moyens de transport : " +
-          gare.transports.join(", ") + "</p>";
-      }
-
-      if(gare.destinations && gare.destinations.length){
-        html += "<details>";
-html += "<summary>Voir les tarifs</summary>";
-        html += "<h4>Destinations et tarifs</h4><ul>";
-
-        gare.destinations.forEach(destination => {
-          if(typeof destination === "string"){
-            html += "<li><strong>" + destination +
-              "</strong> — Tarif à préciser</li>";
-          } else {
-            const prixValide =
-              Number.isFinite(Number(destination.prix)) &&
-              Number(destination.prix) > 0;
-
-            html += "<li><strong>" + destination.nom +
-              "</strong> — " + destination.transport + " : ";
-
-            html += prixValide
-              ? "<span class='price'>" + Number(destination.prix).toLocaleString("fr-FR") + " FCFA</span>"
-              : "Tarif à préciser";
-
-            html += "</li>";
-          }
-        });
-
-        html += "</ul>";
-        html += "</details>";
-      } else {
-        html += "<p class='notice'>Destinations à renseigner.</p>";
-      }
-
-      html += "</div>";
-    });
-
+    html += "</select>";
+    html += "<label for='gareStationSelection'>Gare :</label>";
+    html += "<select id='gareStationSelection' onchange='afficherDestinationsGareSelectionnee()' disabled>";
+    html += "<option value=''>Choisir d'abord une commune</option></select>";
+    html += "<div id='destinationsGareSelectionnee' aria-live='polite'><p class='notice'>Les destinations et tarifs apparaîtront ici après le choix d'une gare.</p></div>";
     resultat.innerHTML = html;
-
+    resultat.scrollIntoView({behavior:"smooth", block:"start"});
   } catch(error) {
-    console.error("Erreur du répertoire :", error);
-
-    resultat.innerHTML =
-      "<strong>📍 Gares et stations</strong>" +
-      "<p class='notice'>Impossible de charger le répertoire actuellement.</p>";
+    console.error("Erreur du répertoire des gares :", error);
+    resultat.innerHTML = "<strong>📍 Gares et stations</strong><p class='notice'>Impossible de charger le répertoire actuellement.</p>";
   }
-
-  resultat.scrollIntoView({
-    behavior:"smooth",
-    block:"start"
-  });
 }
-function filtrerGaresParCommune(){
-  const commune = document.getElementById("filtreCommune").value;
-  const recherche = document.getElementById("rechercheGare").value
-    .trim()
-    .toLowerCase();
 
-  const gares = document.querySelectorAll("#resultat .stop");
-  const ancienMessage = document.getElementById("aucuneGareTrouvee");
+function actualiserListeGaresStations(){
+  const communeSelect = document.getElementById("gareStationCommune");
+  const gareSelect = document.getElementById("gareStationSelection");
+  const zoneDestinations = document.getElementById("destinationsGareSelectionnee");
+  if (!communeSelect || !gareSelect || !zoneDestinations) return;
 
-  if(ancienMessage) ancienMessage.remove();
+  const commune = communeSelect.value;
+  const gares = (window.garesStationsListe || []).filter(g =>
+    String(g.commune || "").trim() === commune
+  );
 
-  let nombreVisible = 0;
-
+  gareSelect.innerHTML = "<option value=''>Choisir une gare</option>";
   gares.forEach(gare => {
-    const communeGare = gare.getAttribute("data-commune") || "";
-
-    const nomGare = (
-      gare.querySelector("h3")?.textContent || ""
-    ).toLowerCase();
-
-    const quartierGare = [...gare.querySelectorAll("p")]
-      .find(p => p.textContent.toLowerCase().startsWith("quartier :"))
-      ?.textContent.toLowerCase() || "";
-
-    const communeCorrespond =
-      commune === "" || communeGare === commune;
-
-    const rechercheCorrespond =
-      recherche === "" ||
-      nomGare.includes(recherche) ||
-      quartierGare.includes(recherche);
-
-    const correspond =
-      communeCorrespond && rechercheCorrespond;
-
-    gare.style.display = correspond ? "block" : "none";
-
-    if(correspond) nombreVisible++;
+    const option = document.createElement("option");
+    option.value = gare.firestoreId;
+    option.textContent = gare.nom || "Gare sans nom";
+    gareSelect.appendChild(option);
   });
 
-  if(nombreVisible === 0){
-    const message = document.createElement("p");
-    message.id = "aucuneGareTrouvee";
-    message.className = "notice";
-    message.textContent = "Aucune gare trouvée pour cette recherche.";
+  gareSelect.disabled = !commune || gares.length === 0;
+  zoneDestinations.innerHTML = gares.length
+    ? "<p class='notice'>Choisissez une gare pour afficher ses destinations et leurs tarifs.</p>"
+    : "<p class='notice'>Aucune gare enregistrée dans cette commune pour ce transport.</p>";
+}
 
-    document.getElementById("resultat").appendChild(message);
+function afficherDestinationsGareSelectionnee(){
+  const gareSelect = document.getElementById("gareStationSelection");
+  const zone = document.getElementById("destinationsGareSelectionnee");
+  if (!gareSelect || !zone) return;
+
+  const gare = (window.garesStationsListe || []).find(g => g.firestoreId === gareSelect.value);
+  if (!gare) {
+    zone.innerHTML = "<p class='notice'>Sélectionnez une gare pour consulter les tarifs.</p>";
+    return;
   }
+
+  const destinations = destinationsGareNormalisees(gare)
+    .filter(d => d && String(d.nom || "").trim());
+  let html = "<section class='stop'><h3>📍 Gare de " +
+    echapperTexteCompagnie(gare.nom || "") + "</h3>";
+  html += "<p><strong>Commune :</strong> " + echapperTexteCompagnie(gare.commune || "Non précisée") + "</p>";
+  if (gare.quartier) html += "<p><strong>Quartier :</strong> " + echapperTexteCompagnie(gare.quartier) + "</p>";
+
+  if (!destinations.length) {
+    html += "<p class='notice'>Les destinations de cette gare ne sont pas encore renseignées.</p>";
+  } else {
+    html += "<h4>Destinations desservies et prix</h4>";
+    html += "<label for='gareStationDestination'>Destination :</label>";
+    html += "<select id='gareStationDestination' onchange='afficherPrixDestinationGare()'>";
+    html += "<option value=''>Choisir une destination</option>";
+    destinations.forEach((d,index) => {
+      const nom = echapperTexteCompagnie(d.nom);
+      html += "<option value='" + index + "'>" + nom + "</option>";
+    });
+    html += "</select><div id='prixDestinationGare' aria-live='polite'>";
+    html += "<ul>";
+    destinations.forEach(d => {
+      const nom = echapperTexteCompagnie(d.nom);
+      const prix = Number(d.prix);
+      const prixValide = Number.isFinite(prix) && prix > 0;
+      html += "<li><strong>" + nom + "</strong> — " +
+        (prixValide ? "<span class='price'>" + prix.toLocaleString("fr-FR") + " FCFA</span>" : "Tarif à préciser") +
+        (d.transport ? " <small>(" + echapperTexteCompagnie(d.transport) + ")</small>" : "") + "</li>";
+    });
+    html += "</ul></div>";
+  }
+  html += "</section>";
+  zone.innerHTML = html;
+  zone.dataset.destinations = JSON.stringify(destinations);
+}
+
+function afficherPrixDestinationGare(){
+  const select = document.getElementById("gareStationDestination");
+  const zone = document.getElementById("prixDestinationGare");
+  const gareSelect = document.getElementById("gareStationSelection");
+  if (!select || !zone || !gareSelect) return;
+
+  const gare = (window.garesStationsListe || []).find(g => g.firestoreId === gareSelect.value);
+  const destinations = gare ? destinationsGareNormalisees(gare) : [];
+  const destination = destinations[Number(select.value)];
+  if (!destination || !destination.nom) {
+    zone.innerHTML = "";
+    return;
+  }
+
+  const prix = Number(destination.prix);
+  const prixValide = Number.isFinite(prix) && prix > 0;
+  zone.innerHTML = "<div class='stop'><strong>Gare de " +
+    echapperTexteCompagnie(gare.nom || "") + " → " +
+    echapperTexteCompagnie(destination.nom) + "</strong><p class='price'>" +
+    (prixValide ? prix.toLocaleString("fr-FR") + " FCFA" : "Tarif à préciser") +
+    "</p></div>";
 }
 async function afficherReseauSotra(){
   const resultat = document.getElementById("resultat");
