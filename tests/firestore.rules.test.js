@@ -37,6 +37,16 @@ function partnerFixture(overrides = {}) {
   };
 }
 
+function ramassageCompanyFixture(overrides = {}) {
+  return {
+    uid: PARTNER_UID, role: "compagnie", nom: "Compagnie test",
+    telephone: "0100000000", email: "partner@example.test",
+    statut: "approuve", abonnement: "actif",
+    dateExpirationAbonnement: futureDate(24),
+    createdAt: Timestamp.now(), ...overrides
+  };
+}
+
 function privateFixture() {
   return {
     clientId: CLIENT_UID,
@@ -71,7 +81,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     testEnv = await initializeTestEnvironment({
       projectId: PROJECT_ID,
       firestore: {
-        rules: readFileSync(resolve(__dirname, "../firestore.rules"), "utf8")
+        rules: readFileSync(resolve(__dirname, "..", process.env.FIRESTORE_RULES_FILE || "firestore.rules"), "utf8")
       }
     });
   });
@@ -96,6 +106,34 @@ describe("Mon Transport CI — règles Firestore", function () {
     await assertFails(setDoc(doc(db,"comptes_ramassage","fake-company"),{
       uid:"fake-company",role:"compagnie",nom:"Fausse compagnie",telephone:"0100000000",
       email:"client@example.test",statut:"approuve",abonnement:"actif",createdAt:serverTimestamp()
+    }));
+  });
+
+  it("autorise une compagnie de ramassage dont l'abonnement est valide à publier une offre", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`comptes_ramassage/${PARTNER_UID}`).set(ramassageCompanyFixture());
+    });
+    const db=testEnv.authenticatedContext(PARTNER_UID,{email:"partner@example.test"}).firestore();
+    const {collection,addDoc,serverTimestamp}=require("firebase/firestore");
+    await assertSucceeds(addDoc(collection(db,"offres_ramassage"),{
+      compagnieId:PARTNER_UID,compagnieNom:"Compagnie test",communeDepart:"Yopougon",
+      points:"Bagnon",destination:"Plateau",jours:"Lundi-vendredi",heure:"06:00",
+      placesDisponibles:12,tarif:25000,statut:"publiee",createdAt:serverTimestamp()
+    }));
+  });
+
+  it("refuse à une compagnie de ramassage dont l'abonnement est expiré de publier une offre", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`comptes_ramassage/${PARTNER_UID}`).set(ramassageCompanyFixture({
+        dateExpirationAbonnement: Timestamp.fromMillis(Date.now()-60000)
+      }));
+    });
+    const db=testEnv.authenticatedContext(PARTNER_UID,{email:"partner@example.test"}).firestore();
+    const {collection,addDoc,serverTimestamp}=require("firebase/firestore");
+    await assertFails(addDoc(collection(db,"offres_ramassage"),{
+      compagnieId:PARTNER_UID,compagnieNom:"Compagnie test",communeDepart:"Yopougon",
+      points:"Bagnon",destination:"Plateau",jours:"Lundi-vendredi",heure:"06:00",
+      placesDisponibles:12,tarif:25000,statut:"publiee",createdAt:serverTimestamp()
     }));
   });
 
