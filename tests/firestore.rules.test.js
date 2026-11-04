@@ -507,14 +507,16 @@ describe("Mon Transport CI — règles Firestore", function () {
       });
     });
     const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
-    const { collection, query, where, limit, getDocs } = require("firebase/firestore");
+    const { collection, query, where, limit, getDocs, doc, getDoc } = require("firebase/firestore");
+    await assertFails(getDoc(doc(db, "commandes_colis", ORDER_ID)));
     const q = query(
       collection(db, "commandes_colis"),
       where("statut", "==", "en_attente"),
       where("service", "in", ["livraison", "livraison_programmee"]),
       limit(30)
     );
-    await assertFails(getDocs(q));
+    const result = await assertSucceeds(getDocs(q));
+    if (!result.empty) throw new Error("Une ancienne commande avec des champs privés a été exposée.");
   });
 
   it("autorise la migration administrative et retire les champs privés de la commande publique", async () => {
