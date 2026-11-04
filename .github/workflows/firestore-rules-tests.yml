@@ -16,5 +16,9 @@ jobs:
           node-version: 24
       - name: Install dependencies
         run: npm install
+      - name: Report npm dependency advisories
+        run: |
+          npm audit --json > npm-audit.json || true
+          node -e 'const a=require("./npm-audit.json"); for (const [name,v] of Object.entries(a.vulnerabilities || {})) console.log(name + " | " + v.severity + " | fixAvailable=" + JSON.stringify(v.fixAvailable));'
       - name: Run Firestore emulator tests
         run: npm test
