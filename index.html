@@ -2231,11 +2231,48 @@ async function connecterPartenaire(){
 
     if(dossier.statut !== "approuve"){
       await auth.signOut();
-      statut.textContent = "Votre dossier est encore en attente de validation.";
+      statut.textContent = dossier.statut === "refuse"
+        ? "Votre demande de partenariat a été refusée."
+        : "Votre dossier est encore en attente de validation.";
       return;
     }
 
-    statut.textContent = "Connexion réussie. Votre compte est approuvé.";
+    let etatCompte = dossier.etatCompte || "actif";
+    if (etatCompte === "suspendu_temporairement" && dossier.suspensionFin) {
+      const finSuspension = dossier.suspensionFin.toDate
+        ? dossier.suspensionFin.toDate()
+        : new Date(dossier.suspensionFin);
+      if (finSuspension <= new Date()) {
+        await documentPartenaire.ref.update({
+          etatCompte: "actif",
+          motifModeration: firebase.firestore.FieldValue.delete(),
+          suspensionDebut: firebase.firestore.FieldValue.delete(),
+          suspensionFin: firebase.firestore.FieldValue.delete(),
+          dateReactivation: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        etatCompte = "actif";
+      }
+    }
+
+    if (etatCompte === "suspendu_definitivement") {
+      await auth.signOut();
+      statut.textContent = "Votre compte est suspendu définitivement. Motif : " + (dossier.motifModeration || "non précisé") + ". Contactez l'administrateur.";
+      return;
+    }
+
+    if (etatCompte === "suspendu_temporairement") {
+      await auth.signOut();
+      const fin = dossier.suspensionFin && dossier.suspensionFin.toDate
+        ? dossier.suspensionFin.toDate()
+        : new Date(dossier.suspensionFin);
+      statut.textContent = "Votre compte est temporairement suspendu jusqu'au " + fin.toLocaleString("fr-FR") + ". Motif : " + (dossier.motifModeration || "non précisé") + ".";
+      return;
+    }
+
+    const avertissement = dossier.avertissementDernier;
+    statut.textContent = avertissement
+      ? "Connexion réussie. Avertissement de l'administrateur : " + (avertissement.motif || "Veuillez respecter les règles de la plateforme.")
+      : "Connexion réussie. Votre compte est approuvé.";
 
   } catch(erreur) {
     statut.textContent = "Connexion impossible : " + erreur.message;
@@ -2332,17 +2369,24 @@ ${partenaire.type === "livreur_independant" ? `
   <p><strong>Gare :</strong> ${echapperTexteCompagnie(partenaire.nomGare || "Non renseignée")}</p>
   <p><strong>Poste occupé :</strong> ${echapperTexteCompagnie(partenaire.posteOccupe || "Non renseigné")}</p>
 `}
-          <p><strong>Statut :</strong> ${echapperTexteCompagnie(partenaire.statut)}</p>
+          <p><strong>Statut du dossier :</strong> ${echapperTexteCompagnie(partenaire.statut || "en_attente")}</p>
+          <p><strong>État du compte :</strong> ${echapperTexteCompagnie(partenaire.etatCompte || "actif")}</p>
+          ${partenaire.motifModeration ? `<p><strong>Motif :</strong> ${echapperTexteCompagnie(partenaire.motifModeration)}</p>` : ""}
+          ${partenaire.suspensionFin ? `<p><strong>Fin de suspension :</strong> ${new Date(partenaire.suspensionFin.toDate ? partenaire.suspensionFin.toDate() : partenaire.suspensionFin).toLocaleString("fr-FR")}</p>` : ""}
+          ${partenaire.avertissementDernier ? `<p><strong>Dernier avertissement :</strong> ${echapperTexteCompagnie(partenaire.avertissementDernier.motif || "")}</p>` : ""}
 
-          <button type="button" class="primary"
-            onclick="validerPartenaire('${doc.id}')">
-            Approuver
-          </button>
-
-          <button type="button"
-            onclick="refuserPartenaire('${doc.id}')">
-            Refuser
-          </button>
+          ${partenaire.statut === "en_attente" || !partenaire.statut ? `
+            <button type="button" class="primary" onclick="validerPartenaire('${doc.id}')">Approuver</button>
+            <button type="button" onclick="refuserPartenaire('${doc.id}')">Refuser</button>
+          ` : ""}
+          ${partenaire.statut === "approuve" && partenaire.etatCompte !== "suspendu_definitivement" ? `
+            <button type="button" class="primary" onclick="avertirPartenaire('${doc.id}')">Envoyer un avertissement</button>
+            <button type="button" onclick="suspendrePartenaireTemporairement('${doc.id}')">Suspendre temporairement</button>
+            <button type="button" style="background:#B42318;color:white;" onclick="suspendrePartenaireDefinitivement('${doc.id}')">Suspendre définitivement</button>
+          ` : ""}
+          ${partenaire.etatCompte === "suspendu_temporairement" ? `
+            <button type="button" class="primary" onclick="reactiverPartenaire('${doc.id}')">Réactiver le compte</button>
+          ` : ""}
         </div>
       `;
     });
@@ -2392,6 +2436,115 @@ async function refuserPartenaire(id) {
     alert("Demande refusée.");
     chargerPartenairesAdmin();
 
+  } catch (erreur) {
+    alert("Erreur : " + erreur.message);
+  }
+}
+
+async function avertirPartenaire(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès réservé à l'administrateur.");
+    return;
+  }
+  const motif = prompt("Indique le motif de l'avertissement à transmettre au partenaire :");
+  if (motif === null) return;
+  if (!motif.trim()) {
+    alert("Le motif est obligatoire.");
+    return;
+  }
+  try {
+    await db.collection("partenaires").doc(id).update({
+      avertissementDernier: {
+        motif: motif.trim(),
+        date: firebase.firestore.FieldValue.serverTimestamp(),
+        lu: false
+      },
+      etatCompte: "actif"
+    });
+    alert("Avertissement enregistré. Le partenaire pourra toujours recevoir des commandes.");
+    chargerPartenairesAdmin();
+  } catch (erreur) {
+    alert("Erreur : " + erreur.message);
+  }
+}
+
+async function suspendrePartenaireTemporairement(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès réservé à l'administrateur.");
+    return;
+  }
+  const choix = prompt("Durée de suspension en heures :\n1 = 24 heures\n2 = 48 heures\n3 = 168 heures (7 jours)\nOu saisis un nombre d'heures personnalisé.", "24");
+  if (choix === null) return;
+  const durees = {"1":24,"2":48,"3":168};
+  const heures = durees[choix.trim()] || Number(choix);
+  if (!Number.isFinite(heures) || heures <= 0 || heures > 8760) {
+    alert("Durée invalide. Saisis un nombre d'heures entre 1 et 8760.");
+    return;
+  }
+  const motif = prompt("Motif obligatoire de la suspension temporaire :");
+  if (motif === null) return;
+  if (!motif.trim()) {
+    alert("Le motif est obligatoire.");
+    return;
+  }
+  const debut = new Date();
+  const fin = new Date(debut.getTime() + heures * 60 * 60 * 1000);
+  try {
+    await db.collection("partenaires").doc(id).update({
+      etatCompte: "suspendu_temporairement",
+      motifModeration: motif.trim(),
+      suspensionDebut: firebase.firestore.Timestamp.fromDate(debut),
+      suspensionFin: firebase.firestore.Timestamp.fromDate(fin)
+    });
+    alert("Suspension temporaire enregistrée jusqu'au " + fin.toLocaleString("fr-FR") + ".");
+    chargerPartenairesAdmin();
+  } catch (erreur) {
+    alert("Erreur : " + erreur.message);
+  }
+}
+
+async function suspendrePartenaireDefinitivement(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès réservé à l'administrateur.");
+    return;
+  }
+  const motif = prompt("Motif obligatoire de la suspension définitive :");
+  if (motif === null) return;
+  if (!motif.trim()) {
+    alert("Le motif est obligatoire.");
+    return;
+  }
+  if (!confirm("Confirmer la suspension définitive ? Le compte sera bloqué, mais son dossier restera enregistré jusqu'à sa suppression manuelle.")) return;
+  try {
+    await db.collection("partenaires").doc(id).update({
+      etatCompte: "suspendu_definitivement",
+      motifModeration: motif.trim(),
+      suspensionDebut: firebase.firestore.FieldValue.serverTimestamp(),
+      suspensionFin: firebase.firestore.FieldValue.delete()
+    });
+    alert("Compte suspendu définitivement. Le dossier n'a pas été supprimé.");
+    chargerPartenairesAdmin();
+  } catch (erreur) {
+    alert("Erreur : " + erreur.message);
+  }
+}
+
+async function reactiverPartenaire(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès réservé à l'administrateur.");
+    return;
+  }
+  if (!confirm("Réactiver ce partenaire ?")) return;
+  try {
+    await db.collection("partenaires").doc(id).update({
+      etatCompte: "actif",
+      motifModeration: firebase.firestore.FieldValue.delete(),
+      suspensionDebut: firebase.firestore.FieldValue.delete(),
+      suspensionFin: firebase.firestore.FieldValue.delete(),
+      dateReactivation: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert("Compte réactivé.");
+    chargerPartenairesAdmin();
   } catch (erreur) {
     alert("Erreur : " + erreur.message);
   }
