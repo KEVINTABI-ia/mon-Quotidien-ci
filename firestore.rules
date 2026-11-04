@@ -461,6 +461,53 @@ service cloud.firestore {
       allow update, delete: if estAdmin();
     }
 
+    match /demandes_publicites/{demandeId} {
+      allow create: if request.resource.data.keys().hasAll([
+          "nom","telephone","activite","description","forfait","forfaitTexte",
+          "dureeJours","montantFCFA","statut","createdAt"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "nom","telephone","activite","description","forfait","forfaitTexte",
+          "dureeJours","montantFCFA","statut","createdAt"
+        ])
+        && request.resource.data.nom is string
+        && request.resource.data.nom.size() > 0
+        && request.resource.data.nom.size() <= 80
+        && request.resource.data.telephone is string
+        && request.resource.data.telephone.size() >= 8
+        && request.resource.data.telephone.size() <= 20
+        && request.resource.data.activite is string
+        && request.resource.data.activite.size() > 0
+        && request.resource.data.activite.size() <= 100
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 1000
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time
+        && (
+          (request.resource.data.forfait == "Découverte"
+            && request.resource.data.dureeJours == 3
+            && request.resource.data.montantFCFA == 2000)
+          || (request.resource.data.forfait == "Visibilité"
+            && request.resource.data.dureeJours == 7
+            && request.resource.data.montantFCFA == 5000)
+          || (request.resource.data.forfait == "Professionnel"
+            && request.resource.data.dureeJours == 15
+            && request.resource.data.montantFCFA == 9000)
+          || (request.resource.data.forfait == "Premium"
+            && request.resource.data.dureeJours == 30
+            && request.resource.data.montantFCFA == 15000)
+        );
+      allow read, update, delete: if estAdmin();
+    }
+
+    match /publicites/{publiciteId} {
+      allow read: if resource.data.statut == "publiee"
+        && resource.data.dateFin is timestamp
+        && resource.data.dateFin > request.time;
+      allow create, update, delete: if estAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
