@@ -843,6 +843,58 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 .formulaire-publicite button{width:100%;margin-top:10px}
 .formulaire-publicite .secondaire{background:#edf2ef;color:#263a35}
 @media(max-width:420px){.forfaits-publicite{grid-template-columns:1fr}}
+
+/* ANIMATION DOUCE DE LA CARTE TRANSPORT COLIS */
+.carte-acces-colis {
+  position: relative;
+  isolation: isolate;
+  border: 2px solid #16834A;
+  animation: colisCarteFlottante 4.5s ease-in-out infinite;
+  transform-origin: center;
+}
+.carte-acces-colis::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 0 35%, rgba(255,255,255,.28) 48%, transparent 62%);
+  background-size: 220% 100%;
+  animation: colisReflet 5s ease-in-out infinite;
+}
+.carte-acces-colis .acces-colis-texte h2 {
+  animation: colisTitreLueur 3.5s ease-in-out infinite;
+}
+.carte-acces-colis .bouton-acces-colis {
+  border: 2px solid rgba(255,255,255,.9) !important;
+  animation: colisBoutonPulse 2.8s ease-in-out infinite;
+}
+@keyframes colisCarteFlottante {
+  0%, 100% { transform: translateY(0); box-shadow: 0 8px 20px rgba(28,63,40,.16); }
+  50% { transform: translateY(-4px); box-shadow: 0 15px 30px rgba(22,131,74,.25); }
+}
+@keyframes colisReflet {
+  0%, 18% { background-position: 130% 0; }
+  58%, 100% { background-position: -130% 0; }
+}
+@keyframes colisTitreLueur {
+  0%, 100% { text-shadow: 0 2px 8px rgba(0,0,0,.28); }
+  50% { text-shadow: 0 2px 13px rgba(255,255,255,.55); }
+}
+@keyframes colisBoutonPulse {
+  0%, 100% { box-shadow: 0 6px 15px rgba(242,140,40,.23); }
+  50% { box-shadow: 0 8px 22px rgba(242,140,40,.48); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .carte-acces-colis,
+  .carte-acces-colis::before,
+  .carte-acces-colis .acces-colis-texte h2,
+  .carte-acces-colis .bouton-acces-colis {
+    animation: none !important;
+  }
+}
+
 </style>
 </head>
 <body>
