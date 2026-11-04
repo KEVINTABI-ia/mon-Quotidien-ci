@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "commandes_colis",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "statut", "order": "ASCENDING" },
+        { "fieldPath": "service", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
