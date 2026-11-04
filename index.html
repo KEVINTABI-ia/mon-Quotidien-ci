@@ -1223,7 +1223,7 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
     </div>
   </div>
   <div class="publicite-action">
-    <p>Choisissez votre formule et envoyez votre demande directement sur WhatsApp.</p>
+    <p>Choisissez votre formule et envoyez vos informations directement depuis cette application.</p>
     <button type="button" class="primary" onclick="ouvrirFormulairePublicite()">📣 FAIRE MA PUB</button>
   </div>
   <form id="formulairePublicite" class="formulaire-publicite" onsubmit="envoyerDemandePublicite(event)" style="display:none">
@@ -1276,18 +1276,6 @@ async function envoyerDemandePublicite(event) {
   };
   const detail = detailsForfaits[forfait.value];
   if (!detail) return;
-  const message = [
-    "Bonjour Mon Transport CI, je souhaite faire une publicité.",
-    "",
-    "Forfait choisi : " + forfait.value,
-    "Nom : " + nom,
-    "Téléphone : " + telephone,
-    "Activité / entreprise : " + activite,
-    "Description : " + description,
-    "",
-    "Je souhaite transmettre mon visuel (photo ou vidéo) et recevoir les modalités de paiement."
-  ].join("\n");
-  const lienWhatsApp = "https://wa.me/2250719577999?text=" + encodeURIComponent(message);
   const bouton = formulaire.querySelector('button[type="submit"]');
   bouton.disabled = true;
   statut.textContent = "Enregistrement de votre demande...";
@@ -1301,8 +1289,8 @@ async function envoyerDemandePublicite(event) {
       statut: "en_attente",
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    statut.textContent = "Demande enregistrée. WhatsApp va s’ouvrir pour transmettre votre visuel et échanger sur le paiement.";
-    window.location.href = lienWhatsApp;
+    statut.textContent = "Votre demande a bien été envoyée à Mon Transport CI. Nous allons examiner vos informations et vous contacter au numéro indiqué pour la suite. Vous pourrez nous transmettre votre photo ou vidéo directement lors de cet échange.";
+    formulaire.reset();
   } catch (erreur) {
     console.error("Erreur demande publicitaire :", erreur);
     statut.textContent = "Impossible d’enregistrer la demande. Réessaie dans quelques instants.";
