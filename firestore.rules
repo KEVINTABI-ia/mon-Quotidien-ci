@@ -282,7 +282,7 @@ service cloud.firestore {
           && existsAfter(detailsPrivesPath(commandeId))
           && getAfter(detailsPrivesPath(commandeId)).data.clientId == resource.data.clientId
           && getAfter(detailsPrivesPath(commandeId)).data.trackingNumber
-            == resource.data.get("trackingNumber", commandeId)
+            == (resource.data.get("trackingNumber", commandeId) is string ? resource.data.get("trackingNumber", commandeId) : commandeId)
         );
 
       allow delete: if estAdmin();
