@@ -1,0 +1,24 @@
+name: Firestore Rules Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  firestore-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm install
+      - name: Report npm dependency advisories
+        run: |
+          npm audit --json > npm-audit.json || true
+          node -e 'const a=require("./npm-audit.json"); for (const [name,v] of Object.entries(a.vulnerabilities || {})) { console.log("\\n" + name + " | " + v.severity + " | installed=" + (v.nodes || []).join(", ") + " | fixAvailable=" + JSON.stringify(v.fixAvailable)); for (const item of (v.via || [])) { if (typeof item === "string") console.log("  via dependency: " + item); else console.log("  advisory: " + item.title + " | range=" + item.range + " | url=" + item.url); } }'
+      - name: Run Firestore emulator tests
+        run: npm test

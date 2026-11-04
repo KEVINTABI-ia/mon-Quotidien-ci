@@ -482,6 +482,244 @@ main > section.card:nth-of-type(2) .result {
   font-weight: 900 !important;
   line-height: 1.4;
 }
+
+/* IDENTITÉ VISUELLE MODERNE — ORANGE, BLANC, VERT */
+:root {
+  --vert: #16834A;
+  --vert-fonce: #11663B;
+  --bleu-nuit: #18352A;
+  --or: #F28C28;
+  --ivoire: #F7F9F7;
+  --blanc: #FFFFFF;
+  --texte: #26352D;
+  --secondaire: #68786E;
+  --bordure: #E3EAE4;
+}
+body { background: #F6F8F6 !important; color: #26352D; }
+header {
+  background: linear-gradient(125deg, #F28C28 0%, #F49A3C 48%, #16834A 100%) !important;
+  color: #FFFFFF;
+  border-radius: 0 0 30px 30px;
+  padding: 30px 20px 34px;
+  box-shadow: 0 10px 28px rgba(31, 74, 46, .15);
+  position: relative;
+  overflow: hidden;
+}
+header::after {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 6px;
+  background: linear-gradient(90deg, #F28C28 0 33.33%, #FFFFFF 33.33% 66.66%, #16834A 66.66% 100%);
+}
+.brand-icon {
+  background: rgba(255,255,255,.22) !important;
+  border: 1px solid rgba(255,255,255,.55) !important;
+  border-radius: 15px;
+}
+.tagline { color: #FFFFFF !important; }
+.header-badge {
+  color: #FFFFFF !important;
+  border-color: rgba(255,255,255,.75) !important;
+  background: rgba(255,255,255,.14);
+}
+main { max-width: 720px; padding: 22px 15px 30px; }
+.card {
+  background: #FFFFFF;
+  border: 1px solid #E5ECE6;
+  border-radius: 22px;
+  box-shadow: 0 7px 24px rgba(28, 63, 40, .07);
+  margin-bottom: 18px;
+}
+h2, h3 { color: #17663D !important; }
+label { color: #344B3B; }
+input, select, textarea {
+  border: 1px solid #DCE7DE;
+  background: #FFFFFF;
+  border-radius: 13px;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #16834A;
+  box-shadow: 0 0 0 3px rgba(22,131,74,.13);
+}
+button { border-radius: 13px; }
+.primary, main > section.card:nth-of-type(2) button.primary {
+  background: linear-gradient(135deg, #F28C28, #E97816) !important;
+  color: #FFFFFF !important;
+  border: 0 !important;
+  box-shadow: 0 6px 15px rgba(242,140,40,.23) !important;
+}
+.primary:hover { background: #D96B12 !important; }
+.menu-toggle {
+  background: #FFFFFF !important;
+  color: #16834A !important;
+  border: 2px solid #F28C28;
+  box-shadow: 0 4px 15px rgba(20,55,32,.18);
+}
+.menu-dropdown { border: 1px solid #E1EAE2; }
+.menu-dropdown button { color: #244532; }
+.menu-dropdown button:active { background: #F0F7F1; }
+.mode, .quick button {
+  color: #17663D;
+  background: #F0F7F1;
+  border: 1px solid #DCEBDD;
+}
+.mode:hover, .quick button:hover { background: #E4F2E6; }
+.price {
+  color: #11663B;
+  background: #E7F5E9;
+}
+.result {
+  background: #F0F8F1;
+  border-color: #D8EBDD;
+}
+.stop { border-color: #E1EAE2; }
+main > section.card:nth-of-type(2) {
+  background: #FFFFFF !important;
+  border: 1px solid #E5ECE6 !important;
+  border-top: 5px solid #F28C28 !important;
+  border-radius: 24px !important;
+  box-shadow: 0 10px 28px rgba(28,63,40,.09) !important;
+}
+main > section.card:nth-of-type(2) h2 {
+  color: #17663D !important;
+}
+main > section.card:nth-of-type(2) label {
+  color: #344B3B !important;
+}
+main > section.card:nth-of-type(2) select {
+  border: 1px solid #DCE7DE !important;
+  background: #FFFFFF !important;
+  color: #26352D !important;
+}
+main > section.card:nth-of-type(2) button.primary {
+  background: linear-gradient(135deg, #F28C28, #E97816) !important;
+  border: 0 !important;
+}
+#espaceAdmin h3 {
+  border-left-color: #F28C28 !important;
+  background: #F3F8F3 !important;
+}
+footer { color: #718076; }
+@media (max-width: 380px) {
+  header { padding: 26px 16px 32px; }
+  .brand { font-size: 21px; }
+}
+
+
+/* NAVIGATION ENTRE LES PARCOURS */
+.btn-retour-accueil {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  min-height: 44px;
+  margin: 0 0 18px;
+  padding: 11px 16px;
+  color: #17663D !important;
+  background: #F0F7F1 !important;
+  border: 1px solid #CFE3D3 !important;
+  border-radius: 13px !important;
+  box-shadow: none !important;
+  font-size: 14px;
+  font-weight: 800;
+}
+.btn-retour-accueil:active {
+  background: #E2F0E5 !important;
+}
+
+
+/* ACCÈS DIRECT AU SERVICE TRANSPORT COLIS DEPUIS L'ACCUEIL */
+.carte-acces-colis {
+  display: block;
+  min-height: 250px;
+  padding: 22px;
+  border: 0;
+  border-radius: 22px;
+  overflow: hidden;
+  background-image:
+    linear-gradient(110deg, rgba(20, 48, 31, .88), rgba(20, 48, 31, .42)),
+    url("https://images.pexels.com/photos/6170470/pexels-photo-6170470.jpeg?cs=srgb&dl=pexels-tima-miroshnichenko-6170470.jpg&fm=jpg");
+  background-size: cover;
+  background-position: center 38%;
+  box-shadow: 0 10px 26px rgba(28,63,40,.18);
+}
+.acces-colis-contenu {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.acces-colis-icone {
+  flex: 0 0 58px;
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  color: #FFFFFF;
+  background: rgba(242,140,40,.92);
+  border: 1px solid rgba(255,255,255,.55);
+  font-size: 30px;
+}
+.acces-colis-texte h2 {
+  margin: 0 0 6px;
+  color: #FFFFFF !important;
+  text-shadow: 0 2px 8px rgba(0,0,0,.28);
+}
+.acces-colis-texte p {
+  margin: 0;
+  color: #FFFFFF;
+  line-height: 1.55;
+  text-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+.bouton-acces-colis {
+  display: block;
+  width: 100%;
+  min-height: 50px;
+  font-weight: 800;
+}
+
+
+/* ACCÈS ADMINISTRATEUR DISCRET EN BAS DE L'ACCUEIL */
+.carte-acces-admin {
+  margin: 30px 0 8px;
+  padding: 16px;
+  text-align: center;
+  border-top: 1px solid #E3EAE4;
+  background: transparent;
+}
+.carte-acces-admin p {
+  margin: 0 0 10px;
+  color: #68786E;
+  font-size: 13px;
+}
+.bouton-acces-admin {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #16834A !important;
+  border-radius: 13px !important;
+  color: #17663D !important;
+  background: #FFFFFF !important;
+  font-weight: 700;
+}
+
+
+/* SERVICE DE CARS DE RAMASSAGE */
+.ramassage-hero{background:linear-gradient(125deg,#F28C28,#16834A);color:#fff;padding:22px;border-radius:20px;margin-bottom:16px}
+.ramassage-hero h2{color:#fff!important;margin-bottom:8px}
+.ramassage-hero p{color:#fff;margin:0}
+.ramassage-tabs{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0}
+.ramassage-tabs button{background:#F0F7F1;color:#17663D;border:1px solid #DCEBDD}
+.ramassage-tabs button.active{background:#F28C28;color:#fff;border-color:#F28C28}
+.ramassage-panel{background:#fff;border:1px solid #E3EAE4;border-radius:16px;padding:16px;margin:12px 0}
+.ramassage-panel h3{margin-top:0}
+.ramassage-list-item{border:1px solid #E3EAE4;border-left:4px solid #16834A;border-radius:13px;padding:13px;margin:10px 0;background:#fff}
+.ramassage-list-item strong{color:#17663D}
+.ramassage-muted{font-size:12px;color:#68786E}
+
 </style>
 </head>
 <body>
@@ -495,7 +733,6 @@ main > section.card:nth-of-type(2) .result {
   <button onclick="ouvrirSection('transportColis')">
   📦 Transport Colis CI
 </button>
-  <button onclick="ouvrirSection('espaceAdmin')">🔐 Espace administrateur</button>
   <button onclick="ouvrirSection('calculateur')">💰 Calculateur de budget</button>
   <button onclick="ouvrirSection('favoris')">⭐ Mes trajets favoris</button>
   <button onclick="ouvrirSection('historique')">🕘 Historique des trajets</button>
@@ -555,6 +792,93 @@ main > section.card:nth-of-type(2) .result {
     Les inscriptions et réservations seront ouvertes après la mise en place des espaces sécurisés.
   </p>
 </section>
+
+
+<section class="card" id="serviceRamassage" style="display:none;">
+  <div class="ramassage-hero">
+    <h2>🚌 Service de cars de ramassage</h2>
+    <p>Travailleurs, agents publics et professionnels : trouvez une place pour vos déplacements réguliers. Compagnies : proposez vos places disponibles.</p>
+  </div>
+  <div class="ramassage-tabs">
+    <button type="button" id="tabRamassageUsager" class="active" onclick="afficherOngletRamassage('usager')">👤 Je cherche un car</button>
+    <button type="button" id="tabRamassageCompagnie" onclick="afficherOngletRamassage('compagnie')">🚌 Je suis une compagnie</button>
+  </div>
+  <div id="ramassageUsager" class="ramassage-panel">
+    <h3>👤 Espace utilisateur</h3>
+    <p>Créez votre compte, publiez votre besoin de ramassage et consultez les cars qui ont des places disponibles.</p>
+    <div id="ramassageUsagerAuth">
+      <label>Adresse e-mail</label><input id="ramassageUserEmail" type="email" placeholder="Votre adresse e-mail">
+      <label>Mot de passe</label><input id="ramassageUserPassword" type="password" placeholder="6 caractères minimum">
+      <label>Nom complet</label><input id="ramassageUserName" placeholder="Nom et prénoms">
+      <label>Téléphone</label><input id="ramassageUserPhone" type="tel" placeholder="07...">
+      <button class="primary" type="button" onclick="inscrireCompteRamassage('usager')">Créer mon compte utilisateur</button>
+      <button type="button" class="primary" onclick="connecterCompteRamassage('usager')">Me connecter</button>
+    </div>
+    <div id="ramassageUsagerEspace" style="display:none">
+      <p id="ramassageUserWelcome" class="notice"></p>
+      <h3>Publier ma recherche de ramassage</h3>
+      <label>Commune de départ</label><input id="demandeRamassageCommune" placeholder="Ex. Yopougon">
+      <label>Quartier ou point de ramassage</label><input id="demandeRamassageDepart" placeholder="Ex. Bagnon">
+      <label>Lieu de travail / destination</label><input id="demandeRamassageDestination" placeholder="Ex. Plateau">
+      <label>Jours de déplacement</label><input id="demandeRamassageJours" placeholder="Ex. Lundi au vendredi">
+      <label>Heure souhaitée</label><input id="demandeRamassageHeure" type="time">
+      <label>Nombre de places recherchées</label><input id="demandeRamassagePlaces" type="number" min="1" max="10" value="1">
+      <button class="primary" type="button" onclick="publierDemandeRamassage()">Publier ma recherche</button>
+      <hr>
+      <h3>Compagnies et places disponibles</h3>
+      <div id="listeOffresRamassage"><p class="notice">Connectez-vous pour consulter les offres.</p></div>
+      <button type="button" onclick="chargerOffresRamassage()">Actualiser les offres</button>
+      <button type="button" onclick="deconnecterRamassage()">Déconnexion</button>
+    </div>
+  </div>
+  <div id="ramassageCompagnie" class="ramassage-panel" style="display:none">
+    <h3>🚌 Espace compagnie de cars</h3>
+    <p>Publiez vos lignes, horaires et places disponibles. L'accès aux demandes des utilisateurs est réservé aux compagnies approuvées disposant d'un abonnement actif.</p>
+    <div id="ramassageCompagnieAuth">
+      <label>Adresse e-mail professionnelle</label><input id="ramassageCompanyEmail" type="email" placeholder="E-mail professionnel">
+      <label>Mot de passe</label><input id="ramassageCompanyPassword" type="password" placeholder="6 caractères minimum">
+      <label>Nom de la compagnie</label><input id="ramassageCompanyName" placeholder="Nom commercial">
+      <label>Téléphone</label><input id="ramassageCompanyPhone" type="tel" placeholder="Téléphone de la compagnie">
+      <button class="primary" type="button" onclick="inscrireCompteRamassage('compagnie')">Inscrire ma compagnie</button>
+      <button class="primary" type="button" onclick="connecterCompteRamassage('compagnie')">Connexion compagnie</button>
+    </div>
+    <div id="ramassageCompagnieEspace" style="display:none">
+      <p id="ramassageCompanyStatus" class="notice"></p>
+      <div id="ramassageCompanyActions" style="display:none">
+        <h3>Publier un trajet avec places disponibles</h3>
+        <label>Commune de départ</label><input id="offreRamassageCommune" placeholder="Ex. Yopougon">
+        <label>Point(s) de ramassage</label><input id="offreRamassagePoints" placeholder="Ex. Bagnon, Niangon, Siporex">
+        <label>Destination</label><input id="offreRamassageDestination" placeholder="Ex. Plateau">
+        <label>Jours de circulation</label><input id="offreRamassageJours" placeholder="Ex. Lundi au vendredi">
+        <label>Heure de départ</label><input id="offreRamassageHeure" type="time">
+        <label>Nombre de places disponibles</label><input id="offreRamassagePlaces" type="number" min="1" max="100">
+        <label>Tarif proposé (FCFA, facultatif)</label><input id="offreRamassageTarif" type="number" min="0">
+        <button class="primary" type="button" onclick="publierOffreRamassage()">Publier mon trajet</button>
+        <hr>
+        <h3>Personnes en recherche de ramassage</h3>
+        <div id="listeDemandesRamassage"><p class="notice">Chargement des demandes...</p></div>
+        <button type="button" onclick="chargerDemandesRamassage()">Actualiser les demandes</button>
+      </div>
+      <button type="button" onclick="deconnecterRamassage()">Déconnexion</button>
+    </div>
+  </div>
+  <p class="notice">Les comptes des compagnies sont soumis à validation et à l'activation d'un abonnement mensuel par l'administration. Le paiement en ligne sera ajouté après validation du fonctionnement et du tarif de l'abonnement.</p>
+</section>
+
+<section class="card carte-acces-colis" aria-label="Accès au service Transport Colis">
+  <div class="acces-colis-contenu">
+    <div class="acces-colis-icone">📦</div>
+    <div class="acces-colis-texte">
+      <h2>Transport Colis</h2>
+      <p>Envoyez et récupérez vos colis facilement grâce à notre réseau de partenaires.</p>
+    </div>
+  </div>
+  <button type="button" class="primary bouton-acces-colis"
+    onclick="ouvrirSection('transportColis')">
+    Accéder au service Transport Colis →
+  </button>
+</section>
+
 <section class="card" id="espaceAdmin" style="display:none;">
   <h2>🔐 Espace administrateur</h2>
 
@@ -573,6 +897,7 @@ main > section.card:nth-of-type(2) .result {
   </button>
 
   <p id="statutAdmin" class="notice"></p>
+<div id="gestionAbonnementsRamassage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🚌 Validation des compagnies de ramassage</h3><p class="notice">Vérifie les dossiers et les paiements avant d’approuver une compagnie ou d’activer son forfait mensuel.</p><div id="listeCompagniesRamassageAdmin">Chargement...</div></div>
 <div id="gestionGares" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
   <h3>📍 Gestion des gares et terminus</h3>
 
@@ -606,7 +931,8 @@ main > section.card:nth-of-type(2) .result {
   <div id="listeGaresAdmin"></div>
 </div>
 <div id="gestionRoutes" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
-  <h3>Gestion des itinéraires</h3>
+  <h3>Gestion des itinéraires et lignes SOTRA</h3>
+  <p class="notice">Pour ajouter une ligne SOTRA : sélectionne SOTRA, indique la gare de départ, la destination principale, le numéro de ligne dans « Précision », puis les arrêts ou destinations et leurs tarifs.</p>
 
   <label>Moyen de transport</label>
   <select id="routeTransport">
@@ -617,17 +943,17 @@ main > section.card:nth-of-type(2) .result {
     <option>Car interurbain</option>
   </select>
 
-  <label>Départ</label>
-  <input id="routeDepart" placeholder="Ex. Yopougon">
+  <label>Gare / point de départ</label>
+  <input id="routeDepart" placeholder="Ex. Gare SOTRA de Yopougon">
 
-  <label>Destination</label>
-  <input id="routeArrivee" placeholder="Ex. Adjamé">
+  <label>Destination principale</label>
+  <input id="routeArrivee" placeholder="Ex. Plateau">
 
-  <label>Précision (facultatif)</label>
-  <input id="routeStatut">
+  <label>Numéro de ligne (pour SOTRA) / précision</label>
+  <input id="routeStatut" placeholder="Ex. Ligne 39">
 
-  <label>Arrêts et tarifs</label>
-  <textarea id="routeArrets" rows="6" placeholder="Arrêt 1 | 200&#10;Arrêt 2 | 300" style="width:100%;padding:12px;"></textarea>
+  <label>Destinations ou arrêts et tarifs</label>
+  <textarea id="routeArrets" rows="6" placeholder="Gare Sud | 200&#10;Arrêt intermédiaire | 200&#10;Destination finale | 200" style="width:100%;padding:12px;"></textarea>
 
   <button class="primary" onclick="enregistrerRoute()">Enregistrer l'itinéraire</button>
 
@@ -783,6 +1109,8 @@ resultat.style.display = "block";
       "<p class='notice'>Aucun tarif confirmé pour cette destination et ce moyen de transport.</p>";
   }
 }
+
+
 </script>
 <button class="primary" onclick="rechercher()">Rechercher un trajet</button>
 <div class="result" id="resultat" aria-live="polite"></div>
@@ -843,10 +1171,10 @@ Calculer mon budget
 <h2>Nos moyens de transport</h2>
 <div class="modes">
 <button class="mode" onclick="choisir('Gbaka')">🚐 Gbaka</button>
-<button class="mode" onclick="choisir('Woro-woro')">🚕 Woro-woro</button>
-<button class="mode" onclick="choisir('Taxi communal')">🚖 Taxi communal</button>
-<button class="mode" onclick="choisir('SOTRA')">🚌 SOTRA</button>
-<button class="mode" onclick="choisir('Car interurbain')">🚍 Cars interurbains</button>
+<button class="mode" onclick="afficherGaresStations('Gbaka')">🚐 Gare de Gbaka</button>
+<button class="mode" onclick="afficherGaresStations('Taxi communal')">🚖 Gare de taxi communal</button>
+<button class="mode" onclick="afficherReseauSotra()">🚌 Réseau SOTRA</button>
+<button class="mode" onclick="ouvrirSection('serviceRamassage')">🚌 Service de cars de ramassage</button>
 </div>
 </section>
 
@@ -854,21 +1182,30 @@ Calculer mon budget
 <h2>Explorer</h2>
 <div class="quick">
 <button onclick="afficherGaresStations()">📍 Gares et stations</button>
-<button onclick="afficherTarifs()">💰 Tarifs</button>
+
 <button onclick="ouvrirCarteItineraire()">🗺️ Carte</button>
 <button onclick="afficherReseauNational()">🇨🇮 Réseau national</button>
+<button type="button" onclick="afficherMarchesCommune()">🏬 Marchés de la commune</button>
 </div>
 </section>
 
 <p class="notice">
 Les tarifs affichés sont des informations de terrain communiquées par des usagers. Ils ne constituent pas une certification officielle.
 </p>
+
+<section class="carte-acces-admin" aria-label="Accès administrateur">
+  <p>Administration de la plateforme</p>
+  <button type="button" class="bouton-acces-admin"
+    onclick="ouvrirSection('espaceAdmin')">
+    🔐 Espace administrateur
+  </button>
+</section>
 </main>
 
 <footer>Mon Transport CI · La mobilité en Côte d'Ivoire</footer>
-<script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore-compat.js"></script>
 <script src="routes.js"></script>
 <script>
 // CONFIGURATION FIREBASE
@@ -907,6 +1244,7 @@ function connexionAdmin() {
       }
 
       statut.textContent = "Connexion administrateur réussie.";
+      chargerCompagniesRamassageAdmin();
     })
     .catch((erreur) => {
       statut.textContent = "Connexion impossible : " + erreur.message;
@@ -942,10 +1280,13 @@ const panneauCompagnies = document.getElementById("gestionCompagnies");
 panneauCompagnies.style.display = autorise ? "block" : "none";
 
 if (autorise) {
+  chargerCompagniesRamassageAdmin();
   chargerCompagniesAdmin();
   chargerPartenairesAdmin();
   chargerCommandesAdmin();
 } else {
+  const panneauRamassageAdmin = document.getElementById("gestionAbonnementsRamassage");
+  if (panneauRamassageAdmin) panneauRamassageAdmin.style.display = "none";
   document.getElementById("listeCompagniesAdmin").innerHTML = "";
   document.getElementById("listePartenairesAdmin").innerHTML = "";
   const commandesAdmin = document.getElementById("listeCommandesAdmin");
@@ -1982,6 +2323,17 @@ function validerEmail(champ, idErreur) {
   message.textContent = "";
   return true;
 }
+function retourEspaceColis(zoneId){
+  const zone = document.getElementById(zoneId);
+  if(zone){
+    if(zoneId === "zoneEspaceClient") zone.replaceChildren();
+    else zone.style.display = "none";
+  }
+  const section = document.getElementById("transportColis");
+  section.style.display = "block";
+  section.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
 function ouvrirInscriptionLivreur(){
   const section = document.getElementById("transportColis");
   let zone = document.getElementById("formulaireLivreur");
@@ -1993,6 +2345,7 @@ function ouvrirInscriptionLivreur(){
   }
 
   zone.innerHTML = `
+    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('formulaireLivreur')">← Retour à Transport Colis</button>
     <hr>
     <h3>🚚 Inscription – Livreur indépendant</h3>
 
@@ -2099,6 +2452,7 @@ function ouvrirInscriptionGare(){
   }
 
   zone.innerHTML = `
+    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('formulaireGare')">← Retour à Transport Colis</button>
     <hr>
     <h3>🏢 Inscription – Représentant de gare</h3>
 
@@ -2191,6 +2545,7 @@ function ouvrirConnexionPartenaire(){
   }
 
   zone.innerHTML = `
+    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('connexionPartenaire')">← Retour à Transport Colis</button>
     <hr>
     <h3>🔐 Connexion partenaire</h3>
 
@@ -2401,6 +2756,7 @@ async function chargerCommandesPartenaire() {
       livreur_affecte: "Attribuée",
       colis_recupere: "Colis récupéré",
       en_transit: "En transit",
+      arrive_destination: "Arrivé à destination",
       livre: "Livrée",
       annule: "Annulée"
     };
@@ -2502,28 +2858,45 @@ async function chargerCommandesAdmin() {
       return {id: doc.id, ...p, disponible: actif};
     });
 
-    const commandes = commandesSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    const commandes = await Promise.all(commandesSnap.docs.map(async doc => {
+      const commande = {id: doc.id, ...doc.data()};
+      try {
+        const prive = await doc.ref.collection("informations_privees").doc("details").get();
+        commande.informationsPrivees = prive.exists ? prive.data() : {};
+      } catch (e) {
+        commande.informationsPrivees = {};
+      }
+      return commande;
+    }));
     commandes.sort((a,b) => {
       const da = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
       const dbDate = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
       return dbDate - da;
     });
 
+    zone.innerHTML = "";
+
     if (!commandes.length) {
-      zone.innerHTML = "<p>Aucune commande enregistrée pour le moment.</p>";
+      const info = document.createElement("p");
+      info.textContent = "Aucune commande enregistrée pour le moment.";
+      zone.appendChild(info);
       return;
     }
 
-    const libelles = {en_attente:"En attente",livreur_affecte:"Partenaire affecté",colis_recupere:"Colis récupéré",en_transit:"En transit",livre:"Livré",annule:"Annulé"};
-    zone.innerHTML = "";
+    const libelles = {en_attente:"En attente",livreur_affecte:"Partenaire affecté",colis_recupere:"Colis récupéré",en_transit:"En transit",arrive_destination:"Arrivé à destination",livre:"Livré",annule:"Annulé"};
+    const migrationBtn = document.createElement("button");
+    migrationBtn.type = "button";
+    migrationBtn.textContent = "Sécuriser les anciennes commandes";
+    migrationBtn.addEventListener("click", migrerAnciennesCommandesPrivees);
+    zone.appendChild(migrationBtn);
     commandes.forEach(commande => {
       const typeAttendu = commande.service === "compagnie" ? "representant_gare" : "livreur_independant";
-      const candidats = partenaires.filter(p => p.disponible && p.type === typeAttendu);
+      const candidats = partenaires.filter(p => p.enLigne === true && p.type === typeAttendu);
       const carte = document.createElement("div");
       carte.className = "stop";
 
       const titre = document.createElement("strong");
-      titre.textContent = "Commande " + (commande.trackingNumber || commande.id);
+      titre.textContent = "Commande " + (commande.informationsPrivees?.trackingNumber || commande.trackingNumber || commande.id);
       const trajet = document.createElement("p");
       trajet.textContent = (commande.depart || "Départ non précisé") + " → " + (commande.destination || "Destination non précisée");
       const details = document.createElement("p");
@@ -2532,7 +2905,7 @@ async function chargerCommandesAdmin() {
       partenaireActuel.textContent = commande.partenaireNom ? "Partenaire actuel : " + commande.partenaireNom : "Aucun partenaire attribué.";
       carte.append(titre, trajet, details, partenaireActuel);
 
-      if (commande.statut !== "livre" && commande.statut !== "annule") {
+      if (commande.statut === "en_attente" && !commande.partenaireId) {
         const select = document.createElement("select");
         select.id = "choixPartenaire_" + commande.id;
         const vide = document.createElement("option");
@@ -2563,7 +2936,8 @@ async function chargerCommandesAdmin() {
 }
 
 async function affecterCommandePartenaire(commandeId, partenaireId) {
-  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+  const admin = auth.currentUser;
+  if (!admin || admin.uid !== ADMIN_UID) {
     alert("Accès réservé à l'administrateur.");
     return;
   }
@@ -2572,44 +2946,58 @@ async function affecterCommandePartenaire(commandeId, partenaireId) {
     return;
   }
 
+  const commandeRef = db.collection("commandes_colis").doc(commandeId);
+  const partenaireRef = db.collection("partenaires").doc(partenaireId);
+  const verrouRef = partenaireRef.collection("verrous").doc("missionActive");
+
   try {
-    const commandeRef = db.collection("commandes_colis").doc(commandeId);
-    const partenaireRef = db.collection("partenaires").doc(partenaireId);
-    const [commandeDoc, partenaireDoc] = await Promise.all([commandeRef.get(), partenaireRef.get()]);
-    if (!commandeDoc.exists || !partenaireDoc.exists) throw new Error("Commande ou partenaire introuvable.");
+    await db.runTransaction(async tx => {
+      // Toutes les lectures sont effectuées avant les écritures.
+      const [commandeSnap, partenaireSnap, verrouSnap] = await Promise.all([
+        tx.get(commandeRef), tx.get(partenaireRef), tx.get(verrouRef)
+      ]);
+      if (!commandeSnap.exists || !partenaireSnap.exists) {
+        throw new Error("Commande ou partenaire introuvable.");
+      }
+      const commande = commandeSnap.data();
+      const partenaire = partenaireSnap.data();
+      if (commande.statut !== "en_attente" || commande.partenaireId) {
+        throw new Error("Cette commande n'est plus disponible. Actualise la liste.");
+      }
+      if (verrouSnap.exists) {
+        throw new Error("Ce partenaire a déjà une mission active.");
+      }
+      if (!partenaireAbonnementValide(partenaire)) {
+        throw new Error("Ce partenaire doit être approuvé et avoir un abonnement valide.");
+      }
+      if (partenaire.enLigne !== true) {
+        throw new Error("Le partenaire doit être en ligne pour recevoir une mission.");
+      }
+      const typeAttendu = commande.service === "compagnie"
+        ? "representant_gare" : "livreur_independant";
+      if (partenaire.type !== typeAttendu) {
+        throw new Error("Le profil du partenaire ne correspond pas au service.");
+      }
 
-    const commande = commandeDoc.data();
-    const partenaire = partenaireDoc.data();
-    const maintenant = new Date();
-    const finEssai = partenaire.dateFinEssai && partenaire.dateFinEssai.toDate ? partenaire.dateFinEssai.toDate() : (partenaire.dateFinEssai ? new Date(partenaire.dateFinEssai) : null);
-    const finAbonnement = partenaire.dateExpirationAbonnement && partenaire.dateExpirationAbonnement.toDate ? partenaire.dateExpirationAbonnement.toDate() : (partenaire.dateExpirationAbonnement ? new Date(partenaire.dateExpirationAbonnement) : null);
-    const abonnementValide = (partenaire.statutAbonnementPartenaire === "Essai" && finEssai && finEssai > maintenant)
-      || (partenaire.statutAbonnementPartenaire === "Actif" && finAbonnement && finAbonnement > maintenant);
-    const typeAttendu = commande.service === "compagnie" ? "representant_gare" : "livreur_independant";
-
-    if (partenaire.statut !== "approuve" || (partenaire.etatCompte || "actif") !== "actif" || !abonnementValide) {
-      throw new Error("Ce partenaire n'est plus éligible : vérifie son approbation, sa suspension et son abonnement.");
-    }
-    if (partenaire.type !== typeAttendu) {
-      throw new Error("Le profil du partenaire ne correspond pas au type de commande.");
-    }
-    if (commande.statut === "livre" || commande.statut === "annule") {
-      throw new Error("Cette commande est déjà clôturée.");
-    }
-
-    await commandeRef.update({
-      partenaireId: partenaireId,
-      partenaireNom: partenaire.nom || "",
-      partenaireTelephone: partenaire.telephone || "",
-      partenaireType: partenaire.type,
-      statut: "livreur_affecte",
-      dateAffectation: firebase.firestore.FieldValue.serverTimestamp(),
-      affectePar: auth.currentUser.uid
+      tx.update(commandeRef, {
+        partenaireId: partenaireId,
+        partenaireNom: partenaire.nom || "",
+        partenaireType: partenaire.type,
+        statut: "livreur_affecte",
+        dateAffectation: firebase.firestore.FieldValue.serverTimestamp(),
+        affectePar: admin.uid
+      });
+      tx.set(verrouRef, {
+        commandeId: commandeId,
+        statut: "active",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
     });
 
-    alert("Commande attribuée à " + (partenaire.nom || "ce partenaire") + ".");
-    chargerCommandesAdmin();
+    alert("Commande attribuée. Le partenaire dispose maintenant d'une mission active.");
+    await chargerCommandesAdmin();
   } catch (erreur) {
+    console.error("Attribution administrative :", erreur);
     alert("Attribution impossible : " + erreur.message);
   }
 }
@@ -3242,22 +3630,204 @@ function basculerMenu(){
     menu.style.display === "block" ? "none" : "block";
 }
 
+function masquerParcours(){
+  ["espaceAdmin","calculateur","favoris","historique","transportColis","serviceRamassage"].forEach(id => {
+    const section = document.getElementById(id);
+    if(section) section.style.display = "none";
+  });
+}
+
+function retourAccueil(){
+  document.getElementById("menuDropdown").style.display = "none";
+  masquerParcours();
+  document.getElementById("zoneEspaceClient")?.replaceChildren();
+  document.getElementById("connexionPartenaire")?.remove();
+  window.scrollTo({top: 0, behavior: "smooth"});
+}
+
 function ouvrirSection(id){
   document.getElementById("menuDropdown").style.display = "none";
+  masquerParcours();
 
-  document.getElementById("espaceAdmin").style.display = "none";
-  document.getElementById("calculateur").style.display = "none";
-  document.getElementById("favoris").style.display = "none";
-  document.getElementById("historique").style.display = "none";
-document.getElementById("transportColis").style.display = "none";
   const section = document.getElementById(id);
+  if(!section) return;
+
   section.style.display = "block";
+
+  // Un seul bouton de retour par écran, même après plusieurs ouvertures.
+  let boutonRetour = section.querySelector(":scope > .btn-retour-accueil");
+  if(!boutonRetour){
+    boutonRetour = document.createElement("button");
+    boutonRetour.type = "button";
+    boutonRetour.className = "btn-retour-accueil";
+    boutonRetour.textContent = "← Retour à l’accueil";
+    boutonRetour.onclick = retourAccueil;
+    section.insertBefore(boutonRetour, section.firstChild);
+  }
 
   section.scrollIntoView({
     behavior:"smooth",
     block:"start"
   });
 }
+
+let ramassageRoleActif = null;
+function afficherOngletRamassage(role){
+  const user = role === "usager";
+  document.getElementById("ramassageUsager").style.display = user ? "block" : "none";
+  document.getElementById("ramassageCompagnie").style.display = user ? "none" : "block";
+  document.getElementById("tabRamassageUsager").classList.toggle("active",user);
+  document.getElementById("tabRamassageCompagnie").classList.toggle("active",!user);
+}
+async function inscrireCompteRamassage(role){
+  const compagnie = role === "compagnie";
+  const email = document.getElementById(compagnie?"ramassageCompanyEmail":"ramassageUserEmail").value.trim();
+  const password = document.getElementById(compagnie?"ramassageCompanyPassword":"ramassageUserPassword").value;
+  const nom = document.getElementById(compagnie?"ramassageCompanyName":"ramassageUserName").value.trim();
+  const telephone = document.getElementById(compagnie?"ramassageCompanyPhone":"ramassageUserPhone").value.trim();
+  if(!email||!password||!nom||!telephone) return alert("Veuillez remplir tous les champs.");
+  if(password.length<6) return alert("Le mot de passe doit contenir au moins 6 caractères.");
+  try{
+    const credential=await auth.createUserWithEmailAndPassword(email,password);
+    await db.collection("comptes_ramassage").doc(credential.user.uid).set({
+      uid:credential.user.uid,role:role,nom:nom,telephone:telephone,email:email,
+      statut:compagnie?"en_attente":"actif",
+      abonnement:compagnie?"inactif":"non_applicable",
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    ramassageRoleActif=role;
+    await afficherEspaceRamassage(credential.user);
+    alert(compagnie?"Demande d'inscription envoyée. Votre compagnie sera vérifiée par l'administration avant activation de l'abonnement.":"Compte créé. Vous pouvez maintenant publier votre recherche de ramassage.");
+  }catch(e){alert("Inscription impossible : "+e.message);}
+}
+async function connecterCompteRamassage(role){
+  const compagnie=role==="compagnie";
+  const email=document.getElementById(compagnie?"ramassageCompanyEmail":"ramassageUserEmail").value.trim();
+  const password=document.getElementById(compagnie?"ramassageCompanyPassword":"ramassageUserPassword").value;
+  if(!email||!password)return alert("Saisissez votre e-mail et votre mot de passe.");
+  try{
+    const credential=await auth.signInWithEmailAndPassword(email,password);
+    const snap=await db.collection("comptes_ramassage").doc(credential.user.uid).get();
+    if(!snap.exists||snap.data().role!==role){await auth.signOut();throw new Error("Ce compte n'est pas inscrit dans cet espace.");}
+    ramassageRoleActif=role;
+    await afficherEspaceRamassage(credential.user,snap.data());
+  }catch(e){alert("Connexion impossible : "+e.message);}
+}
+async function afficherEspaceRamassage(user,profil=null){
+  const snap=profil?null:await db.collection("comptes_ramassage").doc(user.uid).get();
+  const p=profil||(snap&&snap.exists?snap.data():null);
+  if(!p)throw new Error("Profil de ramassage introuvable.");
+  const company=p.role==="compagnie";
+  document.getElementById(company?"ramassageCompagnieAuth":"ramassageUsagerAuth").style.display="none";
+  document.getElementById(company?"ramassageCompagnieEspace":"ramassageUsagerEspace").style.display="block";
+  if(company){
+    const expirationAbonnement = p.dateExpirationAbonnement && typeof p.dateExpirationAbonnement.toDate === "function"
+      ? p.dateExpirationAbonnement.toDate().getTime()
+      : 0;
+    const active=p.statut==="approuve"&&p.abonnement==="actif"&&expirationAbonnement>Date.now();
+    document.getElementById("ramassageCompanyStatus").textContent=active?"Compagnie approuvée — abonnement actif. Vous pouvez publier vos trajets et consulter les demandes.":p.statut!=="approuve"?"Votre dossier est en attente de validation par l'administration.":"Votre abonnement n'est pas encore actif. Contactez l'administration.";
+    document.getElementById("ramassageCompanyActions").style.display=active?"block":"none";
+    if(active)await chargerDemandesRamassage();
+  }else{
+    document.getElementById("ramassageUserWelcome").textContent="Bienvenue "+p.nom+". Publiez votre besoin ou consultez les places disponibles.";
+    await chargerOffresRamassage();
+  }
+}
+async function publierDemandeRamassage(){
+  const user=auth.currentUser;if(!user)return alert("Connectez-vous d'abord.");
+  const val=id=>document.getElementById(id).value.trim();
+  const commune=val("demandeRamassageCommune"),depart=val("demandeRamassageDepart"),destination=val("demandeRamassageDestination"),jours=val("demandeRamassageJours"),heure=val("demandeRamassageHeure"),places=Number(val("demandeRamassagePlaces"));
+  if(!commune||!depart||!destination||!jours||!heure||!Number.isInteger(places)||places<1||places>10)return alert("Vérifiez les informations de votre recherche.");
+  try{
+    await db.collection("demandes_ramassage").add({userId:user.uid,communeDepart:commune,pointDepart:depart,destination:destination,jours:jours,heure:heure,places:places,statut:"ouverte",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    alert("Votre recherche de ramassage est publiée. Les compagnies approuvées et abonnées pourront la consulter.");
+    await chargerOffresRamassage();
+  }catch(e){alert("Publication impossible : "+e.message);}
+}
+async function publierOffreRamassage(){
+  const user=auth.currentUser;if(!user)return alert("Connectez-vous à votre compte compagnie.");
+  const val=id=>document.getElementById(id).value.trim();
+  const commune=val("offreRamassageCommune"),points=val("offreRamassagePoints"),destination=val("offreRamassageDestination"),jours=val("offreRamassageJours"),heure=val("offreRamassageHeure"),places=Number(val("offreRamassagePlaces")),tarif=val("offreRamassageTarif");
+  if(!commune||!points||!destination||!jours||!heure||!Number.isInteger(places)||places<1||places>100)return alert("Vérifiez les informations du trajet et les places disponibles.");
+  const profil=await db.collection("comptes_ramassage").doc(user.uid).get();if(!profil.exists)return alert("Profil compagnie introuvable.");
+  try{
+    await db.collection("offres_ramassage").add({compagnieId:user.uid,compagnieNom:profil.data().nom,communeDepart:commune,points:points,destination:destination,jours:jours,heure:heure,placesDisponibles:places,tarif:tarif?Number(tarif):null,statut:"publiee",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    alert("Votre trajet est publié.");
+    await chargerOffresRamassage();
+  }catch(e){alert("Publication impossible : "+e.message);}
+}
+async function chargerOffresRamassage(){
+  const zone=document.getElementById("listeOffresRamassage");if(!zone)return;
+  zone.innerHTML="<p class='notice'>Chargement des compagnies...</p>";
+  try{
+    const snap=await db.collection("offres_ramassage").where("statut","==","publiee").get();
+    if(snap.empty){zone.innerHTML="<p class='notice'>Aucune compagnie n'a encore publié de place disponible. Revenez consulter les offres.</p>";return;}
+    zone.innerHTML="";
+    snap.forEach(doc=>{
+      const d=doc.data(),item=document.createElement("div");item.className="ramassage-list-item";
+      const title=document.createElement("strong");title.textContent=d.compagnieNom||"Compagnie de cars";
+      const detail=document.createElement("p");detail.textContent=(d.communeDepart||"")+" — "+(d.points||"")+" → "+(d.destination||"");
+      const meta=document.createElement("p");meta.className="ramassage-muted";meta.textContent=(d.jours||"")+" · Départ "+(d.heure||"")+" · "+(d.placesDisponibles||0)+" place(s) · "+(d.tarif?Number(d.tarif).toLocaleString("fr-FR")+" FCFA":"Tarif à confirmer");
+      item.append(title,detail,meta);zone.appendChild(item);
+    });
+  }catch(e){zone.innerHTML="<p class='notice'>Impossible de charger les offres : "+echapperTexteCompagnie(e.message)+"</p>";}
+}
+async function chargerDemandesRamassage(){
+  const zone=document.getElementById("listeDemandesRamassage");if(!zone)return;
+  zone.innerHTML="<p class='notice'>Chargement des recherches...</p>";
+  try{
+    const snap=await db.collection("demandes_ramassage").where("statut","==","ouverte").get();
+    if(snap.empty){zone.innerHTML="<p class='notice'>Aucune recherche ouverte pour le moment.</p>";return;}
+    zone.innerHTML="";
+    snap.forEach(doc=>{
+      const d=doc.data(),item=document.createElement("div");item.className="ramassage-list-item";
+      const title=document.createElement("strong");title.textContent=(d.communeDepart||"")+" — "+(d.pointDepart||"");
+      const detail=document.createElement("p");detail.textContent="Destination : "+(d.destination||"");
+      const meta=document.createElement("p");meta.className="ramassage-muted";meta.textContent=(d.jours||"")+" · Heure souhaitée "+(d.heure||"")+" · "+(d.places||1)+" place(s)";
+      item.append(title,detail,meta);zone.appendChild(item);
+    });
+  }catch(e){zone.innerHTML="<p class='notice'>Accès aux demandes indisponible : "+echapperTexteCompagnie(e.message)+"</p>";}
+}
+
+async function chargerCompagniesRamassageAdmin(){
+  const zone=document.getElementById("listeCompagniesRamassageAdmin");
+  const panneau=document.getElementById("gestionAbonnementsRamassage");
+  if(!zone||!panneau||!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;
+  panneau.style.display="block";zone.textContent="Chargement des dossiers...";
+  try{
+    const snap=await db.collection("comptes_ramassage").where("role","==","compagnie").get();
+    if(snap.empty){zone.innerHTML="<p class='notice'>Aucune compagnie inscrite pour le moment.</p>";return;}
+    zone.innerHTML="";
+    snap.forEach(doc=>{
+      const d=doc.data(),card=document.createElement("div");card.className="ramassage-list-item";
+      const title=document.createElement("strong");title.textContent=d.nom||"Compagnie sans nom";
+      const detail=document.createElement("p");detail.textContent=(d.email||"")+" · "+(d.telephone||"")+" · Dossier : "+(d.statut||"inconnu")+" · Abonnement : "+(d.abonnement||"inactif");
+      const approve=document.createElement("button");approve.type="button";approve.textContent="Approuver le dossier";approve.onclick=()=>modifierStatutCompagnieRamassage(doc.id,"approuve");
+      const activate=document.createElement("button");activate.type="button";activate.textContent="Activer 1 mois (après vérification du paiement)";activate.style.marginTop="8px";activate.onclick=()=>activerAbonnementCompagnieRamassage(doc.id);
+      card.append(title,detail,approve,activate);zone.appendChild(card);
+    });
+  }catch(e){zone.textContent="Impossible de charger les compagnies : "+e.message;}
+}
+async function modifierStatutCompagnieRamassage(uid,statut){
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
+  try{await db.collection("comptes_ramassage").doc(uid).update({statut:statut});alert("Statut du dossier mis à jour.");await chargerCompagniesRamassageAdmin();}
+  catch(e){alert("Modification impossible : "+e.message);}
+}
+async function activerAbonnementCompagnieRamassage(uid){
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
+  if(!confirm("Confirme-tu que le paiement mensuel de cette compagnie a bien été reçu ?"))return;
+  const expiration=new Date(Date.now()+30*24*60*60*1000);
+  try{await db.collection("comptes_ramassage").doc(uid).update({statut:"approuve",abonnement:"actif",dateExpirationAbonnement:firebase.firestore.Timestamp.fromDate(expiration)});alert("Abonnement activé pour 30 jours.");await chargerCompagniesRamassageAdmin();}
+  catch(e){alert("Activation impossible : "+e.message);}
+}
+
+async function deconnecterRamassage(){
+  await auth.signOut();ramassageRoleActif=null;
+  ["ramassageUsagerAuth","ramassageCompagnieAuth"].forEach(id=>document.getElementById(id).style.display="block");
+  ["ramassageUsagerEspace","ramassageCompagnieEspace"].forEach(id=>document.getElementById(id).style.display="none");
+  alert("Vous êtes déconnecté.");
+}
+
 function ouvrirEspaceClient(){
   ouvrirSection("transportColis");
   const user = auth.currentUser;
@@ -3278,6 +3848,7 @@ function afficherConnexionClient(message=""){
   const zone = document.getElementById("zoneEspaceClient");
 
   zone.innerHTML = `
+    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('zoneEspaceClient')">← Retour à Transport Colis</button>
     <hr>
     <h3>👤 Connexion à mon espace client</h3>
     <p>Connectez-vous pour retrouver vos commandes.</p>
@@ -3300,6 +3871,7 @@ function afficherInscriptionClient(message=""){
   const zone = document.getElementById("zoneEspaceClient");
 
   zone.innerHTML = `
+    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('zoneEspaceClient')">← Retour à Transport Colis</button>
     <hr>
     <h3>📝 Créer mon compte client</h3>
     <p>Votre compte conservera vos commandes et votre historique.</p>
@@ -3509,6 +4081,13 @@ function changerServiceCommande(){
 
       <label>Code du colis (pour une récupération)</label>
       <input id="codeColisCommande" placeholder="Code fourni par la compagnie">
+
+      <label>État du paiement de l'expédition (récupération à la gare)</label>
+      <select id="expeditionPayeeCommande">
+        <option value="">Sélectionnez une réponse</option>
+        <option value="oui">Expédition déjà payée</option>
+        <option value="non">Expédition pas encore payée</option>
+      </select>
     `;
   }
 
@@ -4062,197 +4641,6 @@ async function afficherItineraireCommande(){
   }
 }
 
-async function enregistrerCommande(){
-
-  const user = auth.currentUser;
-
-  if(!user){
-    alert("Veuillez vous connecter à votre compte client.");
-    return;
-  }
-
-  const lire = id => {
-    const element = document.getElementById(id);
-    return element ? element.value.trim() : "";
-  };
-
-  const service = lire("serviceCommande");
-
-  if(!service){
-    alert("Veuillez choisir un service.");
-    return;
-  }
-
-  const telephoneExpediteur = lire("telephoneExpediteurCommande");
-  const telephoneDestinataire = lire("telephoneDestinataireCommande");
-
-  function telephoneValide(numero){
-    let n = numero.replace(/\D/g,"");
-    if(n.startsWith("225") && n.length === 13){
-      n = n.substring(3);
-    }
-    return /^(01|05|07)\d{8}$/.test(n);
-  }
-
-  if(!telephoneValide(telephoneExpediteur) ||
-     !telephoneValide(telephoneDestinataire)){
-    alert("Vérifiez les deux numéros. Format attendu : 10 chiffres commençant par 01, 05 ou 07.");
-    return;
-  }
-
-  const adresseRecuperation = lire("adresseRecuperationCommande");
-  const adresseLivraison = lire("adresseLivraisonCommande");
-
-  if(!adresseRecuperation || !adresseLivraison){
-    alert("Veuillez renseigner les deux adresses.");
-    return;
-  }
-
-  let depart = "";
-  let destination = "";
-  let operation = "";
-  let compagnie = "";
-  let gare = "";
-  let provenance = "";
-  let codeColis = "";
-
-  if(service === "compagnie"){
-
-    operation = lire("operationCommande");
-    compagnie = lire("compagnieCommande");
-    gare = lire("gareCommande");
-    provenance = lire("provenanceCommande");
-    codeColis = lire("codeColisCommande");
-
-    if(!compagnie || !gare){
-      alert("Veuillez renseigner la compagnie et la gare.");
-      return;
-    }
-
-    if(operation === "recuperation" &&
-       (!provenance || !codeColis)){
-      alert("Pour récupérer un colis, le code et la provenance sont obligatoires.");
-      return;
-    }
-
-    if(operation === "expedition"){
-      depart = adresseRecuperation;
-      destination = compagnie + " - " + gare;
-    }else{
-      depart = compagnie + " - " + gare;
-      destination = adresseLivraison;
-    }
-  }
-
-  if(service === "livraison" ||
-     service === "livraison_programmee"){
-
-    depart = lire("departCommande");
-    destination = lire("destinationCommande");
-
-    if(!depart || !destination){
-      alert("Veuillez renseigner le lieu de départ et la destination.");
-      return;
-    }
-  }
-
-  const description = lire("descriptionColisCommande");
-
-  let dateSouhaitee = null;
-
-  if(service === "livraison_programmee"){
-
-    const valeurDate = lire("dateHeureCommande");
-
-    if(!valeurDate){
-      alert("Veuillez choisir une date et une heure.");
-      return;
-    }
-
-    const dateChoisie = new Date(valeurDate);
-    const maintenant = Date.now();
-    const delai = dateChoisie.getTime() - maintenant;
-
-    if(isNaN(dateChoisie.getTime()) ||
-       delai < 60 * 60 * 1000 ||
-       delai > 24 * 60 * 60 * 1000){
-      alert("La livraison doit être programmée entre 1 heure et 24 heures après la réservation.");
-      return;
-    }
-
-    dateSouhaitee = firebase.firestore.Timestamp.fromDate(dateChoisie);
-  }
-
-  try{
-
-    const profilDoc = await db.collection("clients").doc(user.uid).get();
-
-    const profil = profilDoc.exists ? profilDoc.data() : {};
-
-    const numeroSuivi =
-      "TCI-" + Date.now().toString(36).toUpperCase()
-      + "-" + Math.floor(1000 + Math.random() * 9000);
-
-    const commande = {
-      clientId: user.uid,
-      clientNom: profil.nom || "Client",
-      clientTelephone: profil.telephone || "",
-      service: service,
-      depart: depart,
-      destination: destination,
-      telephoneExpediteur: telephoneExpediteur,
-      telephoneDestinataire: telephoneDestinataire,
-      adresseRecuperation: adresseRecuperation,
-      adresseLivraison: adresseLivraison,
-      descriptionColis: description,
-      trackingNumber: numeroSuivi,
-      statut: "en_attente",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    const positionRecuperation = window.positionsCommande?.recuperation;
-const positionLivraison = window.positionsCommande?.destination;
-
-if(positionRecuperation){
-  commande.latitudeRecuperation = positionRecuperation.latitude;
-  commande.longitudeRecuperation = positionRecuperation.longitude;
-}
-
-if(positionLivraison){
-  commande.latitudeLivraison = positionLivraison.latitude;
-  commande.longitudeLivraison = positionLivraison.longitude;
-}
-
-    if(operation) commande.operation = operation;
-    if(compagnie) commande.compagnie = compagnie;
-    if(gare) commande.gare = gare;
-    if(provenance) commande.provenance = provenance;
-    if(codeColis) commande.codeColis = codeColis;
-    if(dateSouhaitee) commande.dateHeureSouhaitee = dateSouhaitee;
-
-    await db.collection("commandes_colis").add(commande);
-
-    document.getElementById("zoneFormulaireCommande").innerHTML = `
-      <hr>
-      <h3>✅ Commande enregistrée !</h3>
-      <p><strong>Numéro de suivi :</strong></p>
-      <h3>${numeroSuivi}</h3>
-      <p><strong>Statut :</strong> En attente</p>
-      <p>Votre commande a bien été enregistrée.</p>
-      <button type="button" onclick="afficherFormulaireCommande()">
-        Nouvelle commande
-      </button>
-    `;
-
-    await chargerHistoriqueCommandes();
-
-  }catch(erreur){
-
-    console.error("Erreur commande :", erreur);
-
-    alert("Impossible d'enregistrer la commande. Vérifiez votre connexion et réessayez.");
-
-  }
-}
 async function chargerHistoriqueCommandes(){
   const zone = document.getElementById("zoneHistoriqueCommandes");
   const user = auth.currentUser;
@@ -4274,7 +4662,22 @@ async function chargerHistoriqueCommandes(){
       return;
     }
 
-    const commandes = resultat.docs.map(doc => doc.data());
+    const commandes = await Promise.all(resultat.docs.map(async doc => {
+      const commande = {id: doc.id, ...doc.data()};
+      try {
+        const [prive, expedition, prix] = await Promise.all([
+          doc.ref.collection("informations_privees").doc("details").get(),
+          doc.ref.collection("informations_privees").doc("expedition").get(),
+          doc.ref.collection("tarification").doc("prix").get()
+        ]);
+        commande.informationsPrivees = prive.exists ? prive.data() : {};
+        commande.referencesExpedition = expedition.exists ? expedition.data() : null;
+        commande.tarification = prix.exists ? prix.data() : null;
+      } catch (e) {
+        commande.informationsPrivees = {};
+      }
+      return commande;
+    }));
 
     commandes.sort((a,b) => {
       const dateA = a.createdAt ? a.createdAt.toMillis() : 0;
@@ -4287,6 +4690,7 @@ async function chargerHistoriqueCommandes(){
       livreur_affecte: "Livreur affecté",
       colis_recupere: "Colis récupéré",
       en_transit: "En transit",
+      arrive_destination: "Arrivé à destination",
       livre: "Livré"
     };
 
@@ -4297,7 +4701,7 @@ async function chargerHistoriqueCommandes(){
       carte.className = "stop";
 
       const numero = document.createElement("strong");
-      numero.textContent = "Commande : " + (commande.trackingNumber || "Non disponible");
+      numero.textContent = "Commande : " + (commande.informationsPrivees?.trackingNumber || commande.trackingNumber || commande.id);
 
       const statut = document.createElement("p");
       statut.textContent = "Statut : " + (statuts[commande.statut] || commande.statut || "Non renseigné");
@@ -4306,6 +4710,20 @@ async function chargerHistoriqueCommandes(){
       trajet.textContent = (commande.depart || "") + " → " + (commande.destination || "");
 
       carte.append(numero, statut, trajet);
+      if(commande.tarification){
+        const prix=document.createElement("p");
+        prix.textContent="Montant Mon Transport CI : "+Number(commande.tarification.montantTotal||0).toLocaleString("fr-FR")+" FCFA";
+        carte.appendChild(prix);
+      }
+      if(commande.referencesExpedition){
+        const refs=commande.referencesExpedition;
+        const bloc=document.createElement("div"); bloc.className="notice";
+        const titreRefs=document.createElement("strong"); titreRefs.textContent="📦 Références de votre colis expédié";
+        const compagnie=document.createElement("p"); compagnie.textContent="Compagnie : "+refs.compagnieExpedition;
+        const gare=document.createElement("p"); gare.textContent="Gare de destination : "+refs.gareDestination;
+        const code=document.createElement("p"); code.textContent="Code du colis : "+refs.codeColis;
+        bloc.append(titreRefs,compagnie,gare,code); carte.appendChild(bloc);
+      }
       zone.appendChild(carte);
     });
 
@@ -4337,158 +4755,310 @@ function signalerProblemeGeneral(){
 }
 
 // COLLE ICI LA NOUVELLE FONCTION
-async function afficherGaresStations(){
+async function afficherGaresStations(typeTransport){
   const resultat = document.getElementById("resultat");
-
+  const typeChoisi = typeTransport || "Gbaka";
+  window.garesStationsTypeActuel = typeChoisi;
   resultat.style.display = "block";
-  resultat.innerHTML = "<p>Chargement des gares et terminus...</p>";
+  resultat.innerHTML = "<p>Chargement des gares...</p>";
 
   try {
     const snapshot = await db.collection("gares").orderBy("nom").get();
+    const garesType = snapshot.docs
+      .map(doc => ({...doc.data(), firestoreId: doc.id}))
+      .filter(gare => {
+        const transports = Array.isArray(gare.transports)
+          ? gare.transports
+          : (gare.transports ? [gare.transports] : []);
+        return transports.some(t => normaliser(String(t)) === normaliser(typeChoisi));
+      });
 
-    if(snapshot.empty){
-      resultat.innerHTML =
-        "<strong>📍 Gares et stations</strong>" +
-        "<p class='notice'>Aucune gare enregistrée pour le moment.</p>";
+    const titre = typeChoisi === "Gbaka" ? "Gares de Gbaka" : "Gares de taxi communal";
+    if (!garesType.length) {
+      resultat.innerHTML = "<strong>📍 " + titre + "</strong><p class='notice'>Aucune gare n'est encore enregistrée pour ce transport.</p>";
       return;
     }
 
-    let html = "<strong>📍 Répertoire des gares et terminus</strong>";
-
-const communes = [...new Set(
-  snapshot.docs
-    .map(doc => (doc.data().commune || "").trim())
-    .filter(commune => commune !== "")
-)].sort();
-
-html += "<p><strong>Filtrer par commune :</strong></p>";
-html += "<select id='filtreCommune' onchange='filtrerGaresParCommune()'>";
-html += "<option value=''>Toutes les communes</option>";
-
-communes.forEach(commune => {
-  html += `<option value="${commune}">${commune}</option>`;
-});
-
-html += "</select>";
-html += "<p><strong>Rechercher une gare ou un quartier :</strong></p>";
-html += "<input type='text' id='rechercheGare' placeholder='Ex. : Bagnon, Niangon, Adjamé...' oninput='filtrerGaresParCommune()'>";
-    snapshot.forEach(doc => {
-      const gare = doc.data();
-
-      html += `<div class="stop" data-commune="${(gare.commune || "").trim()}">`;
-      html += "<h3>📍 " + gare.nom + "</h3>";
-
-      if(gare.commune){
-        html += "<p>Commune : " + gare.commune + "</p>";
-      }
-
-      if(gare.quartier){
-        html += "<p>Quartier : " + gare.quartier + "</p>";
-      }
-
-      if(gare.transports && gare.transports.length){
-        html += "<p>Moyens de transport : " +
-          gare.transports.join(", ") + "</p>";
-      }
-
-      if(gare.destinations && gare.destinations.length){
-        html += "<details>";
-html += "<summary>Voir les tarifs</summary>";
-        html += "<h4>Destinations et tarifs</h4><ul>";
-
-        gare.destinations.forEach(destination => {
-          if(typeof destination === "string"){
-            html += "<li><strong>" + destination +
-              "</strong> — Tarif à préciser</li>";
-          } else {
-            const prixValide =
-              Number.isFinite(Number(destination.prix)) &&
-              Number(destination.prix) > 0;
-
-            html += "<li><strong>" + destination.nom +
-              "</strong> — " + destination.transport + " : ";
-
-            html += prixValide
-              ? "<span class='price'>" + Number(destination.prix).toLocaleString("fr-FR") + " FCFA</span>"
-              : "Tarif à préciser";
-
-            html += "</li>";
-          }
-        });
-
-        html += "</ul>";
-        html += "</details>";
-      } else {
-        html += "<p class='notice'>Destinations à renseigner.</p>";
-      }
-
-      html += "</div>";
+    window.garesStationsListe = garesType;
+    const communes = [...new Set(garesType.map(g => String(g.commune || "").trim()).filter(Boolean))]
+      .sort((a,b) => a.localeCompare(b, "fr"));
+    let html = "<strong>📍 " + titre + "</strong>";
+    html += "<p>Sélectionnez d'abord une commune, puis une gare pour consulter ses destinations et les prix.</p>";
+    html += "<label for='gareStationCommune'>Commune :</label>";
+    html += "<select id='gareStationCommune' onchange='actualiserListeGaresStations()'>";
+    html += "<option value=''>Choisir une commune</option>";
+    communes.forEach(commune => {
+      const safe = echapperTexteCompagnie(commune);
+      html += "<option value='" + safe + "'>" + safe + "</option>";
     });
-
+    html += "</select>";
+    html += "<label for='gareStationSelection'>Gare :</label>";
+    html += "<select id='gareStationSelection' onchange='afficherDestinationsGareSelectionnee()' disabled>";
+    html += "<option value=''>Choisir d'abord une commune</option></select>";
+    html += "<div id='destinationsGareSelectionnee' aria-live='polite'><p class='notice'>Les destinations et tarifs apparaîtront ici après le choix d'une gare.</p></div>";
     resultat.innerHTML = html;
-
+    resultat.scrollIntoView({behavior:"smooth", block:"start"});
   } catch(error) {
-    console.error("Erreur du répertoire :", error);
-
-    resultat.innerHTML =
-      "<strong>📍 Gares et stations</strong>" +
-      "<p class='notice'>Impossible de charger le répertoire actuellement.</p>";
+    console.error("Erreur du répertoire des gares :", error);
+    resultat.innerHTML = "<strong>📍 Gares et stations</strong><p class='notice'>Impossible de charger le répertoire actuellement.</p>";
   }
-
-  resultat.scrollIntoView({
-    behavior:"smooth",
-    block:"start"
-  });
 }
-function filtrerGaresParCommune(){
-  const commune = document.getElementById("filtreCommune").value;
-  const recherche = document.getElementById("rechercheGare").value
-    .trim()
-    .toLowerCase();
 
-  const gares = document.querySelectorAll("#resultat .stop");
-  const ancienMessage = document.getElementById("aucuneGareTrouvee");
+function actualiserListeGaresStations(){
+  const communeSelect = document.getElementById("gareStationCommune");
+  const gareSelect = document.getElementById("gareStationSelection");
+  const zoneDestinations = document.getElementById("destinationsGareSelectionnee");
+  if (!communeSelect || !gareSelect || !zoneDestinations) return;
 
-  if(ancienMessage) ancienMessage.remove();
+  const commune = communeSelect.value;
+  const gares = (window.garesStationsListe || []).filter(g =>
+    String(g.commune || "").trim() === commune
+  );
 
-  let nombreVisible = 0;
-
+  gareSelect.innerHTML = "<option value=''>Choisir une gare</option>";
   gares.forEach(gare => {
-    const communeGare = gare.getAttribute("data-commune") || "";
-
-    const nomGare = (
-      gare.querySelector("h3")?.textContent || ""
-    ).toLowerCase();
-
-    const quartierGare = [...gare.querySelectorAll("p")]
-      .find(p => p.textContent.toLowerCase().startsWith("quartier :"))
-      ?.textContent.toLowerCase() || "";
-
-    const communeCorrespond =
-      commune === "" || communeGare === commune;
-
-    const rechercheCorrespond =
-      recherche === "" ||
-      nomGare.includes(recherche) ||
-      quartierGare.includes(recherche);
-
-    const correspond =
-      communeCorrespond && rechercheCorrespond;
-
-    gare.style.display = correspond ? "block" : "none";
-
-    if(correspond) nombreVisible++;
+    const option = document.createElement("option");
+    option.value = gare.firestoreId;
+    option.textContent = gare.nom || "Gare sans nom";
+    gareSelect.appendChild(option);
   });
 
-  if(nombreVisible === 0){
-    const message = document.createElement("p");
-    message.id = "aucuneGareTrouvee";
-    message.className = "notice";
-    message.textContent = "Aucune gare trouvée pour cette recherche.";
+  gareSelect.disabled = !commune || gares.length === 0;
+  zoneDestinations.innerHTML = gares.length
+    ? "<p class='notice'>Choisissez une gare pour afficher ses destinations et leurs tarifs.</p>"
+    : "<p class='notice'>Aucune gare enregistrée dans cette commune pour ce transport.</p>";
+}
 
-    document.getElementById("resultat").appendChild(message);
+function afficherDestinationsGareSelectionnee(){
+  const gareSelect = document.getElementById("gareStationSelection");
+  const zone = document.getElementById("destinationsGareSelectionnee");
+  if (!gareSelect || !zone) return;
+
+  const gare = (window.garesStationsListe || []).find(g => g.firestoreId === gareSelect.value);
+  if (!gare) {
+    zone.innerHTML = "<p class='notice'>Sélectionnez une gare pour consulter les tarifs.</p>";
+    return;
+  }
+
+  const destinations = destinationsGareNormalisees(gare)
+    .filter(d => d && String(d.nom || "").trim());
+  let html = "<section class='stop'><h3>📍 Gare de " +
+    echapperTexteCompagnie(gare.nom || "") + "</h3>";
+  html += "<p><strong>Commune :</strong> " + echapperTexteCompagnie(gare.commune || "Non précisée") + "</p>";
+  if (gare.quartier) html += "<p><strong>Quartier :</strong> " + echapperTexteCompagnie(gare.quartier) + "</p>";
+
+  if (!destinations.length) {
+    html += "<p class='notice'>Les destinations de cette gare ne sont pas encore renseignées.</p>";
+  } else {
+    html += "<h4>Destinations desservies et prix</h4>";
+    html += "<label for='gareStationDestination'>Destination :</label>";
+    html += "<select id='gareStationDestination' onchange='afficherPrixDestinationGare()'>";
+    html += "<option value=''>Choisir une destination</option>";
+    destinations.forEach((d,index) => {
+      const nom = echapperTexteCompagnie(d.nom);
+      html += "<option value='" + index + "'>" + nom + "</option>";
+    });
+    html += "</select><div id='prixDestinationGare' aria-live='polite'>";
+    html += "<ul>";
+    destinations.forEach(d => {
+      const nom = echapperTexteCompagnie(d.nom);
+      const prix = Number(d.prix);
+      const prixValide = Number.isFinite(prix) && prix > 0;
+      html += "<li><strong>" + nom + "</strong> — " +
+        (prixValide ? "<span class='price'>" + prix.toLocaleString("fr-FR") + " FCFA</span>" : "Tarif à préciser") +
+        (d.transport ? " <small>(" + echapperTexteCompagnie(d.transport) + ")</small>" : "") + "</li>";
+    });
+    html += "</ul></div>";
+  }
+  html += "</section>";
+  zone.innerHTML = html;
+  zone.dataset.destinations = JSON.stringify(destinations);
+}
+
+function afficherPrixDestinationGare(){
+  const select = document.getElementById("gareStationDestination");
+  const zone = document.getElementById("prixDestinationGare");
+  const gareSelect = document.getElementById("gareStationSelection");
+  if (!select || !zone || !gareSelect) return;
+
+  const gare = (window.garesStationsListe || []).find(g => g.firestoreId === gareSelect.value);
+  const destinations = gare ? destinationsGareNormalisees(gare) : [];
+  const destination = destinations[Number(select.value)];
+  if (!destination || !destination.nom) {
+    zone.innerHTML = "";
+    return;
+  }
+
+  const prix = Number(destination.prix);
+  const prixValide = Number.isFinite(prix) && prix > 0;
+  zone.innerHTML = "<div class='stop'><strong>Gare de " +
+    echapperTexteCompagnie(gare.nom || "") + " → " +
+    echapperTexteCompagnie(destination.nom) + "</strong><p class='price'>" +
+    (prixValide ? prix.toLocaleString("fr-FR") + " FCFA" : "Tarif à préciser") +
+    "</p></div>";
+}
+async function afficherReseauSotra(){
+  const resultat = document.getElementById("resultat");
+  resultat.style.display = "block";
+  resultat.innerHTML = "<p>Chargement du réseau SOTRA...</p>";
+
+  try {
+    const snapshot = await db.collection("routes").where("transport", "==", "SOTRA").get();
+    const lignes = snapshot.docs.map(doc => ({...doc.data(), firestoreId: doc.id}));
+
+    let html = "<strong>🚌 Réseau SOTRA — Gares, lignes, destinations et tarifs</strong>";
+    if (!lignes.length) {
+      html += "<p class='notice'>Aucune ligne SOTRA n'est encore enregistrée. Les informations seront ajoutées par l'administrateur.</p>";
+    } else {
+      const gares = [...new Set(lignes.map(l => l.depart).filter(Boolean))].sort();
+      html += "<label for='filtreGareSotra'>Choisir une gare :</label>";
+      html += "<select id='filtreGareSotra' onchange='filtrerLignesSotra()'><option value=''>Toutes les gares</option>";
+      gares.forEach(g => { html += "<option value='" + echapperTexteCompagnie(g) + "'>" + echapperTexteCompagnie(g) + "</option>"; });
+      html += "</select><div id='listeLignesSotra'>";
+      lignes.forEach(ligne => {
+        const gare = echapperTexteCompagnie(ligne.depart || "Gare non précisée");
+        const destination = echapperTexteCompagnie(ligne.arrivee || "Destination non précisée");
+        const numero = echapperTexteCompagnie(ligne.statut || "Numéro non renseigné");
+        html += "<article class='stop carte-ligne-sotra' data-gare='" + gare + "'>";
+        html += "<h3>🚌 " + numero + "</h3><p><strong>Gare :</strong> " + gare + "</p>";
+        html += "<p><strong>Destination principale :</strong> " + destination + "</p>";
+        if (Array.isArray(ligne.stops) && ligne.stops.length) {
+          html += "<details><summary>Voir les arrêts et tarifs</summary><ul>";
+          ligne.stops.forEach(stop => {
+            const nom = echapperTexteCompagnie(Array.isArray(stop) ? stop[0] : stop.nom);
+            const prix = Number(Array.isArray(stop) ? stop[1] : stop.tarif);
+            html += "<li><strong>" + nom + "</strong> — " +
+              (Number.isFinite(prix) && prix >= 0 ? prix.toLocaleString("fr-FR") + " FCFA" : "Tarif à préciser") + "</li>";
+          });
+          html += "</ul></details>";
+        } else {
+          html += "<p class='notice'>Tarifs à renseigner.</p>";
+        }
+        html += "</article>";
+      });
+      html += "</div>";
+    }
+    html += "<p class='notice'>Les tarifs sont indicatifs et doivent être confirmés auprès de la SOTRA.</p>";
+    resultat.innerHTML = html;
+    resultat.scrollIntoView({behavior:"smooth", block:"start"});
+  } catch (erreur) {
+    console.error("Erreur réseau SOTRA :", erreur);
+    resultat.innerHTML = "<strong>🚌 Réseau SOTRA</strong><p class='notice'>Impossible de charger les lignes pour le moment.</p>";
   }
 }
+
+function filtrerLignesSotra(){
+  const filtre = document.getElementById("filtreGareSotra");
+  if (!filtre) return;
+  document.querySelectorAll("#listeLignesSotra .carte-ligne-sotra").forEach(carte => {
+    carte.style.display = !filtre.value || carte.dataset.gare === filtre.value ? "block" : "none";
+  });
+}
+
+// Répertoire initial des marchés connus d'Abidjan.
+// Les destinations sont des recherches cartographiques textuelles, pas des coordonnées GPS inventées.
+const MARCHES_COMMUNES = [
+  {commune:"Abobo",nom:"Grand Marché d'Abobo",repere:"Grand Marché d'Abobo, Abobo, Abidjan"},
+  {commune:"Abobo",nom:"Ancien marché de PK 18",repere:"Ancien marché PK 18, Abobo, Abidjan"},
+  {commune:"Abobo",nom:"Marché d'Avocatier",repere:"Marché d'Avocatier, Abobo, Abidjan"},
+  {commune:"Abobo",nom:"Marché Abobo Anador",repere:"Marché Abobo Anador, Abobo, Abidjan"},
+  {commune:"Abobo",nom:"Marché d'Aboboté",repere:"Marché d'Aboboté, Abobo, Abidjan"},
+  {commune:"Abobo",nom:"Marché d'Abobo-Doumé",repere:"Marché Abobo-Doumé, Abobo, Abidjan"},
+  {commune:"Adjamé",nom:"Marché Gouro",repere:"Marché Gouro, Adjamé, Abidjan"},
+  {commune:"Adjamé",nom:"Marché Dabananni",repere:"Marché Dabananni, Adjamé, Abidjan"},
+  {commune:"Adjamé",nom:"Forum des Marchés",repere:"Forum des Marchés, Adjamé, Abidjan"},
+  {commune:"Cocody",nom:"Marché Cocovico",repere:"Marché Cocovico, Cocody, Abidjan"},
+  {commune:"Cocody",nom:"Marché de Cocody Saint-Jean",repere:"Marché Saint-Jean, Cocody, Abidjan"},
+  {commune:"Cocody",nom:"Marché d'Anono",repere:"Marché d'Anono, Cocody, Abidjan"},
+  {commune:"Koumassi",nom:"Marché Djè Konan",repere:"Marché Djè Konan, Koumassi, Abidjan"},
+  {commune:"Koumassi",nom:"Grand Marché de Koumassi",repere:"Grand Marché de Koumassi, Abidjan"},
+  {commune:"Marcory",nom:"Grand Marché de Marcory",repere:"Grand Marché de Marcory, Marcory, Abidjan"},
+  {commune:"Marcory",nom:"Marché d'Anoumabo",repere:"Marché d'Anoumabo, Marcory, Abidjan"},
+  {commune:"Port-Bouët",nom:"Marché central de Port-Bouët",repere:"Marché central de Port-Bouët, Abidjan"},
+  {commune:"Treichville",nom:"Grand Marché de Treichville",repere:"Grand Marché de Treichville, Treichville, Abidjan"},
+  {commune:"Treichville",nom:"Marché de Belleville",repere:"Marché de Belleville, Treichville, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Siporex",repere:"Marché de Siporex, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Gesco",repere:"Marché de Gesco, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Kouté",repere:"Marché de Kouté, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Niangon Nord",repere:"Marché de Niangon Nord, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Sicogi",repere:"Marché de Sicogi, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Niangon Continu",repere:"Marché de Niangon Continu, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché Djédjé Bagnon",repere:"Marché Djédjé Bagnon, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Béago",repere:"Marché de Béago, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché d'Andokoi",repere:"Marché d'Andokoi, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Wassakara",repere:"Marché de Wassakara, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché des Toits Rouges",repere:"Marché des Toits Rouges, Yopougon, Abidjan"},
+  {commune:"Bingerville",nom:"Marché de Bingerville",repere:"Marché de Bingerville, Bingerville, Côte d'Ivoire"}
+];
+
+function afficherMarchesCommune(){
+  const resultat = document.getElementById("resultat");
+  if (!resultat) return;
+  resultat.style.display = "block";
+  const communes = [...new Set(MARCHES_COMMUNES.map(m => m.commune))]
+    .sort((a,b) => a.localeCompare(b,"fr"));
+  let html = "<strong>🏬 Marchés de la commune</strong>";
+  html += "<p>Recherchez ou choisissez une commune pour afficher les marchés disponibles.</p>";
+  html += "<label for='rechercheCommuneMarche'>Commune :</label>";
+  html += "<input id='rechercheCommuneMarche' type='search' list='listeCommunesMarches' ";
+  html += "placeholder='Ex. : Yopougon, Abobo, Cocody...' oninput='filtrerMarchesCommune()' autocomplete='off'>";
+  html += "<datalist id='listeCommunesMarches'>";
+  communes.forEach(c => html += "<option value='" + echapperTexteCompagnie(c) + "'></option>");
+  html += "</datalist><div id='listeMarchesCommune' aria-live='polite'>";
+  html += "<p class='notice'>Saisissez le nom d'une commune pour voir ses marchés.</p></div>";
+  resultat.innerHTML = html;
+  resultat.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function filtrerMarchesCommune(){
+  const champ = document.getElementById("rechercheCommuneMarche");
+  const zone = document.getElementById("listeMarchesCommune");
+  if (!champ || !zone) return;
+  const saisie = normaliser(champ.value);
+  if (!saisie) {
+    zone.innerHTML = "<p class='notice'>Saisissez le nom d'une commune pour voir ses marchés.</p>";
+    return;
+  }
+  const communes = [...new Set(MARCHES_COMMUNES.map(m => m.commune))];
+  const commune = communes.find(c => normaliser(c) === saisie) ||
+    communes.find(c => normaliser(c).startsWith(saisie));
+  if (!commune) {
+    zone.innerHTML = "<p class='notice'>Aucun marché référencé pour cette commune pour le moment.</p>";
+    return;
+  }
+  const marches = MARCHES_COMMUNES.filter(m => m.commune === commune);
+  let html = "<h3>Marchés disponibles à " + echapperTexteCompagnie(commune) + "</h3>";
+  marches.forEach((marche,index) => {
+    html += "<article class='stop'><strong>🏬 " + echapperTexteCompagnie(marche.nom) + "</strong>";
+    html += "<p>" + echapperTexteCompagnie(marche.commune) + "</p>";
+    html += "<button type='button' class='primary' onclick='guiderVersMarche(" + index + ")'>";
+    html += "🧭 Tracer mon itinéraire GPS</button></article>";
+  });
+  zone.innerHTML = html;
+  window.marchesCommuneAffiches = marches;
+}
+
+function guiderVersMarche(index){
+  const marche = (window.marchesCommuneAffiches || [])[index];
+  if (!marche) return;
+  const destination = marche.repere + ", Côte d'Ivoire";
+  const ouvrir = (origine) => {
+    let url = "https://www.google.com/maps/dir/?api=1&destination=" +
+      encodeURIComponent(destination) + "&travelmode=driving";
+    if (origine) url += "&origin=" + encodeURIComponent(origine);
+    window.open(url,"_blank","noopener");
+  };
+  if (!navigator.geolocation) {
+    ouvrir("");
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    position => ouvrir(position.coords.latitude + "," + position.coords.longitude),
+    () => ouvrir(""),
+    {enableHighAccuracy:true,timeout:12000,maximumAge:60000}
+  );
+}
+
 function afficherTarifs(){
   const routes = window.MON_TRANSPORT_CI_ROUTES || [];
   const resultat = document.getElementById("resultat");
@@ -5264,5 +5834,547 @@ const boutonWhatsApp = numeroWhatsApp
 }
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>// ===== ESPACE PARTENAIRE : DISPONIBILITE, FILE D'ATTENTE ET MISSIONS =====
+function partenaireAbonnementValide(p) {
+  const maintenant = new Date();
+  const date = v => v && v.toDate ? v.toDate() : (v ? new Date(v) : null);
+  const essai = date(p.dateFinEssai);
+  const abonnement = date(p.dateExpirationAbonnement);
+  return p.statut === "approuve" && (p.etatCompte || "actif") === "actif" &&
+    ((p.statutAbonnementPartenaire === "Essai" && essai && essai > maintenant) ||
+     (p.statutAbonnementPartenaire === "Actif" && abonnement && abonnement > maintenant));
+}
+
+async function basculerDisponibilitePartenaire() {
+  const user = auth.currentUser;
+  if (!user) return alert("Veuillez vous reconnecter.");
+  try {
+    const ref = db.collection("partenaires").doc(user.uid);
+    const snap = await ref.get();
+    if (!snap.exists || !partenaireAbonnementValide(snap.data())) {
+      return alert("Votre dossier doit être approuvé et votre abonnement actif pour passer en ligne.");
+    }
+    const prochainEtat = snap.data().enLigne !== true;
+    await ref.update({enLigne: prochainEtat, derniereActivite: firebase.firestore.FieldValue.serverTimestamp()});
+    await afficherEspacePartenaire(snap.data() && {...snap.data(), enLigne: prochainEtat}, user.uid);
+  } catch (e) {
+    console.error(e);
+    alert("Impossible de modifier votre disponibilité : " + e.message);
+  }
+}
+
+function afficherEspacePartenaire(dossier, uid) {
+  let zone = document.getElementById("zoneEspacePartenaire");
+  if (!zone) {
+    zone = document.createElement("div");
+    zone.id = "zoneEspacePartenaire";
+    const connexion = document.getElementById("connexionPartenaire");
+    if (connexion) connexion.appendChild(zone); else document.body.appendChild(zone);
+  }
+  const dateFin = dossier.statutAbonnementPartenaire === "Actif" ? dossier.dateExpirationAbonnement : dossier.dateFinEssai;
+  const dateAffichee = dateFin && dateFin.toDate ? dateFin.toDate().toLocaleDateString("fr-FR") : (dateFin ? new Date(dateFin).toLocaleDateString("fr-FR") : "");
+  const eligible = partenaireAbonnementValide(dossier);
+  zone.innerHTML = `
+    <hr><h3>👋 Mon espace partenaire</h3>
+    <p><strong>Nom :</strong> ${echapperTexteCompagnie(dossier.nom || "")}</p>
+    <p><strong>Profil :</strong> ${dossier.type === "livreur_independant" ? "Livreur indépendant" : "Responsable de gare"}</p>
+    <div class="notice"><strong>Abonnement :</strong> ${eligible ? "Actif" : "À renouveler"} ${dateAffichee ? "— échéance : " + dateAffichee : ""}</div>
+    <div class="stop">
+      <strong>Disponibilité</strong>
+      <p id="etatDisponibilitePartenaire">${dossier.enLigne === true ? "🟢 Vous êtes en ligne et pouvez recevoir des commandes." : "⚪ Vous êtes hors ligne."}</p>
+      <button type="button" class="primary" onclick="basculerDisponibilitePartenaire()" ${eligible ? "" : "disabled"}>${dossier.enLigne === true ? "Passer hors ligne" : "Je suis disponible"}</button>
+    </div>
+    <h3>📦 Commandes disponibles</h3>
+    <button type="button" onclick="chargerCommandesPartenaire()">Actualiser</button>
+    <div id="fileCommandesPartenaire"><p>Chargement...</p></div>
+    <h3>🚚 Ma mission en cours</h3>
+    <div id="missionActivePartenaire"><p>Vérification...</p></div>
+    <h3>📋 Mes missions précédentes</h3>
+    <div id="historiquePartenaire"></div>
+    <button type="button" onclick="deconnecterPartenaire()">Se déconnecter</button>`;
+  chargerCommandesPartenaire();
+}
+
+async function chargerCommandesPartenaire() {
+  const user = auth.currentUser;
+  const file = document.getElementById("fileCommandesPartenaire");
+  const mission = document.getElementById("missionActivePartenaire");
+  const historique = document.getElementById("historiquePartenaire");
+  if (!user || !file || !mission) return;
+  file.innerHTML = "<p>Chargement des commandes disponibles...</p>";
+  mission.innerHTML = "<p>Chargement de votre mission...</p>";
+  try {
+    const pSnap = await db.collection("partenaires").doc(user.uid).get();
+    if (!pSnap.exists) throw new Error("Dossier partenaire introuvable.");
+    const p = pSnap.data();
+    if (!partenaireAbonnementValide(p)) throw new Error("Votre compte ou abonnement n'est pas actif.");
+    const lockRef = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
+    const lockSnap = await lockRef.get();
+    let activeOrder = null;
+    if (lockSnap.exists && lockSnap.data().commandeId) {
+      const activeSnap = await db.collection("commandes_colis").doc(lockSnap.data().commandeId).get();
+      if (activeSnap.exists) activeOrder = {id: activeSnap.id, ...activeSnap.data()};
+    }
+    if (activeOrder) {
+      await afficherMissionPartenaire(activeOrder, p, mission);
+    } else {
+      mission.innerHTML = "<p>Aucune mission en cours. Vous pouvez accepter une commande si vous êtes en ligne.</p>";
+    }
+
+    if (p.enLigne !== true) {
+      file.innerHTML = "<p>Vous êtes hors ligne. Passez en ligne pour consulter les nouvelles commandes.</p>";
+    } else if (activeOrder) {
+      file.innerHTML = "<p>Terminez votre mission actuelle avant d'en accepter une autre.</p>";
+    } else {
+      let q = db.collection("commandes_colis").where("publicVersion", "==", true).where("statut", "==", "en_attente");
+      q = p.type === "representant_gare"
+        ? q.where("service", "==", "compagnie")
+        : q.where("service", "in", ["livraison", "livraison_programmee"]);
+      const snap = await q.limit(30).get();
+      if (snap.empty) {
+        file.innerHTML = "<p>Aucune nouvelle commande pour le moment.</p>";
+      } else {
+        file.innerHTML = "";
+        snap.forEach(doc => {
+          const c = doc.data();
+          const card = document.createElement("div");
+          card.className = "stop";
+          const h = document.createElement("strong"); h.textContent = "Nouvelle commande";
+          const route = document.createElement("p"); route.textContent = (c.depart || "Départ non précisé") + " → " + (c.destination || "Destination non précisée");
+          const service = document.createElement("p"); service.textContent = "Service : " + (c.service || "Non précisé");
+          const btn = document.createElement("button"); btn.className = "primary"; btn.textContent = "Accepter la commande";
+          btn.addEventListener("click", () => accepterCommandePartenaire(doc.id));
+          card.append(h, route, service, btn); file.appendChild(card);
+        });
+      }
+    }
+
+    if (historique) {
+      const hs = await db.collection("commandes_colis").where("partenaireId", "==", user.uid).get();
+      const done = hs.docs.filter(d => ["livre","annule"].includes(d.data().statut));
+      historique.innerHTML = done.length ? "" : "<p>Aucune mission terminée.</p>";
+      done.forEach(d => {
+        const el = document.createElement("p");
+        el.textContent = (d.data().depart || "") + " → " + (d.data().destination || "") + " — " + (d.data().statut === "livre" ? "Livrée" : "Annulée");
+        historique.appendChild(el);
+      });
+    }
+  } catch (e) {
+    console.error("Espace partenaire :", e);
+    file.innerHTML = "<p>Chargement impossible : " + echapperTexteCompagnie(e.message) + "</p>";
+    mission.innerHTML = "";
+  }
+}
+
+async function accepterCommandePartenaire(commandeId) {
+  const user = auth.currentUser;
+  if (!user) return alert("Veuillez vous reconnecter.");
+  const commandeRef = db.collection("commandes_colis").doc(commandeId);
+  const partenaireRef = db.collection("partenaires").doc(user.uid);
+  const verrouRef = partenaireRef.collection("verrous").doc("missionActive");
+  try {
+    await db.runTransaction(async tx => {
+      const [cSnap, pSnap, lSnap] = await Promise.all([tx.get(commandeRef), tx.get(partenaireRef), tx.get(verrouRef)]);
+      if (!cSnap.exists || !pSnap.exists) throw new Error("Commande ou dossier partenaire introuvable.");
+      const c = cSnap.data(), p = pSnap.data();
+      if (c.statut !== "en_attente" || c.partenaireId) throw new Error("Cette commande vient d'être prise par un autre partenaire.");
+      if (!partenaireAbonnementValide(p) || p.enLigne !== true) throw new Error("Vous devez être approuvé, abonné et en ligne.");
+      if (lSnap.exists) throw new Error("Vous avez déjà une mission en cours.");
+      const typeAttendu = c.service === "compagnie" ? "representant_gare" : "livreur_independant";
+      if (p.type !== typeAttendu) throw new Error("Cette commande ne correspond pas à votre profil.");
+      tx.update(commandeRef, {partenaireId:user.uid, partenaireNom:p.nom || "", partenaireType:p.type, statut:"livreur_affecte", dateAffectation:firebase.firestore.FieldValue.serverTimestamp()});
+      tx.set(verrouRef, {commandeId, statut:"active", createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    });
+    alert("Commande acceptée. Préparez-vous à rejoindre le point de récupération.");
+    await chargerCommandesPartenaire();
+    await naviguerVersEtapeCommande(commandeId, "recuperation");
+  } catch (e) {
+    console.error(e);
+    alert("Impossible d'accepter cette commande : " + e.message);
+    chargerCommandesPartenaire();
+  }
+}
+
+async function afficherMissionPartenaire(c, partenaire, zone) {
+  zone.innerHTML = "";
+  const card = document.createElement("div"); card.className = "stop";
+  const title = document.createElement("strong"); title.textContent = "Mission en cours — " + c.id;
+  const route = document.createElement("p"); route.textContent = (c.depart || "") + " → " + (c.destination || "");
+  const labels={livreur_affecte:"Attribuée",colis_recupere:"Colis récupéré",en_transit:"En transit",arrive_destination:"Arrivé à destination"};
+  const status = document.createElement("p"); status.textContent = "Statut : " + (labels[c.statut] || c.statut || "");
+  card.append(title, route, status);
+  const privateSnap = await db.collection("commandes_colis").doc(c.id).collection("informations_privees").doc("details").get();
+  let details={};
+  if (privateSnap.exists) {
+    details = privateSnap.data();
+    const detail = document.createElement("p");
+    detail.textContent = "Suivi : " + (details.trackingNumber || c.id) + " | Expéditeur : " + (details.telephoneExpediteur || "non renseigné") + " | Destinataire : " + (details.telephoneDestinataire || "non renseigné");
+    card.appendChild(detail);
+    const adresses = document.createElement("p");
+    adresses.textContent = "Récupération : " + (details.adresseRecuperation || "non renseignée") + " | Livraison : " + (details.adresseLivraison || "non renseignée");
+    card.appendChild(adresses);
+  }
+  const map = document.createElement("div"); map.id = "carteMissionPartenaire"; map.style.cssText = "height:280px;width:100%;border-radius:10px;margin:12px 0;";
+  card.appendChild(map);
+  const estArrive=c.statut==="arrive_destination";
+  const nav = document.createElement("button"); nav.className = "primary"; nav.textContent = c.statut === "colis_recupere" || c.statut === "en_transit" || estArrive ? "Itinéraire vers le destinataire" : "Itinéraire vers le point de récupération";
+  nav.addEventListener("click", () => naviguerVersEtapeCommande(c.id, c.statut === "colis_recupere" || c.statut === "en_transit" || estArrive ? "destination" : "recuperation"));
+  card.appendChild(nav);
+  if (c.statut === "livreur_affecte") {
+    const refuse = document.createElement("button"); refuse.textContent = "Refuser cette mission"; refuse.addEventListener("click", () => refuserMissionPartenaire(c.id)); card.appendChild(refuse);
+    const pickup = document.createElement("button"); pickup.className = "primary"; pickup.textContent = "Colis récupéré"; pickup.addEventListener("click", () => marquerColisRecupere(c.id)); card.appendChild(pickup);
+  } else if (c.statut === "colis_recupere" || c.statut === "en_transit") {
+    const arrive = document.createElement("button"); arrive.className = "primary"; arrive.textContent = "Arrivé à destination"; arrive.addEventListener("click", () => marquerArriveDestination(c.id)); card.appendChild(arrive);
+  } else if (estArrive) {
+    const prixSnap=await db.collection("commandes_colis").doc(c.id).collection("tarification").doc("prix").get();
+    if(prixSnap.exists){
+      const p=prixSnap.data();
+      const montant=document.createElement("p"); montant.textContent="Montant Mon Transport CI à percevoir : "+Number(p.montantTotal||0).toLocaleString("fr-FR")+" FCFA"; card.appendChild(montant);
+    } else {
+      const alerte=document.createElement("p"); alerte.textContent="Tarif privé introuvable. Contactez l'administrateur avant de clôturer."; card.appendChild(alerte);
+    }
+    if(c.service==="compagnie" && details.operation==="expedition"){
+      const form=document.createElement("div"); form.innerHTML='<hr><strong>Références du colis expédié</strong><label>Compagnie d’expédition</label><input id="refCompagnieExpedition" placeholder="Ex. : UTB Yopougon" required><label>Gare de destination</label><input id="refGareDestination" placeholder="Ex. : Gare de Bouaké" required><label>Code du colis délivré par le service courrier</label><input id="refCodeColisExpedition" placeholder="Code du colis" required>';
+      const finish=document.createElement("button"); finish.className="primary"; finish.textContent="Enregistrer les références et terminer"; finish.addEventListener("click",()=>terminerExpeditionGare(c.id)); form.appendChild(finish); card.appendChild(form);
+    } else {
+      const finish=document.createElement("button"); finish.className="primary"; finish.textContent="Confirmer le règlement et terminer"; finish.addEventListener("click",()=>terminerMissionPartenaire(c.id)); card.appendChild(finish);
+      const note=document.createElement("p"); note.textContent="Confirmez uniquement après le règlement convenu avec le client."; card.appendChild(note);
+    }
+  }
+  zone.appendChild(card);
+}
+
+async function naviguerVersEtapeCommande(commandeId, etape) {
+  if (!navigator.geolocation) return alert("La géolocalisation n'est pas disponible sur cet appareil.");
+  const snap = await db.collection("commandes_colis").doc(commandeId).get();
+  if (!snap.exists) return alert("Commande introuvable.");
+  const c = snap.data();
+  const privateSnap = await db.collection("commandes_colis").doc(commandeId).collection("informations_privees").doc("details").get();
+  const details = privateSnap.exists ? privateSnap.data() : {};
+  // Repli temporaire sur les champs historiques pour ne pas casser l'unique commande de test.
+  const lat = etape === "destination"
+    ? (details.latitudeLivraison ?? c.latitudeLivraison)
+    : (details.latitudeRecuperation ?? c.latitudeRecuperation);
+  const lon = etape === "destination"
+    ? (details.longitudeLivraison ?? c.longitudeLivraison)
+    : (details.longitudeRecuperation ?? c.longitudeRecuperation);
+  if (typeof lat !== "number" || typeof lon !== "number") return alert("Les coordonnées GPS de cette adresse ne sont pas enregistrées. Demandez à l'administrateur de vérifier la commande.");
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const from = [pos.coords.latitude,pos.coords.longitude];
+    const to = [lat,lon];
+    try {
+      const url = "https://router.project-osrm.org/route/v1/driving/" + from[1] + "," + from[0] + ";" + to[1] + "," + to[0] + "?overview=full&geometries=geojson";
+      const response = await fetch(url); const data = await response.json();
+      if (!data.routes || !data.routes.length) throw new Error("Aucun itinéraire trouvé.");
+      const r = data.routes[0];
+      alert("Itinéraire vers " + (etape === "destination" ? "le destinataire" : "le point de récupération") + "\nDistance : " + (r.distance/1000).toFixed(1) + " km\nDurée estimée : " + Math.round(r.duration/60) + " min");
+      const mapZone = document.getElementById("carteMissionPartenaire");
+      if (mapZone && window.L) {
+        if (window.carteRoutePartenaire) window.carteRoutePartenaire.remove();
+        const m = L.map("carteMissionPartenaire").setView(from,13); window.carteRoutePartenaire = m;
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(m);
+        const line = L.geoJSON(r.geometry).addTo(m); L.marker(from).addTo(m); L.marker(to).addTo(m); m.fitBounds(line.getBounds(),{padding:[20,20]}); setTimeout(() => m.invalidateSize(), 300);
+      }
+    } catch(e) { alert("Calcul de l'itinéraire impossible : " + e.message); }
+  }, e => alert("Autorisez la localisation GPS pour calculer l'itinéraire : " + e.message), {enableHighAccuracy:true,timeout:15000,maximumAge:0});
+}
+
+async function refuserMissionPartenaire(commandeId) {
+  const user = auth.currentUser;
+  if (!user) return alert("Veuillez vous reconnecter.");
+  if (!confirm("Confirmer le refus ? Cette action est possible uniquement avant la récupération du colis.")) return;
+  const ref = db.collection("commandes_colis").doc(commandeId);
+  const lock = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
+  try {
+    await db.runTransaction(async tx => {
+      const [snap, lockSnap] = await Promise.all([tx.get(ref), tx.get(lock)]);
+      if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut !== "livreur_affecte") {
+        throw new Error("Le colis a déjà été récupéré ou la mission n'est plus à votre nom.");
+      }
+      if (!lockSnap.exists || lockSnap.data().commandeId !== commandeId || lockSnap.data().statut !== "active") {
+        throw new Error("Le verrou de cette mission est introuvable. Contactez l'administrateur.");
+      }
+      tx.update(ref, {
+        partenaireId: firebase.firestore.FieldValue.delete(),
+        partenaireNom: firebase.firestore.FieldValue.delete(),
+        partenaireType: firebase.firestore.FieldValue.delete(),
+        dateAffectation: firebase.firestore.FieldValue.delete(),
+        affectePar: firebase.firestore.FieldValue.delete(),
+        statut: "en_attente"
+      });
+    });
+    await lock.delete();
+    alert("Mission refusée. La commande est de nouveau disponible.");
+    await chargerCommandesPartenaire();
+  } catch (e) {
+    alert("Refus impossible : " + e.message);
+  }
+}
+
+async function marquerColisRecupere(commandeId) {
+  const user = auth.currentUser; if (!user) return;
+  if (!confirm("Confirmer que vous avez physiquement récupéré le colis ? Après cette étape, le refus par le livreur sera bloqué.")) return;
+  try {
+    const ref = db.collection("commandes_colis").doc(commandeId);
+    await db.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut !== "livreur_affecte") throw new Error("Cette mission ne peut plus être modifiée.");
+      tx.update(ref,{statut:"colis_recupere",dateRecuperation:firebase.firestore.FieldValue.serverTimestamp()});
+    });
+    await chargerCommandesPartenaire();
+    await naviguerVersEtapeCommande(commandeId,"destination");
+  } catch(e) { alert("Mise à jour impossible : " + e.message); }
+}
+
+async function marquerArriveDestination(commandeId) {
+  const user=auth.currentUser; if(!user) return;
+  if(!confirm("Confirmer votre arrivée au point de destination ? Le montant Mon Transport CI deviendra visible.")) return;
+  try {
+    await db.runTransaction(async tx=>{
+      const ref=db.collection("commandes_colis").doc(commandeId), snap=await tx.get(ref);
+      if(!snap.exists || snap.data().partenaireId!==user.uid || !["colis_recupere","en_transit"].includes(snap.data().statut)) throw new Error("Cette mission ne peut pas passer à l'étape arrivée.");
+      tx.update(ref,{statut:"arrive_destination",dateArriveeDestination:firebase.firestore.FieldValue.serverTimestamp()});
+    });
+    await chargerCommandesPartenaire();
+  }catch(e){alert("Mise à jour impossible : "+e.message);}
+}
+
+async function terminerMissionPartenaire(commandeId) {
+  const user = auth.currentUser; if (!user) return;
+  if (!confirm("Confirmez-vous que le règlement convenu a été effectué et que la course est terminée ?")) return;
+  const ref = db.collection("commandes_colis").doc(commandeId);
+  const lock = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
+  try {
+    await db.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut!=="arrive_destination") throw new Error("La course ne peut pas être clôturée avant l'arrivée.");
+      const prix=await tx.get(ref.collection("tarification").doc("prix"));
+      if(!prix.exists) throw new Error("Tarif privé introuvable.");
+      tx.update(ref,{statut:"livre",dateLivraison:firebase.firestore.FieldValue.serverTimestamp()});
+    });
+    await lock.delete();
+    alert("Course terminée. Vous pouvez maintenant accepter une nouvelle mission.");
+    chargerCommandesPartenaire();
+  } catch(e) { alert("Clôture impossible : " + e.message); }
+}
+
+async function terminerExpeditionGare(commandeId) {
+  const user=auth.currentUser; if(!user) return;
+  const lire=id=>{const el=document.getElementById(id);return el?el.value.trim():"";};
+  const compagnie=lire("refCompagnieExpedition"), gareDestination=lire("refGareDestination"), codeColis=lire("refCodeColisExpedition");
+  if(!compagnie||!gareDestination||!codeColis) return alert("Les trois références sont obligatoires.");
+  if(!confirm("Confirmez-vous que le règlement Mon Transport CI a été effectué ? Les frais éventuels du service courrier de la gare restent distincts et convenus directement avec le client.\n\nEnregistrer les références d'expédition et terminer la course ?")) return;
+  const ref=db.collection("commandes_colis").doc(commandeId);
+  const lock=db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
+  try{
+    const batch=db.batch();
+    batch.set(ref.collection("informations_privees").doc("expedition"),{
+      compagnieExpedition:compagnie,gareDestination,codeColis,partenaireId:user.uid,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    batch.update(ref,{statut:"livre",dateLivraison:firebase.firestore.FieldValue.serverTimestamp()});
+    await batch.commit();
+    await lock.delete();
+    alert("Références enregistrées. Le client les retrouvera dans son espace Mon Transport CI.");
+    chargerCommandesPartenaire();
+  }catch(e){alert("Enregistrement impossible : "+e.message);}
+}
+
+// ===== CREATION : DONNEES PUBLIQUES SEPAREES DES INFORMATIONS PRIVEES =====
+async function enregistrerCommande() {
+  const user = auth.currentUser;
+  if (!user) return alert("Veuillez vous connecter à votre compte client.");
+  const lire = id => { const el=document.getElementById(id); return el ? el.value.trim() : ""; };
+  const service = lire("serviceCommande");
+  if (!service) return alert("Veuillez choisir un service.");
+  const telephoneExpediteur=lire("telephoneExpediteurCommande"), telephoneDestinataire=lire("telephoneDestinataireCommande");
+  const telOk = n => { let v=n.replace(/\D/g,""); if(v.startsWith("225")&&v.length===13)v=v.substring(3); return /^(01|05|07)\d{8}$/.test(v); };
+  if (!telOk(telephoneExpediteur)||!telOk(telephoneDestinataire)) return alert("Vérifiez les deux numéros de téléphone.");
+  const adresseRecuperation=lire("adresseRecuperationCommande"), adresseLivraison=lire("adresseLivraisonCommande");
+  if(!adresseRecuperation||!adresseLivraison) return alert("Veuillez renseigner les deux adresses.");
+  let depart="", destination="", operation="", compagnie="", gare="", provenance="", codeColis="", expeditionPayee="";
+  if(service==="compagnie"){
+    operation=lire("operationCommande"); compagnie=lire("compagnieCommande"); gare=lire("gareCommande"); provenance=lire("provenanceCommande"); codeColis=lire("codeColisCommande"); expeditionPayee=lire("expeditionPayeeCommande");
+    if(!compagnie||!gare)return alert("Veuillez renseigner la compagnie et la gare.");
+    if(operation==="recuperation"&&(!provenance||!codeColis))return alert("Le code et la provenance sont obligatoires pour récupérer un colis.");
+    if(operation==="recuperation"&&!["oui","non"].includes(expeditionPayee))return alert("Indiquez si l'expédition est déjà payée.");
+    if(operation==="expedition"){depart=adresseRecuperation;destination=compagnie+" - "+gare;}else{depart=compagnie+" - "+gare;destination=adresseLivraison;}
+  } else if(service==="livraison"||service==="livraison_programmee"){
+    depart=lire("departCommande"); destination=lire("destinationCommande");
+    if(!depart||!destination)return alert("Veuillez renseigner le départ et la destination.");
+  } else return alert("Service non reconnu.");
+  const description=lire("descriptionColisCommande");
+  let dateSouhaitee=null;
+  if(service==="livraison_programmee"){
+    const v=lire("dateHeureCommande"); if(!v)return alert("Choisissez la date et l'heure.");
+    const d=new Date(v), delta=d.getTime()-Date.now();
+    if(isNaN(d.getTime())||delta<3600000||delta>86400000)return alert("La livraison doit être programmée entre 1 h et 24 h après la réservation.");
+    dateSouhaitee=firebase.firestore.Timestamp.fromDate(d);
+  }
+  try {
+    const profilDoc=await db.collection("clients").doc(user.uid).get(), profil=profilDoc.exists?profilDoc.data():{};
+    const pr=window.positionsCommande?.recuperation, pl=window.positionsCommande?.destination;
+    if(!pr || !pl || !Number.isFinite(pr.latitude) || !Number.isFinite(pr.longitude) || !Number.isFinite(pl.latitude) || !Number.isFinite(pl.longitude)) {
+      throw new Error("Sélectionnez les deux adresses dans les suggestions ou sur la carte pour calculer le tarif.");
+    }
+    const urlRoute="https://router.project-osrm.org/route/v1/driving/"+pr.longitude+","+pr.latitude+";"+pl.longitude+","+pl.latitude+"?overview=false";
+    const routeResponse=await fetch(urlRoute);
+    if(!routeResponse.ok) throw new Error("Le calcul de la distance est momentanément indisponible.");
+    const routeData=await routeResponse.json();
+    if(!routeData.routes || !routeData.routes.length) throw new Error("Aucun itinéraire routier trouvé entre les deux points.");
+    const distanceMetres=routeData.routes[0].distance;
+    const distanceKm=distanceMetres/1000;
+    const heureCI=new Intl.DateTimeFormat("fr-FR",{timeZone:"Africa/Abidjan",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date());
+    const hh=Number(heureCI.find(p=>p.type==="hour").value), mm=Number(heureCI.find(p=>p.type==="minute").value), minuteJour=hh*60+mm;
+    const tarifKm=minuteJour<=359?190:(minuteJour<=599?100:(minuteJour<=1170?120:150));
+    const fraisService=service==="compagnie"?300:0;
+    const montantLivraison=Math.round(distanceKm*tarifKm);
+    const montantTotal=montantLivraison+fraisService;
+    const resumeTarif="Distance OSRM : "+distanceKm.toFixed(1)+" km\nTarif : "+tarifKm+" FCFA/km\nLivraison : "+montantLivraison.toLocaleString("fr-FR")+" FCFA"+(fraisService?"\nFrais de service Mon Transport CI : 300 FCFA":"")+"\nTOTAL Mon Transport CI : "+montantTotal.toLocaleString("fr-FR")+" FCFA";
+    const noteGare=service==="compagnie"&&operation==="expedition"?"\nLes frais d'expédition de la compagnie sont à régler séparément et seront discutés directement avec le livreur.":(service==="compagnie"&&operation==="recuperation"?"\nLes éventuels frais de retrait du service courrier de la gare seront communiqués sur place par le livreur et discutés directement avec lui.":"");
+    if(!confirm("Vérifiez le tarif de votre commande :\n\n"+resumeTarif+noteGare+"\n\nConfirmer la commande ?")) return;
+    const numeroSuivi="TCI-"+Date.now().toString(36).toUpperCase()+"-"+Math.floor(1000+Math.random()*9000);
+    // La file partenaire affiche le départ sous forme générale, mais la destination exacte
+    // est visible avant acceptation pour permettre au livreur d'évaluer le trajet.
+    // Les téléphones, identités et détails de récupération restent privés jusqu'à l'affectation.
+    const resumeAdressePublique = valeur => {
+      const morceaux = String(valeur || "").split(",").map(x => x.trim()).filter(Boolean);
+      return morceaux.length >= 2 ? morceaux.slice(0, 2).join(", ") : "Départ à confirmer";
+    };
+    let departPublic, destinationPublic;
+    if (service === "compagnie") {
+      departPublic = operation === "expedition" ? resumeAdressePublique(adresseRecuperation) : compagnie + " - " + gare;
+      destinationPublic = operation === "expedition" ? compagnie + " - " + gare : adresseLivraison;
+    } else {
+      departPublic = resumeAdressePublique(depart);
+      destinationPublic = destination;
+    }
+    const publicData={clientId:user.uid,service,depart:departPublic,destination:destinationPublic,statut:"en_attente",publicVersion:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+    if(dateSouhaitee)publicData.dateHeureSouhaitee=dateSouhaitee;
+    const ref=db.collection("commandes_colis").doc();
+    const privateData={clientNom:profil.nom||"Client",clientTelephone:profil.telephone||"",telephoneExpediteur,telephoneDestinataire,adresseRecuperation,adresseLivraison,descriptionColis:description,trackingNumber:numeroSuivi,provenance,codeColis,operation,compagnie,gare,expeditionPayee,
+      latitudeRecuperation:pr?.latitude??null,longitudeRecuperation:pr?.longitude??null,
+      latitudeLivraison:pl?.latitude??null,longitudeLivraison:pl?.longitude??null};
+    const createdAt=firebase.firestore.FieldValue.serverTimestamp();
+    const prixPrive={distanceKm:Number(distanceKm.toFixed(3)),distanceMetres,tarifKm,montantLivraison,fraisService,montantTotal,devise:"FCFA",operation:service==="compagnie"?operation:"livraison",createdAt};
+    await db.runTransaction(async tx=>{
+      tx.set(ref,publicData);
+      tx.set(ref.collection("informations_privees").doc("details"),{...privateData,clientId:user.uid,createdAt});
+      tx.set(ref.collection("tarification").doc("prix"),prixPrive);
+    });
+    document.getElementById("zoneFormulaireCommande").innerHTML=`<hr><h3>✅ Commande enregistrée !</h3><p><strong>Numéro de suivi :</strong></p><h3>${numeroSuivi}</h3><p><strong>Montant Mon Transport CI :</strong> ${montantTotal.toLocaleString("fr-FR")} FCFA</p><p><strong>Statut :</strong> En attente</p><p>Votre commande a bien été enregistrée.</p><button type="button" onclick="afficherFormulaireCommande()">Nouvelle commande</button>`;
+    await chargerHistoriqueCommandes();
+  } catch(e) { console.error("Erreur commande :",e); alert("Impossible d'enregistrer la commande : "+e.message); }
+}
+
+async function chargerHistoriqueCommandes() {
+  const zone=document.getElementById("zoneHistoriqueCommandes"), user=auth.currentUser;
+  if(!zone)return;
+  if(!user){zone.innerHTML="<p>Veuillez vous connecter.</p>";return;}
+  zone.innerHTML="<p>Chargement de votre historique...</p>";
+  try{
+    const snap=await db.collection("commandes_colis").where("clientId","==",user.uid).get();
+    if(snap.empty){zone.innerHTML="<p>Aucune commande enregistrée pour le moment.</p>";return;}
+    const docs=snap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
+    zone.innerHTML="<h3>📋 Mes commandes</h3>";
+    for(const doc of docs){
+      const c=doc.data(), priv=await doc.ref.collection("informations_privees").doc("details").get(), d=priv.exists?priv.data():{};
+      const card=document.createElement("div");card.className="stop";
+      const n=document.createElement("strong");n.textContent="Commande : "+(d.trackingNumber||doc.id);
+      const s=document.createElement("p");s.textContent="Statut : "+({en_attente:"En attente",livreur_affecte:"Livreur affecté",colis_recupere:"Colis récupéré",en_transit:"En transit",livre:"Livré",annule:"Annulé"}[c.statut]||c.statut||"Non renseigné");
+      const t=document.createElement("p");t.textContent=(c.depart||"")+" → "+(c.destination||"");
+      card.append(n,s,t);zone.appendChild(card);
+    }
+  }catch(e){console.error(e);zone.innerHTML="<p>Impossible de charger votre historique : "+echapperTexteCompagnie(e.message)+"</p>";}
+}
+
+
+async function migrerAnciennesCommandesPrivees() {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Cette opération est réservée à l'administrateur.");
+    return;
+  }
+  if (!confirm("Sécuriser les anciennes commandes ? Les commandes seront conservées. Les détails privés seront déplacés ou vérifiés avant de rendre chaque commande visible aux partenaires.")) return;
+
+  const champsPrives = [
+    "clientNom", "clientTelephone", "telephoneExpediteur", "telephoneDestinataire",
+    "adresseRecuperation", "adresseLivraison", "descriptionColis", "trackingNumber",
+    "provenance", "codeColis", "typeColis", "livreurId", "operation", "compagnie",
+    "gare", "latitudeRecuperation", "longitudeRecuperation",
+    "latitudeLivraison", "longitudeLivraison"
+  ];
+  let securisees = 0, ignorees = 0;
+
+  try {
+    const commandes = await db.collection("commandes_colis").get();
+    for (const doc of commandes.docs) {
+      const refPrivee = doc.ref.collection("informations_privees").doc("details");
+      const securisee = await db.runTransaction(async tx => {
+        const [commandeSnap, priveSnap] = await Promise.all([tx.get(doc.ref), tx.get(refPrivee)]);
+        if (!commandeSnap.exists) return false;
+
+        const data = commandeSnap.data();
+        const contientAncienPrive = champsPrives.some(k => data[k] !== undefined);
+        const retrait = {};
+        champsPrives.forEach(k => {
+          if (data[k] !== undefined) retrait[k] = firebase.firestore.FieldValue.delete();
+        });
+
+        if (priveSnap.exists) {
+          const detailsExistants = priveSnap.data();
+          if (detailsExistants.clientId !== data.clientId ||
+              typeof detailsExistants.trackingNumber !== "string") return false;
+          if (typeof data.trackingNumber === "string" &&
+              detailsExistants.trackingNumber !== data.trackingNumber) return false;
+          if (contientAncienPrive || data.publicVersion !== true) {
+            tx.update(doc.ref, {...retrait, publicVersion: true});
+            return true;
+          }
+          return false;
+        }
+
+        if (contientAncienPrive) {
+          if (!data.clientId) return false;
+          const details = {
+            clientId: data.clientId,
+            clientNom: data.clientNom || "Client",
+            clientTelephone: data.clientTelephone || "",
+            telephoneExpediteur: data.telephoneExpediteur || "",
+            telephoneDestinataire: data.telephoneDestinataire || "",
+            adresseRecuperation: data.adresseRecuperation || "",
+            adresseLivraison: data.adresseLivraison || "",
+            descriptionColis: data.descriptionColis || "",
+            trackingNumber: typeof data.trackingNumber === "string" ? data.trackingNumber : doc.id,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          };
+          champsPrives.forEach(k => {
+            if (data[k] !== undefined) details[k] = data[k];
+          });
+          tx.set(refPrivee, details);
+          tx.update(doc.ref, {...retrait, publicVersion: true});
+          return true;
+        }
+
+        if (data.publicVersion !== true) {
+          tx.update(doc.ref, {publicVersion: true});
+          return true;
+        }
+        return false;
+      });
+
+      if (securisee) securisees++;
+      else ignorees++;
+    }
+
+    alert("Opération terminée. Commandes sécurisées et rendues publiques : " + securisees +
+      " ; déjà sécurisées ou à vérifier manuellement : " + ignorees + ".");
+    await chargerCommandesAdmin();
+  } catch (e) {
+    console.error("Sécurisation des anciennes commandes :", e);
+    alert("Opération interrompue : " + e.message + ". Les commandes déjà sécurisées sont conservées.");
+  }
+}
+
+</script>
 </body>
 </html>
