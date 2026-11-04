@@ -707,6 +707,26 @@ footer { color: #718076; }
 }
 
 
+/* ACCUEIL : TUILES ILLUSTREES DES SERVICES */
+.accueil-services{padding:20px 16px}
+.accueil-services-entete h2{margin-bottom:6px}
+.accueil-services-entete p{margin:0 0 16px;color:var(--secondaire);font-size:13px}
+.accueil-services-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.accueil-service{min-width:0;min-height:154px;padding:15px 10px;border:1px solid #DCE8E0;border-radius:19px;background:linear-gradient(145deg,#F7FBF8,#EAF4EE);color:#174B40;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:7px;box-shadow:0 5px 14px #102D350d}
+.accueil-service:active{transform:scale(.98)}
+.accueil-service-illustration{font-size:39px;line-height:1.2;filter:drop-shadow(0 3px 2px #102D3518)}
+.accueil-service strong{font-size:13px;line-height:1.3}
+.accueil-service small{font-size:10px;line-height:1.35;font-weight:500;color:#68786E}
+.tuile-gbaka{background:linear-gradient(145deg,#FFF8E9,#FBEACB)}
+.tuile-taxi{background:linear-gradient(145deg,#F0F7FF,#DFECFA)}
+.tuile-sotra{background:linear-gradient(145deg,#ECF8F2,#DCEFE4)}
+.tuile-ramassage{background:linear-gradient(145deg,#FFF3E9,#FCE2CF)}
+.tuile-marches{background:linear-gradient(145deg,#F9F2FF,#EDE2F7)}
+.tuile-woro{background:linear-gradient(145deg,#F1F5F5,#E1E9E9)}
+.colis-choix{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+.colis-choix-bouton{min-height:54px;background:#F0F6F2;color:#075744;border:1px solid #DCE8E0}
+@media(max-width:360px){.accueil-service{min-height:145px;padding:12px 7px}.accueil-service-illustration{font-size:34px}.accueil-service strong{font-size:12px}}
+
 /* SERVICE DE CARS DE RAMASSAGE */
 .ramassage-hero{background:linear-gradient(125deg,#F28C28,#16834A);color:#fff;padding:22px;border-radius:20px;margin-bottom:16px}
 .ramassage-hero h2{color:#fff!important;margin-bottom:8px}
@@ -730,13 +750,9 @@ footer { color: #718076; }
   </button>
 
 <div class="menu-dropdown" id="menuDropdown">
-  <button onclick="ouvrirSection('transportColis')">
-  📦 Transport Colis CI
-</button>
-  <button onclick="ouvrirSection('calculateur')">💰 Calculateur de budget</button>
-  <button onclick="ouvrirSection('favoris')">⭐ Mes trajets favoris</button>
-  <button onclick="ouvrirSection('historique')">🕘 Historique des trajets</button>
-  <button onclick="signalerProblemeGeneral()">⚠️ Signaler un problème</button>
+  <button onclick="ouvrirSection('espaceAdmin')">🔐 Espace administrateur</button>
+  <button onclick="ouvrirSection('transportColis')">📦 Transport Colis CI</button>
+  <button onclick="ouvrirSection('devenirPartenaire')">🤝 Devenir partenaire</button>
 </div>
 </div>
 
@@ -761,36 +777,29 @@ footer { color: #718076; }
     <p><strong>Un service de Mon Transport CI</strong></p>
     <p>Envoyez et recevez vos colis partout à Abidjan.</p>
   </div>
+  <div class="colis-choix">
+    <button type="button" class="colis-choix-bouton" onclick="afficherSousMenuColis('client')">👤 Espace client</button>
+    <button type="button" class="colis-choix-bouton" onclick="afficherSousMenuColis('partenaire')">🤝 Espace partenaire</button>
+  </div>
+  <div id="zoneMenuColisClient">
+    <h3>👤 Espace client</h3>
+    <p>Réservez un transport et suivez vos colis.</p>
+    <button class="primary" onclick="ouvrirEspaceClient()">Accéder à mon espace client</button>
+    <div id="zoneEspaceClient"></div>
+  </div>
+  <div id="zoneMenuColisPartenaire" style="display:none;">
+    <h3>🤝 Espace partenaire</h3>
+    <p>Déjà inscrit ? Connectez-vous pour accéder à vos missions et à votre espace partenaire.</p>
+    <button class="primary" onclick="ouvrirConnexionPartenaire()">Se connecter à mon espace partenaire</button>
+    <div id="connexionPartenaire"></div>
+  </div>
+</section>
 
-  <hr>
-
-  <h3>👤 Espace client</h3>
-  <p>Réservez un transport et suivez vos colis.</p>
-<button class="primary" onclick="ouvrirEspaceClient()">
-    Accéder à mon espace client
-  </button>
-<div id="zoneEspaceClient"></div>
-  <hr>
-
-  <h3>🚚 Devenir partenaire</h3>
-  <p>Rejoignez notre réseau de livreurs et représentants de gare.</p>
-  <button class="primary" onclick="ouvrirInscriptionLivreur()">
-  🚚 S'inscrire comme livreur indépendant
-</button>
-<button class="primary" onclick="ouvrirInscriptionGare()">
-  🏢 S'inscrire comme représentant de gare
-</button>
-<hr>
-
-<h3>🔐 Espace partenaire</h3>
-<p>Déjà inscrit ? Connectez-vous pour accéder à votre espace.</p>
-
-<button class="primary" onclick="ouvrirConnexionPartenaire()">
-  Se connecter à mon espace partenaire
-</button>
-  <p class="notice">
-    Les inscriptions et réservations seront ouvertes après la mise en place des espaces sécurisés.
-  </p>
+<section class="card" id="devenirPartenaire" style="display:none;">
+  <h2>🤝 Devenir partenaire de Mon Transport CI</h2>
+  <p>Rejoignez notre réseau en tant que livreur indépendant ou représentant de gare. Votre dossier sera soumis à validation.</p>
+  <button class="primary" onclick="ouvrirInscriptionLivreur()">🚚 Devenir livreur indépendant</button>
+  <button class="primary" onclick="ouvrirInscriptionGare()">🏢 Devenir représentant de gare</button>
 </section>
 
 
@@ -1137,67 +1146,41 @@ resultat.style.display = "block";
     </p>
   </div>
 </section>
-<section class="card" id="calculateur" style="display:none;">
-<h2>💰 Calculateur de budget transport</h2>
-<label for="nombreTrajets">Nombre de trajets :</label>
-<input type="number" id="nombreTrajets" min="1" value="1">
-
-<label for="tarifUnitaire">Tarif par trajet (FCFA) :</label>
-<input type="number" id="tarifUnitaire" min="0" placeholder="Ex. : 200">
-
-<button type="button" onclick="calculerBudget()">
-Calculer mon budget
-</button>
-<p id="budgetTotal">Votre budget s'affichera ici.</p>
-</section>
-
-<section class="card" id="favoris" style="display:none;">
-<h2>⭐ Mes trajets favoris</h2>
-<div id="listeFavoris">
-<p class="notice">Aucun trajet favori enregistré.</p>
-</div>
-</section>
-
-<section class="card" id="historique" style="display:none;">
-<h2>🕘 Historique de mes recherches</h2>
-<div id="listeHistorique">
-<p class="notice">Aucune recherche enregistrée.</p>
-</div>
-<button type="button" onclick="effacerHistorique()" style="width:100%;margin-top:10px;background:#fcebea;color:#9b2929;">
-🗑️ Effacer l'historique
-</button>
-</section>
-<section class="card">
-<h2>Nos moyens de transport</h2>
-<div class="modes">
-<button class="mode" onclick="choisir('Gbaka')">🚐 Gbaka</button>
-<button class="mode" onclick="afficherGaresStations('Gbaka')">🚐 Gare de Gbaka</button>
-<button class="mode" onclick="afficherGaresStations('Taxi communal')">🚖 Gare de taxi communal</button>
-<button class="mode" onclick="afficherReseauSotra()">🚌 Réseau SOTRA</button>
-<button class="mode" onclick="ouvrirSection('serviceRamassage')">🚌 Service de cars de ramassage</button>
-</div>
-</section>
-
-<section class="card">
-<h2>Explorer</h2>
-<div class="quick">
-<button onclick="afficherGaresStations()">📍 Gares et stations</button>
-
-<button onclick="ouvrirCarteItineraire()">🗺️ Carte</button>
-<button onclick="afficherReseauNational()">🇨🇮 Réseau national</button>
-<button type="button" onclick="afficherMarchesCommune()">🏬 Marchés de la commune</button>
-</div>
+<section class="card accueil-services">
+  <div class="accueil-services-entete">
+    <h2>Explorez les transports et services</h2>
+    <p>Choisissez directement le service ou le réseau que vous recherchez.</p>
+  </div>
+  <div class="accueil-services-grid">
+    <button type="button" class="accueil-service tuile-gbaka" onclick="afficherGaresStations('Gbaka')">
+      <span class="accueil-service-illustration">🚐</span><strong>Gares de Gbaka</strong><small>Points de départ et destinations</small>
+    </button>
+    <button type="button" class="accueil-service tuile-taxi" onclick="afficherGaresStations('Taxi communal')">
+      <span class="accueil-service-illustration">🚖</span><strong>Gares de taxi communal</strong><small>Repérez les gares proches de votre trajet</small>
+    </button>
+    <button type="button" class="accueil-service tuile-sotra" onclick="afficherReseauSotra()">
+      <span class="accueil-service-illustration">🚌</span><strong>SOTRA</strong><small>Lignes, gares et arrêts</small>
+    </button>
+    <button type="button" class="accueil-service tuile-ramassage" onclick="ouvrirSection('serviceRamassage')">
+      <span class="accueil-service-illustration">🚍</span><strong>Cars de ramassage</strong><small>Déplacements réguliers et places disponibles</small>
+    </button>
+    <button type="button" class="accueil-service tuile-marches" onclick="afficherMarchesCommune()">
+      <span class="accueil-service-illustration">🏬</span><strong>Marchés de la commune</strong><small>Retrouvez les marchés par commune</small>
+    </button>
+    <button type="button" class="accueil-service tuile-woro" onclick="afficherGaresStations('Woro-woro')">
+      <span class="accueil-service-illustration">🚕</span><strong>Woro-woro</strong><small>Gares et dessertes disponibles</small>
+    </button>
+  </div>
 </section>
 
 <p class="notice">
 Les tarifs affichés sont des informations de terrain communiquées par des usagers. Ils ne constituent pas une certification officielle.
 </p>
 
-<section class="carte-acces-admin" aria-label="Accès administrateur">
-  <p>Administration de la plateforme</p>
-  <button type="button" class="bouton-acces-admin"
-    onclick="ouvrirSection('espaceAdmin')">
-    🔐 Espace administrateur
+<section class="carte-acces-admin" aria-label="Signaler un problème">
+  <p>Une difficulté avec l’application ou un trajet ?</p>
+  <button type="button" class="bouton-acces-admin" onclick="signalerProblemeGeneral()">
+    ⚠️ Signaler un problème
   </button>
 </section>
 </main>
@@ -1821,82 +1804,6 @@ const temporaire=depart.value;
 depart.value=arrivee.value;
 arrivee.value=temporaire;
 }
-function calculerBudget(){
-const tarif=Number(document.getElementById("tarifUnitaire").value);
-const nombre=Number(document.getElementById("nombreTrajets").value);
-
-if(tarif<=0 || nombre<=0){
-document.getElementById("budgetTotal").textContent="Veuillez saisir un tarif et un nombre de trajets valides.";
-return;
-}
-
-const total=tarif*nombre;
-
-document.getElementById("budgetTotal").textContent=
-"Budget total : "+total.toLocaleString("fr-FR")+" FCFA";
-}
-let favoris=JSON.parse(localStorage.getItem("monTransportFavoris") || "[]");
-
-function afficherFavoris(){
-const liste=document.getElementById("listeFavoris");
-
-if(favoris.length===0){
-liste.innerHTML='<p class="notice">Aucun trajet favori enregistré.</p>';
-return;
-}
-
-liste.innerHTML=favoris.map((trajet,index)=>`
-<div class="stop">
-<span>${trajet.depart} → ${trajet.destination} (${trajet.transport})</span>
-<button type="button" onclick="rechercherFavori(${index})">🔎</button>
-<button type="button" onclick="supprimerFavori(${index})">🗑️</button>
-</div>
-`).join("");
-}
-
-function ajouterFavori(index){
-const item=window.trajetsTrouves[index];
-
-if(!item)return;
-
-const trajet={
-depart:item.route.depart,
-destination:item.route.stops[item.index][0],
-transport:item.route.transport
-};
-
-if(favoris.some(f=>f.depart===trajet.depart && f.destination===trajet.destination && f.transport===trajet.transport)){
-alert("Ce trajet est déjà dans vos favoris.");
-return;
-}
-
-favoris.push(trajet);
-localStorage.setItem("monTransportFavoris",JSON.stringify(favoris));
-afficherFavoris();
-alert("Trajet ajouté aux favoris !");
-}
-
-function supprimerFavori(index){
-favoris.splice(index,1);
-localStorage.setItem("monTransportFavoris",JSON.stringify(favoris));
-afficherFavoris();
-}
-
-function rechercherFavori(index){
-const trajet=favoris[index];
-
-if(!trajet)return;
-
-document.getElementById("depart").value=trajet.depart;
-document.getElementById("arrivee").value=trajet.destination;
-
-document.getElementById("transport").value=
-trajet.transport.startsWith("SOTRA") ? "SOTRA" : trajet.transport;
-
-rechercher();
-}
-
-afficherFavoris();
 function partagerTrajet(index){
 const item=window.trajetsTrouves[index];
 
@@ -2115,54 +2022,6 @@ const url=
 
 window.open(url,"_blank");
 }
-let historique=JSON.parse(localStorage.getItem("monTransportHistorique") || "[]");
-
-function afficherHistorique(){
-const liste=document.getElementById("listeHistorique");
-
-if(historique.length===0){
-liste.innerHTML='<p class="notice">Aucune recherche enregistrée.</p>';
-return;
-}
-
-liste.innerHTML=historique.map((trajet,index)=>`
-<div class="stop">
-<span>${trajet.depart} → ${trajet.destination} (${trajet.transport})</span>
-<button type="button" onclick="rechercherHistorique(${index})">🔎</button>
-</div>
-`).join("");
-}
-
-function effacerHistorique(){
-historique=[];
-localStorage.setItem("monTransportHistorique",JSON.stringify(historique));
-afficherHistorique();
-}
-
-function rechercherHistorique(index){
-const trajet=historique[index];
-if(!trajet)return;
-
-document.getElementById("depart").value=trajet.depart;
-document.getElementById("arrivee").value=trajet.destination;
-document.getElementById("transport").value=trajet.transport;
-
-rechercher();
-}
-
-function enregistrerHistorique(depart,arrivee,transport){
-historique=historique.filter(trajet=>
-!(trajet.depart===depart && trajet.destination===arrivee && trajet.transport===transport)
-);
-
-historique.unshift({depart, destination:arrivee, transport});
-historique=historique.slice(0,10);
-
-localStorage.setItem("monTransportHistorique",JSON.stringify(historique));
-afficherHistorique();
-}
-
-afficherHistorique();
 function rechercher(){
 const depart=normaliser(document.getElementById("depart").value);
 const arrivee=normaliser(document.getElementById("arrivee").value);
@@ -2234,11 +2093,6 @@ return;
 resultat.textContent="Aucun trajet ni tarif correspondant n'a été trouvé pour cette sélection.";
 return;
 }
-enregistrerHistorique(
-document.getElementById("depart").value,
-document.getElementById("arrivee").value,
-document.getElementById("transport").value
-);
 window.trajetsTrouves=trouvees;
 let html="<strong>Résultat de votre recherche</strong>";
 
@@ -2252,7 +2106,6 @@ html+=`<p class="notice"><strong>Information :</strong> ${route.statut}. Parcour
 }
 html+=`<p>Destination recherchée : ${stop[0]}</p>`;
 html+=`<p><strong>Tarif indiqué : ${stop[1]} FCFA</strong></p>`;
-html+=`<button type="button" onclick="ajouterFavori(${index})">⭐ Ajouter aux favoris</button>`;
 html+=`<button type="button" onclick="partagerTrajet(${index})">📲 Partager sur WhatsApp</button>`;
 html+=`<button type="button" onclick="signalerTrajet(${index})" style="margin-top:10px;background:#fff0e8;color:#a34416;">⚠️ Signaler un problème</button>`;
 html+="<h4>Arrêts et tarifs</h4>";
@@ -2329,13 +2182,14 @@ function retourEspaceColis(zoneId){
     if(zoneId === "zoneEspaceClient") zone.replaceChildren();
     else zone.style.display = "none";
   }
-  const section = document.getElementById("transportColis");
+  const section = zone?.closest(".card") || document.getElementById("transportColis");
   section.style.display = "block";
   section.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
 function ouvrirInscriptionLivreur(){
-  const section = document.getElementById("transportColis");
+  ouvrirSection("devenirPartenaire");
+  const section = document.getElementById("devenirPartenaire");
   let zone = document.getElementById("formulaireLivreur");
 
   if (!zone) {
@@ -2442,7 +2296,8 @@ function validerMotDePasse(champ, idErreur) {
   return true;
 }
 function ouvrirInscriptionGare(){
-  const section = document.getElementById("transportColis");
+  ouvrirSection("devenirPartenaire");
+  const section = document.getElementById("devenirPartenaire");
   let zone = document.getElementById("formulaireGare");
 
   if(!zone){
@@ -2536,12 +2391,13 @@ posteOccupe: document.getElementById('garePosteOccupe').value.trim(),
 }
 function ouvrirConnexionPartenaire(){
   const section = document.getElementById("transportColis");
+  afficherSousMenuColis("partenaire");
   let zone = document.getElementById("connexionPartenaire");
 
   if(!zone){
     zone = document.createElement("div");
     zone.id = "connexionPartenaire";
-    section.appendChild(zone);
+    document.getElementById("zoneMenuColisPartenaire").appendChild(zone);
   }
 
   zone.innerHTML = `
@@ -3631,7 +3487,7 @@ function basculerMenu(){
 }
 
 function masquerParcours(){
-  ["espaceAdmin","calculateur","favoris","historique","transportColis","serviceRamassage"].forEach(id => {
+  ["espaceAdmin","transportColis","devenirPartenaire","serviceRamassage"].forEach(id => {
     const section = document.getElementById(id);
     if(section) section.style.display = "none";
   });
@@ -3653,6 +3509,7 @@ function ouvrirSection(id){
   if(!section) return;
 
   section.style.display = "block";
+  if(id === "transportColis") afficherSousMenuColis("client");
 
   // Un seul bouton de retour par écran, même après plusieurs ouvertures.
   let boutonRetour = section.querySelector(":scope > .btn-retour-accueil");
@@ -3828,8 +3685,16 @@ async function deconnecterRamassage(){
   alert("Vous êtes déconnecté.");
 }
 
+function afficherSousMenuColis(espace){
+  const client = document.getElementById("zoneMenuColisClient");
+  const partenaire = document.getElementById("zoneMenuColisPartenaire");
+  if(client) client.style.display = espace === "client" ? "block" : "none";
+  if(partenaire) partenaire.style.display = espace === "partenaire" ? "block" : "none";
+}
+
 function ouvrirEspaceClient(){
   ouvrirSection("transportColis");
+  afficherSousMenuColis("client");
   const user = auth.currentUser;
 
   if(user){
@@ -4738,7 +4603,7 @@ async function deconnecterClient(){
   afficherConnexionClient("Vous êtes déconnecté.");
 }
 function signalerProblemeGeneral(){
-  basculerMenu();
+  document.getElementById("menuDropdown").style.display = "none";
 
   const message =
     "🇨🇮 SIGNALEMENT - MON TRANSPORT CI\n\n" +
