@@ -363,7 +363,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     if (result.empty) throw new Error("La commande disponible n'a pas été retournée.");
   });
 
-  it("refuse la requête de file d'attente d'un livreur pour les commandes de gare", async () => {
+  it("ne retourne pas les commandes de gare dans la file d'attente des livreurs", async () => {
     await testEnv.withSecurityRulesDisabled(async context => {
       await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
         clientId: CLIENT_UID, service: "compagnie", statut: "en_attente",
