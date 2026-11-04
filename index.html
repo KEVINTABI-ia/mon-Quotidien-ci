@@ -5499,7 +5499,7 @@ async function naviguerVersEtapeCommande(commandeId, etape) {
         if (window.carteRoutePartenaire) window.carteRoutePartenaire.remove();
         const m = L.map("carteMissionPartenaire").setView(from,13); window.carteRoutePartenaire = m;
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(m);
-        const line = L.geoJSON(r.geometry).addTo(m); L.marker(from).addTo(m); L.marker(to).addTo(m); m.fitBounds(line.getBounds(),{padding:[20,20]});
+        const line = L.geoJSON(r.geometry).addTo(m); L.marker(from).addTo(m); L.marker(to).addTo(m); m.fitBounds(line.getBounds(),{padding:[20,20]}); setTimeout(() => m.invalidateSize(), 300);
       }
     } catch(e) { alert("Calcul de l'itinéraire impossible : " + e.message); }
   }, e => alert("Autorisez la localisation GPS pour calculer l'itinéraire : " + e.message), {enableHighAccuracy:true,timeout:15000,maximumAge:0});
