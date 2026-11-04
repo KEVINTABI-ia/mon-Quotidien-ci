@@ -102,6 +102,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       depart: "Yopougon",
       destination: "Adjamé",
       statut: "en_attente",
+      publicVersion: true,
       createdAt: serverTimestamp()
     });
     batch.set(privateRef, details);
@@ -119,6 +120,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       depart: "Yopougon",
       destination: "Adjamé",
       statut: "en_attente",
+      publicVersion: true,
       createdAt: serverTimestamp()
     }));
   });
@@ -221,7 +223,7 @@ describe("Mon Transport CI — règles Firestore", function () {
   it("autorise un partenaire approuvé, abonné et en ligne à consulter une commande en attente", async () => {
     await testEnv.withSecurityRulesDisabled(async context => {
       await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
-        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente", publicVersion: true,
         depart: "Yopougon", destination: "Adjamé"
       });
     });
@@ -235,7 +237,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       const db = context.firestore();
       await db.doc(`partenaires/${PARTNER_UID}`).update({ enLigne: false });
       await db.doc(`commandes_colis/${ORDER_ID}`).set({
-        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente", publicVersion: true,
         depart: "Yopougon", destination: "Adjamé"
       });
     });
@@ -247,7 +249,7 @@ describe("Mon Transport CI — règles Firestore", function () {
   it("interdit au livreur indépendant de consulter une commande réservée à une gare", async () => {
     await testEnv.withSecurityRulesDisabled(async context => {
       await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
-        clientId: CLIENT_UID, service: "compagnie", statut: "en_attente",
+        clientId: CLIENT_UID, service: "compagnie", statut: "en_attente", publicVersion: true,
         depart: "Gare test", destination: "Gare destination"
       });
     });
@@ -354,6 +356,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     const { collection, query, where, limit, getDocs } = require("firebase/firestore");
     const q = query(
       collection(db, "commandes_colis"),
+      where("publicVersion", "==", true),
       where("statut", "==", "en_attente"),
       where("service", "in", ["livraison", "livraison_programmee"]),
       limit(30)
