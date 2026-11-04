@@ -2414,6 +2414,11 @@ async function chargerCommandesPartenaire() {
     });
 
     zone.innerHTML = "";
+    const migrationBtn = document.createElement("button");
+    migrationBtn.type = "button";
+    migrationBtn.textContent = "Sécuriser les anciennes commandes";
+    migrationBtn.addEventListener("click", migrerAnciennesCommandesPrivees);
+    zone.appendChild(migrationBtn);
     commandes.forEach(commande => {
       const carte = document.createElement("div");
       carte.className = "stop";
@@ -5618,6 +5623,65 @@ async function chargerHistoriqueCommandes() {
       card.append(n,s,t);zone.appendChild(card);
     }
   }catch(e){console.error(e);zone.innerHTML="<p>Impossible de charger votre historique : "+echapperTexteCompagnie(e.message)+"</p>";}
+}
+
+
+// Migration sans suppression de commande : les champs sensibles sont copiés dans
+// informations_privees/details puis retirés du document public dans une transaction.
+async function migrerAnciennesCommandesPrivees() {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Cette opération est réservée à l'administrateur.");
+    return;
+  }
+  if (!confirm("Migrer les anciennes commandes ? Les commandes seront conservées. Seuls leurs champs sensibles seront déplacés vers leur document privé.")) return;
+  const champsPrives = [
+    "clientNom", "clientTelephone", "telephoneExpediteur", "telephoneDestinataire",
+    "adresseRecuperation", "adresseLivraison", "descriptionColis", "trackingNumber",
+    "provenance", "codeColis", "typeColis", "livreurId", "operation", "compagnie",
+    "gare", "latitudeRecuperation", "longitudeRecuperation",
+    "latitudeLivraison", "longitudeLivraison"
+  ];
+  let migrees = 0, ignorees = 0;
+  try {
+    const commandes = await db.collection("commandes_colis").get();
+    for (const doc of commandes.docs) {
+      const refPrivee = doc.ref.collection("informations_privees").doc("details");
+      await db.runTransaction(async tx => {
+        const [commandeSnap, priveSnap] = await Promise.all([tx.get(doc.ref), tx.get(refPrivee)]);
+        if (!commandeSnap.exists || priveSnap.exists) { ignorees++; return; }
+        const data = commandeSnap.data();
+        const contientAncienPrive = champsPrives.some(k => data[k] !== undefined);
+        if (!contientAncienPrive) { ignorees++; return; }
+        const details = {
+          clientId: data.clientId,
+          clientNom: data.clientNom || "Client",
+          clientTelephone: data.clientTelephone || "",
+          telephoneExpediteur: data.telephoneExpediteur || "",
+          telephoneDestinataire: data.telephoneDestinataire || "",
+          adresseRecuperation: data.adresseRecuperation || "",
+          adresseLivraison: data.adresseLivraison || "",
+          descriptionColis: data.descriptionColis || "",
+          trackingNumber: typeof data.trackingNumber === "string" ? data.trackingNumber : doc.id,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        champsPrives.forEach(k => {
+          if (data[k] !== undefined) details[k] = data[k];
+        });
+        const retrait = {};
+        champsPrives.forEach(k => {
+          if (data[k] !== undefined) retrait[k] = firebase.firestore.FieldValue.delete();
+        });
+        tx.set(refPrivee, details);
+        if (Object.keys(retrait).length) tx.update(doc.ref, retrait);
+        migrees++;
+      });
+    }
+    alert("Migration terminée. Commandes sécurisées : " + migrees + " ; déjà sécurisées ou sans données privées : " + ignorees + ".");
+    await chargerCommandesAdmin();
+  } catch (e) {
+    console.error("Migration des commandes :", e);
+    alert("Migration interrompue : " + e.message + ". Les commandes déjà migrées sont conservées.");
+  }
 }
 
 // Attribution administrative : même verrou de mission que l'acceptation par un partenaire.
