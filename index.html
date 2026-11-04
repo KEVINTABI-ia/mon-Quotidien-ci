@@ -4932,26 +4932,38 @@ function filtrerLignesSotra(){
 // Répertoire initial des marchés connus d'Abidjan.
 // Les destinations sont des recherches cartographiques textuelles, pas des coordonnées GPS inventées.
 const MARCHES_COMMUNES = [
-  {commune:"Abobo",nom:"Grand Marché d'Abobo",repere:"Grand Marché, Abobo, Abidjan"},
+  {commune:"Abobo",nom:"Grand Marché d'Abobo",repere:"Grand Marché d'Abobo, Abobo, Abidjan"},
   {commune:"Abobo",nom:"Ancien marché de PK 18",repere:"Ancien marché PK 18, Abobo, Abidjan"},
   {commune:"Abobo",nom:"Marché d'Avocatier",repere:"Marché d'Avocatier, Abobo, Abidjan"},
-  {commune:"Adjamé",nom:"Grand Marché Gouro",repere:"Grand Marché Gouro, Adjamé, Abidjan"},
-  {commune:"Adjamé",nom:"Forum des Marchés",repere:"Forum des Marchés, Adjamé, Abidjan"},
+  {commune:"Abobo",nom:"Marché Abobo Anador",repere:"Marché Abobo Anador, Abobo, Abidjan"},
+  {commune:"Abobo",nom:"Marché d'Aboboté",repere:"Marché d'Aboboté, Abobo, Abidjan"},
+  {commune:"Abobo",nom:"Marché d'Abobo-Doumé",repere:"Marché Abobo-Doumé, Abobo, Abidjan"},
+  {commune:"Adjamé",nom:"Marché Gouro",repere:"Marché Gouro, Adjamé, Abidjan"},
   {commune:"Adjamé",nom:"Marché Dabananni",repere:"Marché Dabananni, Adjamé, Abidjan"},
+  {commune:"Adjamé",nom:"Forum des Marchés",repere:"Forum des Marchés, Adjamé, Abidjan"},
   {commune:"Cocody",nom:"Marché Cocovico",repere:"Marché Cocovico, Cocody, Abidjan"},
-  {commune:"Cocody",nom:"Marché de Cocody Saint-Jean",repere:"Marché Saint-Jean, Boulevard de France, Cocody, Abidjan"},
+  {commune:"Cocody",nom:"Marché de Cocody Saint-Jean",repere:"Marché Saint-Jean, Cocody, Abidjan"},
   {commune:"Cocody",nom:"Marché d'Anono",repere:"Marché d'Anono, Cocody, Abidjan"},
-  {commune:"Koumassi",nom:"Marché Djè Konan",repere:"Marché Djè Konan, Boulevard du 7 Décembre, Koumassi, Abidjan"},
+  {commune:"Koumassi",nom:"Marché Djè Konan",repere:"Marché Djè Konan, Koumassi, Abidjan"},
   {commune:"Koumassi",nom:"Grand Marché de Koumassi",repere:"Grand Marché de Koumassi, Abidjan"},
-  {commune:"Marcory",nom:"Grand Marché de Marcory",repere:"Grand Marché de Marcory, Boulevard du Cameroun, Abidjan"},
-  {commune:"Treichville",nom:"Grand Marché de Treichville",repere:"Grand Marché de Treichville, Avenue Victor Biaka Boda, Abidjan"},
+  {commune:"Marcory",nom:"Grand Marché de Marcory",repere:"Grand Marché de Marcory, Marcory, Abidjan"},
+  {commune:"Marcory",nom:"Marché d'Anoumabo",repere:"Marché d'Anoumabo, Marcory, Abidjan"},
+  {commune:"Port-Bouët",nom:"Marché central de Port-Bouët",repere:"Marché central de Port-Bouët, Abidjan"},
+  {commune:"Treichville",nom:"Grand Marché de Treichville",repere:"Grand Marché de Treichville, Treichville, Abidjan"},
   {commune:"Treichville",nom:"Marché de Belleville",repere:"Marché de Belleville, Treichville, Abidjan"},
   {commune:"Yopougon",nom:"Marché de Siporex",repere:"Marché de Siporex, Yopougon, Abidjan"},
   {commune:"Yopougon",nom:"Marché de Gesco",repere:"Marché de Gesco, Yopougon, Abidjan"},
   {commune:"Yopougon",nom:"Marché de Kouté",repere:"Marché de Kouté, Yopougon, Abidjan"},
   {commune:"Yopougon",nom:"Marché de Niangon Nord",repere:"Marché de Niangon Nord, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Sicogi",repere:"Marché de Sicogi, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Niangon Continu",repere:"Marché de Niangon Continu, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché Djédjé Bagnon",repere:"Marché Djédjé Bagnon, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Béago",repere:"Marché de Béago, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché d'Andokoi",repere:"Marché d'Andokoi, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Wassakara",repere:"Marché de Wassakara, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché des Toits Rouges",repere:"Marché des Toits Rouges, Yopougon, Abidjan"},
   {commune:"Bingerville",nom:"Marché de Bingerville",repere:"Marché de Bingerville, Bingerville, Côte d'Ivoire"}
-];
+;
 
 function afficherMarchesCommune(){
   const resultat = document.getElementById("resultat");
