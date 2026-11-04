@@ -1195,11 +1195,18 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 </div>
 <div id="gestionPublicites" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;">
   <h3>📣 Gestion des publicités</h3>
-  <p class="notice">Consulte les demandes reçues. Confirme le paiement après vérification sur WhatsApp ou refuse la demande.</p>
-  <button type="button" class="primary" onclick="chargerDemandesPublicitesAdmin()">Actualiser les demandes</button>
+  <p class="notice">Le client te contacte sur WhatsApp. Renseigne ensuite sa publicité ici et choisis quand elle doit être visible.</p>
+  <h4>Ajouter une publicité manuellement</h4>
+  <label>Nom de l'entreprise / titre</label><input id="nouvellePubTitre" maxlength="100" placeholder="Ex. : Restaurant Le Délice">
+  <label>Description</label><textarea id="nouvellePubDescription" maxlength="1000" rows="3" placeholder="Description de l'activité"></textarea>
+  <label>Présentation</label><select id="nouvellePubType"><option value="banniere">Bannière publicitaire</option><option value="logo">Logo partenaire</option></select>
+  <label>Logo ou image du client</label><input id="nouvellePubImage" type="file" accept="image/jpeg,image/png,image/webp">
+  <p class="notice">Sélectionne l'image depuis la galerie. La publicité sera enregistrée masquée. Tu décideras ensuite de l'afficher.</p>
+  <button type="button" class="primary" onclick="creerPubliciteManuelle()">Enregistrer la publicité</button>
+  <p id="statutNouvellePub" class="notice"></p>
+  <h4>Demandes reçues</h4><button type="button" class="primary" onclick="chargerDemandesPublicitesAdmin()">Actualiser les demandes</button>
   <div id="listeDemandesPublicitesAdmin"><p class="notice">Connecte-toi comme administrateur pour consulter les demandes.</p></div>
-  <h3>Publicités en ligne et programmées</h3>
-  <div id="listePublicitesAdmin"><p class="notice">Aucune annonce chargée.</p></div>
+  <h4>Publicités enregistrées</h4><div id="listePublicitesAdmin"><p class="notice">Aucune annonce chargée.</p></div>
 </div>
 
 
@@ -1322,7 +1329,7 @@ async function chargerDemandesPublicitesAdmin() {
       const actions = statut === "en_attente"
         ? '<button type="button" onclick="changerStatutDemandePublicite(&quot;' + doc.id + '&quot;,&quot;paiement_confirme&quot;)">Confirmer le paiement</button><button type="button" onclick="changerStatutDemandePublicite(&quot;' + doc.id + '&quot;,&quot;refusee&quot;)">Refuser</button>'
         : statut === "paiement_confirme"
-          ? '<label>Visuel reçu sur WhatsApp (image ou vidéo MP4/WebM/MOV, 25 Mo maximum)</label><input type="file" id="mediaPublicite_' + doc.id + '" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"><button type="button" class="primary" onclick="publierDemandePublicite(&quot;' + doc.id + '&quot;)">Publier cette publicité</button>'
+          ? '<span class="notice">Paiement confirmé. Récupère le visuel auprès du client sur WhatsApp, puis crée sa publicité dans le formulaire manuel ci-dessus.</span>'
           : '<span class="notice">Demande traitée : ' + echapperTextePublicite(statut) + '</span>';
       return '<article class="card" style="margin:12px 0;padding:14px;">'
         + '<strong>' + echapperTextePublicite(d.activite) + '</strong>'
@@ -1424,20 +1431,63 @@ async function chargerPublicitesAdmin() {
       const d = doc.data();
       const dateFin = d.dateFin?.toDate ? d.dateFin.toDate().toLocaleDateString("fr-FR") : "Non définie";
       const terminee = d.dateFin?.toDate && d.dateFin.toDate() <= new Date();
-      const etat = d.statut === "publiee" && !terminee ? "En ligne" : "Masquée / terminée";
+      const terminee = d.dateFin?.toDate && d.dateFin.toDate() <= new Date();
+      const visible = d.statut === "publiee" && !terminee;
+      const etat = visible ? "Affichée" : "Masquée";
+      const visuel = d.imageDataUrl || d.mediaUrl || "";
       return '<article class="card" style="margin:12px 0;padding:14px;">'
+        + (visuel ? '<img src="' + echapperTextePublicite(visuel) + '" alt="" style="width:100%;max-width:220px;max-height:140px;object-fit:contain;border-radius:10px;">' : '')
         + '<strong>' + echapperTextePublicite(d.titre) + '</strong>'
-        + '<p class="notice">' + etat + ' · Fin prévue : ' + dateFin + '</p>'
+        + '<p class="notice">' + etat + (dateFin !== "Non définie" ? ' · Fin prévue : ' + dateFin : '') + '</p>'
         + '<label>Nom de l’activité</label><input id="titrePub_' + doc.id + '" maxlength="100" value="' + echapperTextePublicite(d.titre) + '">'
         + '<label>Description</label><textarea id="descriptionPub_' + doc.id + '" maxlength="1000" rows="3">' + echapperTextePublicite(d.description) + '</textarea>'
         + '<button type="button" onclick="modifierPublicite(&quot;' + doc.id + '&quot;)">Enregistrer les modifications</button>'
-        + '<button type="button" onclick="supprimerPublicite(&quot;' + doc.id + '&quot;)">Supprimer la publicité</button>'
+        + '<button type="button" class="primary" onclick="basculerVisibilitePublicite(&quot;' + doc.id + '&quot;,&quot;' + (visible ? 'masquee' : 'publiee') + '&quot;)">' + (visible ? 'Masquer' : 'Afficher') + '</button>'
+        + '<button type="button" onclick="supprimerPublicite(&quot;' + doc.id + '&quot;)">Supprimer définitivement</button>'
         + '</article>';
     }).join("");
   } catch (erreur) {
     console.error("Gestion publicités :", erreur);
     zone.innerHTML = '<p class="notice">Impossible de charger les publicités.</p>';
   }
+}
+
+async function creerPubliciteManuelle() {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) { alert("Accès administrateur requis."); return; }
+  const titre = document.getElementById("nouvellePubTitre").value.trim();
+  const description = document.getElementById("nouvellePubDescription").value.trim();
+  const typeAffichage = document.getElementById("nouvellePubType").value;
+  const fichier = document.getElementById("nouvellePubImage").files[0];
+  const statut = document.getElementById("statutNouvellePub");
+  if (!titre || !description || !fichier) { statut.textContent = "Renseigne le titre, la description et sélectionne une image."; return; }
+  if (!["image/jpeg","image/png","image/webp"].includes(fichier.type)) { statut.textContent = "Formats acceptés : JPG, PNG ou WebP."; return; }
+  try {
+    statut.textContent = "Préparation de l'image...";
+    const imageDataUrl = await compresserImage(fichier);
+    await db.collection("publicites").add({
+      titre, description, typeAffichage, imageDataUrl, mediaType:"image/jpeg",
+      statut:"masquee",
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      dateDebut:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById("nouvellePubTitre").value = "";
+    document.getElementById("nouvellePubDescription").value = "";
+    document.getElementById("nouvellePubImage").value = "";
+    statut.textContent = "Publicité enregistrée et masquée. Tu peux l'afficher quand tu le souhaites.";
+    await chargerPublicitesAdmin();
+  } catch (erreur) {
+    console.error("Création publicité manuelle :", erreur);
+    statut.textContent = "Enregistrement impossible : " + (erreur.message || "erreur inconnue");
+  }
+}
+
+async function basculerVisibilitePublicite(id, statut) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) { alert("Accès administrateur requis."); return; }
+  if (!["publiee","masquee"].includes(statut)) return;
+  try {
+    await db.collection("publicites").doc(id).update({statut,visibiliteModifieeLe:firebase.firestore.FieldValue.serverTimestamp()});
+    await chargerPublicitesAdmin();
+  } catch (erreur) { alert("Modification de visibilité impossible : " + erreur.message); }
 }
 
 async function modifierPublicite(id) {
@@ -1488,9 +1538,10 @@ function chargerPublicitesAccueil() {
         zone.innerHTML = annonces.map(d => {
           const titre = echapperTextePublicite(d.titre);
           const description = echapperTextePublicite(d.description);
+          const sourceVisuel = d.imageDataUrl || d.mediaUrl || "";
           const media = String(d.mediaType || "").startsWith("video/")
-            ? '<video src="' + echapperTextePublicite(d.mediaUrl) + '" controls muted playsinline preload="metadata" style="width:100%;max-height:260px;object-fit:contain;border-radius:14px;"></video>'
-            : '<img src="' + echapperTextePublicite(d.mediaUrl) + '" alt="Publicité ' + titre + '" loading="lazy" style="width:100%;max-height:260px;object-fit:contain;border-radius:14px;">';
+            ? '<video src="' + echapperTextePublicite(sourceVisuel) + '" controls muted playsinline preload="metadata" style="width:100%;max-height:260px;object-fit:contain;border-radius:14px;"></video>'
+            : '<img src="' + echapperTextePublicite(sourceVisuel) + '" alt="Publicité ' + titre + '" loading="lazy" style="width:100%;max-height:260px;object-fit:contain;border-radius:14px;">';
           return '<article class="publicite-annonce" style="padding:10px;">' + media
             + '<strong style="display:block;margin-top:8px;">' + titre + '</strong>'
             + '<p>' + description + '</p></article>';
@@ -5888,6 +5939,9 @@ if (
   onclick="preparerRappelEmail('${doc.id}')">
   Préparer le rappel par e-mail
 </button>
+<button type="button" onclick="supprimerCompagnie('${doc.id}')">
+  Supprimer la compagnie
+</button>
         </div>
       `;
     }).join("");
@@ -5896,6 +5950,23 @@ if (
     zone.textContent = "Erreur de chargement : " + erreur.message;
   }
 }
+async function supprimerCompagnie(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) { alert("Accès administrateur requis."); return; }
+  try {
+    const reference = db.collection("compagnies").doc(id);
+    const snap = await reference.get();
+    if (!snap.exists) { alert("Compagnie introuvable."); await chargerCompagniesAdmin(); return; }
+    const nom = snap.data().nom || "cette compagnie";
+    if (!confirm("Supprimer définitivement " + nom + " ?\n\nLa fiche de la compagnie sera supprimée. Les gares, trajets et commandes enregistrés seront conservés.")) return;
+    await reference.delete();
+    alert("Compagnie supprimée. Les autres données sont conservées.");
+    await chargerCompagniesAdmin();
+  } catch (erreur) {
+    console.error("Suppression compagnie :", erreur);
+    alert("Suppression impossible : " + erreur.message);
+  }
+}
+
 async function modifierCompagnie(id) {
   if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
     alert("Accès administrateur requis.");
