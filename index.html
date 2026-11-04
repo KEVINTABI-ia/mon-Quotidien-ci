@@ -3279,9 +3279,9 @@ async function chargerCommandesPartenaire() {
 
     const libelles = {
       en_attente: "En attente",
-      livreur_affecte: "Attribuée",
+      livreur_affecte: "Livreur en route",
       colis_recupere: "Colis récupéré",
-      en_transit: "En transit",
+      en_transit: "En cours de livraison",
       arrive_destination: "Arrivé à destination",
       livre: "Livrée",
       annule: "Annulée"
@@ -3410,7 +3410,7 @@ async function chargerCommandesAdmin() {
       return;
     }
 
-    const libelles = {en_attente:"En attente",livreur_affecte:"Partenaire affecté",colis_recupere:"Colis récupéré",en_transit:"En transit",arrive_destination:"Arrivé à destination",livre:"Livré",annule:"Annulé"};
+    const libelles = {en_attente:"En attente",livreur_affecte:"Livreur en route",colis_recupere:"Colis récupéré",en_transit:"En cours de livraison",arrive_destination:"Arrivé à destination",livre:"Livré",annule:"Annulé"};
     const migrationBtn = document.createElement("button");
     migrationBtn.type = "button";
     migrationBtn.textContent = "Sécuriser les anciennes commandes";
@@ -5308,9 +5308,9 @@ async function chargerHistoriqueCommandes(){
 
     const statuts = {
       en_attente: "En attente",
-      livreur_affecte: "Livreur affecté",
+      livreur_affecte: "Livreur en route",
       colis_recupere: "Colis récupéré",
-      en_transit: "En transit",
+      en_transit: "En cours de livraison",
       arrive_destination: "Arrivé à destination",
       livre: "Livré"
     };
@@ -6716,7 +6716,7 @@ async function afficherMissionPartenaire(c, partenaire, zone) {
   const card = document.createElement("div"); card.className = "stop";
   const title = document.createElement("strong"); title.textContent = "Mission en cours — " + c.id;
   const route = document.createElement("p"); route.textContent = (c.depart || "") + " → " + (c.destination || "");
-  const labels={livreur_affecte:"Attribuée",colis_recupere:"Colis récupéré",en_transit:"En transit",arrive_destination:"Arrivé à destination"};
+  const labels={livreur_affecte:"Livreur en route",colis_recupere:"Colis récupéré",en_transit:"En cours de livraison",arrive_destination:"Arrivé à destination"};
   const status = document.createElement("p"); status.textContent = "Statut : " + (labels[c.statut] || c.statut || "");
   card.append(title, route, status);
   const privateSnap = await db.collection("commandes_colis").doc(c.id).collection("informations_privees").doc("details").get();
@@ -7026,7 +7026,7 @@ async function chargerHistoriqueCommandes() {
       const c=doc.data(), priv=await doc.ref.collection("informations_privees").doc("details").get(), d=priv.exists?priv.data():{};
       const card=document.createElement("div");card.className="stop";
       const n=document.createElement("strong");n.textContent="Commande : "+(d.trackingNumber||doc.id);
-      const s=document.createElement("p");s.textContent="Statut : "+({en_attente:"En attente",livreur_affecte:"Livreur affecté",colis_recupere:"Colis récupéré",en_transit:"En transit",livre:"Livré",annule:"Annulé"}[c.statut]||c.statut||"Non renseigné");
+      const s=document.createElement("p");s.textContent="Statut : "+({en_attente:"En attente",livreur_affecte:"Livreur en route",colis_recupere:"Colis récupéré",en_transit:"En cours de livraison",livre:"Livré",annule:"Annulé"}[c.statut]||c.statut||"Non renseigné");
       const t=document.createElement("p");t.textContent=(c.depart||"")+" → "+(c.destination||"");
       card.append(n,s,t);zone.appendChild(card);
     }
