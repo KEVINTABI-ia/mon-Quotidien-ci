@@ -30,15 +30,15 @@ service cloud.firestore {
         );
     }
 
-    function partenaireEnLignePour(service) {
+    function partenaireEnLignePour(typeService) {
       return estConnecte()
         && exists(/databases/$(database)/documents/partenaires/$(request.auth.uid))
         && partenaire(request.auth.uid).enLigne == true
         && abonnementValide(partenaire(request.auth.uid))
         && (
-          (service == "compagnie" && partenaire(request.auth.uid).type == "representant_gare")
+          (typeService == "compagnie" && partenaire(request.auth.uid).type == "representant_gare")
           ||
-          ((service == "livraison" || service == "livraison_programmee")
+          ((typeService == "livraison" || typeService == "livraison_programmee")
             && partenaire(request.auth.uid).type == "livreur_independant")
         );
     }
