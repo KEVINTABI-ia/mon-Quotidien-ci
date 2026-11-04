@@ -6130,20 +6130,20 @@ async function enregistrerCommande() {
   try {
     const profilDoc=await db.collection("clients").doc(user.uid).get(), profil=profilDoc.exists?profilDoc.data():{};
     const numeroSuivi="TCI-"+Date.now().toString(36).toUpperCase()+"-"+Math.floor(1000+Math.random()*9000);
-    // La commande publique ne contient que les informations nécessaires à la file d'attente.
-    // Les commandes visibles dans la file partenaire ne révèlent qu'une zone générale.
-    // Les adresses complètes restent dans informations_privees/details.
+    // La file partenaire affiche le départ sous forme générale, mais la destination exacte
+    // est visible avant acceptation pour permettre au livreur d'évaluer le trajet.
+    // Les téléphones, identités et détails de récupération restent privés jusqu'à l'affectation.
     const resumeAdressePublique = valeur => {
       const morceaux = String(valeur || "").split(",").map(x => x.trim()).filter(Boolean);
-      return morceaux.length >= 2 ? morceaux.slice(0, 2).join(", ") : "Zone à confirmer";
+      return morceaux.length >= 2 ? morceaux.slice(0, 2).join(", ") : "Départ à confirmer";
     };
     let departPublic, destinationPublic;
     if (service === "compagnie") {
       departPublic = operation === "expedition" ? resumeAdressePublique(adresseRecuperation) : compagnie + " - " + gare;
-      destinationPublic = operation === "expedition" ? compagnie + " - " + gare : resumeAdressePublique(adresseLivraison);
+      destinationPublic = operation === "expedition" ? compagnie + " - " + gare : adresseLivraison;
     } else {
       departPublic = resumeAdressePublique(depart);
-      destinationPublic = resumeAdressePublique(destination);
+      destinationPublic = destination;
     }
     const publicData={clientId:user.uid,service,depart:departPublic,destination:destinationPublic,statut:"en_attente",publicVersion:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
     if(dateSouhaitee)publicData.dateHeureSouhaitee=dateSouhaitee;
