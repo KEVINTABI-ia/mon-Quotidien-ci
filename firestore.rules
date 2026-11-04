@@ -126,7 +126,7 @@ service cloud.firestore {
           && request.resource.data.commandeId is string
           && request.resource.data.statut == "active"
           && getAfter(commandePath(request.resource.data.commandeId)).data.partenaireId == partenaireId
-          && getAfter(commandePath(request.resource.data.commandeId)).data.statut == "livreur_affecte"
+          && (getAfter(commandePath(request.resource.data.commandeId)).data.statut == "livreur_affecte" || getAfter(commandePath(request.resource.data.commandeId)).data.statut == "colis_recupere" || getAfter(commandePath(request.resource.data.commandeId)).data.statut == "en_transit")
           && abonnementValide(partenaire(partenaireId));
         allow delete: if estAdmin()
           || (estConnecte()
