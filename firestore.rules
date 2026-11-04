@@ -136,6 +136,7 @@ service cloud.firestore {
           || (estConnecte()
             && request.auth.uid == partenaireId
             && verrouId == "missionActive"
+            && resource.data.commandeId is string
             && (
               getAfter(commandePath(resource.data.commandeId)).data.statut == "en_attente"
               || getAfter(commandePath(resource.data.commandeId)).data.statut == "livre"
@@ -243,6 +244,8 @@ service cloud.firestore {
           && !("partenaireId" in request.resource.data)
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation"])
+          && exists(verrouPath(request.auth.uid))
+          && get(verrouPath(request.auth.uid)).data.commandeId == commandeId
           && !existsAfter(verrouPath(request.auth.uid))
         )
         || (
@@ -253,6 +256,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["statut", "dateRecuperation"])
           && exists(verrouPath(request.auth.uid))
+          && get(verrouPath(request.auth.uid)).data.commandeId == commandeId
         )
         || (
           estConnecte()
@@ -261,6 +265,8 @@ service cloud.firestore {
           && request.resource.data.statut == "livre"
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["statut", "dateLivraison"])
+          && exists(verrouPath(request.auth.uid))
+          && get(verrouPath(request.auth.uid)).data.commandeId == commandeId
           && !existsAfter(verrouPath(request.auth.uid))
         )
         // Migration administrative contrôlée des anciennes commandes vers le document privé.
@@ -276,7 +282,7 @@ service cloud.firestore {
           && existsAfter(detailsPrivesPath(commandeId))
           && getAfter(detailsPrivesPath(commandeId)).data.clientId == resource.data.clientId
           && getAfter(detailsPrivesPath(commandeId)).data.trackingNumber
-            == (resource.data.trackingNumber is string ? resource.data.trackingNumber : commandeId)
+            == resource.data.get("trackingNumber", commandeId)
         );
 
       allow delete: if estAdmin();
