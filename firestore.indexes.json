@@ -4,8 +4,32 @@
       "collectionGroup": "commandes_colis",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "statut", "order": "ASCENDING" },
-        { "fieldPath": "service", "order": "ASCENDING" }
+        {
+          "fieldPath": "statut",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "service",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "commandes_colis",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "publicVersion",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "statut",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "service",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],
