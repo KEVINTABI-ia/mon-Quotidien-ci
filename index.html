@@ -2023,6 +2023,13 @@ function ouvrirInscriptionLivreur(){
 
 <label>Numéro du permis de conduire</label>
 <input type="text" id="livreurNumeroPermis" required>
+<label>Photo de profil (selfie)</label>
+<input type="file" id="livreurPhotoProfil"
+  accept="image/*" capture="user" required
+  onchange="previsualiserPhotoProfil('livreurPhotoProfil', 'apercuPhotoLivreur')">
+
+<img id="apercuPhotoLivreur"
+  style="display:none;width:120px;height:120px;object-fit:cover;border-radius:50%;">
     <p class="notice">
       Ton compte sera créé avec le statut « En attente ».
     Tes informations seront vérifiées avant validation.
@@ -2118,6 +2125,13 @@ function ouvrirInscriptionGare(){
 
 <label>Poste occupé dans la gare</label>
 <input type="text" id="garePosteOccupe" required>
+<label>Photo de profil (selfie)</label>
+<input type="file" id="garePhotoProfil"
+  accept="image/*" capture="user" required
+  onchange="previsualiserPhotoProfil('garePhotoProfil', 'apercuPhotoGare')">
+
+<img id="apercuPhotoGare"
+  style="display:none;width:120px;height:120px;object-fit:cover;border-radius:50%;">
 
     <p class="notice">
       Ton compte sera créé avec le statut « En attente ».
@@ -2286,6 +2300,13 @@ async function chargerPartenairesAdmin() {
 
       html += `
         <div class="stop">
+                  ${(
+            typeof partenaire.photoProfil === "string" &&
+            /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(partenaire.photoProfil) &&
+            partenaire.photoProfil.length <= 200000
+          )
+            ? `<img src="${partenaire.photoProfil}" alt="Photo de profil" style="width:110px;height:110px;object-fit:cover;border-radius:50%;display:block;margin-bottom:12px;">`
+            : "<p><em>Aucune photo de profil enregistrée.</em></p>"}
           <h3>${echapperTexteCompagnie(partenaire.nom)}</h3>
           <p><strong>Profil :</strong> ${type}</p>
           <p><strong>Téléphone :</strong> ${echapperTexteCompagnie(partenaire.telephone)}</p>
@@ -2364,6 +2385,83 @@ async function refuserPartenaire(id) {
   } catch (erreur) {
     alert("Erreur : " + erreur.message);
   }
+}
+// PHOTO DE PROFIL : aperçu et compression
+function previsualiserPhotoProfil(champId, apercuId) {
+  const champ = document.getElementById(champId);
+  const apercu = document.getElementById(apercuId);
+  const fichier = champ && champ.files ? champ.files[0] : null;
+
+  if (!fichier) {
+    apercu.style.display = "none";
+    return;
+  }
+
+  if (!fichier.type.startsWith("image/")) {
+    alert("Choisis une image valide.");
+    champ.value = "";
+    apercu.style.display = "none";
+    return;
+  }
+
+  const lecteur = new FileReader();
+  lecteur.onload = function(e) {
+    apercu.src = e.target.result;
+    apercu.style.display = "block";
+  };
+  lecteur.readAsDataURL(fichier);
+}
+
+function convertirImageEnJpegCompressee(fichier) {
+  return new Promise((resolve, reject) => {
+    const lecteur = new FileReader();
+
+    lecteur.onerror = () => reject(new Error("Impossible de lire la photo."));
+
+    lecteur.onload = () => {
+      const image = new Image();
+
+      image.onerror = () => reject(new Error("Image non valide."));
+
+      image.onload = () => {
+        const dimensionMax = 360;
+        const facteur = Math.min(1, dimensionMax / Math.max(image.width, image.height));
+        const largeur = Math.max(1, Math.round(image.width * facteur));
+        const hauteur = Math.max(1, Math.round(image.height * facteur));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = largeur;
+        canvas.height = hauteur;
+
+        const contexte = canvas.getContext("2d");
+        if (!contexte) {
+          reject(new Error("Compression indisponible."));
+          return;
+        }
+
+        contexte.drawImage(image, 0, 0, largeur, hauteur);
+
+        let qualite = 0.72;
+        let resultat = canvas.toDataURL("image/jpeg", qualite);
+
+        while (resultat.length > 190000 && qualite > 0.35) {
+          qualite -= 0.07;
+          resultat = canvas.toDataURL("image/jpeg", qualite);
+        }
+
+        if (resultat.length > 200000) {
+          reject(new Error("Photo trop volumineuse. Choisis une image plus légère."));
+          return;
+        }
+
+        resolve(resultat);
+      };
+
+      image.src = lecteur.result;
+    };
+
+    lecteur.readAsDataURL(fichier);
+  });
 }
 // CREATION DU COMPTE PARTENAIRE
 async function envoyerFichierCloudflare(
@@ -2472,6 +2570,28 @@ if (!validerNumeroIdentite(champIdentite, idErreur)) {
 }
 
 donnees.numeroIdentite = champIdentite.value;
+const champPhotoId = type === "livreur_independant"
+  ? "livreurPhotoProfil"
+  : "garePhotoProfil";
+
+const champPhoto = document.getElementById(champPhotoId);
+const fichierPhoto = champPhoto && champPhoto.files
+  ? champPhoto.files[0]
+  : null;
+
+if (!fichierPhoto) {
+  alert("Ajoute une photo de profil avant de créer ton compte.");
+  return;
+}
+
+let photoProfil;
+
+try {
+  photoProfil = await convertirImageEnJpegCompressee(fichierPhoto);
+} catch (erreurPhoto) {
+  alert(erreurPhoto.message);
+  return;
+}
   if (!email || !motDePasse || motDePasse.length < 6) {
     alert("Vérifie ton adresse e-mail et ton mot de passe (6 caractères minimum).");
     return;
@@ -2509,6 +2629,7 @@ const fichiers = {};
       dateNaissance: donnees.dateNaissance,
 lieuNaissance: donnees.lieuNaissance,
 numeroIdentite: donnees.numeroIdentite,
+photoProfil: photoProfil,
       statut: "en_attente",
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
