@@ -2534,7 +2534,7 @@ async function chargerCommandesAdmin() {
     zone.appendChild(migrationBtn);
     commandes.forEach(commande => {
       const typeAttendu = commande.service === "compagnie" ? "representant_gare" : "livreur_independant";
-      const candidats = partenaires.filter(p => p.disponible && p.type === typeAttendu);
+      const candidats = partenaires.filter(p => p.enLigne === true && p.type === typeAttendu);
       const carte = document.createElement("div");
       carte.className = "stop";
 
@@ -5205,7 +5205,7 @@ async function chargerCommandesPartenaire() {
     } else if (activeOrder) {
       file.innerHTML = "<p>Terminez votre mission actuelle avant d'en accepter une autre.</p>";
     } else {
-      let q = db.collection("commandes_colis").where("statut", "==", "en_attente");
+      let q = db.collection("commandes_colis").where("publicVersion", "==", true).where("statut", "==", "en_attente");
       q = p.type === "representant_gare"
         ? q.where("service", "==", "compagnie")
         : q.where("service", "in", ["livraison", "livraison_programmee"]);
@@ -5436,7 +5436,7 @@ async function enregistrerCommande() {
     const profilDoc=await db.collection("clients").doc(user.uid).get(), profil=profilDoc.exists?profilDoc.data():{};
     const numeroSuivi="TCI-"+Date.now().toString(36).toUpperCase()+"-"+Math.floor(1000+Math.random()*9000);
     // La commande publique ne contient que les informations nécessaires à la file d'attente.
-    const publicData={clientId:user.uid,service,depart,destination,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+    const publicData={clientId:user.uid,service,depart,destination,statut:"en_attente",publicVersion:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
     if(dateSouhaitee)publicData.dateHeureSouhaitee=dateSouhaitee;
     const pr=window.positionsCommande?.recuperation, pl=window.positionsCommande?.destination;
     const ref=db.collection("commandes_colis").doc();
@@ -5481,7 +5481,8 @@ async function migrerAnciennesCommandesPrivees() {
     alert("Cette opération est réservée à l'administrateur.");
     return;
   }
-  if (!confirm("Migrer les anciennes commandes ? Les commandes seront conservées. Seuls leurs champs sensibles seront déplacés vers leur document privé.")) return;
+  if (!confirm("Sécuriser les anciennes commandes ? Les commandes seront conservées. Les détails privés seront déplacés ou vérifiés avant de rendre chaque commande visible aux partenaires.")) return;
+
   const champsPrives = [
     "clientNom", "clientTelephone", "telephoneExpediteur", "telephoneDestinataire",
     "adresseRecuperation", "adresseLivraison", "descriptionColis", "trackingNumber",
@@ -5489,48 +5490,75 @@ async function migrerAnciennesCommandesPrivees() {
     "gare", "latitudeRecuperation", "longitudeRecuperation",
     "latitudeLivraison", "longitudeLivraison"
   ];
-  let migrees = 0, ignorees = 0;
+  let securisees = 0, ignorees = 0;
+
   try {
     const commandes = await db.collection("commandes_colis").get();
     for (const doc of commandes.docs) {
       const refPrivee = doc.ref.collection("informations_privees").doc("details");
-      const aMigre = await db.runTransaction(async tx => {
+      const securisee = await db.runTransaction(async tx => {
         const [commandeSnap, priveSnap] = await Promise.all([tx.get(doc.ref), tx.get(refPrivee)]);
-        if (!commandeSnap.exists || priveSnap.exists) return false;
+        if (!commandeSnap.exists) return false;
+
         const data = commandeSnap.data();
         const contientAncienPrive = champsPrives.some(k => data[k] !== undefined);
-        if (!contientAncienPrive) return false;
-        const details = {
-          clientId: data.clientId,
-          clientNom: data.clientNom || "Client",
-          clientTelephone: data.clientTelephone || "",
-          telephoneExpediteur: data.telephoneExpediteur || "",
-          telephoneDestinataire: data.telephoneDestinataire || "",
-          adresseRecuperation: data.adresseRecuperation || "",
-          adresseLivraison: data.adresseLivraison || "",
-          descriptionColis: data.descriptionColis || "",
-          trackingNumber: typeof data.trackingNumber === "string" ? data.trackingNumber : doc.id,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        champsPrives.forEach(k => {
-          if (data[k] !== undefined) details[k] = data[k];
-        });
         const retrait = {};
         champsPrives.forEach(k => {
           if (data[k] !== undefined) retrait[k] = firebase.firestore.FieldValue.delete();
         });
-        tx.set(refPrivee, details);
-        if (Object.keys(retrait).length) tx.update(doc.ref, retrait);
-        return true;
+
+        if (priveSnap.exists) {
+          const detailsExistants = priveSnap.data();
+          if (detailsExistants.clientId !== data.clientId ||
+              typeof detailsExistants.trackingNumber !== "string") return false;
+          if (typeof data.trackingNumber === "string" &&
+              detailsExistants.trackingNumber !== data.trackingNumber) return false;
+          if (contientAncienPrive || data.publicVersion !== true) {
+            tx.update(doc.ref, {...retrait, publicVersion: true});
+            return true;
+          }
+          return false;
+        }
+
+        if (contientAncienPrive) {
+          if (!data.clientId) return false;
+          const details = {
+            clientId: data.clientId,
+            clientNom: data.clientNom || "Client",
+            clientTelephone: data.clientTelephone || "",
+            telephoneExpediteur: data.telephoneExpediteur || "",
+            telephoneDestinataire: data.telephoneDestinataire || "",
+            adresseRecuperation: data.adresseRecuperation || "",
+            adresseLivraison: data.adresseLivraison || "",
+            descriptionColis: data.descriptionColis || "",
+            trackingNumber: typeof data.trackingNumber === "string" ? data.trackingNumber : doc.id,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          };
+          champsPrives.forEach(k => {
+            if (data[k] !== undefined) details[k] = data[k];
+          });
+          tx.set(refPrivee, details);
+          tx.update(doc.ref, {...retrait, publicVersion: true});
+          return true;
+        }
+
+        if (data.publicVersion !== true) {
+          tx.update(doc.ref, {publicVersion: true});
+          return true;
+        }
+        return false;
       });
-      if (aMigre) migrees++;
+
+      if (securisee) securisees++;
       else ignorees++;
     }
-    alert("Migration terminée. Commandes sécurisées : " + migrees + " ; déjà sécurisées ou sans données privées : " + ignorees + ".");
+
+    alert("Opération terminée. Commandes sécurisées et rendues publiques : " + securisees +
+      " ; déjà sécurisées ou à vérifier manuellement : " + ignorees + ".");
     await chargerCommandesAdmin();
   } catch (e) {
-    console.error("Migration des commandes :", e);
-    alert("Migration interrompue : " + e.message + ". Les commandes déjà migrées sont conservées.");
+    console.error("Sécurisation des anciennes commandes :", e);
+    alert("Opération interrompue : " + e.message + ". Les commandes déjà sécurisées sont conservées.");
   }
 }
 
