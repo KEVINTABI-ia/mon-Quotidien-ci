@@ -2543,7 +2543,7 @@ async function chargerCommandesAdmin() {
       partenaireActuel.textContent = commande.partenaireNom ? "Partenaire actuel : " + commande.partenaireNom : "Aucun partenaire attribué.";
       carte.append(titre, trajet, details, partenaireActuel);
 
-      if (commande.statut !== "livre" && commande.statut !== "annule") {
+      if (commande.statut === "en_attente" && !commande.partenaireId) {
         const select = document.createElement("select");
         select.id = "choixPartenaire_" + commande.id;
         const vide = document.createElement("option");
