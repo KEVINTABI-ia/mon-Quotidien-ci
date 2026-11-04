@@ -238,7 +238,7 @@ service cloud.firestore {
           && request.resource.data.statut == "livreur_affecte"
           && request.resource.data.dateAffectation == request.time
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["partenaireId", "partenaireNom", "partenaireTelephone", "partenaireType", "dateAffectation", "statut"])
+            .hasOnly(["partenaireId", "partenaireNom", "partenaireTelephone", "partenairePhotoProfil", "partenaireType", "dateAffectation", "statut"])
           && existsAfter(verrouPath(request.auth.uid))
           && getAfter(verrouPath(request.auth.uid)).data.commandeId == commandeId
           && partenaireEnLignePour(resource.data['service'])
