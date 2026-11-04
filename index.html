@@ -2504,7 +2504,16 @@ async function chargerCommandesAdmin() {
       return {id: doc.id, ...p, disponible: actif};
     });
 
-    const commandes = commandesSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    const commandes = await Promise.all(commandesSnap.docs.map(async doc => {
+      const commande = {id: doc.id, ...doc.data()};
+      try {
+        const prive = await doc.ref.collection("informations_privees").doc("details").get();
+        commande.informationsPrivees = prive.exists ? prive.data() : {};
+      } catch (e) {
+        commande.informationsPrivees = {};
+      }
+      return commande;
+    }));
     commandes.sort((a,b) => {
       const da = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
       const dbDate = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
@@ -2525,7 +2534,7 @@ async function chargerCommandesAdmin() {
       carte.className = "stop";
 
       const titre = document.createElement("strong");
-      titre.textContent = "Commande " + (commande.trackingNumber || commande.id);
+      titre.textContent = "Commande " + (commande.informationsPrivees?.trackingNumber || commande.trackingNumber || commande.id);
       const trajet = document.createElement("p");
       trajet.textContent = (commande.depart || "Départ non précisé") + " → " + (commande.destination || "Destination non précisée");
       const details = document.createElement("p");
@@ -5461,8 +5470,15 @@ async function naviguerVersEtapeCommande(commandeId, etape) {
   const snap = await db.collection("commandes_colis").doc(commandeId).get();
   if (!snap.exists) return alert("Commande introuvable.");
   const c = snap.data();
-  const lat = etape === "destination" ? c.latitudeLivraison : c.latitudeRecuperation;
-  const lon = etape === "destination" ? c.longitudeLivraison : c.longitudeRecuperation;
+  const privateSnap = await db.collection("commandes_colis").doc(commandeId).collection("informations_privees").doc("details").get();
+  const details = privateSnap.exists ? privateSnap.data() : {};
+  // Repli temporaire sur les champs historiques pour ne pas casser l'unique commande de test.
+  const lat = etape === "destination"
+    ? (details.latitudeLivraison ?? c.latitudeLivraison)
+    : (details.latitudeRecuperation ?? c.latitudeRecuperation);
+  const lon = etape === "destination"
+    ? (details.longitudeLivraison ?? c.longitudeLivraison)
+    : (details.longitudeRecuperation ?? c.longitudeRecuperation);
   if (typeof lat !== "number" || typeof lon !== "number") return alert("Les coordonnées GPS de cette adresse ne sont pas enregistrées. Demandez à l'administrateur de vérifier la commande.");
   navigator.geolocation.getCurrentPosition(async pos => {
     const from = [pos.coords.latitude,pos.coords.longitude];
@@ -5566,16 +5582,14 @@ async function enregistrerCommande() {
   try {
     const profilDoc=await db.collection("clients").doc(user.uid).get(), profil=profilDoc.exists?profilDoc.data():{};
     const numeroSuivi="TCI-"+Date.now().toString(36).toUpperCase()+"-"+Math.floor(1000+Math.random()*9000);
+    // La commande publique ne contient que les informations nécessaires à la file d'attente.
     const publicData={clientId:user.uid,service,depart,destination,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-    const pr=window.positionsCommande?.recuperation, pl=window.positionsCommande?.destination;
-    if(pr){publicData.latitudeRecuperation=pr.latitude;publicData.longitudeRecuperation=pr.longitude;}
-    if(pl){publicData.latitudeLivraison=pl.latitude;publicData.longitudeLivraison=pl.longitude;}
-    if(operation)publicData.operation=operation;
-    if(compagnie)publicData.compagnie=compagnie;
-    if(gare)publicData.gare=gare;
     if(dateSouhaitee)publicData.dateHeureSouhaitee=dateSouhaitee;
+    const pr=window.positionsCommande?.recuperation, pl=window.positionsCommande?.destination;
     const ref=db.collection("commandes_colis").doc();
-    const privateData={clientNom:profil.nom||"Client",clientTelephone:profil.telephone||"",telephoneExpediteur,telephoneDestinataire,adresseRecuperation,adresseLivraison,descriptionColis:description,trackingNumber:numeroSuivi,provenance,codeColis};
+    const privateData={clientNom:profil.nom||"Client",clientTelephone:profil.telephone||"",telephoneExpediteur,telephoneDestinataire,adresseRecuperation,adresseLivraison,descriptionColis:description,trackingNumber:numeroSuivi,provenance,codeColis,operation,compagnie,gare,
+      latitudeRecuperation:pr?.latitude??null,longitudeRecuperation:pr?.longitude??null,
+      latitudeLivraison:pl?.latitude??null,longitudeLivraison:pl?.longitude??null};
     await db.runTransaction(async tx=>{
       tx.set(ref,publicData);
       tx.set(ref.collection("informations_privees").doc("details"),{...privateData,clientId:user.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
