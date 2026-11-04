@@ -89,10 +89,10 @@ service cloud.firestore {
           || request.resource.data.type == "representant_gare")
         && (
           (request.resource.data.type == "livreur_independant"
-            && request.resource.data.keys().hasAll(["quartiers", "numeroPermis"])
+            && request.resource.data.keys().hasAll(["quartiers", "numeroPermis"]))
           ||
           (request.resource.data.type == "representant_gare"
-            && request.resource.data.keys().hasAll(["nomGare", "posteOccupe"])
+            && request.resource.data.keys().hasAll(["nomGare", "posteOccupe"]))
         )
         && request.resource.data.statut == "en_attente"
         && request.resource.data.email == request.auth.token.email
