@@ -7273,6 +7273,51 @@ async function migrerAnciennesCommandesPrivees() {
   }
 }
 
+
+/* Annuaire national initial des compagnies interurbaines — sources publiques, tarifs à confirmer. */
+const CATALOGUE_COMPAGNIES_INTERURBAINES = ["AHT","AMT Transport","ART Luxury Bus (Abdoul Razak Transport)","AT Transport (Almamy Touré Transport)","ATEA-Transports","BAN","BG","Binkadi Transport","CA Trans","Chonco Transport","CITADINE","CK (Coulibaly Kassoum)","CK-Transport","Cogemad Transport","Compagnie Sans Frontières","CTE Transport","CTM-TCY","Diarra Transport","GM-Transport","GTI Transport","Jet Express","Kocrou Transport (TKF)","KS","Label Transport","Le Labelle Transport","Léopard Transport","Majesté-DT","Malex","MT Transport","MTK Transport","MVST - Mieux vous servir transport","NARRE Compagnie CI","NCT Luxury","Nour Transport Voyageurs","Océan Côte d'Ivoire Transport","OT-CI - Ouest Transaction CI","SBTA","SDS - Société Diomandé Service","ST - Soumahoro Transport","STB","STD Transports","STGB","STIF - Société de transport Inza et frères","TCV-CI - Transport Confort Voyageurs Côte d'Ivoire","Transports AVS","TSFA - Transport Sylla Frère Anyama","TSR-CI - Transport Sana Rasmané Côte d'Ivoire","UTB - Union des Transports de Bouaké","UTRACO","UTRAKO - Union des Transporteurs de Korhogo","UTS - Union des transporteurs des savanes"];
+const VILLES_INTERURBAINES_DOCUMENTEES = ["Abidjan","Abengourou","Aboisso","Adzopé","Béoumi","Bondoukou","Bonon","Bouaflé","Bouaké","Boundiali","Daloa","Danané","Daoukro","Divo","Ferkessédougou","Gagnoa","Gonaté","Grand-Bassam","Guiglo","Korhogo","Lakota","Man","Ouangolodougou","San-Pédro","Séguéla","Soubré","Toumodi","Yamoussoukro","Zouan-Hounien"];
+const TARIFS_INTERURBAINS_INDICATIFS = [
+ {depart:"Abidjan",ville:"Adzopé",prix:2000},
+ {depart:"Abidjan",ville:"Aboisso",prix:2300},
+ {depart:"Abidjan",ville:"Abengourou",prix:3500},
+ {depart:"Abidjan",ville:"Yamoussoukro",prix:4000},
+ {depart:"Abidjan",ville:"Bouaké",prix:7100},
+ {depart:"Abidjan",ville:"Korhogo",prix:8100},
+ {depart:"Abidjan",ville:"Man",prix:9100},
+ {depart:"Abidjan",ville:"Danané",prix:9100},
+ {depart:"Abidjan",ville:"Zouan-Hounien",prix:9100}
+];
+async function afficherCompagniesPubliques() {
+ const zone=document.getElementById("listeCompagniesPubliques");
+ if(!zone) return;
+ zone.innerHTML="<p class='notice'>Chargement de l’annuaire national...</p>";
+ let actifs=[];
+ try {
+  const snap=await db.collection("compagnies").where("statutAbonnement","==","Actif").get();
+  snap.forEach(d=>actifs.push(d.data()));
+ } catch(e) { console.warn("Lecture des compagnies actives indisponible",e); }
+ const nomRecherche=(document.getElementById("rechercheCompagnieNationale")?.value||"").trim().toLocaleLowerCase("fr");
+ const villeChoisie=document.getElementById("filtreVilleNationale")?.value||"";
+ const toutes=CATALOGUE_COMPAGNIES_INTERURBAINES.map(n=>({nom:n,source:"Annuaire public",actif:false}));
+ actifs.forEach(c=>{
+  const nom=String(c.nom||"").trim();
+  if(nom && !toutes.some(x=>x.nom.toLocaleLowerCase("fr")===nom.toLocaleLowerCase("fr"))) toutes.unshift({nom,source:"Partenaire Mon Transport CI",actif:true,fiche:c});
+ });
+ const filtrees=toutes.filter(c=>(!nomRecherche||c.nom.toLocaleLowerCase("fr").includes(nomRecherche))&&(!villeChoisie||villeChoisie==="Toutes les villes"||((c.fiche?.destinations||[]).some(d=>String(d.ville||"").toLocaleLowerCase("fr")===villeChoisie.toLocaleLowerCase("fr")))));
+ const prixHTML=TARIFS_INTERURBAINS_INDICATIFS.filter(t=>!villeChoisie||villeChoisie==="Toutes les villes"||t.ville===villeChoisie).map(t=>'<li><strong>'+echapperTexteCompagnie(t.depart)+' → '+echapperTexteCompagnie(t.ville)+'</strong> : dès '+t.prix.toLocaleString("fr-FR")+' FCFA <small>(indicatif, non attribué à une compagnie précise)</small></li>').join("");
+ const listeHTML=filtrees.map(c=>{
+  const fiche=c.fiche||{};
+  const destinations=(fiche.destinations||[]).map(d=>'<li>'+echapperTexteCompagnie(d.ville)+' : '+(Number(d.prix)>0?Number(d.prix).toLocaleString("fr-FR")+' FCFA':'Tarif à confirmer')+'</li>').join("");
+  return '<article class="stop" style="margin:10px 0;padding:14px"><strong>'+echapperTexteCompagnie(c.nom)+'</strong><p class="notice">'+(c.actif?'Partenaire actif sur Mon Transport CI':'Référencée dans les sources publiques — lignes et agence à confirmer')+'</p>'+(fiche.agence?'<p>Agence : '+echapperTexteCompagnie(fiche.agence)+'</p>':'')+(fiche.localisation?'<p>Localisation : '+echapperTexteCompagnie(fiche.localisation)+'</p>':'')+(fiche.telephone?'<p>Téléphone : '+echapperTexteCompagnie(fiche.telephone)+'</p>':'')+(destinations?'<p><strong>Destinations et tarifs saisis par la compagnie :</strong></p><ul>'+destinations+'</ul>':'<p class="notice">Aucun tarif ou itinéraire confirmé pour cette fiche. Contactez la compagnie avant le départ.</p>')+'</article>';
+ }).join("");
+ zone.innerHTML=
+ '<div class="card" style="padding:14px"><p><strong>Annuaire national — '+toutes.length+' compagnies référencées</strong></p><label for="rechercheCompagnieNationale">Rechercher une compagnie</label><input id="rechercheCompagnieNationale" placeholder="Ex. UTB, AVS, TSR..." value="'+echapperTexteCompagnie(nomRecherche)+'" oninput="afficherCompagniesPubliques()"><label for="filtreVilleNationale">Filtrer par ville desservie</label><select id="filtreVilleNationale" onchange="afficherCompagniesPubliques()"><option>Toutes les villes</option>'+VILLES_INTERURBAINES_DOCUMENTEES.map(v=>'<option '+(villeChoisie===v?'selected':'')+'>'+echapperTexteCompagnie(v)+'</option>').join("")+'</select><p class="notice">Le catalogue initial réunit les compagnies repérées publiquement. Une compagnie référencée n’est pas nécessairement partenaire ou vérifiée. Les destinations non publiées restent à confirmer.</p></div>'+
+ '<h3>Tarifs indicatifs relevés au départ d’Abidjan</h3><ul>'+(prixHTML||'<li>Aucun tarif indicatif disponible pour ce filtre.</li>')+'</ul>'+
+ '<h3>Compagnies</h3>'+(listeHTML||'<p class="notice">Aucun résultat pour cette recherche.</p>')+
+ '<p class="notice">Source de référence : <a href="https://yacar.ci/compagnies" target="_blank" rel="noopener">YaCar — annuaire des compagnies</a>. Tarifs indicatifs : <a href="https://yacar.ci/" target="_blank" rel="noopener">YaCar</a>. Les prix affichés ne sont pas des offres garanties et doivent être confirmés au guichet.</p>';
+}
+
 </script>
 <div id="vuePleinEcran" aria-hidden="true">
   <div class="vue-plein-ecran-entete">
