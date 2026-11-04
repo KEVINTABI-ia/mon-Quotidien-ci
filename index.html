@@ -5353,7 +5353,6 @@ async function refuserMissionPartenaire(commandeId) {
       if (!lockSnap.exists || lockSnap.data().commandeId !== commandeId || lockSnap.data().statut !== "active") {
         throw new Error("Le verrou de cette mission est introuvable. Contactez l'administrateur.");
       }
-      tx.delete(lock);
       tx.update(ref, {
         partenaireId: firebase.firestore.FieldValue.delete(),
         partenaireNom: firebase.firestore.FieldValue.delete(),
@@ -5363,6 +5362,7 @@ async function refuserMissionPartenaire(commandeId) {
         statut: "en_attente"
       });
     });
+    await lock.delete();
     alert("Mission refusée. La commande est de nouveau disponible.");
     await chargerCommandesPartenaire();
   } catch (e) {
@@ -5395,8 +5395,8 @@ async function terminerMissionPartenaire(commandeId) {
       const snap = await tx.get(ref);
       if (!snap.exists || snap.data().partenaireId !== user.uid || !["colis_recupere","en_transit"].includes(snap.data().statut)) throw new Error("La livraison ne peut pas être clôturée.");
       tx.update(ref,{statut:"livre",dateLivraison:firebase.firestore.FieldValue.serverTimestamp()});
-      tx.delete(lock);
     });
+    await lock.delete();
     alert("Livraison confirmée. Vous pouvez maintenant accepter une nouvelle mission.");
     chargerCommandesPartenaire();
   } catch(e) { alert("Clôture impossible : " + e.message); }
