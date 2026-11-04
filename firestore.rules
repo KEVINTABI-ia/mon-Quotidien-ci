@@ -260,7 +260,7 @@ service cloud.firestore {
             .hasOnly(["statut", "dateLivraison"])
           && exists(verrouPath(request.auth.uid))
           && get(verrouPath(request.auth.uid)).data.commandeId == commandeId
-          && !existsAfter(verrouPath(request.auth.uid))
+          && get(verrouPath(request.auth.uid)).data.statut == "active"
         )
         // Migration administrative contrôlée des anciennes commandes vers le document privé.
         || (
