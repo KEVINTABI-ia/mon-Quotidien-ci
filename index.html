@@ -785,368 +785,6 @@ resultat.style.display = "block";
 }
 
 
-// ===== ESPACE PARTENAIRE : DISPONIBILITE, FILE D'ATTENTE ET MISSIONS =====
-function partenaireAbonnementValide(p) {
-  const maintenant = new Date();
-  const date = v => v && v.toDate ? v.toDate() : (v ? new Date(v) : null);
-  const essai = date(p.dateFinEssai);
-  const abonnement = date(p.dateExpirationAbonnement);
-  return p.statut === "approuve" && (p.etatCompte || "actif") === "actif" &&
-    ((p.statutAbonnementPartenaire === "Essai" && essai && essai > maintenant) ||
-     (p.statutAbonnementPartenaire === "Actif" && abonnement && abonnement > maintenant));
-}
-
-async function basculerDisponibilitePartenaire() {
-  const user = auth.currentUser;
-  if (!user) return alert("Veuillez vous reconnecter.");
-  try {
-    const ref = db.collection("partenaires").doc(user.uid);
-    const snap = await ref.get();
-    if (!snap.exists || !partenaireAbonnementValide(snap.data())) {
-      return alert("Votre dossier doit être approuvé et votre abonnement actif pour passer en ligne.");
-    }
-    const prochainEtat = snap.data().enLigne !== true;
-    await ref.update({enLigne: prochainEtat, derniereActivite: firebase.firestore.FieldValue.serverTimestamp()});
-    await afficherEspacePartenaire(snap.data() && {...snap.data(), enLigne: prochainEtat}, user.uid);
-  } catch (e) {
-    console.error(e);
-    alert("Impossible de modifier votre disponibilité : " + e.message);
-  }
-}
-
-function afficherEspacePartenaire(dossier, uid) {
-  let zone = document.getElementById("zoneEspacePartenaire");
-  if (!zone) {
-    zone = document.createElement("div");
-    zone.id = "zoneEspacePartenaire";
-    const connexion = document.getElementById("connexionPartenaire");
-    if (connexion) connexion.appendChild(zone); else document.body.appendChild(zone);
-  }
-  const dateFin = dossier.statutAbonnementPartenaire === "Actif" ? dossier.dateExpirationAbonnement : dossier.dateFinEssai;
-  const dateAffichee = dateFin && dateFin.toDate ? dateFin.toDate().toLocaleDateString("fr-FR") : (dateFin ? new Date(dateFin).toLocaleDateString("fr-FR") : "");
-  const eligible = partenaireAbonnementValide(dossier);
-  zone.innerHTML = `
-    <hr><h3>👋 Mon espace partenaire</h3>
-    <p><strong>Nom :</strong> ${echapperTexteCompagnie(dossier.nom || "")}</p>
-    <p><strong>Profil :</strong> ${dossier.type === "livreur_independant" ? "Livreur indépendant" : "Responsable de gare"}</p>
-    <div class="notice"><strong>Abonnement :</strong> ${eligible ? "Actif" : "À renouveler"} ${dateAffichee ? "— échéance : " + dateAffichee : ""}</div>
-    <div class="stop">
-      <strong>Disponibilité</strong>
-      <p id="etatDisponibilitePartenaire">${dossier.enLigne === true ? "🟢 Vous êtes en ligne et pouvez recevoir des commandes." : "⚪ Vous êtes hors ligne."}</p>
-      <button type="button" class="primary" onclick="basculerDisponibilitePartenaire()" ${eligible ? "" : "disabled"}>${dossier.enLigne === true ? "Passer hors ligne" : "Je suis disponible"}</button>
-    </div>
-    <h3>📦 Commandes disponibles</h3>
-    <button type="button" onclick="chargerCommandesPartenaire()">Actualiser</button>
-    <div id="fileCommandesPartenaire"><p>Chargement...</p></div>
-    <h3>🚚 Ma mission en cours</h3>
-    <div id="missionActivePartenaire"><p>Vérification...</p></div>
-    <h3>📋 Mes missions précédentes</h3>
-    <div id="historiquePartenaire"></div>
-    <button type="button" onclick="deconnecterPartenaire()">Se déconnecter</button>`;
-  chargerCommandesPartenaire();
-}
-
-async function chargerCommandesPartenaire() {
-  const user = auth.currentUser;
-  const file = document.getElementById("fileCommandesPartenaire");
-  const mission = document.getElementById("missionActivePartenaire");
-  const historique = document.getElementById("historiquePartenaire");
-  if (!user || !file || !mission) return;
-  file.innerHTML = "<p>Chargement des commandes disponibles...</p>";
-  mission.innerHTML = "<p>Chargement de votre mission...</p>";
-  try {
-    const pSnap = await db.collection("partenaires").doc(user.uid).get();
-    if (!pSnap.exists) throw new Error("Dossier partenaire introuvable.");
-    const p = pSnap.data();
-    if (!partenaireAbonnementValide(p)) throw new Error("Votre compte ou abonnement n'est pas actif.");
-    const lockRef = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
-    const lockSnap = await lockRef.get();
-    let activeOrder = null;
-    if (lockSnap.exists && lockSnap.data().commandeId) {
-      const activeSnap = await db.collection("commandes_colis").doc(lockSnap.data().commandeId).get();
-      if (activeSnap.exists) activeOrder = {id: activeSnap.id, ...activeSnap.data()};
-    }
-    if (activeOrder) {
-      await afficherMissionPartenaire(activeOrder, p, mission);
-    } else {
-      mission.innerHTML = "<p>Aucune mission en cours. Vous pouvez accepter une commande si vous êtes en ligne.</p>";
-    }
-
-    if (p.enLigne !== true) {
-      file.innerHTML = "<p>Vous êtes hors ligne. Passez en ligne pour consulter les nouvelles commandes.</p>";
-    } else if (activeOrder) {
-      file.innerHTML = "<p>Terminez votre mission actuelle avant d'en accepter une autre.</p>";
-    } else {
-      let q = db.collection("commandes_colis").where("statut", "==", "en_attente");
-      q = p.type === "representant_gare"
-        ? q.where("service", "==", "compagnie")
-        : q.where("service", "in", ["livraison", "livraison_programmee"]);
-      const snap = await q.limit(30).get();
-      if (snap.empty) {
-        file.innerHTML = "<p>Aucune nouvelle commande pour le moment.</p>";
-      } else {
-        file.innerHTML = "";
-        snap.forEach(doc => {
-          const c = doc.data();
-          const card = document.createElement("div");
-          card.className = "stop";
-          const h = document.createElement("strong"); h.textContent = "Nouvelle commande";
-          const route = document.createElement("p"); route.textContent = (c.depart || "Départ non précisé") + " → " + (c.destination || "Destination non précisée");
-          const service = document.createElement("p"); service.textContent = "Service : " + (c.service || "Non précisé");
-          const btn = document.createElement("button"); btn.className = "primary"; btn.textContent = "Accepter la commande";
-          btn.addEventListener("click", () => accepterCommandePartenaire(doc.id));
-          card.append(h, route, service, btn); file.appendChild(card);
-        });
-      }
-    }
-
-    if (historique) {
-      const hs = await db.collection("commandes_colis").where("partenaireId", "==", user.uid).get();
-      const done = hs.docs.filter(d => ["livre","annule"].includes(d.data().statut));
-      historique.innerHTML = done.length ? "" : "<p>Aucune mission terminée.</p>";
-      done.forEach(d => {
-        const el = document.createElement("p");
-        el.textContent = (d.data().depart || "") + " → " + (d.data().destination || "") + " — " + (d.data().statut === "livre" ? "Livrée" : "Annulée");
-        historique.appendChild(el);
-      });
-    }
-  } catch (e) {
-    console.error("Espace partenaire :", e);
-    file.innerHTML = "<p>Chargement impossible : " + echapperTexteCompagnie(e.message) + "</p>";
-    mission.innerHTML = "";
-  }
-}
-
-async function accepterCommandePartenaire(commandeId) {
-  const user = auth.currentUser;
-  if (!user) return alert("Veuillez vous reconnecter.");
-  const commandeRef = db.collection("commandes_colis").doc(commandeId);
-  const partenaireRef = db.collection("partenaires").doc(user.uid);
-  const verrouRef = partenaireRef.collection("verrous").doc("missionActive");
-  try {
-    await db.runTransaction(async tx => {
-      const [cSnap, pSnap, lSnap] = await Promise.all([tx.get(commandeRef), tx.get(partenaireRef), tx.get(verrouRef)]);
-      if (!cSnap.exists || !pSnap.exists) throw new Error("Commande ou dossier partenaire introuvable.");
-      const c = cSnap.data(), p = pSnap.data();
-      if (c.statut !== "en_attente" || c.partenaireId) throw new Error("Cette commande vient d'être prise par un autre partenaire.");
-      if (!partenaireAbonnementValide(p) || p.enLigne !== true) throw new Error("Vous devez être approuvé, abonné et en ligne.");
-      if (lSnap.exists) throw new Error("Vous avez déjà une mission en cours.");
-      const typeAttendu = c.service === "compagnie" ? "representant_gare" : "livreur_independant";
-      if (p.type !== typeAttendu) throw new Error("Cette commande ne correspond pas à votre profil.");
-      tx.update(commandeRef, {partenaireId:user.uid, partenaireNom:p.nom || "", partenaireType:p.type, statut:"livreur_affecte", dateAffectation:firebase.firestore.FieldValue.serverTimestamp()});
-      tx.set(verrouRef, {commandeId, statut:"active", createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    });
-    alert("Commande acceptée. Préparez-vous à rejoindre le point de récupération.");
-    await chargerCommandesPartenaire();
-    await naviguerVersEtapeCommande(commandeId, "recuperation");
-  } catch (e) {
-    console.error(e);
-    alert("Impossible d'accepter cette commande : " + e.message);
-    chargerCommandesPartenaire();
-  }
-}
-
-async function afficherMissionPartenaire(c, partenaire, zone) {
-  zone.innerHTML = "";
-  const card = document.createElement("div"); card.className = "stop";
-  const title = document.createElement("strong"); title.textContent = "Mission en cours — " + c.id;
-  const route = document.createElement("p"); route.textContent = (c.depart || "") + " → " + (c.destination || "");
-  const status = document.createElement("p"); status.textContent = "Statut : " + (c.statut || "");
-  card.append(title, route, status);
-  const privateSnap = await db.collection("commandes_colis").doc(c.id).collection("informations_privees").doc("details").get();
-  if (privateSnap.exists) {
-    const d = privateSnap.data();
-    const detail = document.createElement("p");
-    detail.textContent = "Suivi : " + (d.trackingNumber || c.id) + " | Expéditeur : " + (d.telephoneExpediteur || "non renseigné") + " | Destinataire : " + (d.telephoneDestinataire || "non renseigné");
-    card.appendChild(detail);
-  }
-  const map = document.createElement("div"); map.id = "carteMissionPartenaire"; map.style.cssText = "height:280px;width:100%;border-radius:10px;margin:12px 0;";
-  card.appendChild(map);
-  const nav = document.createElement("button"); nav.className = "primary"; nav.textContent = c.statut === "colis_recupere" || c.statut === "en_transit" ? "Itinéraire vers le destinataire" : "Itinéraire vers le point de récupération";
-  nav.addEventListener("click", () => naviguerVersEtapeCommande(c.id, c.statut === "colis_recupere" || c.statut === "en_transit" ? "destination" : "recuperation"));
-  card.appendChild(nav);
-  if (c.statut === "livreur_affecte") {
-    const refuse = document.createElement("button"); refuse.textContent = "Refuser cette mission"; refuse.addEventListener("click", () => refuserMissionPartenaire(c.id)); card.appendChild(refuse);
-    const pickup = document.createElement("button"); pickup.className = "primary"; pickup.textContent = "Colis récupéré"; pickup.addEventListener("click", () => marquerColisRecupere(c.id)); card.appendChild(pickup);
-  } else if (c.statut === "colis_recupere" || c.statut === "en_transit") {
-    const delivered = document.createElement("button"); delivered.className = "primary"; delivered.textContent = "Confirmer la livraison"; delivered.addEventListener("click", () => terminerMissionPartenaire(c.id)); card.appendChild(delivered);
-  }
-  zone.appendChild(card);
-
-}
-
-async function naviguerVersEtapeCommande(commandeId, etape) {
-  if (!navigator.geolocation) return alert("La géolocalisation n'est pas disponible sur cet appareil.");
-  const snap = await db.collection("commandes_colis").doc(commandeId).get();
-  if (!snap.exists) return alert("Commande introuvable.");
-  const c = snap.data();
-  const lat = etape === "destination" ? c.latitudeLivraison : c.latitudeRecuperation;
-  const lon = etape === "destination" ? c.longitudeLivraison : c.longitudeRecuperation;
-  if (typeof lat !== "number" || typeof lon !== "number") return alert("Les coordonnées GPS de cette adresse ne sont pas enregistrées. Demandez à l'administrateur de vérifier la commande.");
-  navigator.geolocation.getCurrentPosition(async pos => {
-    const from = [pos.coords.latitude,pos.coords.longitude];
-    const to = [lat,lon];
-    try {
-      const url = "https://router.project-osrm.org/route/v1/driving/" + from[1] + "," + from[0] + ";" + to[1] + "," + to[0] + "?overview=full&geometries=geojson";
-      const response = await fetch(url); const data = await response.json();
-      if (!data.routes || !data.routes.length) throw new Error("Aucun itinéraire trouvé.");
-      const r = data.routes[0];
-      alert("Itinéraire vers " + (etape === "destination" ? "le destinataire" : "le point de récupération") + "\nDistance : " + (r.distance/1000).toFixed(1) + " km\nDurée estimée : " + Math.round(r.duration/60) + " min");
-      const mapZone = document.getElementById("carteMissionPartenaire");
-      if (mapZone && window.L) {
-        if (window.carteRoutePartenaire) window.carteRoutePartenaire.remove();
-        const m = L.map("carteMissionPartenaire").setView(from,13); window.carteRoutePartenaire = m;
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(m);
-        const line = L.geoJSON(r.geometry).addTo(m); L.marker(from).addTo(m); L.marker(to).addTo(m); m.fitBounds(line.getBounds(),{padding:[20,20]});
-      }
-    } catch(e) { alert("Calcul de l'itinéraire impossible : " + e.message); }
-  }, e => alert("Autorisez la localisation GPS pour calculer l'itinéraire : " + e.message), {enableHighAccuracy:true,timeout:15000,maximumAge:0});
-}
-
-async function refuserMissionPartenaire(commandeId) {
-  const user = auth.currentUser; if (!user) return;
-  if (!confirm("Confirmer le refus ? Cette action est possible uniquement avant la récupération du colis.")) return;
-  const ref = db.collection("commandes_colis").doc(commandeId);
-  const lock = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
-  try {
-    await db.runTransaction(async tx => {
-      const snap = await tx.get(ref); const lockSnap = await tx.get(lock);
-      if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut !== "livreur_affecte") throw new Error("Le colis a déjà été récupéré ou la mission n'est plus à votre nom. Contactez l'administrateur.");
-      if (lockSnap.exists && lockSnap.data().commandeId === commandeId) tx.delete(lock);
-      tx.update(ref,{partenaireId:firebase.firestore.FieldValue.delete(),partenaireNom:firebase.firestore.FieldValue.delete(),partenaireType:firebase.firestore.FieldValue.delete(),dateAffectation:firebase.firestore.FieldValue.delete(),statut:"en_attente"});
-    });
-    alert("Mission refusée. La commande est de nouveau disponible.");
-    chargerCommandesPartenaire();
-  } catch(e) { alert("Refus impossible : " + e.message); }
-}
-
-async function marquerColisRecupere(commandeId) {
-  const user = auth.currentUser; if (!user) return;
-  if (!confirm("Confirmer que vous avez physiquement récupéré le colis ? Après cette étape, le refus par le livreur sera bloqué.")) return;
-  try {
-    const ref = db.collection("commandes_colis").doc(commandeId);
-    await db.runTransaction(async tx => {
-      const snap = await tx.get(ref);
-      if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut !== "livreur_affecte") throw new Error("Cette mission ne peut plus être modifiée.");
-      tx.update(ref,{statut:"colis_recupere",dateRecuperation:firebase.firestore.FieldValue.serverTimestamp()});
-    });
-    await chargerCommandesPartenaire();
-    await naviguerVersEtapeCommande(commandeId,"destination");
-  } catch(e) { alert("Mise à jour impossible : " + e.message); }
-}
-
-async function terminerMissionPartenaire(commandeId) {
-  const user = auth.currentUser; if (!user) return;
-  if (!confirm("Confirmer que le colis a été remis au destinataire ?")) return;
-  const ref = db.collection("commandes_colis").doc(commandeId);
-  const lock = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
-  try {
-    await db.runTransaction(async tx => {
-      const snap = await tx.get(ref);
-      if (!snap.exists || snap.data().partenaireId !== user.uid || !["colis_recupere","en_transit"].includes(snap.data().statut)) throw new Error("La livraison ne peut pas être clôturée.");
-      tx.update(ref,{statut:"livre",dateLivraison:firebase.firestore.FieldValue.serverTimestamp()});
-      tx.delete(lock);
-    });
-    alert("Livraison confirmée. Vous pouvez maintenant accepter une nouvelle mission.");
-    chargerCommandesPartenaire();
-  } catch(e) { alert("Clôture impossible : " + e.message); }
-}
-
-// ===== CREATION : DONNEES PUBLIQUES SEPAREES DES INFORMATIONS PRIVEES =====
-async function enregistrerCommande() {
-  const user = auth.currentUser;
-  if (!user) return alert("Veuillez vous connecter à votre compte client.");
-  const lire = id => { const el=document.getElementById(id); return el ? el.value.trim() : ""; };
-  const service = lire("serviceCommande");
-  if (!service) return alert("Veuillez choisir un service.");
-  const telephoneExpediteur=lire("telephoneExpediteurCommande"), telephoneDestinataire=lire("telephoneDestinataireCommande");
-  const telOk = n => { let v=n.replace(/\D/g,""); if(v.startsWith("225")&&v.length===13)v=v.substring(3); return /^(01|05|07)\d{8}$/.test(v); };
-  if (!telOk(telephoneExpediteur)||!telOk(telephoneDestinataire)) return alert("Vérifiez les deux numéros de téléphone.");
-  const adresseRecuperation=lire("adresseRecuperationCommande"), adresseLivraison=lire("adresseLivraisonCommande");
-  if(!adresseRecuperation||!adresseLivraison) return alert("Veuillez renseigner les deux adresses.");
-  let depart="", destination="", operation="", compagnie="", gare="", provenance="", codeColis="";
-  if(service==="compagnie"){
-    operation=lire("operationCommande"); compagnie=lire("compagnieCommande"); gare=lire("gareCommande"); provenance=lire("provenanceCommande"); codeColis=lire("codeColisCommande");
-    if(!compagnie||!gare)return alert("Veuillez renseigner la compagnie et la gare.");
-    if(operation==="recuperation"&&(!provenance||!codeColis))return alert("Le code et la provenance sont obligatoires pour récupérer un colis.");
-    if(operation==="expedition"){depart=adresseRecuperation;destination=compagnie+" - "+gare;}else{depart=compagnie+" - "+gare;destination=adresseLivraison;}
-  } else if(service==="livraison"||service==="livraison_programmee"){
-    depart=lire("departCommande"); destination=lire("destinationCommande");
-    if(!depart||!destination)return alert("Veuillez renseigner le départ et la destination.");
-  } else return alert("Service non reconnu.");
-  const description=lire("descriptionColisCommande");
-  let dateSouhaitee=null;
-  if(service==="livraison_programmee"){
-    const v=lire("dateHeureCommande"); if(!v)return alert("Choisissez la date et l'heure.");
-    const d=new Date(v), delta=d.getTime()-Date.now();
-    if(isNaN(d.getTime())||delta<3600000||delta>86400000)return alert("La livraison doit être programmée entre 1 h et 24 h après la réservation.");
-    dateSouhaitee=firebase.firestore.Timestamp.fromDate(d);
-  }
-  try {
-    const profilDoc=await db.collection("clients").doc(user.uid).get(), profil=profilDoc.exists?profilDoc.data():{};
-    const numeroSuivi="TCI-"+Date.now().toString(36).toUpperCase()+"-"+Math.floor(1000+Math.random()*9000);
-    const publicData={clientId:user.uid,service,depart,destination,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-    const pr=window.positionsCommande?.recuperation, pl=window.positionsCommande?.destination;
-    if(pr){publicData.latitudeRecuperation=pr.latitude;publicData.longitudeRecuperation=pr.longitude;}
-    if(pl){publicData.latitudeLivraison=pl.latitude;publicData.longitudeLivraison=pl.longitude;}
-    if(operation)publicData.operation=operation;
-    if(compagnie)publicData.compagnie=compagnie;
-    if(gare)publicData.gare=gare;
-    if(dateSouhaitee)publicData.dateHeureSouhaitee=dateSouhaitee;
-    const ref=db.collection("commandes_colis").doc();
-    const privateData={clientNom:profil.nom||"Client",clientTelephone:profil.telephone||"",telephoneExpediteur,telephoneDestinataire,adresseRecuperation,adresseLivraison,descriptionColis:description,trackingNumber:numeroSuivi,provenance,codeColis};
-    await db.runTransaction(async tx=>{
-      tx.set(ref,publicData);
-      tx.set(ref.collection("informations_privees").doc("details"),{...privateData,clientId:user.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    });
-    document.getElementById("zoneFormulaireCommande").innerHTML=`<hr><h3>✅ Commande enregistrée !</h3><p><strong>Numéro de suivi :</strong></p><h3>${numeroSuivi}</h3><p><strong>Statut :</strong> En attente</p><p>Votre commande a bien été enregistrée.</p><button type="button" onclick="afficherFormulaireCommande()">Nouvelle commande</button>`;
-    await chargerHistoriqueCommandes();
-  } catch(e) { console.error("Erreur commande :",e); alert("Impossible d'enregistrer la commande : "+e.message); }
-}
-
-async function chargerHistoriqueCommandes() {
-  const zone=document.getElementById("zoneHistoriqueCommandes"), user=auth.currentUser;
-  if(!zone)return;
-  if(!user){zone.innerHTML="<p>Veuillez vous connecter.</p>";return;}
-  zone.innerHTML="<p>Chargement de votre historique...</p>";
-  try{
-    const snap=await db.collection("commandes_colis").where("clientId","==",user.uid).get();
-    if(snap.empty){zone.innerHTML="<p>Aucune commande enregistrée pour le moment.</p>";return;}
-    const docs=snap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
-    zone.innerHTML="<h3>📋 Mes commandes</h3>";
-    for(const doc of docs){
-      const c=doc.data(), priv=await doc.ref.collection("informations_privees").doc("details").get(), d=priv.exists?priv.data():{};
-      const card=document.createElement("div");card.className="stop";
-      const n=document.createElement("strong");n.textContent="Commande : "+(d.trackingNumber||doc.id);
-      const s=document.createElement("p");s.textContent="Statut : "+({en_attente:"En attente",livreur_affecte:"Livreur affecté",colis_recupere:"Colis récupéré",en_transit:"En transit",livre:"Livré",annule:"Annulé"}[c.statut]||c.statut||"Non renseigné");
-      const t=document.createElement("p");t.textContent=(c.depart||"")+" → "+(c.destination||"");
-      card.append(n,s,t);zone.appendChild(card);
-    }
-  }catch(e){console.error(e);zone.innerHTML="<p>Impossible de charger votre historique : "+echapperTexteCompagnie(e.message)+"</p>";}
-}
-
-// Attribution administrative : même verrou de mission que l'acceptation par un partenaire.
-async function affecterCommandePartenaire(commandeId, partenaireId) {
-  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
-  if(!partenaireId)return alert("Choisis un partenaire.");
-  const cRef=db.collection("commandes_colis").doc(commandeId), pRef=db.collection("partenaires").doc(partenaireId), lRef=pRef.collection("verrous").doc("missionActive");
-  try{
-    await db.runTransaction(async tx=>{
-      const [cs,ps,ls]=await Promise.all([tx.get(cRef),tx.get(pRef),tx.get(lRef)]);
-      if(!cs.exists||!ps.exists)throw new Error("Commande ou partenaire introuvable.");
-      const c=cs.data(),p=ps.data();
-      if(c.statut!=="en_attente"||c.partenaireId)throw new Error("Cette commande n'est plus disponible.");
-      if(!partenaireAbonnementValide(p))throw new Error("Partenaire non éligible.");
-      if(p.type!==(c.service==="compagnie"?"representant_gare":"livreur_independant"))throw new Error("Profil incompatible.");
-      if(ls.exists)throw new Error("Ce partenaire a déjà une mission active.");
-      tx.update(cRef,{partenaireId,partenaireNom:p.nom||"",partenaireType:p.type,statut:"livreur_affecte",dateAffectation:firebase.firestore.FieldValue.serverTimestamp(),affectePar:auth.currentUser.uid});
-      tx.set(lRef,{commandeId,statut:"active",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    });
-    alert("Commande attribuée avec verrou de mission.");
-    chargerCommandesAdmin();
-  }catch(e){alert("Attribution impossible : "+e.message);}
-}
-
 </script>
 <button class="primary" onclick="rechercher()">Rechercher un trajet</button>
 <div class="result" id="resultat" aria-live="polite"></div>
@@ -5627,6 +5265,369 @@ const boutonWhatsApp = numeroWhatsApp
   }
 }
 </script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">// ===== ESPACE PARTENAIRE : DISPONIBILITE, FILE D'ATTENTE ET MISSIONS =====
+function partenaireAbonnementValide(p) {
+  const maintenant = new Date();
+  const date = v => v && v.toDate ? v.toDate() : (v ? new Date(v) : null);
+  const essai = date(p.dateFinEssai);
+  const abonnement = date(p.dateExpirationAbonnement);
+  return p.statut === "approuve" && (p.etatCompte || "actif") === "actif" &&
+    ((p.statutAbonnementPartenaire === "Essai" && essai && essai > maintenant) ||
+     (p.statutAbonnementPartenaire === "Actif" && abonnement && abonnement > maintenant));
+}
+
+async function basculerDisponibilitePartenaire() {
+  const user = auth.currentUser;
+  if (!user) return alert("Veuillez vous reconnecter.");
+  try {
+    const ref = db.collection("partenaires").doc(user.uid);
+    const snap = await ref.get();
+    if (!snap.exists || !partenaireAbonnementValide(snap.data())) {
+      return alert("Votre dossier doit être approuvé et votre abonnement actif pour passer en ligne.");
+    }
+    const prochainEtat = snap.data().enLigne !== true;
+    await ref.update({enLigne: prochainEtat, derniereActivite: firebase.firestore.FieldValue.serverTimestamp()});
+    await afficherEspacePartenaire(snap.data() && {...snap.data(), enLigne: prochainEtat}, user.uid);
+  } catch (e) {
+    console.error(e);
+    alert("Impossible de modifier votre disponibilité : " + e.message);
+  }
+}
+
+function afficherEspacePartenaire(dossier, uid) {
+  let zone = document.getElementById("zoneEspacePartenaire");
+  if (!zone) {
+    zone = document.createElement("div");
+    zone.id = "zoneEspacePartenaire";
+    const connexion = document.getElementById("connexionPartenaire");
+    if (connexion) connexion.appendChild(zone); else document.body.appendChild(zone);
+  }
+  const dateFin = dossier.statutAbonnementPartenaire === "Actif" ? dossier.dateExpirationAbonnement : dossier.dateFinEssai;
+  const dateAffichee = dateFin && dateFin.toDate ? dateFin.toDate().toLocaleDateString("fr-FR") : (dateFin ? new Date(dateFin).toLocaleDateString("fr-FR") : "");
+  const eligible = partenaireAbonnementValide(dossier);
+  zone.innerHTML = `
+    <hr><h3>👋 Mon espace partenaire</h3>
+    <p><strong>Nom :</strong> ${echapperTexteCompagnie(dossier.nom || "")}</p>
+    <p><strong>Profil :</strong> ${dossier.type === "livreur_independant" ? "Livreur indépendant" : "Responsable de gare"}</p>
+    <div class="notice"><strong>Abonnement :</strong> ${eligible ? "Actif" : "À renouveler"} ${dateAffichee ? "— échéance : " + dateAffichee : ""}</div>
+    <div class="stop">
+      <strong>Disponibilité</strong>
+      <p id="etatDisponibilitePartenaire">${dossier.enLigne === true ? "🟢 Vous êtes en ligne et pouvez recevoir des commandes." : "⚪ Vous êtes hors ligne."}</p>
+      <button type="button" class="primary" onclick="basculerDisponibilitePartenaire()" ${eligible ? "" : "disabled"}>${dossier.enLigne === true ? "Passer hors ligne" : "Je suis disponible"}</button>
+    </div>
+    <h3>📦 Commandes disponibles</h3>
+    <button type="button" onclick="chargerCommandesPartenaire()">Actualiser</button>
+    <div id="fileCommandesPartenaire"><p>Chargement...</p></div>
+    <h3>🚚 Ma mission en cours</h3>
+    <div id="missionActivePartenaire"><p>Vérification...</p></div>
+    <h3>📋 Mes missions précédentes</h3>
+    <div id="historiquePartenaire"></div>
+    <button type="button" onclick="deconnecterPartenaire()">Se déconnecter</button>`;
+  chargerCommandesPartenaire();
+}
+
+async function chargerCommandesPartenaire() {
+  const user = auth.currentUser;
+  const file = document.getElementById("fileCommandesPartenaire");
+  const mission = document.getElementById("missionActivePartenaire");
+  const historique = document.getElementById("historiquePartenaire");
+  if (!user || !file || !mission) return;
+  file.innerHTML = "<p>Chargement des commandes disponibles...</p>";
+  mission.innerHTML = "<p>Chargement de votre mission...</p>";
+  try {
+    const pSnap = await db.collection("partenaires").doc(user.uid).get();
+    if (!pSnap.exists) throw new Error("Dossier partenaire introuvable.");
+    const p = pSnap.data();
+    if (!partenaireAbonnementValide(p)) throw new Error("Votre compte ou abonnement n'est pas actif.");
+    const lockRef = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
+    const lockSnap = await lockRef.get();
+    let activeOrder = null;
+    if (lockSnap.exists && lockSnap.data().commandeId) {
+      const activeSnap = await db.collection("commandes_colis").doc(lockSnap.data().commandeId).get();
+      if (activeSnap.exists) activeOrder = {id: activeSnap.id, ...activeSnap.data()};
+    }
+    if (activeOrder) {
+      await afficherMissionPartenaire(activeOrder, p, mission);
+    } else {
+      mission.innerHTML = "<p>Aucune mission en cours. Vous pouvez accepter une commande si vous êtes en ligne.</p>";
+    }
+
+    if (p.enLigne !== true) {
+      file.innerHTML = "<p>Vous êtes hors ligne. Passez en ligne pour consulter les nouvelles commandes.</p>";
+    } else if (activeOrder) {
+      file.innerHTML = "<p>Terminez votre mission actuelle avant d'en accepter une autre.</p>";
+    } else {
+      let q = db.collection("commandes_colis").where("statut", "==", "en_attente");
+      q = p.type === "representant_gare"
+        ? q.where("service", "==", "compagnie")
+        : q.where("service", "in", ["livraison", "livraison_programmee"]);
+      const snap = await q.limit(30).get();
+      if (snap.empty) {
+        file.innerHTML = "<p>Aucune nouvelle commande pour le moment.</p>";
+      } else {
+        file.innerHTML = "";
+        snap.forEach(doc => {
+          const c = doc.data();
+          const card = document.createElement("div");
+          card.className = "stop";
+          const h = document.createElement("strong"); h.textContent = "Nouvelle commande";
+          const route = document.createElement("p"); route.textContent = (c.depart || "Départ non précisé") + " → " + (c.destination || "Destination non précisée");
+          const service = document.createElement("p"); service.textContent = "Service : " + (c.service || "Non précisé");
+          const btn = document.createElement("button"); btn.className = "primary"; btn.textContent = "Accepter la commande";
+          btn.addEventListener("click", () => accepterCommandePartenaire(doc.id));
+          card.append(h, route, service, btn); file.appendChild(card);
+        });
+      }
+    }
+
+    if (historique) {
+      const hs = await db.collection("commandes_colis").where("partenaireId", "==", user.uid).get();
+      const done = hs.docs.filter(d => ["livre","annule"].includes(d.data().statut));
+      historique.innerHTML = done.length ? "" : "<p>Aucune mission terminée.</p>";
+      done.forEach(d => {
+        const el = document.createElement("p");
+        el.textContent = (d.data().depart || "") + " → " + (d.data().destination || "") + " — " + (d.data().statut === "livre" ? "Livrée" : "Annulée");
+        historique.appendChild(el);
+      });
+    }
+  } catch (e) {
+    console.error("Espace partenaire :", e);
+    file.innerHTML = "<p>Chargement impossible : " + echapperTexteCompagnie(e.message) + "</p>";
+    mission.innerHTML = "";
+  }
+}
+
+async function accepterCommandePartenaire(commandeId) {
+  const user = auth.currentUser;
+  if (!user) return alert("Veuillez vous reconnecter.");
+  const commandeRef = db.collection("commandes_colis").doc(commandeId);
+  const partenaireRef = db.collection("partenaires").doc(user.uid);
+  const verrouRef = partenaireRef.collection("verrous").doc("missionActive");
+  try {
+    await db.runTransaction(async tx => {
+      const [cSnap, pSnap, lSnap] = await Promise.all([tx.get(commandeRef), tx.get(partenaireRef), tx.get(verrouRef)]);
+      if (!cSnap.exists || !pSnap.exists) throw new Error("Commande ou dossier partenaire introuvable.");
+      const c = cSnap.data(), p = pSnap.data();
+      if (c.statut !== "en_attente" || c.partenaireId) throw new Error("Cette commande vient d'être prise par un autre partenaire.");
+      if (!partenaireAbonnementValide(p) || p.enLigne !== true) throw new Error("Vous devez être approuvé, abonné et en ligne.");
+      if (lSnap.exists) throw new Error("Vous avez déjà une mission en cours.");
+      const typeAttendu = c.service === "compagnie" ? "representant_gare" : "livreur_independant";
+      if (p.type !== typeAttendu) throw new Error("Cette commande ne correspond pas à votre profil.");
+      tx.update(commandeRef, {partenaireId:user.uid, partenaireNom:p.nom || "", partenaireType:p.type, statut:"livreur_affecte", dateAffectation:firebase.firestore.FieldValue.serverTimestamp()});
+      tx.set(verrouRef, {commandeId, statut:"active", createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    });
+    alert("Commande acceptée. Préparez-vous à rejoindre le point de récupération.");
+    await chargerCommandesPartenaire();
+    await naviguerVersEtapeCommande(commandeId, "recuperation");
+  } catch (e) {
+    console.error(e);
+    alert("Impossible d'accepter cette commande : " + e.message);
+    chargerCommandesPartenaire();
+  }
+}
+
+async function afficherMissionPartenaire(c, partenaire, zone) {
+  zone.innerHTML = "";
+  const card = document.createElement("div"); card.className = "stop";
+  const title = document.createElement("strong"); title.textContent = "Mission en cours — " + c.id;
+  const route = document.createElement("p"); route.textContent = (c.depart || "") + " → " + (c.destination || "");
+  const status = document.createElement("p"); status.textContent = "Statut : " + (c.statut || "");
+  card.append(title, route, status);
+  const privateSnap = await db.collection("commandes_colis").doc(c.id).collection("informations_privees").doc("details").get();
+  if (privateSnap.exists) {
+    const d = privateSnap.data();
+    const detail = document.createElement("p");
+    detail.textContent = "Suivi : " + (d.trackingNumber || c.id) + " | Expéditeur : " + (d.telephoneExpediteur || "non renseigné") + " | Destinataire : " + (d.telephoneDestinataire || "non renseigné");
+    card.appendChild(detail);
+  }
+  const map = document.createElement("div"); map.id = "carteMissionPartenaire"; map.style.cssText = "height:280px;width:100%;border-radius:10px;margin:12px 0;";
+  card.appendChild(map);
+  const nav = document.createElement("button"); nav.className = "primary"; nav.textContent = c.statut === "colis_recupere" || c.statut === "en_transit" ? "Itinéraire vers le destinataire" : "Itinéraire vers le point de récupération";
+  nav.addEventListener("click", () => naviguerVersEtapeCommande(c.id, c.statut === "colis_recupere" || c.statut === "en_transit" ? "destination" : "recuperation"));
+  card.appendChild(nav);
+  if (c.statut === "livreur_affecte") {
+    const refuse = document.createElement("button"); refuse.textContent = "Refuser cette mission"; refuse.addEventListener("click", () => refuserMissionPartenaire(c.id)); card.appendChild(refuse);
+    const pickup = document.createElement("button"); pickup.className = "primary"; pickup.textContent = "Colis récupéré"; pickup.addEventListener("click", () => marquerColisRecupere(c.id)); card.appendChild(pickup);
+  } else if (c.statut === "colis_recupere" || c.statut === "en_transit") {
+    const delivered = document.createElement("button"); delivered.className = "primary"; delivered.textContent = "Confirmer la livraison"; delivered.addEventListener("click", () => terminerMissionPartenaire(c.id)); card.appendChild(delivered);
+  }
+  zone.appendChild(card);
+
+}
+
+async function naviguerVersEtapeCommande(commandeId, etape) {
+  if (!navigator.geolocation) return alert("La géolocalisation n'est pas disponible sur cet appareil.");
+  const snap = await db.collection("commandes_colis").doc(commandeId).get();
+  if (!snap.exists) return alert("Commande introuvable.");
+  const c = snap.data();
+  const lat = etape === "destination" ? c.latitudeLivraison : c.latitudeRecuperation;
+  const lon = etape === "destination" ? c.longitudeLivraison : c.longitudeRecuperation;
+  if (typeof lat !== "number" || typeof lon !== "number") return alert("Les coordonnées GPS de cette adresse ne sont pas enregistrées. Demandez à l'administrateur de vérifier la commande.");
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const from = [pos.coords.latitude,pos.coords.longitude];
+    const to = [lat,lon];
+    try {
+      const url = "https://router.project-osrm.org/route/v1/driving/" + from[1] + "," + from[0] + ";" + to[1] + "," + to[0] + "?overview=full&geometries=geojson";
+      const response = await fetch(url); const data = await response.json();
+      if (!data.routes || !data.routes.length) throw new Error("Aucun itinéraire trouvé.");
+      const r = data.routes[0];
+      alert("Itinéraire vers " + (etape === "destination" ? "le destinataire" : "le point de récupération") + "\nDistance : " + (r.distance/1000).toFixed(1) + " km\nDurée estimée : " + Math.round(r.duration/60) + " min");
+      const mapZone = document.getElementById("carteMissionPartenaire");
+      if (mapZone && window.L) {
+        if (window.carteRoutePartenaire) window.carteRoutePartenaire.remove();
+        const m = L.map("carteMissionPartenaire").setView(from,13); window.carteRoutePartenaire = m;
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(m);
+        const line = L.geoJSON(r.geometry).addTo(m); L.marker(from).addTo(m); L.marker(to).addTo(m); m.fitBounds(line.getBounds(),{padding:[20,20]});
+      }
+    } catch(e) { alert("Calcul de l'itinéraire impossible : " + e.message); }
+  }, e => alert("Autorisez la localisation GPS pour calculer l'itinéraire : " + e.message), {enableHighAccuracy:true,timeout:15000,maximumAge:0});
+}
+
+async function refuserMissionPartenaire(commandeId) {
+  const user = auth.currentUser; if (!user) return;
+  if (!confirm("Confirmer le refus ? Cette action est possible uniquement avant la récupération du colis.")) return;
+  const ref = db.collection("commandes_colis").doc(commandeId);
+  const lock = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
+  try {
+    await db.runTransaction(async tx => {
+      const snap = await tx.get(ref); const lockSnap = await tx.get(lock);
+      if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut !== "livreur_affecte") throw new Error("Le colis a déjà été récupéré ou la mission n'est plus à votre nom. Contactez l'administrateur.");
+      if (lockSnap.exists && lockSnap.data().commandeId === commandeId) tx.delete(lock);
+      tx.update(ref,{partenaireId:firebase.firestore.FieldValue.delete(),partenaireNom:firebase.firestore.FieldValue.delete(),partenaireType:firebase.firestore.FieldValue.delete(),dateAffectation:firebase.firestore.FieldValue.delete(),statut:"en_attente"});
+    });
+    alert("Mission refusée. La commande est de nouveau disponible.");
+    chargerCommandesPartenaire();
+  } catch(e) { alert("Refus impossible : " + e.message); }
+}
+
+async function marquerColisRecupere(commandeId) {
+  const user = auth.currentUser; if (!user) return;
+  if (!confirm("Confirmer que vous avez physiquement récupéré le colis ? Après cette étape, le refus par le livreur sera bloqué.")) return;
+  try {
+    const ref = db.collection("commandes_colis").doc(commandeId);
+    await db.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut !== "livreur_affecte") throw new Error("Cette mission ne peut plus être modifiée.");
+      tx.update(ref,{statut:"colis_recupere",dateRecuperation:firebase.firestore.FieldValue.serverTimestamp()});
+    });
+    await chargerCommandesPartenaire();
+    await naviguerVersEtapeCommande(commandeId,"destination");
+  } catch(e) { alert("Mise à jour impossible : " + e.message); }
+}
+
+async function terminerMissionPartenaire(commandeId) {
+  const user = auth.currentUser; if (!user) return;
+  if (!confirm("Confirmer que le colis a été remis au destinataire ?")) return;
+  const ref = db.collection("commandes_colis").doc(commandeId);
+  const lock = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
+  try {
+    await db.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists || snap.data().partenaireId !== user.uid || !["colis_recupere","en_transit"].includes(snap.data().statut)) throw new Error("La livraison ne peut pas être clôturée.");
+      tx.update(ref,{statut:"livre",dateLivraison:firebase.firestore.FieldValue.serverTimestamp()});
+      tx.delete(lock);
+    });
+    alert("Livraison confirmée. Vous pouvez maintenant accepter une nouvelle mission.");
+    chargerCommandesPartenaire();
+  } catch(e) { alert("Clôture impossible : " + e.message); }
+}
+
+// ===== CREATION : DONNEES PUBLIQUES SEPAREES DES INFORMATIONS PRIVEES =====
+async function enregistrerCommande() {
+  const user = auth.currentUser;
+  if (!user) return alert("Veuillez vous connecter à votre compte client.");
+  const lire = id => { const el=document.getElementById(id); return el ? el.value.trim() : ""; };
+  const service = lire("serviceCommande");
+  if (!service) return alert("Veuillez choisir un service.");
+  const telephoneExpediteur=lire("telephoneExpediteurCommande"), telephoneDestinataire=lire("telephoneDestinataireCommande");
+  const telOk = n => { let v=n.replace(/\D/g,""); if(v.startsWith("225")&&v.length===13)v=v.substring(3); return /^(01|05|07)\d{8}$/.test(v); };
+  if (!telOk(telephoneExpediteur)||!telOk(telephoneDestinataire)) return alert("Vérifiez les deux numéros de téléphone.");
+  const adresseRecuperation=lire("adresseRecuperationCommande"), adresseLivraison=lire("adresseLivraisonCommande");
+  if(!adresseRecuperation||!adresseLivraison) return alert("Veuillez renseigner les deux adresses.");
+  let depart="", destination="", operation="", compagnie="", gare="", provenance="", codeColis="";
+  if(service==="compagnie"){
+    operation=lire("operationCommande"); compagnie=lire("compagnieCommande"); gare=lire("gareCommande"); provenance=lire("provenanceCommande"); codeColis=lire("codeColisCommande");
+    if(!compagnie||!gare)return alert("Veuillez renseigner la compagnie et la gare.");
+    if(operation==="recuperation"&&(!provenance||!codeColis))return alert("Le code et la provenance sont obligatoires pour récupérer un colis.");
+    if(operation==="expedition"){depart=adresseRecuperation;destination=compagnie+" - "+gare;}else{depart=compagnie+" - "+gare;destination=adresseLivraison;}
+  } else if(service==="livraison"||service==="livraison_programmee"){
+    depart=lire("departCommande"); destination=lire("destinationCommande");
+    if(!depart||!destination)return alert("Veuillez renseigner le départ et la destination.");
+  } else return alert("Service non reconnu.");
+  const description=lire("descriptionColisCommande");
+  let dateSouhaitee=null;
+  if(service==="livraison_programmee"){
+    const v=lire("dateHeureCommande"); if(!v)return alert("Choisissez la date et l'heure.");
+    const d=new Date(v), delta=d.getTime()-Date.now();
+    if(isNaN(d.getTime())||delta<3600000||delta>86400000)return alert("La livraison doit être programmée entre 1 h et 24 h après la réservation.");
+    dateSouhaitee=firebase.firestore.Timestamp.fromDate(d);
+  }
+  try {
+    const profilDoc=await db.collection("clients").doc(user.uid).get(), profil=profilDoc.exists?profilDoc.data():{};
+    const numeroSuivi="TCI-"+Date.now().toString(36).toUpperCase()+"-"+Math.floor(1000+Math.random()*9000);
+    const publicData={clientId:user.uid,service,depart,destination,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+    const pr=window.positionsCommande?.recuperation, pl=window.positionsCommande?.destination;
+    if(pr){publicData.latitudeRecuperation=pr.latitude;publicData.longitudeRecuperation=pr.longitude;}
+    if(pl){publicData.latitudeLivraison=pl.latitude;publicData.longitudeLivraison=pl.longitude;}
+    if(operation)publicData.operation=operation;
+    if(compagnie)publicData.compagnie=compagnie;
+    if(gare)publicData.gare=gare;
+    if(dateSouhaitee)publicData.dateHeureSouhaitee=dateSouhaitee;
+    const ref=db.collection("commandes_colis").doc();
+    const privateData={clientNom:profil.nom||"Client",clientTelephone:profil.telephone||"",telephoneExpediteur,telephoneDestinataire,adresseRecuperation,adresseLivraison,descriptionColis:description,trackingNumber:numeroSuivi,provenance,codeColis};
+    await db.runTransaction(async tx=>{
+      tx.set(ref,publicData);
+      tx.set(ref.collection("informations_privees").doc("details"),{...privateData,clientId:user.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    });
+    document.getElementById("zoneFormulaireCommande").innerHTML=`<hr><h3>✅ Commande enregistrée !</h3><p><strong>Numéro de suivi :</strong></p><h3>${numeroSuivi}</h3><p><strong>Statut :</strong> En attente</p><p>Votre commande a bien été enregistrée.</p><button type="button" onclick="afficherFormulaireCommande()">Nouvelle commande</button>`;
+    await chargerHistoriqueCommandes();
+  } catch(e) { console.error("Erreur commande :",e); alert("Impossible d'enregistrer la commande : "+e.message); }
+}
+
+async function chargerHistoriqueCommandes() {
+  const zone=document.getElementById("zoneHistoriqueCommandes"), user=auth.currentUser;
+  if(!zone)return;
+  if(!user){zone.innerHTML="<p>Veuillez vous connecter.</p>";return;}
+  zone.innerHTML="<p>Chargement de votre historique...</p>";
+  try{
+    const snap=await db.collection("commandes_colis").where("clientId","==",user.uid).get();
+    if(snap.empty){zone.innerHTML="<p>Aucune commande enregistrée pour le moment.</p>";return;}
+    const docs=snap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
+    zone.innerHTML="<h3>📋 Mes commandes</h3>";
+    for(const doc of docs){
+      const c=doc.data(), priv=await doc.ref.collection("informations_privees").doc("details").get(), d=priv.exists?priv.data():{};
+      const card=document.createElement("div");card.className="stop";
+      const n=document.createElement("strong");n.textContent="Commande : "+(d.trackingNumber||doc.id);
+      const s=document.createElement("p");s.textContent="Statut : "+({en_attente:"En attente",livreur_affecte:"Livreur affecté",colis_recupere:"Colis récupéré",en_transit:"En transit",livre:"Livré",annule:"Annulé"}[c.statut]||c.statut||"Non renseigné");
+      const t=document.createElement("p");t.textContent=(c.depart||"")+" → "+(c.destination||"");
+      card.append(n,s,t);zone.appendChild(card);
+    }
+  }catch(e){console.error(e);zone.innerHTML="<p>Impossible de charger votre historique : "+echapperTexteCompagnie(e.message)+"</p>";}
+}
+
+// Attribution administrative : même verrou de mission que l'acceptation par un partenaire.
+async function affecterCommandePartenaire(commandeId, partenaireId) {
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
+  if(!partenaireId)return alert("Choisis un partenaire.");
+  const cRef=db.collection("commandes_colis").doc(commandeId), pRef=db.collection("partenaires").doc(partenaireId), lRef=pRef.collection("verrous").doc("missionActive");
+  try{
+    await db.runTransaction(async tx=>{
+      const [cs,ps,ls]=await Promise.all([tx.get(cRef),tx.get(pRef),tx.get(lRef)]);
+      if(!cs.exists||!ps.exists)throw new Error("Commande ou partenaire introuvable.");
+      const c=cs.data(),p=ps.data();
+      if(c.statut!=="en_attente"||c.partenaireId)throw new Error("Cette commande n'est plus disponible.");
+      if(!partenaireAbonnementValide(p))throw new Error("Partenaire non éligible.");
+      if(p.type!==(c.service==="compagnie"?"representant_gare":"livreur_independant"))throw new Error("Profil incompatible.");
+      if(ls.exists)throw new Error("Ce partenaire a déjà une mission active.");
+      tx.update(cRef,{partenaireId,partenaireNom:p.nom||"",partenaireType:p.type,statut:"livreur_affecte",dateAffectation:firebase.firestore.FieldValue.serverTimestamp(),affectePar:auth.currentUser.uid});
+      tx.set(lRef,{commandeId,statut:"active",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    });
+    alert("Commande attribuée avec verrou de mission.");
+    chargerCommandesAdmin();
+  }catch(e){alert("Attribution impossible : "+e.message);}
+}
+
+
+</script>
 </body>
 </html>
