@@ -238,7 +238,7 @@ service cloud.firestore {
           && request.resource.data.statut == "livreur_affecte"
           && request.resource.data.dateAffectation == request.time
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation", "statut"])
+            .hasOnly(["partenaireId", "partenaireNom", "partenaireTelephone", "partenaireType", "dateAffectation", "statut"])
           && existsAfter(verrouPath(request.auth.uid))
           && getAfter(verrouPath(request.auth.uid)).data.commandeId == commandeId
           && partenaireEnLignePour(resource.data['service'])
@@ -314,6 +314,22 @@ service cloud.firestore {
               && !contientChampsPrives(resource.data))
           )
         );
+
+        || (
+          estConnecte()
+          && resource.data.partenaireId == request.auth.uid
+          && resource.data.statut in ["livreur_affecte", "colis_recupere", "en_transit", "arrive_destination"]
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["positionLivreur", "positionLivreurMaj"])
+          && request.resource.data.positionLivreur is map
+          && request.resource.data.positionLivreur.keys().hasAll(["latitude", "longitude"])
+          && request.resource.data.positionLivreur.latitude is number
+          && request.resource.data.positionLivreur.latitude >= -90
+          && request.resource.data.positionLivreur.latitude <= 90
+          && request.resource.data.positionLivreur.longitude is number
+          && request.resource.data.positionLivreur.longitude >= -180
+          && request.resource.data.positionLivreur.longitude <= 180
+          && request.resource.data.positionLivreurMaj == request.time
+        )
 
       allow delete: if estAdmin();
 
