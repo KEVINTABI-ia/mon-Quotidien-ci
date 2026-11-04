@@ -897,6 +897,7 @@ footer { color: #718076; }
   </button>
 
   <p id="statutAdmin" class="notice"></p>
+<div id="gestionAbonnementsRamassage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🚌 Validation des compagnies de ramassage</h3><p class="notice">Vérifie les dossiers et les paiements avant d’approuver une compagnie ou d’activer son forfait mensuel.</p><div id="listeCompagniesRamassageAdmin">Chargement...</div></div>
 <div id="gestionGares" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
   <h3>📍 Gestion des gares et terminus</h3>
 
@@ -1241,6 +1242,7 @@ function connexionAdmin() {
       }
 
       statut.textContent = "Connexion administrateur réussie.";
+      chargerCompagniesRamassageAdmin();
     })
     .catch((erreur) => {
       statut.textContent = "Connexion impossible : " + erreur.message;
@@ -3737,7 +3739,7 @@ async function publierOffreRamassage(){
   if(!commune||!points||!destination||!jours||!heure||!Number.isInteger(places)||places<1||places>100)return alert("Vérifiez les informations du trajet et les places disponibles.");
   const profil=await db.collection("comptes_ramassage").doc(user.uid).get();if(!profil.exists)return alert("Profil compagnie introuvable.");
   try{
-    await db.collection("offres_ramassage").add({compagnieId:user.uid,compagnieNom:profil.data().nom,telephone:profil.data().telephone,communeDepart:commune,points:points,destination:destination,jours:jours,heure:heure,placesDisponibles:places,tarif:tarif?Number(tarif):null,statut:"publiee",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    await db.collection("offres_ramassage").add({compagnieId:user.uid,compagnieNom:profil.data().nom,communeDepart:commune,points:points,destination:destination,jours:jours,heure:heure,placesDisponibles:places,tarif:tarif?Number(tarif):null,statut:"publiee",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     alert("Votre trajet est publié.");
     await chargerOffresRamassage();
   }catch(e){alert("Publication impossible : "+e.message);}
@@ -3754,8 +3756,7 @@ async function chargerOffresRamassage(){
       const title=document.createElement("strong");title.textContent=d.compagnieNom||"Compagnie de cars";
       const detail=document.createElement("p");detail.textContent=(d.communeDepart||"")+" — "+(d.points||"")+" → "+(d.destination||"");
       const meta=document.createElement("p");meta.className="ramassage-muted";meta.textContent=(d.jours||"")+" · Départ "+(d.heure||"")+" · "+(d.placesDisponibles||0)+" place(s) · "+(d.tarif?Number(d.tarif).toLocaleString("fr-FR")+" FCFA":"Tarif à confirmer");
-      const contact=document.createElement("p");contact.className="ramassage-muted";contact.textContent="Contact : "+(d.telephone||"non renseigné");
-      item.append(title,detail,meta,contact);zone.appendChild(item);
+      item.append(title,detail,meta);zone.appendChild(item);
     });
   }catch(e){zone.innerHTML="<p class='notice'>Impossible de charger les offres : "+echapperTexteCompagnie(e.message)+"</p>";}
 }
@@ -3775,6 +3776,39 @@ async function chargerDemandesRamassage(){
     });
   }catch(e){zone.innerHTML="<p class='notice'>Accès aux demandes indisponible : "+echapperTexteCompagnie(e.message)+"</p>";}
 }
+
+async function chargerCompagniesRamassageAdmin(){
+  const zone=document.getElementById("listeCompagniesRamassageAdmin");
+  const panneau=document.getElementById("gestionAbonnementsRamassage");
+  if(!zone||!panneau||!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;
+  panneau.style.display="block";zone.textContent="Chargement des dossiers...";
+  try{
+    const snap=await db.collection("comptes_ramassage").where("role","==","compagnie").get();
+    if(snap.empty){zone.innerHTML="<p class='notice'>Aucune compagnie inscrite pour le moment.</p>";return;}
+    zone.innerHTML="";
+    snap.forEach(doc=>{
+      const d=doc.data(),card=document.createElement("div");card.className="ramassage-list-item";
+      const title=document.createElement("strong");title.textContent=d.nom||"Compagnie sans nom";
+      const detail=document.createElement("p");detail.textContent=(d.email||"")+" · "+(d.telephone||"")+" · Dossier : "+(d.statut||"inconnu")+" · Abonnement : "+(d.abonnement||"inactif");
+      const approve=document.createElement("button");approve.type="button";approve.textContent="Approuver le dossier";approve.onclick=()=>modifierStatutCompagnieRamassage(doc.id,"approuve");
+      const activate=document.createElement("button");activate.type="button";activate.textContent="Activer 1 mois (après vérification du paiement)";activate.style.marginTop="8px";activate.onclick=()=>activerAbonnementCompagnieRamassage(doc.id);
+      card.append(title,detail,approve,activate);zone.appendChild(card);
+    });
+  }catch(e){zone.textContent="Impossible de charger les compagnies : "+e.message;}
+}
+async function modifierStatutCompagnieRamassage(uid,statut){
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
+  try{await db.collection("comptes_ramassage").doc(uid).update({statut:statut});alert("Statut du dossier mis à jour.");await chargerCompagniesRamassageAdmin();}
+  catch(e){alert("Modification impossible : "+e.message);}
+}
+async function activerAbonnementCompagnieRamassage(uid){
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
+  if(!confirm("Confirme-tu que le paiement mensuel de cette compagnie a bien été reçu ?"))return;
+  const expiration=new Date(Date.now()+30*24*60*60*1000);
+  try{await db.collection("comptes_ramassage").doc(uid).update({statut:"approuve",abonnement:"actif",dateExpirationAbonnement:firebase.firestore.Timestamp.fromDate(expiration)});alert("Abonnement activé pour 30 jours.");await chargerCompagniesRamassageAdmin();}
+  catch(e){alert("Activation impossible : "+e.message);}
+}
+
 async function deconnecterRamassage(){
   await auth.signOut();ramassageRoleActif=null;
   ["ramassageUsagerAuth","ramassageCompagnieAuth"].forEach(id=>document.getElementById(id).style.display="block");
