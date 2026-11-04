@@ -3164,6 +3164,78 @@ function afficherEspacePartenaire(dossier, uid) {
   chargerCommandesPartenaire();
 }
 
+let ecouteFileCommandesPartenaire = null;
+let idsCommandesDejaVuesPartenaire = new Set();
+let premierChargementFilePartenaire = true;
+let contexteAudioCommandes = null;
+
+function activerSonCommandesPartenaire() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!contexteAudioCommandes) contexteAudioCommandes = new AudioCtx();
+    if (contexteAudioCommandes.state === "suspended") contexteAudioCommandes.resume();
+  } catch (e) { console.warn("Audio commandes indisponible :", e); }
+}
+
+function sonnerNouvelleCommandePartenaire() {
+  try {
+    if (!contexteAudioCommandes || contexteAudioCommandes.state !== "running") return;
+    const ctx = contexteAudioCommandes;
+    [0, 0.22].forEach((decalage, index) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = "sine"; osc.frequency.value = index ? 1046 : 880;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + decalage);
+      gain.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + decalage + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + decalage + 0.18);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + decalage); osc.stop(ctx.currentTime + decalage + 0.2);
+    });
+  } catch (e) { console.warn("Sonnerie impossible :", e); }
+}
+
+function installerStyleAlerteCommandes() {
+  if (document.getElementById("styleAlerteCommandesPartenaire")) return;
+  const style = document.createElement("style");
+  style.id = "styleAlerteCommandesPartenaire";
+  style.textContent = "@keyframes clignotementCommandeRapide{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(1.025)}}@keyframes clignotementCommandeLent{0%,100%{opacity:1}50%{opacity:.68}}.bouton-commande-clignotant{animation:clignotementCommandeRapide .65s infinite}.bouton-commande-clignotant.lent{animation:clignotementCommandeLent 2.2s infinite}";
+  document.head.appendChild(style);
+}
+
+function ecouterNouvellesCommandesPartenaire(uid, partenaire, missionActive) {
+  const file = document.getElementById("fileCommandesPartenaire");
+  if (!file) return;
+  if (ecouteFileCommandesPartenaire) { ecouteFileCommandesPartenaire(); ecouteFileCommandesPartenaire = null; }
+  if (partenaire.enLigne !== true) { file.innerHTML = "<p>Vous êtes hors ligne. Passez en ligne pour recevoir les nouvelles commandes.</p>"; return; }
+  if (missionActive) { file.innerHTML = "<p>Terminez votre mission actuelle avant d'en accepter une autre.</p>"; return; }
+  let requete = db.collection("commandes_colis").where("publicVersion", "==", true).where("statut", "==", "en_attente");
+  requete = partenaire.type === "representant_gare"
+    ? requete.where("service", "==", "compagnie")
+    : requete.where("service", "in", ["livraison", "livraison_programmee"]);
+  installerStyleAlerteCommandes();
+  ecouteFileCommandesPartenaire = requete.limit(30).onSnapshot(snapshot => {
+    const docs = snapshot.docs;
+    if (!premierChargementFilePartenaire && docs.some(doc => !idsCommandesDejaVuesPartenaire.has(doc.id))) sonnerNouvelleCommandePartenaire();
+    idsCommandesDejaVuesPartenaire = new Set(docs.map(doc => doc.id));
+    premierChargementFilePartenaire = false;
+    if (!docs.length) { file.innerHTML = "<p>Aucune nouvelle commande pour le moment. Nous surveillons les arrivées.</p>"; return; }
+    file.innerHTML = "";
+    docs.forEach(doc => {
+      const c = doc.data(), card = document.createElement("div"); card.className = "stop";
+      const h = document.createElement("strong"); h.textContent = "🔔 Nouvelle commande";
+      const route = document.createElement("p"); route.textContent = (c.depart || "Départ non précisé") + " → " + (c.destination || "Destination non précisée");
+      const service = document.createElement("p"); service.textContent = "Service : " + (c.service || "Non précisé");
+      const btn = document.createElement("button"); btn.type = "button"; btn.className = "primary bouton-commande-clignotant"; btn.textContent = "Accepter la commande";
+      btn.addEventListener("click", () => accepterCommandePartenaire(doc.id));
+      card.append(h, route, service, btn); file.appendChild(card);
+      setTimeout(() => { if (btn.isConnected) btn.classList.add("lent"); }, 15000);
+    });
+  }, erreur => {
+    console.error("Écoute des commandes :", erreur);
+    file.innerHTML = "<p>Surveillance des commandes interrompue : " + echapperTexteCompagnie(erreur.message || "erreur") + "</p>";
+  });
+}
+
 async function chargerCommandesPartenaire() {
   const zone = document.getElementById("listeCommandesPartenaire");
   const user = auth.currentUser;
@@ -3243,6 +3315,7 @@ async function chargerCommandesPartenaire() {
 }
 
 async function deconnecterPartenaire() {
+  if (ecouteFileCommandesPartenaire) { ecouteFileCommandesPartenaire(); ecouteFileCommandesPartenaire = null; }
   await auth.signOut();
   const zone = document.getElementById("zoneEspacePartenaire");
   if (zone) zone.innerHTML = "";
@@ -6413,6 +6486,7 @@ function partenaireAbonnementValide(p) {
 }
 
 async function basculerDisponibilitePartenaire() {
+  activerSonCommandesPartenaire();
   const user = auth.currentUser;
   if (!user) return alert("Veuillez vous reconnecter.");
   try {
@@ -6488,33 +6562,7 @@ async function chargerCommandesPartenaire() {
       mission.innerHTML = "<p>Aucune mission en cours. Vous pouvez accepter une commande si vous êtes en ligne.</p>";
     }
 
-    if (p.enLigne !== true) {
-      file.innerHTML = "<p>Vous êtes hors ligne. Passez en ligne pour consulter les nouvelles commandes.</p>";
-    } else if (activeOrder) {
-      file.innerHTML = "<p>Terminez votre mission actuelle avant d'en accepter une autre.</p>";
-    } else {
-      let q = db.collection("commandes_colis").where("publicVersion", "==", true).where("statut", "==", "en_attente");
-      q = p.type === "representant_gare"
-        ? q.where("service", "==", "compagnie")
-        : q.where("service", "in", ["livraison", "livraison_programmee"]);
-      const snap = await q.limit(30).get();
-      if (snap.empty) {
-        file.innerHTML = "<p>Aucune nouvelle commande pour le moment.</p>";
-      } else {
-        file.innerHTML = "";
-        snap.forEach(doc => {
-          const c = doc.data();
-          const card = document.createElement("div");
-          card.className = "stop";
-          const h = document.createElement("strong"); h.textContent = "Nouvelle commande";
-          const route = document.createElement("p"); route.textContent = (c.depart || "Départ non précisé") + " → " + (c.destination || "Destination non précisée");
-          const service = document.createElement("p"); service.textContent = "Service : " + (c.service || "Non précisé");
-          const btn = document.createElement("button"); btn.className = "primary"; btn.textContent = "Accepter la commande";
-          btn.addEventListener("click", () => accepterCommandePartenaire(doc.id));
-          card.append(h, route, service, btn); file.appendChild(card);
-        });
-      }
-    }
+    ecouterNouvellesCommandesPartenaire(user.uid, p, activeOrder);
 
     if (historique) {
       const hs = await db.collection("commandes_colis").where("partenaireId", "==", user.uid).get();
