@@ -1334,7 +1334,7 @@ async function chargerDemandesPublicitesAdmin() {
       const actions = statut === "en_attente"
         ? '<button type="button" onclick="changerStatutDemandePublicite(&quot;' + doc.id + '&quot;,&quot;paiement_confirme&quot;)">Confirmer le paiement</button><button type="button" onclick="changerStatutDemandePublicite(&quot;' + doc.id + '&quot;,&quot;refusee&quot;)">Refuser</button>'
         : statut === "paiement_confirme"
-          ? '<label>Visuel reçu sur WhatsApp (image ou vidéo MP4/WebM, 25 Mo maximum)</label><input type="file" id="mediaPublicite_' + doc.id + '" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"><button type="button" class="primary" onclick="publierDemandePublicite(&quot;' + doc.id + '&quot;)">Publier cette publicité</button>'
+          ? '<label>Visuel reçu sur WhatsApp (image ou vidéo MP4/WebM/MOV, 25 Mo maximum)</label><input type="file" id="mediaPublicite_' + doc.id + '" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"><button type="button" class="primary" onclick="publierDemandePublicite(&quot;' + doc.id + '&quot;)">Publier cette publicité</button>'
           : '<span class="notice">Demande traitée : ' + echapperTextePublicite(statut) + '</span>';
       return '<article class="card" style="margin:12px 0;padding:14px;">'
         + '<strong>' + echapperTextePublicite(d.activite) + '</strong>'
@@ -1378,9 +1378,9 @@ async function publierDemandePublicite(id) {
     alert("Choisis d’abord la photo ou la vidéo reçue sur WhatsApp.");
     return;
   }
-  const types = ["image/jpeg","image/png","image/webp","video/mp4","video/webm"];
+  const types = ["image/jpeg","image/png","image/webp","video/mp4","video/webm","video/quicktime"];
   if (!types.includes(fichier.type) || fichier.size > 25 * 1024 * 1024) {
-    alert("Format non accepté ou fichier supérieur à 25 Mo. Utilise JPG, PNG, WebP, MP4 ou WebM.");
+    alert("Format non accepté ou fichier supérieur à 25 Mo. Utilise JPG, PNG, WebP, MP4, WebM ou MOV.");
     return;
   }
   try {
