@@ -336,6 +336,74 @@ service cloud.firestore {
       }
     }
 
+
+    // Service de cars de ramassage : profils, offres publiques et demandes privées.
+    function compagnieRamassageActive(uid) {
+      return exists(/databases/$(database)/documents/comptes_ramassage/$(uid))
+        && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.role == "compagnie"
+        && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.statut == "approuve"
+        && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.abonnement == "actif";
+    }
+
+    match /comptes_ramassage/{uid} {
+      allow create: if estConnecte()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.keys().hasAll(["uid","role","nom","telephone","email","statut","abonnement","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","role","nom","telephone","email","statut","abonnement","createdAt"])
+        && (request.resource.data.role == "usager"
+          ? request.resource.data.statut == "actif" && request.resource.data.abonnement == "non_applicable"
+          : request.resource.data.role == "compagnie"
+            && request.resource.data.statut == "en_attente"
+            && request.resource.data.abonnement == "inactif")
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
+      allow update, delete: if estAdmin();
+    }
+
+    match /offres_ramassage/{offreId} {
+      allow read: if resource.data.statut == "publiee";
+      allow create: if estConnecte()
+        && request.resource.data.compagnieId == request.auth.uid
+        && compagnieRamassageActive(request.auth.uid)
+        && request.resource.data.keys().hasAll([
+          "compagnieId","compagnieNom","communeDepart","points","destination",
+          "jours","heure","placesDisponibles","tarif","statut","createdAt"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "compagnieId","compagnieNom","communeDepart","points","destination",
+          "jours","heure","placesDisponibles","tarif","statut","createdAt"
+        ])
+        && request.resource.data.statut == "publiee"
+        && request.resource.data.placesDisponibles is int
+        && request.resource.data.placesDisponibles > 0
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if estAdmin();
+    }
+
+    match /demandes_ramassage/{demandeId} {
+      allow create: if estConnecte()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasAll([
+          "userId","communeDepart","pointDepart","destination","jours",
+          "heure","places","statut","createdAt"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "userId","communeDepart","pointDepart","destination","jours",
+          "heure","places","statut","createdAt"
+        ])
+        && request.resource.data.statut == "ouverte"
+        && request.resource.data.places is int
+        && request.resource.data.places > 0
+        && request.resource.data.places <= 10
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin()
+        || (estConnecte() && resource.data.userId == request.auth.uid)
+        || (estConnecte() && compagnieRamassageActive(request.auth.uid));
+      allow update, delete: if estAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
