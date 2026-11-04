@@ -286,6 +286,10 @@ service cloud.firestore {
           && get(verrouPath(request.auth.uid)).data.commandeId == commandeId
           && get(verrouPath(request.auth.uid)).data.statut == "active"
           && exists(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix)
+          && (
+            get(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details).data.get("operation", null) != "expedition"
+            || existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/expedition)
+          )
         )
         // Migration administrative contrôlée des anciennes commandes vers le document privé.
         || (
