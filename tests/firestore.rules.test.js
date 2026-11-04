@@ -256,4 +256,90 @@ describe("Mon Transport CI — règles Firestore", function () {
     await assertFails(getDoc(doc(db, "commandes_colis", ORDER_ID)));
   });
 
+
+  it("autorise l'acceptation atomique d'une commande et la création du verrou", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        depart: "Yopougon", destination: "Adjamé"
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { doc, writeBatch, serverTimestamp } = require("firebase/firestore");
+    const batch = writeBatch(db);
+    batch.update(doc(db, "commandes_colis", ORDER_ID), {
+      partenaireId: PARTNER_UID, partenaireNom: "Partenaire test",
+      partenaireType: "livreur_independant", statut: "livreur_affecte",
+      dateAffectation: serverTimestamp()
+    });
+    batch.set(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive"), {
+      commandeId: ORDER_ID, statut: "active", createdAt: serverTimestamp()
+    });
+    await assertSucceeds(batch.commit());
+  });
+
+  it("autorise l'administrateur à attribuer une commande avec le verrou correspondant", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        depart: "Yopougon", destination: "Adjamé"
+      });
+    });
+    const db = testEnv.authenticatedContext(ADMIN_UID).firestore();
+    const { doc, writeBatch, serverTimestamp } = require("firebase/firestore");
+    const batch = writeBatch(db);
+    batch.update(doc(db, "commandes_colis", ORDER_ID), {
+      partenaireId: PARTNER_UID, partenaireNom: "Partenaire test",
+      partenaireType: "livreur_independant", statut: "livreur_affecte",
+      dateAffectation: serverTimestamp(), affectePar: ADMIN_UID
+    });
+    batch.set(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive"), {
+      commandeId: ORDER_ID, statut: "active", createdAt: serverTimestamp()
+    });
+    await assertSucceeds(batch.commit());
+  });
+
+  it("autorise le refus avant récupération et libère le verrou dans la même opération", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await db.doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, partenaireId: PARTNER_UID,
+        partenaireNom: "Partenaire test", partenaireType: "livreur_independant",
+        service: "livraison", statut: "livreur_affecte"
+      });
+      await db.doc(`partenaires/${PARTNER_UID}/verrous/missionActive`).set({
+        commandeId: ORDER_ID, statut: "active", createdAt: Timestamp.now()
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { doc, writeBatch, deleteField } = require("firebase/firestore");
+    const batch = writeBatch(db);
+    batch.update(doc(db, "commandes_colis", ORDER_ID), {
+      partenaireId: deleteField(), partenaireNom: deleteField(),
+      partenaireType: deleteField(), dateAffectation: deleteField(),
+      affectePar: deleteField(), statut: "en_attente"
+    });
+    batch.delete(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive"));
+    await assertSucceeds(batch.commit());
+  });
+
+  it("refuse le refus d'une mission après récupération du colis", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await db.doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, partenaireId: PARTNER_UID,
+        partenaireNom: "Partenaire test", partenaireType: "livreur_independant",
+        service: "livraison", statut: "colis_recupere"
+      });
+      await db.doc(`partenaires/${PARTNER_UID}/verrous/missionActive`).set({
+        commandeId: ORDER_ID, statut: "active", createdAt: Timestamp.now()
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { doc, updateDoc, deleteField } = require("firebase/firestore");
+    await assertFails(updateDoc(doc(db, "commandes_colis", ORDER_ID), {
+      partenaireId: deleteField(), statut: "en_attente"
+    }));
+  });
+
 });
