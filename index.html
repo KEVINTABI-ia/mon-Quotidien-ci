@@ -482,6 +482,131 @@ main > section.card:nth-of-type(2) .result {
   font-weight: 900 !important;
   line-height: 1.4;
 }
+
+/* IDENTITÉ VISUELLE MODERNE — ORANGE, BLANC, VERT */
+:root {
+  --vert: #16834A;
+  --vert-fonce: #11663B;
+  --bleu-nuit: #18352A;
+  --or: #F28C28;
+  --ivoire: #F7F9F7;
+  --blanc: #FFFFFF;
+  --texte: #26352D;
+  --secondaire: #68786E;
+  --bordure: #E3EAE4;
+}
+body { background: #F6F8F6 !important; color: #26352D; }
+header {
+  background: linear-gradient(125deg, #F28C28 0%, #F49A3C 48%, #16834A 100%) !important;
+  color: #FFFFFF;
+  border-radius: 0 0 30px 30px;
+  padding: 30px 20px 34px;
+  box-shadow: 0 10px 28px rgba(31, 74, 46, .15);
+  position: relative;
+  overflow: hidden;
+}
+header::after {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 6px;
+  background: linear-gradient(90deg, #F28C28 0 33.33%, #FFFFFF 33.33% 66.66%, #16834A 66.66% 100%);
+}
+.brand-icon {
+  background: rgba(255,255,255,.22) !important;
+  border: 1px solid rgba(255,255,255,.55) !important;
+  border-radius: 15px;
+}
+.tagline { color: #FFFFFF !important; }
+.header-badge {
+  color: #FFFFFF !important;
+  border-color: rgba(255,255,255,.75) !important;
+  background: rgba(255,255,255,.14);
+}
+main { max-width: 720px; padding: 22px 15px 30px; }
+.card {
+  background: #FFFFFF;
+  border: 1px solid #E5ECE6;
+  border-radius: 22px;
+  box-shadow: 0 7px 24px rgba(28, 63, 40, .07);
+  margin-bottom: 18px;
+}
+h2, h3 { color: #17663D !important; }
+label { color: #344B3B; }
+input, select, textarea {
+  border: 1px solid #DCE7DE;
+  background: #FFFFFF;
+  border-radius: 13px;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #16834A;
+  box-shadow: 0 0 0 3px rgba(22,131,74,.13);
+}
+button { border-radius: 13px; }
+.primary, main > section.card:nth-of-type(2) button.primary {
+  background: linear-gradient(135deg, #F28C28, #E97816) !important;
+  color: #FFFFFF !important;
+  border: 0 !important;
+  box-shadow: 0 6px 15px rgba(242,140,40,.23) !important;
+}
+.primary:hover { background: #D96B12 !important; }
+.menu-toggle {
+  background: #FFFFFF !important;
+  color: #16834A !important;
+  border: 2px solid #F28C28;
+  box-shadow: 0 4px 15px rgba(20,55,32,.18);
+}
+.menu-dropdown { border: 1px solid #E1EAE2; }
+.menu-dropdown button { color: #244532; }
+.menu-dropdown button:active { background: #F0F7F1; }
+.mode, .quick button {
+  color: #17663D;
+  background: #F0F7F1;
+  border: 1px solid #DCEBDD;
+}
+.mode:hover, .quick button:hover { background: #E4F2E6; }
+.price {
+  color: #11663B;
+  background: #E7F5E9;
+}
+.result {
+  background: #F0F8F1;
+  border-color: #D8EBDD;
+}
+.stop { border-color: #E1EAE2; }
+main > section.card:nth-of-type(2) {
+  background: #FFFFFF !important;
+  border: 1px solid #E5ECE6 !important;
+  border-top: 5px solid #F28C28 !important;
+  border-radius: 24px !important;
+  box-shadow: 0 10px 28px rgba(28,63,40,.09) !important;
+}
+main > section.card:nth-of-type(2) h2 {
+  color: #17663D !important;
+}
+main > section.card:nth-of-type(2) label {
+  color: #344B3B !important;
+}
+main > section.card:nth-of-type(2) select {
+  border: 1px solid #DCE7DE !important;
+  background: #FFFFFF !important;
+  color: #26352D !important;
+}
+main > section.card:nth-of-type(2) button.primary {
+  background: linear-gradient(135deg, #F28C28, #E97816) !important;
+  border: 0 !important;
+}
+#espaceAdmin h3 {
+  border-left-color: #F28C28 !important;
+  background: #F3F8F3 !important;
+}
+footer { color: #718076; }
+@media (max-width: 380px) {
+  header { padding: 26px 16px 32px; }
+  .brand { font-size: 21px; }
+}
+
 </style>
 </head>
 <body>
