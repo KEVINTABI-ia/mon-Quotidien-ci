@@ -6255,38 +6255,41 @@ async function afficherMissionPartenaire(c, partenaire, zone) {
 }
 
 async function naviguerVersEtapeCommande(commandeId, etape) {
-  if (!navigator.geolocation) return alert("La géolocalisation n'est pas disponible sur cet appareil.");
-  const snap = await db.collection("commandes_colis").doc(commandeId).get();
-  if (!snap.exists) return alert("Commande introuvable.");
-  const c = snap.data();
-  const privateSnap = await db.collection("commandes_colis").doc(commandeId).collection("informations_privees").doc("details").get();
-  const details = privateSnap.exists ? privateSnap.data() : {};
-  // Repli temporaire sur les champs historiques pour ne pas casser l'unique commande de test.
-  const lat = etape === "destination"
-    ? (details.latitudeLivraison ?? c.latitudeLivraison)
-    : (details.latitudeRecuperation ?? c.latitudeRecuperation);
-  const lon = etape === "destination"
-    ? (details.longitudeLivraison ?? c.longitudeLivraison)
-    : (details.longitudeRecuperation ?? c.longitudeRecuperation);
-  if (typeof lat !== "number" || typeof lon !== "number") return alert("Les coordonnées GPS de cette adresse ne sont pas enregistrées. Demandez à l'administrateur de vérifier la commande.");
-  navigator.geolocation.getCurrentPosition(async pos => {
-    const from = [pos.coords.latitude,pos.coords.longitude];
-    const to = [lat,lon];
-    try {
-      const url = "https://router.project-osrm.org/route/v1/driving/" + from[1] + "," + from[0] + ";" + to[1] + "," + to[0] + "?overview=full&geometries=geojson";
-      const response = await fetch(url); const data = await response.json();
-      if (!data.routes || !data.routes.length) throw new Error("Aucun itinéraire trouvé.");
-      const r = data.routes[0];
-      alert("Itinéraire vers " + (etape === "destination" ? "le destinataire" : "le point de récupération") + "\nDistance : " + (r.distance/1000).toFixed(1) + " km\nDurée estimée : " + Math.round(r.duration/60) + " min");
-      const mapZone = document.getElementById("carteMissionPartenaire");
-      if (mapZone && window.L) {
-        if (window.carteRoutePartenaire) window.carteRoutePartenaire.remove();
-        const m = L.map("carteMissionPartenaire").setView(from,13); window.carteRoutePartenaire = m;
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(m);
-        const line = L.geoJSON(r.geometry).addTo(m); L.marker(from).addTo(m); L.marker(to).addTo(m); m.fitBounds(line.getBounds(),{padding:[20,20]}); setTimeout(() => m.invalidateSize(), 300);
-      }
-    } catch(e) { alert("Calcul de l'itinéraire impossible : " + e.message); }
-  }, e => alert("Autorisez la localisation GPS pour calculer l'itinéraire : " + e.message), {enableHighAccuracy:true,timeout:15000,maximumAge:0});
+  try {
+    const commandeRef = db.collection("commandes_colis").doc(commandeId);
+    const snap = await commandeRef.get();
+    if (!snap.exists) return alert("Commande introuvable.");
+
+    const c = snap.data();
+    const privateSnap = await commandeRef.collection("informations_privees").doc("details").get();
+    const details = privateSnap.exists ? privateSnap.data() : {};
+
+    // Coordonnées enregistrées lors du choix des adresses par le client.
+    const latBrute = etape === "destination"
+      ? (details.latitudeLivraison ?? c.latitudeLivraison)
+      : (details.latitudeRecuperation ?? c.latitudeRecuperation);
+    const lonBrute = etape === "destination"
+      ? (details.longitudeLivraison ?? c.longitudeLivraison)
+      : (details.longitudeRecuperation ?? c.longitudeRecuperation);
+    const lat = Number(latBrute);
+    const lon = Number(lonBrute);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) ||
+        lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      return alert("Les coordonnées GPS de cette adresse ne sont pas enregistrées. Demandez au client ou à l'administrateur de vérifier l'adresse.");
+    }
+
+    // Ouvre Google Maps en navigation vers le point choisi.
+    // Sans point de départ imposé, Maps utilise la position actuelle du livreur.
+    const destination = encodeURIComponent(lat + "," + lon);
+    const url = "https://www.google.com/maps/dir/?api=1&destination="
+      + destination + "&travelmode=driving&dir_action=navigate";
+
+    window.location.assign(url);
+  } catch (e) {
+    console.error("Ouverture GPS :", e);
+    alert("Impossible d'ouvrir l'itinéraire GPS : " + (e.message || e));
+  }
 }
 
 async function refuserMissionPartenaire(commandeId) {
@@ -6440,7 +6443,7 @@ async function enregistrerCommande() {
     const fraisService=service==="compagnie"?300:0;
     const montantLivraison=Math.round(distanceKm*tarifKm);
     const montantTotal=montantLivraison+fraisService;
-    const resumeTarif="Distance OSRM : "+distanceKm.toFixed(1)+" km\nTarif : "+tarifKm+" FCFA/km\nLivraison : "+montantLivraison.toLocaleString("fr-FR")+" FCFA"+(fraisService?"\nFrais de service Mon Transport CI : 300 FCFA":"")+"\nTOTAL Mon Transport CI : "+montantTotal.toLocaleString("fr-FR")+" FCFA";
+    const resumeTarif="MONTANT TOTAL MON TRANSPORT CI : "+montantTotal.toLocaleString("fr-FR")+" FCFA";
     const noteGare=service==="compagnie"&&operation==="expedition"?"\nLes frais d'expédition de la compagnie sont à régler séparément et seront discutés directement avec le livreur.":(service==="compagnie"&&operation==="recuperation"?"\nLes éventuels frais de retrait du service courrier de la gare seront communiqués sur place par le livreur et discutés directement avec lui.":"");
     if(!confirm("Vérifiez le tarif de votre commande :\n\n"+resumeTarif+noteGare+"\n\nConfirmer la commande ?")) return;
     const numeroSuivi="TCI-"+Date.now().toString(36).toUpperCase()+"-"+Math.floor(1000+Math.random()*9000);
