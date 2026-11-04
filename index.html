@@ -1563,7 +1563,7 @@ function chargerPublicitesAccueil() {
         const maintenant = Date.now();
         const annonces = (window.publicitesAccueilDocs || [])
           .map(doc => ({id:doc.id,...doc.data()}))
-          .filter(d => d.dateFin?.toDate && d.dateFin.toDate().getTime() > maintenant)
+          .filter(d => !d.dateFin?.toDate || d.dateFin.toDate().getTime() > maintenant)
           .sort((a,b) => (a.dateDebut?.toMillis?.() || 0) - (b.dateDebut?.toMillis?.() || 0));
         if (!annonces.length) {
           zone.innerHTML = '<div class="publicite-placeholder"><span class="publicite-icone">📢</span><strong>Votre publicité ici</strong><span>Réservez un emplacement et présentez votre activité à nos utilisateurs.</span></div>';
