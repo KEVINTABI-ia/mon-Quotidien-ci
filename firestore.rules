@@ -129,6 +129,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(["commandeId", "statut", "createdAt"])
           && request.resource.data.commandeId is string
           && request.resource.data.statut == "active"
+          && request.resource.data.createdAt == request.time
           && getAfter(commandePath(request.resource.data.commandeId)).data.partenaireId == partenaireId
           && (getAfter(commandePath(request.resource.data.commandeId)).data.statut == "livreur_affecte" || getAfter(commandePath(request.resource.data.commandeId)).data.statut == "colis_recupere" || getAfter(commandePath(request.resource.data.commandeId)).data.statut == "en_transit")
           && abonnementValide(partenaire(partenaireId));
@@ -202,6 +203,8 @@ service cloud.firestore {
           && request.resource.data.statut == "livreur_affecte"
           && request.resource.data.partenaireId is string
           && request.resource.data.partenaireType == (resource.data.service == "compagnie" ? "representant_gare" : "livreur_independant")
+          && request.resource.data.dateAffectation == request.time
+          && request.resource.data.affectePar == request.auth.uid
           && abonnementValide(partenaire(request.resource.data.partenaireId))
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation", "affectePar"])
@@ -214,6 +217,7 @@ service cloud.firestore {
           && !("partenaireId" in resource.data)
           && request.resource.data.partenaireId == request.auth.uid
           && request.resource.data.statut == "livreur_affecte"
+          && request.resource.data.dateAffectation == request.time
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation"])
           && existsAfter(verrouPath(request.auth.uid))
@@ -237,6 +241,7 @@ service cloud.firestore {
           && resource.data.partenaireId == request.auth.uid
           && resource.data.statut == "livreur_affecte"
           && request.resource.data.statut == "colis_recupere"
+          && request.resource.data.dateRecuperation == request.time
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["statut", "dateRecuperation"])
           && exists(verrouPath(request.auth.uid))
@@ -248,6 +253,7 @@ service cloud.firestore {
           && resource.data.partenaireId == request.auth.uid
           && (resource.data.statut == "colis_recupere" || resource.data.statut == "en_transit")
           && request.resource.data.statut == "livre"
+          && request.resource.data.dateLivraison == request.time
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["statut", "dateLivraison"])
           && exists(verrouPath(request.auth.uid))
