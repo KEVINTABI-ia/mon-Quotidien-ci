@@ -313,14 +313,13 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
     const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
     const { doc, writeBatch, deleteField } = require("firebase/firestore");
-    const batch = writeBatch(db);
-    batch.update(doc(db, "commandes_colis", ORDER_ID), {
+    await assertSucceeds(updateDoc(doc(db, "commandes_colis", ORDER_ID), {
       partenaireId: deleteField(), partenaireNom: deleteField(),
       partenaireType: deleteField(), dateAffectation: deleteField(),
       affectePar: deleteField(), statut: "en_attente"
-    });
-    batch.delete(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive"));
-    await assertSucceeds(batch.commit());
+    }));
+    const { deleteDoc } = require("firebase/firestore");
+    await assertSucceeds(deleteDoc(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive")));
   });
 
   it("refuse le refus d'une mission après récupération du colis", async () => {
