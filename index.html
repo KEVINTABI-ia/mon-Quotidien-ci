@@ -2756,6 +2756,7 @@ async function chargerCommandesPartenaire() {
       livreur_affecte: "Attribuée",
       colis_recupere: "Colis récupéré",
       en_transit: "En transit",
+      arrive_destination: "Arrivé à destination",
       livre: "Livrée",
       annule: "Annulée"
     };
@@ -2882,7 +2883,7 @@ async function chargerCommandesAdmin() {
       return;
     }
 
-    const libelles = {en_attente:"En attente",livreur_affecte:"Partenaire affecté",colis_recupere:"Colis récupéré",en_transit:"En transit",livre:"Livré",annule:"Annulé"};
+    const libelles = {en_attente:"En attente",livreur_affecte:"Partenaire affecté",colis_recupere:"Colis récupéré",en_transit:"En transit",arrive_destination:"Arrivé à destination",livre:"Livré",annule:"Annulé"};
     const migrationBtn = document.createElement("button");
     migrationBtn.type = "button";
     migrationBtn.textContent = "Sécuriser les anciennes commandes";
@@ -4689,6 +4690,7 @@ async function chargerHistoriqueCommandes(){
       livreur_affecte: "Livreur affecté",
       colis_recupere: "Colis récupéré",
       en_transit: "En transit",
+      arrive_destination: "Arrivé à destination",
       livre: "Livré"
     };
 
