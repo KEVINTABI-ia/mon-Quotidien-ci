@@ -563,6 +563,17 @@ describe("Mon Transport CI — règles Firestore", function () {
     const privateDoc = await getDoc(privateRef);
     if (publicDoc.data().trackingNumber !== undefined) throw new Error("Le numéro de suivi est encore dans la commande publique.");
     if (privateDoc.data().trackingNumber !== "MTC-LEGACY-001") throw new Error("Le numéro de suivi n'a pas été conservé dans le document privé.");
+    const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { collection, query, where, limit, getDocs } = require("firebase/firestore");
+    const q = query(
+      collection(partnerDb, "commandes_colis"),
+      where("publicVersion", "==", true),
+      where("statut", "==", "en_attente"),
+      where("service", "in", ["livraison", "livraison_programmee"]),
+      limit(30)
+    );
+    const visible = await assertSucceeds(getDocs(q));
+    if (visible.empty) throw new Error("La commande migrée n'est pas visible dans la file partenaire.");
   });
 
   it("refuse de retirer les anciens champs privés sans créer le document privé", async () => {
