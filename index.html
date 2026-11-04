@@ -826,6 +826,21 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 .publicite-placeholder strong{font-size:15px}
 .publicite-placeholder span:last-child{font-size:12px;color:#64746a}
 @media(max-width:480px){.espace-publicitaire{margin-bottom:14px;padding:8px}.publicite-media{min-height:112px;aspect-ratio:16/7}.publicite-entete small{font-size:9px}}
+
+/* Formulaire de réservation publicitaire */
+.formulaire-publicite{background:#fff;padding:18px;border-radius:16px;margin-top:16px;border:1px solid #e2e9e4}
+.formulaire-publicite h3{margin-top:0}
+.formulaire-publicite input:not([type=radio]),.formulaire-publicite textarea{width:100%;padding:13px;border:1px solid #d5dfd9;border-radius:10px;font:inherit}
+.formulaire-publicite textarea{resize:vertical}
+.forfaits-publicite{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}
+.forfait-publicite{display:flex;align-items:flex-start;gap:8px;margin:0;padding:11px;border:1px solid #dce6df;border-radius:11px;background:#f8faf8;font-weight:400}
+.forfait-publicite input{width:auto;margin-top:4px;accent-color:#087c62}
+.forfait-publicite span{font-size:13px}
+.publicite-action{padding:12px 16px 18px;text-align:center}
+.publicite-action p,.publicite-note{font-size:13px;color:#5d6d65}
+.formulaire-publicite button{width:100%;margin-top:10px}
+.formulaire-publicite .secondaire{background:#edf2ef;color:#263a35}
+@media(max-width:420px){.forfaits-publicite{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -1113,20 +1128,77 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 
 </section>
 
-<!-- ESPACE PUBLICITAIRE : emplacement pour images et vidéos -->
+<!-- ESPACE PUBLICITAIRE -->
 <section class="espace-publicitaire" id="espacePublicitaire" aria-label="Espace publicitaire">
   <div class="publicite-entete">
     <span>ESPACE PUBLICITAIRE</span>
-    <small>Nos partenaires et annonceurs</small>
+    <small>Faites connaître votre activité sur Mon Transport CI</small>
   </div>
   <div class="publicite-media" id="publiciteMedia">
     <div class="publicite-placeholder">
       <span class="publicite-icone">📢</span>
       <strong>Votre publicité ici</strong>
-      <span>Emplacement prévu pour vos images et vidéos promotionnelles</span>
+      <span>Réservez un emplacement et présentez votre activité à nos utilisateurs.</span>
     </div>
   </div>
+  <div class="publicite-action">
+    <p>Choisissez votre formule et envoyez votre demande directement sur WhatsApp.</p>
+    <button type="button" class="primary" onclick="ouvrirFormulairePublicite()">📣 FAIRE MA PUB</button>
+  </div>
+  <form id="formulairePublicite" class="formulaire-publicite" onsubmit="envoyerDemandePublicite(event)" style="display:none">
+    <h3>Votre demande de publicité</h3>
+    <div class="forfaits-publicite">
+      <label class="forfait-publicite"><input type="radio" name="forfaitPublicite" value="Découverte - 3 jours - 2 000 FCFA" required><span><strong>Découverte</strong><br>3 jours · 2 000 FCFA</span></label>
+      <label class="forfait-publicite"><input type="radio" name="forfaitPublicite" value="Visibilité - 7 jours - 5 000 FCFA"><span><strong>Visibilité</strong><br>7 jours · 5 000 FCFA</span></label>
+      <label class="forfait-publicite"><input type="radio" name="forfaitPublicite" value="Professionnel - 15 jours - 9 000 FCFA"><span><strong>Professionnel</strong><br>15 jours · 9 000 FCFA</span></label>
+      <label class="forfait-publicite"><input type="radio" name="forfaitPublicite" value="Premium - 30 jours - 15 000 FCFA"><span><strong>Premium</strong><br>30 jours · 15 000 FCFA</span></label>
+    </div>
+    <label for="publiciteNom">Votre nom</label>
+    <input id="publiciteNom" name="nom" type="text" maxlength="80" autocomplete="name" required placeholder="Nom et prénom">
+    <label for="publiciteTelephone">Votre numéro de téléphone</label>
+    <input id="publiciteTelephone" name="telephone" type="tel" maxlength="20" autocomplete="tel" required placeholder="Ex. 07 00 00 00 00">
+    <label for="publiciteActivite">Votre activité / entreprise</label>
+    <input id="publiciteActivite" name="activite" type="text" maxlength="100" required placeholder="Nom de votre entreprise ou activité">
+    <label for="publiciteDescription">Description de la publicité</label>
+    <textarea id="publiciteDescription" name="description" maxlength="1000" rows="4" required placeholder="Décrivez le produit ou service à promouvoir"></textarea>
+    <p class="publicite-note">Après l’ouverture de WhatsApp, joignez votre photo ou vidéo directement à la conversation. Le paiement sera confirmé avec notre équipe avant toute publication.</p>
+    <button type="submit" class="primary">Envoyer ma demande sur WhatsApp</button>
+    <button type="button" class="secondaire" onclick="fermerFormulairePublicite()">Annuler</button>
+  </form>
 </section>
+<script>
+function ouvrirFormulairePublicite() {
+  const formulaire = document.getElementById("formulairePublicite");
+  formulaire.style.display = "block";
+  formulaire.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function fermerFormulairePublicite() {
+  document.getElementById("formulairePublicite").style.display = "none";
+}
+function envoyerDemandePublicite(event) {
+  event.preventDefault();
+  const formulaire = document.getElementById("formulairePublicite");
+  if (!formulaire.reportValidity()) return;
+  const forfait = formulaire.querySelector('input[name="forfaitPublicite"]:checked');
+  if (!forfait) return;
+  const nom = document.getElementById("publiciteNom").value.trim();
+  const telephone = document.getElementById("publiciteTelephone").value.trim();
+  const activite = document.getElementById("publiciteActivite").value.trim();
+  const description = document.getElementById("publiciteDescription").value.trim();
+  const message = [
+    "Bonjour Mon Transport CI, je souhaite faire une publicité.",
+    "",
+    "Forfait choisi : " + forfait.value,
+    "Nom : " + nom,
+    "Téléphone : " + telephone,
+    "Activité / entreprise : " + activite,
+    "Description : " + description,
+    "",
+    "Je souhaite connaître les modalités de paiement et transmettre mon visuel (photo ou vidéo)."
+  ].join("\n");
+  window.open("https://wa.me/2250719577999?text=" + encodeURIComponent(message), "_blank", "noopener");
+}
+</script>
 
 <section class="card recherche-trajet">
 <h2>Où souhaitez-vous aller ?</h2>
