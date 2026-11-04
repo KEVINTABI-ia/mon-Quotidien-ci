@@ -1185,6 +1185,7 @@ Calculer mon budget
 
 <button onclick="ouvrirCarteItineraire()">🗺️ Carte</button>
 <button onclick="afficherReseauNational()">🇨🇮 Réseau national</button>
+<button type="button" onclick="afficherMarchesCommune()">🏬 Marchés de la commune</button>
 </div>
 </section>
 
@@ -4728,7 +4729,7 @@ function signalerProblemeGeneral(){
 }
 
 // COLLE ICI LA NOUVELLE FONCTION
-async async function afficherGaresStations(typeTransport){
+async function afficherGaresStations(typeTransport){
   const resultat = document.getElementById("resultat");
   const typeChoisi = typeTransport || "Gbaka";
   window.garesStationsTypeActuel = typeChoisi;
@@ -4926,6 +4927,98 @@ function filtrerLignesSotra(){
   document.querySelectorAll("#listeLignesSotra .carte-ligne-sotra").forEach(carte => {
     carte.style.display = !filtre.value || carte.dataset.gare === filtre.value ? "block" : "none";
   });
+}
+
+// Répertoire initial des marchés connus d'Abidjan.
+// Les destinations sont des recherches cartographiques textuelles, pas des coordonnées GPS inventées.
+const MARCHES_COMMUNES = [
+  {commune:"Abobo",nom:"Grand Marché d'Abobo",repere:"Grand Marché, Abobo, Abidjan"},
+  {commune:"Abobo",nom:"Ancien marché de PK 18",repere:"Ancien marché PK 18, Abobo, Abidjan"},
+  {commune:"Abobo",nom:"Marché d'Avocatier",repere:"Marché d'Avocatier, Abobo, Abidjan"},
+  {commune:"Adjamé",nom:"Grand Marché Gouro",repere:"Grand Marché Gouro, Adjamé, Abidjan"},
+  {commune:"Adjamé",nom:"Forum des Marchés",repere:"Forum des Marchés, Adjamé, Abidjan"},
+  {commune:"Adjamé",nom:"Marché Dabananni",repere:"Marché Dabananni, Adjamé, Abidjan"},
+  {commune:"Cocody",nom:"Marché Cocovico",repere:"Marché Cocovico, Cocody, Abidjan"},
+  {commune:"Cocody",nom:"Marché de Cocody Saint-Jean",repere:"Marché Saint-Jean, Boulevard de France, Cocody, Abidjan"},
+  {commune:"Cocody",nom:"Marché d'Anono",repere:"Marché d'Anono, Cocody, Abidjan"},
+  {commune:"Koumassi",nom:"Marché Djè Konan",repere:"Marché Djè Konan, Boulevard du 7 Décembre, Koumassi, Abidjan"},
+  {commune:"Koumassi",nom:"Grand Marché de Koumassi",repere:"Grand Marché de Koumassi, Abidjan"},
+  {commune:"Marcory",nom:"Grand Marché de Marcory",repere:"Grand Marché de Marcory, Boulevard du Cameroun, Abidjan"},
+  {commune:"Treichville",nom:"Grand Marché de Treichville",repere:"Grand Marché de Treichville, Avenue Victor Biaka Boda, Abidjan"},
+  {commune:"Treichville",nom:"Marché de Belleville",repere:"Marché de Belleville, Treichville, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Siporex",repere:"Marché de Siporex, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Gesco",repere:"Marché de Gesco, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Kouté",repere:"Marché de Kouté, Yopougon, Abidjan"},
+  {commune:"Yopougon",nom:"Marché de Niangon Nord",repere:"Marché de Niangon Nord, Yopougon, Abidjan"},
+  {commune:"Bingerville",nom:"Marché de Bingerville",repere:"Marché de Bingerville, Bingerville, Côte d'Ivoire"}
+];
+
+function afficherMarchesCommune(){
+  const resultat = document.getElementById("resultat");
+  if (!resultat) return;
+  resultat.style.display = "block";
+  const communes = [...new Set(MARCHES_COMMUNES.map(m => m.commune))]
+    .sort((a,b) => a.localeCompare(b,"fr"));
+  let html = "<strong>🏬 Marchés de la commune</strong>";
+  html += "<p>Recherchez ou choisissez une commune pour afficher les marchés disponibles.</p>";
+  html += "<label for='rechercheCommuneMarche'>Commune :</label>";
+  html += "<input id='rechercheCommuneMarche' type='search' list='listeCommunesMarches' ";
+  html += "placeholder='Ex. : Yopougon, Abobo, Cocody...' oninput='filtrerMarchesCommune()' autocomplete='off'>";
+  html += "<datalist id='listeCommunesMarches'>";
+  communes.forEach(c => html += "<option value='" + echapperTexteCompagnie(c) + "'></option>");
+  html += "</datalist><div id='listeMarchesCommune' aria-live='polite'>";
+  html += "<p class='notice'>Saisissez le nom d'une commune pour voir ses marchés.</p></div>";
+  resultat.innerHTML = html;
+  resultat.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function filtrerMarchesCommune(){
+  const champ = document.getElementById("rechercheCommuneMarche");
+  const zone = document.getElementById("listeMarchesCommune");
+  if (!champ || !zone) return;
+  const saisie = normaliser(champ.value);
+  if (!saisie) {
+    zone.innerHTML = "<p class='notice'>Saisissez le nom d'une commune pour voir ses marchés.</p>";
+    return;
+  }
+  const communes = [...new Set(MARCHES_COMMUNES.map(m => m.commune))];
+  const commune = communes.find(c => normaliser(c) === saisie) ||
+    communes.find(c => normaliser(c).startsWith(saisie));
+  if (!commune) {
+    zone.innerHTML = "<p class='notice'>Aucun marché référencé pour cette commune pour le moment.</p>";
+    return;
+  }
+  const marches = MARCHES_COMMUNES.filter(m => m.commune === commune);
+  let html = "<h3>Marchés disponibles à " + echapperTexteCompagnie(commune) + "</h3>";
+  marches.forEach((marche,index) => {
+    html += "<article class='stop'><strong>🏬 " + echapperTexteCompagnie(marche.nom) + "</strong>";
+    html += "<p>" + echapperTexteCompagnie(marche.commune) + "</p>";
+    html += "<button type='button' class='primary' onclick='guiderVersMarche(" + index + ")'>";
+    html += "🧭 Tracer mon itinéraire GPS</button></article>";
+  });
+  zone.innerHTML = html;
+  window.marchesCommuneAffiches = marches;
+}
+
+function guiderVersMarche(index){
+  const marche = (window.marchesCommuneAffiches || [])[index];
+  if (!marche) return;
+  const destination = marche.repere + ", Côte d'Ivoire";
+  const ouvrir = (origine) => {
+    let url = "https://www.google.com/maps/dir/?api=1&destination=" +
+      encodeURIComponent(destination) + "&travelmode=driving";
+    if (origine) url += "&origin=" + encodeURIComponent(origine);
+    window.open(url,"_blank","noopener");
+  };
+  if (!navigator.geolocation) {
+    ouvrir("");
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    position => ouvrir(position.coords.latitude + "," + position.coords.longitude),
+    () => ouvrir(""),
+    {enableHighAccuracy:true,timeout:12000,maximumAge:60000}
+  );
 }
 
 function afficherTarifs(){
