@@ -476,4 +476,77 @@ describe("Mon Transport CI — règles Firestore", function () {
     if (result.empty) throw new Error("La commande de compagnie n'a pas été retournée au représentant de gare.");
   });
 
+
+  it("bloque la file d'attente partenaire tant qu'une ancienne commande contient des champs privés", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        depart: "Yopougon", destination: "Adjamé",
+        clientTelephone: "0100000000", adresseRecuperation: "Adresse privée"
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { collection, query, where, limit, getDocs } = require("firebase/firestore");
+    const q = query(
+      collection(db, "commandes_colis"),
+      where("statut", "==", "en_attente"),
+      where("service", "in", ["livraison", "livraison_programmee"]),
+      limit(30)
+    );
+    await assertFails(getDocs(q));
+  });
+
+  it("autorise la migration administrative et retire les champs privés de la commande publique", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        depart: "Yopougon", destination: "Adjamé",
+        clientNom: "Client test", clientTelephone: "0100000000",
+        telephoneExpediteur: "0100000000", telephoneDestinataire: "0200000000",
+        adresseRecuperation: "Adresse de récupération", adresseLivraison: "Adresse de livraison",
+        descriptionColis: "Document", trackingNumber: "MTC-LEGACY-001",
+        latitudeRecuperation: 5.3, longitudeRecuperation: -4.0
+      });
+    });
+    const db = testEnv.authenticatedContext(ADMIN_UID).firestore();
+    const { doc, writeBatch, serverTimestamp, deleteField, getDoc } = require("firebase/firestore");
+    const batch = writeBatch(db);
+    const orderRef = doc(db, "commandes_colis", ORDER_ID);
+    const privateRef = doc(db, "commandes_colis", ORDER_ID, "informations_privees", "details");
+    batch.set(privateRef, {
+      clientId: CLIENT_UID, clientNom: "Client test", clientTelephone: "0100000000",
+      telephoneExpediteur: "0100000000", telephoneDestinataire: "0200000000",
+      adresseRecuperation: "Adresse de récupération", adresseLivraison: "Adresse de livraison",
+      descriptionColis: "Document", trackingNumber: "MTC-LEGACY-001",
+      latitudeRecuperation: 5.3, longitudeRecuperation: -4.0,
+      createdAt: serverTimestamp()
+    });
+    batch.update(orderRef, {
+      clientNom: deleteField(), clientTelephone: deleteField(),
+      telephoneExpediteur: deleteField(), telephoneDestinataire: deleteField(),
+      adresseRecuperation: deleteField(), adresseLivraison: deleteField(),
+      descriptionColis: deleteField(), trackingNumber: deleteField(),
+      latitudeRecuperation: deleteField(), longitudeRecuperation: deleteField()
+    });
+    await assertSucceeds(batch.commit());
+    const publicDoc = await getDoc(orderRef);
+    const privateDoc = await getDoc(privateRef);
+    if (publicDoc.data().trackingNumber !== undefined) throw new Error("Le numéro de suivi est encore dans la commande publique.");
+    if (privateDoc.data().trackingNumber !== "MTC-LEGACY-001") throw new Error("Le numéro de suivi n'a pas été conservé dans le document privé.");
+  });
+
+  it("refuse de retirer les anciens champs privés sans créer le document privé", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        trackingNumber: "MTC-LEGACY-002"
+      });
+    });
+    const db = testEnv.authenticatedContext(ADMIN_UID).firestore();
+    const { doc, updateDoc, deleteField } = require("firebase/firestore");
+    await assertFails(updateDoc(doc(db, "commandes_colis", ORDER_ID), {
+      trackingNumber: deleteField()
+    }));
+  });
+
 });
