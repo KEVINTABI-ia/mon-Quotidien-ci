@@ -131,7 +131,10 @@ service cloud.firestore {
           && request.resource.data.statut == "active"
           && request.resource.data.createdAt == request.time
           && partenaire(partenaireId).enLigne == true
-          && abonnementValide(partenaire(partenaireId));
+          && abonnementValide(partenaire(partenaireId))
+          && existsAfter(commandePath(request.resource.data.commandeId))
+          && getAfter(commandePath(request.resource.data.commandeId)).data.partenaireId == partenaireId
+          && getAfter(commandePath(request.resource.data.commandeId)).data.statut == "livreur_affecte";
         allow delete: if estAdmin()
           || (estConnecte()
             && request.auth.uid == partenaireId
