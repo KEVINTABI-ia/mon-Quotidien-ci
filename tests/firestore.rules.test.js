@@ -391,4 +391,89 @@ describe("Mon Transport CI — règles Firestore", function () {
     ));
   });
 
+
+  it("interdit de supprimer le verrou tant que la commande reste attribuée", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await db.doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, partenaireId: PARTNER_UID,
+        service: "livraison", statut: "livreur_affecte"
+      });
+      await db.doc(`partenaires/${PARTNER_UID}/verrous/missionActive`).set({
+        commandeId: ORDER_ID, statut: "active", createdAt: Timestamp.now()
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { doc, deleteDoc } = require("firebase/firestore");
+    await assertFails(deleteDoc(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive")));
+  });
+
+  it("autorise la clôture de livraison puis la suppression du verrou", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await db.doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, partenaireId: PARTNER_UID,
+        partenaireNom: "Partenaire test", partenaireType: "livreur_independant",
+        service: "livraison", statut: "colis_recupere"
+      });
+      await db.doc(`partenaires/${PARTNER_UID}/verrous/missionActive`).set({
+        commandeId: ORDER_ID, statut: "active", createdAt: Timestamp.now()
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { doc, updateDoc, deleteDoc, serverTimestamp } = require("firebase/firestore");
+    await assertSucceeds(updateDoc(doc(db, "commandes_colis", ORDER_ID), {
+      statut: "livre", dateLivraison: serverTimestamp()
+    }));
+    await assertSucceeds(deleteDoc(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive")));
+  });
+
+  it("refuse l'attribution administrative à un partenaire hors ligne", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await db.doc(`partenaires/${PARTNER_UID}`).update({ enLigne: false });
+      await db.doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        depart: "Yopougon", destination: "Adjamé"
+      });
+    });
+    const db = testEnv.authenticatedContext(ADMIN_UID).firestore();
+    const { doc, writeBatch, serverTimestamp } = require("firebase/firestore");
+    const batch = writeBatch(db);
+    batch.update(doc(db, "commandes_colis", ORDER_ID), {
+      partenaireId: PARTNER_UID, partenaireNom: "Partenaire test",
+      partenaireType: "livreur_independant", statut: "livreur_affecte",
+      dateAffectation: serverTimestamp(), affectePar: ADMIN_UID
+    });
+    batch.set(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive"), {
+      commandeId: ORDER_ID, statut: "active", createdAt: serverTimestamp()
+    });
+    await assertFails(batch.commit());
+  });
+
+  it("autorise un représentant de gare éligible à consulter les commandes de compagnie", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await db.doc(`partenaires/${PARTNER_UID}`).set(partnerFixture({
+        type: "representant_gare",
+        nomGare: "Gare test",
+        posteOccupe: "Représentant"
+      }));
+      await db.doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, service: "compagnie", statut: "en_attente",
+        depart: "Gare test", destination: "Bouaké"
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { collection, query, where, limit, getDocs } = require("firebase/firestore");
+    const q = query(
+      collection(db, "commandes_colis"),
+      where("statut", "==", "en_attente"),
+      where("service", "==", "compagnie"),
+      limit(30)
+    );
+    const result = await assertSucceeds(getDocs(q));
+    if (result.empty) throw new Error("La commande de compagnie n'a pas été retournée au représentant de gare.");
+  });
+
 });
