@@ -130,21 +130,18 @@ service cloud.firestore {
           && request.resource.data.commandeId is string
           && request.resource.data.statut == "active"
           && request.resource.data.createdAt == request.time
-          && getAfter(commandePath(request.resource.data.commandeId)).data.partenaireId == partenaireId
-          && (getAfter(commandePath(request.resource.data.commandeId)).data.statut == "livreur_affecte" || getAfter(commandePath(request.resource.data.commandeId)).data.statut == "colis_recupere" || getAfter(commandePath(request.resource.data.commandeId)).data.statut == "en_transit")
-          && ((getAfter(commandePath(request.resource.data.commandeId)).data['service'] == "compagnie" && partenaire(partenaireId).type == "representant_gare") || (getAfter(commandePath(request.resource.data.commandeId)).data['service'] != "compagnie" && partenaire(partenaireId).type == "livreur_independant"))
+          && exists(commandePath(request.resource.data.commandeId))
+          && get(commandePath(request.resource.data.commandeId)).data.statut == "en_attente"
+          && get(commandePath(request.resource.data.commandeId)).data.get("partenaireId", null) == null
+          && ((get(commandePath(request.resource.data.commandeId)).data['service'] == "compagnie" && partenaire(partenaireId).type == "representant_gare") || (get(commandePath(request.resource.data.commandeId)).data['service'] != "compagnie" && partenaire(partenaireId).type == "livreur_independant"))
           && abonnementValide(partenaire(partenaireId));
         allow delete: if estAdmin()
           || (estConnecte()
             && request.auth.uid == partenaireId
             && verrouId == "missionActive"
             && resource.data.commandeId is string
-            && (
-              (getAfter(commandePath(resource.data.commandeId)).data.statut == "en_attente"
-                && getAfter(commandePath(resource.data.commandeId)).data.get("partenaireId", null) == null)
-              || (getAfter(commandePath(resource.data.commandeId)).data.statut == "livre"
-                && getAfter(commandePath(resource.data.commandeId)).data.partenaireId == partenaireId)
-            ));
+            && get(commandePath(resource.data.commandeId)).data.partenaireId == partenaireId
+            && get(commandePath(resource.data.commandeId)).data.statut == "livreur_affecte");
         allow update: if false;
       }
     }
