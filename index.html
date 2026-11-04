@@ -2613,6 +2613,9 @@ async function affecterCommandePartenaire(commandeId, partenaireId) {
       if (!partenaireAbonnementValide(partenaire)) {
         throw new Error("Ce partenaire doit être approuvé et avoir un abonnement valide.");
       }
+      if (partenaire.enLigne !== true) {
+        throw new Error("Le partenaire doit être en ligne pour recevoir une mission.");
+      }
       const typeAttendu = commande.service === "compagnie"
         ? "representant_gare" : "livreur_independant";
       if (partenaire.type !== typeAttendu) {
