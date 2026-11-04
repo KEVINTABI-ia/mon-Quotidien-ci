@@ -5347,6 +5347,14 @@ async function chargerHistoriqueCommandes(){
       }
       if (["livreur_affecte","colis_recupere","en_transit","arrive_destination"].includes(commande.statut) && commande.partenaireId) {
         const suivi = document.createElement("div"); suivi.className = "notice";
+        const photoLivreur = String(commande.partenairePhotoProfil || "");
+        if (/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(photoLivreur) && photoLivreur.length <= 200000) {
+          const portrait = document.createElement("img");
+          portrait.src = photoLivreur;
+          portrait.alt = "Photo du livreur";
+          portrait.style.cssText = "width:96px;height:96px;object-fit:cover;border-radius:50%;display:block;margin:8px 0;border:3px solid #16834A;";
+          suivi.appendChild(portrait);
+        }
         const nom = document.createElement("p"); nom.textContent = "🚚 Votre livreur : " + (commande.partenaireNom || "Partenaire affecté"); suivi.appendChild(nom);
         const telephone = String(commande.partenaireTelephone || "").trim();
         if (telephone) {
@@ -6665,7 +6673,7 @@ async function accepterCommandePartenaire(commandeId) {
       if (lSnap.exists) throw new Error("Vous avez déjà une mission en cours.");
       const typeAttendu = c.service === "compagnie" ? "representant_gare" : "livreur_independant";
       if (p.type !== typeAttendu) throw new Error("Cette commande ne correspond pas à votre profil.");
-      tx.update(commandeRef, {partenaireId:user.uid, partenaireNom:p.nom || "", partenaireTelephone:p.telephone || "", partenaireType:p.type, statut:"livreur_affecte", dateAffectation:firebase.firestore.FieldValue.serverTimestamp()});
+      tx.update(commandeRef, {partenaireId:user.uid, partenaireNom:p.nom || "", partenaireTelephone:p.telephone || "", partenairePhotoProfil:typeof p.photoProfil === "string" ? p.photoProfil : "", partenaireType:p.type, statut:"livreur_affecte", dateAffectation:firebase.firestore.FieldValue.serverTimestamp()});
       tx.set(verrouRef, {commandeId, statut:"active", createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     });
     alert("Commande acceptée. Préparez-vous à rejoindre le point de récupération.");
