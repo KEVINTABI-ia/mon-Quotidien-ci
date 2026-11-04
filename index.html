@@ -1193,6 +1193,13 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
   <button type="button" class="primary" onclick="chargerCommandesAdmin()">Actualiser les commandes</button>
   <div id="listeCommandesAdmin"><p class="notice">Connecte-toi comme administrateur pour charger les commandes.</p></div>
 </div>
+<div id="gestionPublicites" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;">
+  <h3>📣 Gestion des publicités</h3>
+  <p class="notice">Consulte les demandes reçues. Confirme le paiement après vérification sur WhatsApp ou refuse la demande.</p>
+  <button type="button" class="primary" onclick="chargerDemandesPublicitesAdmin()">Actualiser les demandes</button>
+  <div id="listeDemandesPublicitesAdmin"><p class="notice">Connecte-toi comme administrateur pour consulter les demandes.</p></div>
+</div>
+
 
 
 
@@ -1233,6 +1240,7 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
     <input id="publiciteActivite" name="activite" type="text" maxlength="100" required placeholder="Nom de votre entreprise ou activité">
     <label for="publiciteDescription">Description de la publicité</label>
     <textarea id="publiciteDescription" name="description" maxlength="1000" rows="4" required placeholder="Décrivez le produit ou service à promouvoir"></textarea>
+    <p id="statutPublicite" class="notice" aria-live="polite"></p>
     <p class="publicite-note">Après l’ouverture de WhatsApp, joignez votre photo ou vidéo directement à la conversation. Le paiement sera confirmé avec notre équipe avant toute publication.</p>
     <button type="submit" class="primary">Envoyer ma demande sur WhatsApp</button>
     <button type="button" class="secondaire" onclick="fermerFormulairePublicite()">Annuler</button>
@@ -1247,9 +1255,10 @@ function ouvrirFormulairePublicite() {
 function fermerFormulairePublicite() {
   document.getElementById("formulairePublicite").style.display = "none";
 }
-function envoyerDemandePublicite(event) {
+async function envoyerDemandePublicite(event) {
   event.preventDefault();
   const formulaire = document.getElementById("formulairePublicite");
+  const statut = document.getElementById("statutPublicite");
   if (!formulaire.reportValidity()) return;
   const forfait = formulaire.querySelector('input[name="forfaitPublicite"]:checked');
   if (!forfait) return;
@@ -1257,6 +1266,14 @@ function envoyerDemandePublicite(event) {
   const telephone = document.getElementById("publiciteTelephone").value.trim();
   const activite = document.getElementById("publiciteActivite").value.trim();
   const description = document.getElementById("publiciteDescription").value.trim();
+  const detailsForfaits = {
+    "Découverte - 3 jours - 2 000 FCFA": {nom:"Découverte",jours:3,montant:2000},
+    "Visibilité - 7 jours - 5 000 FCFA": {nom:"Visibilité",jours:7,montant:5000},
+    "Professionnel - 15 jours - 9 000 FCFA": {nom:"Professionnel",jours:15,montant:9000},
+    "Premium - 30 jours - 15 000 FCFA": {nom:"Premium",jours:30,montant:15000}
+  };
+  const detail = detailsForfaits[forfait.value];
+  if (!detail) return;
   const message = [
     "Bonjour Mon Transport CI, je souhaite faire une publicité.",
     "",
@@ -1266,9 +1283,85 @@ function envoyerDemandePublicite(event) {
     "Activité / entreprise : " + activite,
     "Description : " + description,
     "",
-    "Je souhaite connaître les modalités de paiement et transmettre mon visuel (photo ou vidéo)."
+    "Je souhaite transmettre mon visuel (photo ou vidéo) et recevoir les modalités de paiement."
   ].join("\n");
-  window.open("https://wa.me/2250719577999?text=" + encodeURIComponent(message), "_blank", "noopener");
+  const lienWhatsApp = "https://wa.me/2250719577999?text=" + encodeURIComponent(message);
+  const bouton = formulaire.querySelector('button[type="submit"]');
+  bouton.disabled = true;
+  statut.textContent = "Enregistrement de votre demande...";
+  try {
+    await db.collection("demandes_publicites").add({
+      nom, telephone, activite, description,
+      forfait: detail.nom,
+      forfaitTexte: forfait.value,
+      dureeJours: detail.jours,
+      montantFCFA: detail.montant,
+      statut: "en_attente",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    statut.textContent = "Demande enregistrée. WhatsApp va s’ouvrir pour transmettre votre visuel et échanger sur le paiement.";
+    window.location.href = lienWhatsApp;
+  } catch (erreur) {
+    console.error("Erreur demande publicitaire :", erreur);
+    statut.textContent = "Impossible d’enregistrer la demande. Réessaie dans quelques instants.";
+    bouton.disabled = false;
+  }
+}
+
+function echapperTextePublicite(valeur) {
+  return String(valeur || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+async function chargerDemandesPublicitesAdmin() {
+  const conteneur = document.getElementById("listeDemandesPublicitesAdmin");
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    if (conteneur) conteneur.textContent = "Accès administrateur requis.";
+    return;
+  }
+  conteneur.innerHTML = '<p class="notice">Chargement des demandes...</p>';
+  try {
+    const snapshot = await db.collection("demandes_publicites").orderBy("createdAt", "desc").limit(100).get();
+    if (snapshot.empty) {
+      conteneur.innerHTML = '<p class="notice">Aucune demande publicitaire pour le moment.</p>';
+      return;
+    }
+    conteneur.innerHTML = snapshot.docs.map(doc => {
+      const d = doc.data();
+      const date = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toLocaleString("fr-FR") : "Date en cours";
+      const statut = d.statut || "en_attente";
+      const actions = statut === "en_attente"
+        ? '<button type="button" onclick="changerStatutDemandePublicite(\'' + doc.id + '\',\'paiement_confirme\')">Confirmer le paiement</button><button type="button" onclick="changerStatutDemandePublicite(\'' + doc.id + '\',\'refusee\')">Refuser</button>'
+        : '<span class="notice">Demande traitée : ' + echapperTextePublicite(statut) + '</span>';
+      return '<article class="card" style="margin:12px 0;padding:14px;">'
+        + '<strong>' + echapperTextePublicite(d.activite) + '</strong>'
+        + '<p>Contact : ' + echapperTextePublicite(d.nom) + ' · ' + echapperTextePublicite(d.telephone) + '</p>'
+        + '<p>Forfait : ' + echapperTextePublicite(d.forfaitTexte) + '</p>'
+        + '<p>Description : ' + echapperTextePublicite(d.description) + '</p>'
+        + '<p class="notice">Reçue le ' + date + ' · Statut : ' + echapperTextePublicite(statut) + '</p>'
+        + actions + '</article>';
+    }).join("");
+  } catch (erreur) {
+    console.error("Chargement demandes publicitaires :", erreur);
+    conteneur.innerHTML = '<p class="notice">Erreur de chargement. Vérifie les règles Firestore et réessaie.</p>';
+  }
+}
+
+async function changerStatutDemandePublicite(id, statut) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès administrateur requis.");
+    return;
+  }
+  if (!["paiement_confirme", "refusee"].includes(statut)) return;
+  try {
+    await db.collection("demandes_publicites").doc(id).update({
+      statut,
+      traiteLe: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await chargerDemandesPublicitesAdmin();
+  } catch (erreur) {
+    console.error("Mise à jour demande publicitaire :", erreur);
+    alert("Impossible de mettre à jour cette demande.");
+  }
 }
 </script>
 
@@ -1451,7 +1544,8 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionCompagnies",titre:"🚍 Gestion des compagnies de voyage"},
   {id:"gestionAbonnementsRamassage",titre:"🚌 Validation des compagnies de ramassage"},
   {id:"gestionPartenaires",titre:"👥 Gestion des partenaires"},
-  {id:"gestionCommandesPartenaires",titre:"📦 Attribution des commandes aux partenaires"}
+  {id:"gestionCommandesPartenaires",titre:"📦 Attribution des commandes aux partenaires"},
+  {id:"gestionPublicites",titre:"📣 Gestion des publicités"}
 ];
 function afficherMenuAdmin(){
   const menu=document.getElementById("adminMenuRubriques");
@@ -1506,6 +1600,7 @@ function connexionAdmin() {
       statut.textContent = "Connexion administrateur réussie.";
       actualiserInterfaceAdmin(true);
       chargerCompagniesRamassageAdmin();
+      chargerDemandesPublicitesAdmin();
     })
     .catch((erreur) => {
       statut.textContent = "Connexion impossible : " + erreur.message;
