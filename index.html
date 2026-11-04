@@ -4080,6 +4080,13 @@ function changerServiceCommande(){
 
       <label>Code du colis (pour une récupération)</label>
       <input id="codeColisCommande" placeholder="Code fourni par la compagnie">
+
+      <label>État du paiement de l'expédition (récupération à la gare)</label>
+      <select id="expeditionPayeeCommande">
+        <option value="">Sélectionnez une réponse</option>
+        <option value="oui">Expédition déjà payée</option>
+        <option value="non">Expédition pas encore payée</option>
+      </select>
     `;
   }
 
@@ -4657,8 +4664,14 @@ async function chargerHistoriqueCommandes(){
     const commandes = await Promise.all(resultat.docs.map(async doc => {
       const commande = {id: doc.id, ...doc.data()};
       try {
-        const prive = await doc.ref.collection("informations_privees").doc("details").get();
+        const [prive, expedition, prix] = await Promise.all([
+          doc.ref.collection("informations_privees").doc("details").get(),
+          doc.ref.collection("informations_privees").doc("expedition").get(),
+          doc.ref.collection("tarification").doc("prix").get()
+        ]);
         commande.informationsPrivees = prive.exists ? prive.data() : {};
+        commande.referencesExpedition = expedition.exists ? expedition.data() : null;
+        commande.tarification = prix.exists ? prix.data() : null;
       } catch (e) {
         commande.informationsPrivees = {};
       }
@@ -4695,6 +4708,20 @@ async function chargerHistoriqueCommandes(){
       trajet.textContent = (commande.depart || "") + " → " + (commande.destination || "");
 
       carte.append(numero, statut, trajet);
+      if(commande.tarification){
+        const prix=document.createElement("p");
+        prix.textContent="Montant Mon Transport CI : "+Number(commande.tarification.montantTotal||0).toLocaleString("fr-FR")+" FCFA";
+        carte.appendChild(prix);
+      }
+      if(commande.referencesExpedition){
+        const refs=commande.referencesExpedition;
+        const bloc=document.createElement("div"); bloc.className="notice";
+        const titreRefs=document.createElement("strong"); titreRefs.textContent="📦 Références de votre colis expédié";
+        const compagnie=document.createElement("p"); compagnie.textContent="Compagnie : "+refs.compagnieExpedition;
+        const gare=document.createElement("p"); gare.textContent="Gare de destination : "+refs.gareDestination;
+        const code=document.createElement("p"); code.textContent="Code du colis : "+refs.codeColis;
+        bloc.append(titreRefs,compagnie,gare,code); carte.appendChild(bloc);
+      }
       zone.appendChild(carte);
     });
 
@@ -5971,31 +5998,48 @@ async function afficherMissionPartenaire(c, partenaire, zone) {
   const card = document.createElement("div"); card.className = "stop";
   const title = document.createElement("strong"); title.textContent = "Mission en cours — " + c.id;
   const route = document.createElement("p"); route.textContent = (c.depart || "") + " → " + (c.destination || "");
-  const status = document.createElement("p"); status.textContent = "Statut : " + (c.statut || "");
+  const labels={livreur_affecte:"Attribuée",colis_recupere:"Colis récupéré",en_transit:"En transit",arrive_destination:"Arrivé à destination"};
+  const status = document.createElement("p"); status.textContent = "Statut : " + (labels[c.statut] || c.statut || "");
   card.append(title, route, status);
   const privateSnap = await db.collection("commandes_colis").doc(c.id).collection("informations_privees").doc("details").get();
+  let details={};
   if (privateSnap.exists) {
-    const d = privateSnap.data();
+    details = privateSnap.data();
     const detail = document.createElement("p");
-    detail.textContent = "Suivi : " + (d.trackingNumber || c.id) + " | Expéditeur : " + (d.telephoneExpediteur || "non renseigné") + " | Destinataire : " + (d.telephoneDestinataire || "non renseigné");
+    detail.textContent = "Suivi : " + (details.trackingNumber || c.id) + " | Expéditeur : " + (details.telephoneExpediteur || "non renseigné") + " | Destinataire : " + (details.telephoneDestinataire || "non renseigné");
     card.appendChild(detail);
     const adresses = document.createElement("p");
-    adresses.textContent = "Récupération : " + (d.adresseRecuperation || "non renseignée") + " | Livraison : " + (d.adresseLivraison || "non renseignée");
+    adresses.textContent = "Récupération : " + (details.adresseRecuperation || "non renseignée") + " | Livraison : " + (details.adresseLivraison || "non renseignée");
     card.appendChild(adresses);
   }
   const map = document.createElement("div"); map.id = "carteMissionPartenaire"; map.style.cssText = "height:280px;width:100%;border-radius:10px;margin:12px 0;";
   card.appendChild(map);
-  const nav = document.createElement("button"); nav.className = "primary"; nav.textContent = c.statut === "colis_recupere" || c.statut === "en_transit" ? "Itinéraire vers le destinataire" : "Itinéraire vers le point de récupération";
-  nav.addEventListener("click", () => naviguerVersEtapeCommande(c.id, c.statut === "colis_recupere" || c.statut === "en_transit" ? "destination" : "recuperation"));
+  const estArrive=c.statut==="arrive_destination";
+  const nav = document.createElement("button"); nav.className = "primary"; nav.textContent = c.statut === "colis_recupere" || c.statut === "en_transit" || estArrive ? "Itinéraire vers le destinataire" : "Itinéraire vers le point de récupération";
+  nav.addEventListener("click", () => naviguerVersEtapeCommande(c.id, c.statut === "colis_recupere" || c.statut === "en_transit" || estArrive ? "destination" : "recuperation"));
   card.appendChild(nav);
   if (c.statut === "livreur_affecte") {
     const refuse = document.createElement("button"); refuse.textContent = "Refuser cette mission"; refuse.addEventListener("click", () => refuserMissionPartenaire(c.id)); card.appendChild(refuse);
     const pickup = document.createElement("button"); pickup.className = "primary"; pickup.textContent = "Colis récupéré"; pickup.addEventListener("click", () => marquerColisRecupere(c.id)); card.appendChild(pickup);
   } else if (c.statut === "colis_recupere" || c.statut === "en_transit") {
-    const delivered = document.createElement("button"); delivered.className = "primary"; delivered.textContent = "Confirmer la livraison"; delivered.addEventListener("click", () => terminerMissionPartenaire(c.id)); card.appendChild(delivered);
+    const arrive = document.createElement("button"); arrive.className = "primary"; arrive.textContent = "Arrivé à destination"; arrive.addEventListener("click", () => marquerArriveDestination(c.id)); card.appendChild(arrive);
+  } else if (estArrive) {
+    const prixSnap=await db.collection("commandes_colis").doc(c.id).collection("tarification").doc("prix").get();
+    if(prixSnap.exists){
+      const p=prixSnap.data();
+      const montant=document.createElement("p"); montant.textContent="Montant Mon Transport CI à percevoir : "+Number(p.montantTotal||0).toLocaleString("fr-FR")+" FCFA"; card.appendChild(montant);
+    } else {
+      const alerte=document.createElement("p"); alerte.textContent="Tarif privé introuvable. Contactez l'administrateur avant de clôturer."; card.appendChild(alerte);
+    }
+    if(c.service==="compagnie" && details.operation==="expedition"){
+      const form=document.createElement("div"); form.innerHTML='<hr><strong>Références du colis expédié</strong><label>Compagnie d’expédition</label><input id="refCompagnieExpedition" placeholder="Ex. : UTB Yopougon" required><label>Gare de destination</label><input id="refGareDestination" placeholder="Ex. : Gare de Bouaké" required><label>Code du colis délivré par le service courrier</label><input id="refCodeColisExpedition" placeholder="Code du colis" required>';
+      const finish=document.createElement("button"); finish.className="primary"; finish.textContent="Enregistrer les références et terminer"; finish.addEventListener("click",()=>terminerExpeditionGare(c.id)); form.appendChild(finish); card.appendChild(form);
+    } else {
+      const finish=document.createElement("button"); finish.className="primary"; finish.textContent="Confirmer le règlement et terminer"; finish.addEventListener("click",()=>terminerMissionPartenaire(c.id)); card.appendChild(finish);
+      const note=document.createElement("p"); note.textContent="Confirmez uniquement après le règlement convenu avec le client."; card.appendChild(note);
+    }
   }
   zone.appendChild(card);
-
 }
 
 async function naviguerVersEtapeCommande(commandeId, etape) {
@@ -6080,21 +6124,58 @@ async function marquerColisRecupere(commandeId) {
   } catch(e) { alert("Mise à jour impossible : " + e.message); }
 }
 
+async function marquerArriveDestination(commandeId) {
+  const user=auth.currentUser; if(!user) return;
+  if(!confirm("Confirmer votre arrivée au point de destination ? Le montant Mon Transport CI deviendra visible.")) return;
+  try {
+    await db.runTransaction(async tx=>{
+      const ref=db.collection("commandes_colis").doc(commandeId), snap=await tx.get(ref);
+      if(!snap.exists || snap.data().partenaireId!==user.uid || !["colis_recupere","en_transit"].includes(snap.data().statut)) throw new Error("Cette mission ne peut pas passer à l'étape arrivée.");
+      tx.update(ref,{statut:"arrive_destination",dateArriveeDestination:firebase.firestore.FieldValue.serverTimestamp()});
+    });
+    await chargerCommandesPartenaire();
+  }catch(e){alert("Mise à jour impossible : "+e.message);}
+}
+
 async function terminerMissionPartenaire(commandeId) {
   const user = auth.currentUser; if (!user) return;
-  if (!confirm("Confirmer que le colis a été remis au destinataire ?")) return;
+  if (!confirm("Confirmez-vous que le règlement convenu a été effectué et que la course est terminée ?")) return;
   const ref = db.collection("commandes_colis").doc(commandeId);
   const lock = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
   try {
     await db.runTransaction(async tx => {
       const snap = await tx.get(ref);
-      if (!snap.exists || snap.data().partenaireId !== user.uid || !["colis_recupere","en_transit"].includes(snap.data().statut)) throw new Error("La livraison ne peut pas être clôturée.");
+      if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut!=="arrive_destination") throw new Error("La course ne peut pas être clôturée avant l'arrivée.");
+      const prix=await tx.get(ref.collection("tarification").doc("prix"));
+      if(!prix.exists) throw new Error("Tarif privé introuvable.");
       tx.update(ref,{statut:"livre",dateLivraison:firebase.firestore.FieldValue.serverTimestamp()});
     });
     await lock.delete();
-    alert("Livraison confirmée. Vous pouvez maintenant accepter une nouvelle mission.");
+    alert("Course terminée. Vous pouvez maintenant accepter une nouvelle mission.");
     chargerCommandesPartenaire();
   } catch(e) { alert("Clôture impossible : " + e.message); }
+}
+
+async function terminerExpeditionGare(commandeId) {
+  const user=auth.currentUser; if(!user) return;
+  const lire=id=>{const el=document.getElementById(id);return el?el.value.trim():"";};
+  const compagnie=lire("refCompagnieExpedition"), gareDestination=lire("refGareDestination"), codeColis=lire("refCodeColisExpedition");
+  if(!compagnie||!gareDestination||!codeColis) return alert("Les trois références sont obligatoires.");
+  if(!confirm("Enregistrer les références d'expédition et terminer la course ?")) return;
+  const ref=db.collection("commandes_colis").doc(commandeId);
+  const lock=db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
+  try{
+    const batch=db.batch();
+    batch.set(ref.collection("informations_privees").doc("expedition"),{
+      compagnieExpedition:compagnie,gareDestination,codeColis,partenaireId:user.uid,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    batch.update(ref,{statut:"livre",dateLivraison:firebase.firestore.FieldValue.serverTimestamp()});
+    await batch.commit();
+    await lock.delete();
+    alert("Références enregistrées. Le client les retrouvera dans son espace Mon Transport CI.");
+    chargerCommandesPartenaire();
+  }catch(e){alert("Enregistrement impossible : "+e.message);}
 }
 
 // ===== CREATION : DONNEES PUBLIQUES SEPAREES DES INFORMATIONS PRIVEES =====
@@ -6109,11 +6190,12 @@ async function enregistrerCommande() {
   if (!telOk(telephoneExpediteur)||!telOk(telephoneDestinataire)) return alert("Vérifiez les deux numéros de téléphone.");
   const adresseRecuperation=lire("adresseRecuperationCommande"), adresseLivraison=lire("adresseLivraisonCommande");
   if(!adresseRecuperation||!adresseLivraison) return alert("Veuillez renseigner les deux adresses.");
-  let depart="", destination="", operation="", compagnie="", gare="", provenance="", codeColis="";
+  let depart="", destination="", operation="", compagnie="", gare="", provenance="", codeColis="", expeditionPayee="";
   if(service==="compagnie"){
-    operation=lire("operationCommande"); compagnie=lire("compagnieCommande"); gare=lire("gareCommande"); provenance=lire("provenanceCommande"); codeColis=lire("codeColisCommande");
+    operation=lire("operationCommande"); compagnie=lire("compagnieCommande"); gare=lire("gareCommande"); provenance=lire("provenanceCommande"); codeColis=lire("codeColisCommande"); expeditionPayee=lire("expeditionPayeeCommande");
     if(!compagnie||!gare)return alert("Veuillez renseigner la compagnie et la gare.");
     if(operation==="recuperation"&&(!provenance||!codeColis))return alert("Le code et la provenance sont obligatoires pour récupérer un colis.");
+    if(operation==="recuperation"&&!["oui","non"].includes(expeditionPayee))return alert("Indiquez si l'expédition est déjà payée.");
     if(operation==="expedition"){depart=adresseRecuperation;destination=compagnie+" - "+gare;}else{depart=compagnie+" - "+gare;destination=adresseLivraison;}
   } else if(service==="livraison"||service==="livraison_programmee"){
     depart=lire("departCommande"); destination=lire("destinationCommande");
@@ -6129,6 +6211,26 @@ async function enregistrerCommande() {
   }
   try {
     const profilDoc=await db.collection("clients").doc(user.uid).get(), profil=profilDoc.exists?profilDoc.data():{};
+    const pr=window.positionsCommande?.recuperation, pl=window.positionsCommande?.destination;
+    if(!pr || !pl || !Number.isFinite(pr.latitude) || !Number.isFinite(pr.longitude) || !Number.isFinite(pl.latitude) || !Number.isFinite(pl.longitude)) {
+      throw new Error("Sélectionnez les deux adresses dans les suggestions ou sur la carte pour calculer le tarif.");
+    }
+    const urlRoute="https://router.project-osrm.org/route/v1/driving/"+pr.longitude+","+pr.latitude+";"+pl.longitude+","+pl.latitude+"?overview=false";
+    const routeResponse=await fetch(urlRoute);
+    if(!routeResponse.ok) throw new Error("Le calcul de la distance est momentanément indisponible.");
+    const routeData=await routeResponse.json();
+    if(!routeData.routes || !routeData.routes.length) throw new Error("Aucun itinéraire routier trouvé entre les deux points.");
+    const distanceMetres=routeData.routes[0].distance;
+    const distanceKm=distanceMetres/1000;
+    const heureCI=new Intl.DateTimeFormat("fr-FR",{timeZone:"Africa/Abidjan",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date());
+    const hh=Number(heureCI.find(p=>p.type==="hour").value), mm=Number(heureCI.find(p=>p.type==="minute").value), minuteJour=hh*60+mm;
+    const tarifKm=minuteJour<=359?190:(minuteJour<=599?100:(minuteJour<=1170?120:150));
+    const fraisService=service==="compagnie"?300:0;
+    const montantLivraison=Math.round(distanceKm*tarifKm);
+    const montantTotal=montantLivraison+fraisService;
+    const resumeTarif="Distance OSRM : "+distanceKm.toFixed(1)+" km\nTarif : "+tarifKm+" FCFA/km\nLivraison : "+montantLivraison.toLocaleString("fr-FR")+" FCFA"+(fraisService?"\nFrais de service Mon Transport CI : 300 FCFA":"")+"\nTOTAL Mon Transport CI : "+montantTotal.toLocaleString("fr-FR")+" FCFA";
+    const noteGare=service==="compagnie"&&operation==="expedition"?"\nLes frais d'expédition de la compagnie sont à régler séparément et seront discutés directement avec le livreur.":(service==="compagnie"&&operation==="recuperation"?"\nLes éventuels frais de retrait du service courrier de la gare seront communiqués sur place par le livreur et discutés directement avec lui.":"");
+    if(!confirm("Vérifiez le tarif de votre commande :\n\n"+resumeTarif+noteGare+"\n\nConfirmer la commande ?")) return;
     const numeroSuivi="TCI-"+Date.now().toString(36).toUpperCase()+"-"+Math.floor(1000+Math.random()*9000);
     // La file partenaire affiche le départ sous forme générale, mais la destination exacte
     // est visible avant acceptation pour permettre au livreur d'évaluer le trajet.
@@ -6147,16 +6249,18 @@ async function enregistrerCommande() {
     }
     const publicData={clientId:user.uid,service,depart:departPublic,destination:destinationPublic,statut:"en_attente",publicVersion:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
     if(dateSouhaitee)publicData.dateHeureSouhaitee=dateSouhaitee;
-    const pr=window.positionsCommande?.recuperation, pl=window.positionsCommande?.destination;
     const ref=db.collection("commandes_colis").doc();
-    const privateData={clientNom:profil.nom||"Client",clientTelephone:profil.telephone||"",telephoneExpediteur,telephoneDestinataire,adresseRecuperation,adresseLivraison,descriptionColis:description,trackingNumber:numeroSuivi,provenance,codeColis,operation,compagnie,gare,
+    const privateData={clientNom:profil.nom||"Client",clientTelephone:profil.telephone||"",telephoneExpediteur,telephoneDestinataire,adresseRecuperation,adresseLivraison,descriptionColis:description,trackingNumber:numeroSuivi,provenance,codeColis,operation,compagnie,gare,expeditionPayee,
       latitudeRecuperation:pr?.latitude??null,longitudeRecuperation:pr?.longitude??null,
       latitudeLivraison:pl?.latitude??null,longitudeLivraison:pl?.longitude??null};
+    const createdAt=firebase.firestore.FieldValue.serverTimestamp();
+    const prixPrive={distanceKm:Number(distanceKm.toFixed(3)),distanceMetres,tarifKm,montantLivraison,fraisService,montantTotal,devise:"FCFA",operation:service==="compagnie"?operation:"livraison",createdAt};
     await db.runTransaction(async tx=>{
       tx.set(ref,publicData);
-      tx.set(ref.collection("informations_privees").doc("details"),{...privateData,clientId:user.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      tx.set(ref.collection("informations_privees").doc("details"),{...privateData,clientId:user.uid,createdAt});
+      tx.set(ref.collection("tarification").doc("prix"),prixPrive);
     });
-    document.getElementById("zoneFormulaireCommande").innerHTML=`<hr><h3>✅ Commande enregistrée !</h3><p><strong>Numéro de suivi :</strong></p><h3>${numeroSuivi}</h3><p><strong>Statut :</strong> En attente</p><p>Votre commande a bien été enregistrée.</p><button type="button" onclick="afficherFormulaireCommande()">Nouvelle commande</button>`;
+    document.getElementById("zoneFormulaireCommande").innerHTML=`<hr><h3>✅ Commande enregistrée !</h3><p><strong>Numéro de suivi :</strong></p><h3>${numeroSuivi}</h3><p><strong>Montant Mon Transport CI :</strong> ${montantTotal.toLocaleString("fr-FR")} FCFA</p><p><strong>Statut :</strong> En attente</p><p>Votre commande a bien été enregistrée.</p><button type="button" onclick="afficherFormulaireCommande()">Nouvelle commande</button>`;
     await chargerHistoriqueCommandes();
   } catch(e) { console.error("Erreur commande :",e); alert("Impossible d'enregistrer la commande : "+e.message); }
 }
