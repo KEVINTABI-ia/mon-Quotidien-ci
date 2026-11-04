@@ -1452,6 +1452,41 @@ async function chargerPublicitesAdmin() {
   }
 }
 
+function compresserImagePublicite(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith("image/")) {
+      reject(new Error("Sélectionne une image valide.")); return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Lecture de l'image impossible."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Image impossible à ouvrir."));
+      img.onload = () => {
+        let max = 1100;
+        let ratio = Math.min(1, max / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("Compression impossible.")); return; }
+        let data = "";
+        for (let essai = 0; essai < 5; essai++) {
+          canvas.width = Math.max(1, Math.round(img.width * ratio));
+          canvas.height = Math.max(1, Math.round(img.height * ratio));
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          data = canvas.toDataURL("image/jpeg", 0.72 - essai * 0.08);
+          if (data.length <= 650000) { resolve(data); return; }
+          ratio *= 0.78;
+        }
+        if (data.length <= 700000) resolve(data);
+        else reject(new Error("Image trop volumineuse. Essaie une image plus légère."));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 async function creerPubliciteManuelle() {
   if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) { alert("Accès administrateur requis."); return; }
   const titre = document.getElementById("nouvellePubTitre").value.trim();
@@ -1463,7 +1498,7 @@ async function creerPubliciteManuelle() {
   if (!["image/jpeg","image/png","image/webp"].includes(fichier.type)) { statut.textContent = "Formats acceptés : JPG, PNG ou WebP."; return; }
   try {
     statut.textContent = "Préparation de l'image...";
-    const imageDataUrl = await compresserImage(fichier);
+    const imageDataUrl = await compresserImagePublicite(fichier);
     await db.collection("publicites").add({
       titre, description, typeAffichage, imageDataUrl, mediaType:"image/jpeg",
       statut:"masquee",
