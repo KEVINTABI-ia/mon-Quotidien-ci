@@ -972,19 +972,7 @@ async function afficherMissionPartenaire(c, partenaire, zone) {
     const delivered = document.createElement("button"); delivered.className = "primary"; delivered.textContent = "Confirmer la livraison"; delivered.addEventListener("click", () => terminerMissionPartenaire(c.id)); card.appendChild(delivered);
   }
   zone.appendChild(card);
-  if (c.latitudeRecuperation != null && c.longitudeRecuperation != null) {
-    setTimeout(() => {
-      if (window.L && document.getElementById("carteMissionPartenaire")) {
-        const lat = c.statut === "colis_recupere" || c.statut === "en_transit" ? c.latitudeLivraison : c.latitudeRecuperation;
-        const lon = c.statut === "colis_recupere" || c.statut === "en_transit" ? c.longitudeLivraison : c.longitudeRecuperation;
-        if (lat != null && lon != null) {
-          const mapObj = L.map("carteMissionPartenaire").setView([lat,lon],13);
-          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(mapObj);
-          L.marker([lat,lon]).addTo(mapObj);
-        }
-      }
-    },250);
-  }
+
 }
 
 async function naviguerVersEtapeCommande(commandeId, etape) {
