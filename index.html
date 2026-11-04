@@ -5640,6 +5640,22 @@ function filtrerMarchesCommune(){
   window.marchesCommuneAffiches = marches;
 }
 
+function instructionNavigationMarche(etape,index){
+  const m=etape.maneuver||{}, type=m.type||"continue", mod=m.modifier||"", nom=etape.name||"la route";
+  let action="Continuez tout droit";
+  if(type==="depart") action="Démarrez";
+  else if(type==="arrive") action="Vous êtes arrivé à destination";
+  else if(type==="turn"||type==="end of road"||type==="fork"||type==="on ramp"||type==="off ramp"||type==="roundabout"||type==="rotary"){
+    if(mod.includes("left")) action="Tournez à gauche";
+    else if(mod.includes("right")) action="Tournez à droite";
+    else if(mod==="uturn") action="Faites demi-tour";
+    else if(type==="roundabout"||type==="rotary") action="Prenez le rond-point";
+    else action="Continuez";
+  } else if(type==="merge") action="Insérez-vous";
+  const distance=etape.distance>=1000?(etape.distance/1000).toFixed(1).replace(".",",")+" km":Math.round(etape.distance)+" m";
+  return (index===0?"Départ : ":"")+action+(nom&&type!=="arrive"?" sur "+echapperTexteCompagnie(nom):"")+" ("+distance+")";
+}
+
 async function tracerItineraireMarche(index){
   const marche=(window.marchesCommuneAffiches||[])[index];
   if(!marche)return;
@@ -5656,20 +5672,33 @@ async function tracerItineraireMarche(index){
       const lieux=await recherche.json();
       if(!lieux.length)throw new Error("L'emplacement de ce marché n'a pas été trouvé.");
       const arrivee=[Number(lieux[0].lat),Number(lieux[0].lon)];
-      const url="https://router.project-osrm.org/route/v1/driving/"+depart[1]+","+depart[0]+";"+arrivee[1]+","+arrivee[0]+"?overview=full&geometries=geojson";
+      const url="https://router.project-osrm.org/route/v1/driving/"+depart[1]+","+depart[0]+";"+arrivee[1]+","+arrivee[0]+"?overview=full&geometries=geojson&steps=true";
       const reponse=await fetch(url);
       if(!reponse.ok)throw new Error("Le calcul du trajet est momentanément indisponible.");
       const donnees=await reponse.json();
       if(!donnees.routes||!donnees.routes.length)throw new Error("Aucun itinéraire routier n'a été trouvé.");
       const trajet=donnees.routes[0];
-      carteZone.innerHTML="<strong>Itinéraire vers "+echapperTexteCompagnie(marche.nom)+"</strong><p>Distance : "+(trajet.distance/1000).toFixed(1)+" km · Durée estimée : "+Math.round(trajet.duration/60)+" min</p><div id='carteMarchesLeaflet' style='width:100%;height:290px;border-radius:12px'></div>";
+      const etapes=(trajet.legs||[]).flatMap(leg=>leg.steps||[]).filter(etape=>etape.distance>5);
+      const instructions=etapes.map((etape,i)=>"<li style='margin:8px 0'>"+instructionNavigationMarche(etape,i)+"</li>").join("");
+      carteZone.innerHTML="<strong>Itinéraire vers "+echapperTexteCompagnie(marche.nom)+"</strong><p>Distance : "+(trajet.distance/1000).toFixed(1)+" km · Durée estimée : "+Math.round(trajet.duration/60)+" min</p><div id='prochaineInstructionMarche' class='notice' style='font-size:16px;font-weight:bold'>Suivez les indications ci-dessous.</div><div id='carteMarchesLeaflet' style='width:100%;height:320px;border-radius:12px'></div><h4>Instructions de conduite</h4><ol>"+instructions+"</ol><p class='notice'>La position GPS sera actualisée pendant le déplacement. Gardez cette page ouverte et autorisez la localisation.</p>";
       if(window.carteItineraireMarche){window.carteItineraireMarche.remove();window.carteItineraireMarche=null;}
-      const carte=L.map("carteMarchesLeaflet").setView(depart,13);window.carteItineraireMarche=carte;
+      const carte=L.map("carteMarchesLeaflet").setView(depart,16);window.carteItineraireMarche=carte;
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(carte);
       const ligne=L.geoJSON(trajet.geometry,{style:{color:"#16834A",weight:6,opacity:.85}}).addTo(carte);
-      L.marker(depart).addTo(carte).bindPopup("Votre position");
+      const icone=L.divIcon({className:"",html:"<div style=\"background:#1769e0;border:3px solid white;border-radius:50%;width:18px;height:18px;box-shadow:0 1px 6px #333\"></div>",iconSize:[24,24],iconAnchor:[12,12]});
+      const marqueurPosition=L.marker(depart,{icon:icone}).addTo(carte).bindPopup("Votre position GPS");
       L.marker(arrivee).addTo(carte).bindPopup(marche.nom);
       carte.fitBounds(ligne.getBounds(),{padding:[22,22]});
+      if(window.suiviGPSMarche!==undefined && window.suiviGPSMarche!==null) navigator.geolocation.clearWatch(window.suiviGPSMarche);
+      window.suiviGPSMarche=navigator.geolocation.watchPosition(pos=>{
+        const actuelle=[pos.coords.latitude,pos.coords.longitude];
+        marqueurPosition.setLatLng(actuelle);
+        carte.panTo(actuelle,{animate:true,duration:0.8});
+        let proche=0,ecart=Infinity;
+        etapes.forEach((etape,i)=>{if(etape.maneuver&&etape.maneuver.location){const dx=(etape.maneuver.location[1]-actuelle[0])*111000,dy=(etape.maneuver.location[0]-actuelle[1])*111000*Math.cos(actuelle[0]*Math.PI/180),d=Math.hypot(dx,dy);if(d<ecart){ecart=d;proche=i;}}});
+        const instruction=document.getElementById("prochaineInstructionMarche");
+        if(instruction&&etapes.length){const prochaine=etapes[Math.min(proche+1,etapes.length-1)];instruction.textContent=instructionNavigationMarche(prochaine,proche+1)+" — à environ "+Math.round(ecart)+" m";}
+      },err=>console.warn("Suivi GPS marché :",err),{enableHighAccuracy:true,maximumAge:3000,timeout:20000});
       setTimeout(()=>carte.invalidateSize(),250);
       carteZone.scrollIntoView({behavior:"smooth",block:"nearest"});
     }catch(e){carteZone.innerHTML="<p class='notice'>"+echapperTexteCompagnie(e.message)+"</p>";}
