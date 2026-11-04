@@ -262,7 +262,7 @@ describe("Mon Transport CI — règles Firestore", function () {
   it("autorise l'acceptation atomique d'une commande et la création du verrou", async () => {
     await testEnv.withSecurityRulesDisabled(async context => {
       await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
-        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente", publicVersion: true,
         depart: "Yopougon", destination: "Adjamé"
       });
     });
@@ -283,7 +283,7 @@ describe("Mon Transport CI — règles Firestore", function () {
   it("autorise l'administrateur à attribuer une commande avec le verrou correspondant", async () => {
     await testEnv.withSecurityRulesDisabled(async context => {
       await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
-        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente", publicVersion: true,
         depart: "Yopougon", destination: "Adjamé"
       });
     });
@@ -348,7 +348,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     await testEnv.withSecurityRulesDisabled(async context => {
       const db = context.firestore();
       await db.doc(`commandes_colis/${ORDER_ID}`).set({
-        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente", publicVersion: true,
         depart: "Yopougon", destination: "Adjamé"
       });
     });
@@ -356,6 +356,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     const { collection, query, where, limit, getDocs } = require("firebase/firestore");
     const q = query(
       collection(db, "commandes_colis"),
+      where("publicVersion", "==", true),
       where("publicVersion", "==", true),
       where("statut", "==", "en_attente"),
       where("service", "in", ["livraison", "livraison_programmee"]),
@@ -368,7 +369,7 @@ describe("Mon Transport CI — règles Firestore", function () {
   it("ne retourne pas les commandes de gare dans la file d'attente des livreurs", async () => {
     await testEnv.withSecurityRulesDisabled(async context => {
       await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
-        clientId: CLIENT_UID, service: "compagnie", statut: "en_attente",
+        clientId: CLIENT_UID, service: "compagnie", statut: "en_attente", publicVersion: true,
         depart: "Gare test", destination: "Gare destination"
       });
     });
@@ -376,6 +377,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     const { collection, query, where, limit, getDocs } = require("firebase/firestore");
     const q = query(
       collection(db, "commandes_colis"),
+      where("publicVersion", "==", true),
       where("statut", "==", "en_attente"),
       where("service", "in", ["livraison", "livraison_programmee"]),
       limit(30)
@@ -397,7 +399,7 @@ describe("Mon Transport CI — règles Firestore", function () {
   it("autorise le verrou uniquement avec la commande attribuée dans la même opération", async () => {
     await testEnv.withSecurityRulesDisabled(async context => {
       await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
-        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente", publicVersion: true,
         depart: "Yopougon", destination: "Adjamé"
       });
     });
@@ -457,7 +459,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       const db = context.firestore();
       await db.doc(`partenaires/${PARTNER_UID}`).update({ enLigne: false });
       await db.doc(`commandes_colis/${ORDER_ID}`).set({
-        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente", publicVersion: true,
         depart: "Yopougon", destination: "Adjamé"
       });
     });
@@ -484,7 +486,7 @@ describe("Mon Transport CI — règles Firestore", function () {
         posteOccupe: "Représentant"
       }));
       await db.doc(`commandes_colis/${ORDER_ID}`).set({
-        clientId: CLIENT_UID, service: "compagnie", statut: "en_attente",
+        clientId: CLIENT_UID, service: "compagnie", statut: "en_attente", publicVersion: true,
         depart: "Gare test", destination: "Bouaké"
       });
     });
@@ -492,6 +494,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     const { collection, query, where, limit, getDocs } = require("firebase/firestore");
     const q = query(
       collection(db, "commandes_colis"),
+      where("publicVersion", "==", true),
       where("statut", "==", "en_attente"),
       where("service", "==", "compagnie"),
       limit(30)
@@ -514,6 +517,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     await assertFails(getDoc(doc(db, "commandes_colis", ORDER_ID)));
     const q = query(
       collection(db, "commandes_colis"),
+      where("publicVersion", "==", true),
       where("statut", "==", "en_attente"),
       where("service", "in", ["livraison", "livraison_programmee"]),
       limit(30)
@@ -552,7 +556,8 @@ describe("Mon Transport CI — règles Firestore", function () {
       telephoneExpediteur: deleteField(), telephoneDestinataire: deleteField(),
       adresseRecuperation: deleteField(), adresseLivraison: deleteField(),
       descriptionColis: deleteField(), trackingNumber: deleteField(),
-      latitudeRecuperation: deleteField(), longitudeRecuperation: deleteField()
+      latitudeRecuperation: deleteField(), longitudeRecuperation: deleteField(),
+      publicVersion: true
     });
     await assertSucceeds(batch.commit());
     const publicDoc = await getDoc(orderRef);
