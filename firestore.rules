@@ -138,8 +138,10 @@ service cloud.firestore {
             && verrouId == "missionActive"
             && resource.data.commandeId is string
             && (
-              getAfter(commandePath(resource.data.commandeId)).data.statut == "en_attente"
-              || getAfter(commandePath(resource.data.commandeId)).data.statut == "livre"
+              (getAfter(commandePath(resource.data.commandeId)).data.statut == "en_attente"
+                && getAfter(commandePath(resource.data.commandeId)).data.get("partenaireId", null) == null)
+              || (getAfter(commandePath(resource.data.commandeId)).data.statut == "livre"
+                && getAfter(commandePath(resource.data.commandeId)).data.partenaireId == partenaireId)
             ));
         allow update: if false;
       }
@@ -197,6 +199,8 @@ service cloud.firestore {
           && resource.data.statut == "en_attente"
           && request.resource.data.statut == "livreur_affecte"
           && request.resource.data.partenaireId is string
+          && request.resource.data.partenaireType == (resource.data.service == "compagnie" ? "representant_gare" : "livreur_independant")
+          && abonnementValide(partenaire(request.resource.data.partenaireId))
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation", "affectePar"])
           && existsAfter(verrouPath(request.resource.data.partenaireId))
@@ -235,6 +239,7 @@ service cloud.firestore {
             .hasOnly(["statut", "dateRecuperation"])
           && exists(verrouPath(request.auth.uid))
           && get(verrouPath(request.auth.uid)).data.commandeId == commandeId
+          && get(verrouPath(request.auth.uid)).data.statut == "active"
         )
         || (
           estConnecte()
@@ -284,6 +289,7 @@ service cloud.firestore {
           && (
             (estConnecte()
               && getAfter(commandePath(commandeId)).data.clientId == request.auth.uid
+              && getAfter(commandePath(commandeId)).data.statut == "en_attente"
               && request.resource.data.clientId == request.auth.uid)
             || (estAdmin()
               && get(commandePath(commandeId)).data.clientId == request.resource.data.clientId)
