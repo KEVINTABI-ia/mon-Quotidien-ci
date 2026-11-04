@@ -707,6 +707,31 @@ footer { color: #718076; }
 }
 
 
+/* NAVIGATION PLEIN ECRAN ET ACCUEIL COMPACT */
+.recherche-trajet{padding:15px 14px!important}
+.recherche-trajet h2{font-size:18px!important;margin-bottom:12px!important}
+.recherche-trajet label{margin-top:11px!important;font-size:12px!important}
+.recherche-trajet select{min-height:43px!important;padding:10px 12px!important;font-size:14px!important}
+.recherche-trajet .primary{min-height:47px!important;font-size:15px!important;margin-top:12px!important}
+.accueil-raccourcis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 18px}
+.accueil-raccourci{min-width:0;min-height:116px;padding:12px 9px;border:1px solid #DCE8E0;border-radius:16px;background:#fff;box-shadow:0 4px 14px #102D3510;display:flex;flex-direction:column;align-items:center;text-align:center;justify-content:center;gap:5px}
+.raccourci-icone{font-size:25px;line-height:1.1}
+.raccourci-texte{display:flex;flex-direction:column;gap:2px;min-width:0}
+.raccourci-texte strong{font-size:12px;line-height:1.25;color:#174B40}
+.raccourci-texte small{font-size:10px;line-height:1.25;color:#718079}
+.accueil-raccourci button{margin-top:3px;padding:8px 12px;font-size:11px;background:#087C62;color:#fff;width:100%;border-radius:10px}
+.carte-colis{background:linear-gradient(145deg,#FFF8E9,#FBEACB)}
+.carte-compagnies{background:linear-gradient(145deg,#ECF8F2,#DCEFE4)}
+#vuePleinEcran{display:none;position:fixed;inset:0;z-index:5000;background:#F5F5F0;overflow:hidden;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+#vuePleinEcran.actif{display:flex}
+.vue-plein-ecran-entete{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:12px 16px;background:#102D35;color:#fff;box-shadow:0 3px 12px #0002;min-height:62px}
+.vue-plein-ecran-entete button{flex:0 0 auto;background:#D5A84B;color:#102D35;padding:10px 13px;font-size:13px}
+.vue-plein-ecran-titre{font-size:16px;font-weight:800;line-height:1.25}
+#vuePleinEcranContenu{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:14px 12px 28px}
+#vuePleinEcranContenu>.card,#vuePleinEcranContenu>.result{width:100%;max-width:680px;margin:0 auto 12px;box-shadow:none}
+#vuePleinEcranContenu>.result{display:block!important}
+#vuePleinEcranContenu #carte{max-width:100%}
+@media(max-width:360px){.accueil-raccourci{padding:10px 6px;min-height:112px}.raccourci-texte strong{font-size:11px}.accueil-raccourci button{font-size:10px;padding:8px 5px}}
 /* ACCUEIL : TUILES ILLUSTREES DES SERVICES */
 .accueil-services{padding:20px 16px}
 .accueil-services-entete h2{margin-bottom:6px}
@@ -750,9 +775,9 @@ footer { color: #718076; }
   </button>
 
 <div class="menu-dropdown" id="menuDropdown">
-  <button onclick="ouvrirSection('espaceAdmin')">🔐 Espace administrateur</button>
-  <button onclick="ouvrirSection('transportColis')">📦 Transport Colis CI</button>
-  <button onclick="ouvrirSection('devenirPartenaire')">🤝 Devenir partenaire</button>
+  <button onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur')">🔐 Espace administrateur</button>
+  <button onclick="ouvrirSectionPleinEcran('transportColis','Transport Colis CI')">📦 Transport Colis CI</button>
+  <button onclick="ouvrirSectionPleinEcran('devenirPartenaire','Devenir partenaire')">🤝 Devenir partenaire</button>
 </div>
 </div>
 
@@ -1052,7 +1077,7 @@ footer { color: #718076; }
 </section>
 
 </section>
-<section class="card">
+<section class="card recherche-trajet">
 <h2>Où souhaitez-vous aller ?</h2>
 
 <label for="depart">Lieu de départ</label>
@@ -1125,11 +1150,20 @@ resultat.style.display = "block";
 <div class="result" id="resultat" aria-live="polite"></div>
 <div id="carte" style="width:100%;height:350px;margin-top:15px;border-radius:12px;display:none;"></div>
 <div id="infoRoute" style="margin-top:10px;font-weight:bold;"></div>
-<button type="button" onclick="ouvrirDansGoogleMaps()" style="width:100%;margin-top:10px;">
-🗺️ Ouvrir l’itinéraire dans Google Maps
-</button>
 </section>
-<section class="card" id="repertoireCompagnies">
+<div class="accueil-raccourcis">
+  <section class="accueil-raccourci carte-colis">
+    <div class="raccourci-icone">📦</div>
+    <div class="raccourci-texte"><strong>Transport Colis CI</strong><small>Envoyer ou récupérer un colis</small></div>
+    <button type="button" onclick="ouvrirSectionPleinEcran('transportColis','Transport Colis CI')">Ouvrir</button>
+  </section>
+  <section class="accueil-raccourci carte-compagnies">
+    <div class="raccourci-icone">🚍</div>
+    <div class="raccourci-texte"><strong>Compagnies de voyage</strong><small>Agences, destinations et tarifs</small></div>
+    <button type="button" onclick="ouvrirSectionPleinEcran('repertoireCompagnies','Compagnies de voyage')">Consulter</button>
+  </section>
+</div>
+<section class="card" id="repertoireCompagnies" style="display:none;">
   <h2>🚍 Compagnies de voyage</h2>
   <p class="notice">
     Consultez les agences, les destinations et les tarifs des compagnies.
@@ -1152,22 +1186,22 @@ resultat.style.display = "block";
     <p>Choisissez directement le service ou le réseau que vous recherchez.</p>
   </div>
   <div class="accueil-services-grid">
-    <button type="button" class="accueil-service tuile-gbaka" onclick="afficherGaresStations('Gbaka')">
+    <button type="button" class="accueil-service tuile-gbaka" onclick="ouvrirResultatPleinEcran('Gares de Gbaka'); afficherGaresStations('Gbaka')">
       <span class="accueil-service-illustration">🚐</span><strong>Gares de Gbaka</strong><small>Points de départ et destinations</small>
     </button>
-    <button type="button" class="accueil-service tuile-taxi" onclick="afficherGaresStations('Taxi communal')">
+    <button type="button" class="accueil-service tuile-taxi" onclick="ouvrirResultatPleinEcran('Gares de taxi communal'); afficherGaresStations('Taxi communal')">
       <span class="accueil-service-illustration">🚖</span><strong>Gares de taxi communal</strong><small>Repérez les gares proches de votre trajet</small>
     </button>
-    <button type="button" class="accueil-service tuile-sotra" onclick="afficherReseauSotra()">
+    <button type="button" class="accueil-service tuile-sotra" onclick="ouvrirResultatPleinEcran('Réseau SOTRA'); afficherReseauSotra()">
       <span class="accueil-service-illustration">🚌</span><strong>SOTRA</strong><small>Lignes, gares et arrêts</small>
     </button>
-    <button type="button" class="accueil-service tuile-ramassage" onclick="ouvrirSection('serviceRamassage')">
+    <button type="button" class="accueil-service tuile-ramassage" onclick="ouvrirSectionPleinEcran('serviceRamassage','Cars de ramassage')">
       <span class="accueil-service-illustration">🚍</span><strong>Cars de ramassage</strong><small>Déplacements réguliers et places disponibles</small>
     </button>
-    <button type="button" class="accueil-service tuile-marches" onclick="afficherMarchesCommune()">
+    <button type="button" class="accueil-service tuile-marches" onclick="ouvrirResultatPleinEcran('Marchés de la commune'); afficherMarchesCommune()">
       <span class="accueil-service-illustration">🏬</span><strong>Marchés de la commune</strong><small>Retrouvez les marchés par commune</small>
     </button>
-    <button type="button" class="accueil-service tuile-woro" onclick="afficherGaresStations('Woro-woro')">
+    <button type="button" class="accueil-service tuile-woro" onclick="ouvrirResultatPleinEcran('Gares de Woro-woro'); afficherGaresStations('Woro-woro')">
       <span class="accueil-service-illustration">🚕</span><strong>Woro-woro</strong><small>Gares et dessertes disponibles</small>
     </button>
   </div>
@@ -3479,6 +3513,67 @@ alert("Inscription réussie. Ton dossier est en attente de validation.");
     alert("Erreur lors de la création : " + erreur.message);
   }
 }
+let vuePleinEcranActive = null;
+
+function ouvrirElementPleinEcran(element, titre){
+  if(!element) return;
+  if(vuePleinEcranActive) fermerVuePleinEcran();
+
+  const placeholder = document.createComment("emplacement d'origine");
+  const displayInitial = element.style.display;
+  element.parentNode.insertBefore(placeholder, element);
+
+  document.getElementById("vuePleinEcranTitre").textContent = titre || "Mon Transport CI";
+  const contenu = document.getElementById("vuePleinEcranContenu");
+  contenu.replaceChildren(element);
+  element.style.display = "block";
+
+  const overlay = document.getElementById("vuePleinEcran");
+  overlay.classList.add("actif");
+  overlay.setAttribute("aria-hidden","false");
+  document.body.style.overflow = "hidden";
+  vuePleinEcranActive = {element, placeholder, displayInitial};
+  contenu.scrollTop = 0;
+}
+
+function ouvrirSectionPleinEcran(id, titre){
+  const section = document.getElementById(id);
+  if(!section) return;
+  document.getElementById("menuDropdown").style.display = "none";
+  if(id === "transportColis") afficherSousMenuColis("client");
+  ouvrirElementPleinEcran(section, titre);
+}
+
+function ouvrirResultatPleinEcran(titre){
+  const resultat = document.getElementById("resultat");
+  if(!resultat) return;
+  ouvrirElementPleinEcran(resultat, titre);
+}
+
+function fermerVuePleinEcran(){
+  if(!vuePleinEcranActive) return;
+  const {element, placeholder, displayInitial} = vuePleinEcranActive;
+  placeholder.parentNode.insertBefore(element, placeholder);
+  placeholder.remove();
+  element.style.display = displayInitial;
+  vuePleinEcranActive = null;
+
+  const overlay = document.getElementById("vuePleinEcran");
+  overlay.classList.remove("actif");
+  overlay.setAttribute("aria-hidden","true");
+  document.getElementById("vuePleinEcranContenu").replaceChildren();
+  document.body.style.overflow = "";
+}
+
+document.addEventListener("click", function(event){
+  const conteneur = document.querySelector(".menu-container");
+  const menu = document.getElementById("menuDropdown");
+  if(menu && menu.style.display === "block" &&
+     conteneur && !conteneur.contains(event.target)){
+    menu.style.display = "none";
+  }
+});
+
 function basculerMenu(){
   const menu = document.getElementById("menuDropdown");
 
@@ -4872,7 +4967,11 @@ function afficherMarchesCommune(){
   html += "</datalist><div id='listeMarchesCommune' aria-live='polite'>";
   html += "<p class='notice'>Saisissez le nom d'une commune pour voir ses marchés.</p></div>";
   resultat.innerHTML = html;
-  resultat.scrollIntoView({behavior:"smooth",block:"start"});
+  if(vuePleinEcranActive && vuePleinEcranActive.element === resultat){
+    document.getElementById("vuePleinEcranContenu").scrollTop = 0;
+  } else {
+    resultat.scrollIntoView({behavior:"smooth",block:"start"});
+  }
 }
 
 function filtrerMarchesCommune(){
@@ -6241,5 +6340,12 @@ async function migrerAnciennesCommandesPrivees() {
 }
 
 </script>
+<div id="vuePleinEcran" aria-hidden="true">
+  <div class="vue-plein-ecran-entete">
+    <button type="button" onclick="fermerVuePleinEcran()">← Retour</button>
+    <div class="vue-plein-ecran-titre" id="vuePleinEcranTitre"></div>
+  </div>
+  <div id="vuePleinEcranContenu"></div>
+</div>
 </body>
 </html>
