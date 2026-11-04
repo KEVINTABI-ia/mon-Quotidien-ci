@@ -1431,7 +1431,6 @@ async function chargerPublicitesAdmin() {
       const d = doc.data();
       const dateFin = d.dateFin?.toDate ? d.dateFin.toDate().toLocaleDateString("fr-FR") : "Non définie";
       const terminee = d.dateFin?.toDate && d.dateFin.toDate() <= new Date();
-      const terminee = d.dateFin?.toDate && d.dateFin.toDate() <= new Date();
       const visible = d.statut === "publiee" && !terminee;
       const etat = visible ? "Affichée" : "Masquée";
       const visuel = d.imageDataUrl || d.mediaUrl || "";
