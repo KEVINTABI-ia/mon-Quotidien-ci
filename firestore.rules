@@ -313,8 +313,7 @@ service cloud.firestore {
             || (!existsAfter(detailsPrivesPath(commandeId))
               && !contientChampsPrives(resource.data))
           )
-        );
-
+        )
         || (
           estConnecte()
           && resource.data.partenaireId == request.auth.uid
@@ -329,7 +328,7 @@ service cloud.firestore {
           && request.resource.data.positionLivreur.longitude >= -180
           && request.resource.data.positionLivreur.longitude <= 180
           && request.resource.data.positionLivreurMaj == request.time
-        )
+        );
 
       allow delete: if estAdmin();
 
