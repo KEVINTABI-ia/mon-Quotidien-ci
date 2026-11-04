@@ -706,6 +706,20 @@ footer { color: #718076; }
   font-weight: 700;
 }
 
+
+/* SERVICE DE CARS DE RAMASSAGE */
+.ramassage-hero{background:linear-gradient(125deg,#F28C28,#16834A);color:#fff;padding:22px;border-radius:20px;margin-bottom:16px}
+.ramassage-hero h2{color:#fff!important;margin-bottom:8px}
+.ramassage-hero p{color:#fff;margin:0}
+.ramassage-tabs{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0}
+.ramassage-tabs button{background:#F0F7F1;color:#17663D;border:1px solid #DCEBDD}
+.ramassage-tabs button.active{background:#F28C28;color:#fff;border-color:#F28C28}
+.ramassage-panel{background:#fff;border:1px solid #E3EAE4;border-radius:16px;padding:16px;margin:12px 0}
+.ramassage-panel h3{margin-top:0}
+.ramassage-list-item{border:1px solid #E3EAE4;border-left:4px solid #16834A;border-radius:13px;padding:13px;margin:10px 0;background:#fff}
+.ramassage-list-item strong{color:#17663D}
+.ramassage-muted{font-size:12px;color:#68786E}
+
 </style>
 </head>
 <body>
@@ -777,6 +791,78 @@ footer { color: #718076; }
   <p class="notice">
     Les inscriptions et réservations seront ouvertes après la mise en place des espaces sécurisés.
   </p>
+</section>
+
+
+<section class="card" id="serviceRamassage" style="display:none;">
+  <div class="ramassage-hero">
+    <h2>🚌 Service de cars de ramassage</h2>
+    <p>Travailleurs, agents publics et professionnels : trouvez une place pour vos déplacements réguliers. Compagnies : proposez vos places disponibles.</p>
+  </div>
+  <div class="ramassage-tabs">
+    <button type="button" id="tabRamassageUsager" class="active" onclick="afficherOngletRamassage('usager')">👤 Je cherche un car</button>
+    <button type="button" id="tabRamassageCompagnie" onclick="afficherOngletRamassage('compagnie')">🚌 Je suis une compagnie</button>
+  </div>
+  <div id="ramassageUsager" class="ramassage-panel">
+    <h3>👤 Espace utilisateur</h3>
+    <p>Créez votre compte, publiez votre besoin de ramassage et consultez les cars qui ont des places disponibles.</p>
+    <div id="ramassageUsagerAuth">
+      <label>Adresse e-mail</label><input id="ramassageUserEmail" type="email" placeholder="Votre adresse e-mail">
+      <label>Mot de passe</label><input id="ramassageUserPassword" type="password" placeholder="6 caractères minimum">
+      <label>Nom complet</label><input id="ramassageUserName" placeholder="Nom et prénoms">
+      <label>Téléphone</label><input id="ramassageUserPhone" type="tel" placeholder="07...">
+      <button class="primary" type="button" onclick="inscrireCompteRamassage('usager')">Créer mon compte utilisateur</button>
+      <button type="button" class="primary" onclick="connecterCompteRamassage('usager')">Me connecter</button>
+    </div>
+    <div id="ramassageUsagerEspace" style="display:none">
+      <p id="ramassageUserWelcome" class="notice"></p>
+      <h3>Publier ma recherche de ramassage</h3>
+      <label>Commune de départ</label><input id="demandeRamassageCommune" placeholder="Ex. Yopougon">
+      <label>Quartier ou point de ramassage</label><input id="demandeRamassageDepart" placeholder="Ex. Bagnon">
+      <label>Lieu de travail / destination</label><input id="demandeRamassageDestination" placeholder="Ex. Plateau">
+      <label>Jours de déplacement</label><input id="demandeRamassageJours" placeholder="Ex. Lundi au vendredi">
+      <label>Heure souhaitée</label><input id="demandeRamassageHeure" type="time">
+      <label>Nombre de places recherchées</label><input id="demandeRamassagePlaces" type="number" min="1" max="10" value="1">
+      <button class="primary" type="button" onclick="publierDemandeRamassage()">Publier ma recherche</button>
+      <hr>
+      <h3>Compagnies et places disponibles</h3>
+      <div id="listeOffresRamassage"><p class="notice">Connectez-vous pour consulter les offres.</p></div>
+      <button type="button" onclick="chargerOffresRamassage()">Actualiser les offres</button>
+      <button type="button" onclick="deconnecterRamassage()">Déconnexion</button>
+    </div>
+  </div>
+  <div id="ramassageCompagnie" class="ramassage-panel" style="display:none">
+    <h3>🚌 Espace compagnie de cars</h3>
+    <p>Publiez vos lignes, horaires et places disponibles. L'accès aux demandes des utilisateurs est réservé aux compagnies approuvées disposant d'un abonnement actif.</p>
+    <div id="ramassageCompagnieAuth">
+      <label>Adresse e-mail professionnelle</label><input id="ramassageCompanyEmail" type="email" placeholder="E-mail professionnel">
+      <label>Mot de passe</label><input id="ramassageCompanyPassword" type="password" placeholder="6 caractères minimum">
+      <label>Nom de la compagnie</label><input id="ramassageCompanyName" placeholder="Nom commercial">
+      <label>Téléphone</label><input id="ramassageCompanyPhone" type="tel" placeholder="Téléphone de la compagnie">
+      <button class="primary" type="button" onclick="inscrireCompteRamassage('compagnie')">Inscrire ma compagnie</button>
+      <button class="primary" type="button" onclick="connecterCompteRamassage('compagnie')">Connexion compagnie</button>
+    </div>
+    <div id="ramassageCompagnieEspace" style="display:none">
+      <p id="ramassageCompanyStatus" class="notice"></p>
+      <div id="ramassageCompanyActions" style="display:none">
+        <h3>Publier un trajet avec places disponibles</h3>
+        <label>Commune de départ</label><input id="offreRamassageCommune" placeholder="Ex. Yopougon">
+        <label>Point(s) de ramassage</label><input id="offreRamassagePoints" placeholder="Ex. Bagnon, Niangon, Siporex">
+        <label>Destination</label><input id="offreRamassageDestination" placeholder="Ex. Plateau">
+        <label>Jours de circulation</label><input id="offreRamassageJours" placeholder="Ex. Lundi au vendredi">
+        <label>Heure de départ</label><input id="offreRamassageHeure" type="time">
+        <label>Nombre de places disponibles</label><input id="offreRamassagePlaces" type="number" min="1" max="100">
+        <label>Tarif proposé (FCFA, facultatif)</label><input id="offreRamassageTarif" type="number" min="0">
+        <button class="primary" type="button" onclick="publierOffreRamassage()">Publier mon trajet</button>
+        <hr>
+        <h3>Personnes en recherche de ramassage</h3>
+        <div id="listeDemandesRamassage"><p class="notice">Chargement des demandes...</p></div>
+        <button type="button" onclick="chargerDemandesRamassage()">Actualiser les demandes</button>
+      </div>
+      <button type="button" onclick="deconnecterRamassage()">Déconnexion</button>
+    </div>
+  </div>
+  <p class="notice">Les comptes des compagnies sont soumis à validation et à l'activation d'un abonnement mensuel par l'administration. Le paiement en ligne sera ajouté après validation du fonctionnement et du tarif de l'abonnement.</p>
 </section>
 
 <section class="card carte-acces-colis" aria-label="Accès au service Transport Colis">
@@ -1086,7 +1172,7 @@ Calculer mon budget
 <button class="mode" onclick="choisir('Woro-woro')">🚕 Woro-woro</button>
 <button class="mode" onclick="choisir('Taxi communal')">🚖 Taxi communal</button>
 <button class="mode" onclick="choisir('SOTRA')">🚌 SOTRA</button>
-<button class="mode" onclick="choisir('Car interurbain')">🚌 Service de cars de ramassage</button>
+<button class="mode" onclick="ouvrirSection('serviceRamassage')">🚌 Service de cars de ramassage</button>
 </div>
 </section>
 
@@ -3534,7 +3620,7 @@ function basculerMenu(){
 }
 
 function masquerParcours(){
-  ["espaceAdmin","calculateur","favoris","historique","transportColis"].forEach(id => {
+  ["espaceAdmin","calculateur","favoris","historique","transportColis","serviceRamassage"].forEach(id => {
     const section = document.getElementById(id);
     if(section) section.style.display = "none";
   });
@@ -3573,6 +3659,129 @@ function ouvrirSection(id){
     block:"start"
   });
 }
+
+let ramassageRoleActif = null;
+function afficherOngletRamassage(role){
+  const user = role === "usager";
+  document.getElementById("ramassageUsager").style.display = user ? "block" : "none";
+  document.getElementById("ramassageCompagnie").style.display = user ? "none" : "block";
+  document.getElementById("tabRamassageUsager").classList.toggle("active",user);
+  document.getElementById("tabRamassageCompagnie").classList.toggle("active",!user);
+}
+async function inscrireCompteRamassage(role){
+  const compagnie = role === "compagnie";
+  const email = document.getElementById(compagnie?"ramassageCompanyEmail":"ramassageUserEmail").value.trim();
+  const password = document.getElementById(compagnie?"ramassageCompanyPassword":"ramassageUserPassword").value;
+  const nom = document.getElementById(compagnie?"ramassageCompanyName":"ramassageUserName").value.trim();
+  const telephone = document.getElementById(compagnie?"ramassageCompanyPhone":"ramassageUserPhone").value.trim();
+  if(!email||!password||!nom||!telephone) return alert("Veuillez remplir tous les champs.");
+  if(password.length<6) return alert("Le mot de passe doit contenir au moins 6 caractères.");
+  try{
+    const credential=await auth.createUserWithEmailAndPassword(email,password);
+    await db.collection("comptes_ramassage").doc(credential.user.uid).set({
+      uid:credential.user.uid,role:role,nom:nom,telephone:telephone,email:email,
+      statut:compagnie?"en_attente":"actif",
+      abonnement:compagnie?"inactif":"non_applicable",
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    ramassageRoleActif=role;
+    await afficherEspaceRamassage(credential.user);
+    alert(compagnie?"Demande d'inscription envoyée. Votre compagnie sera vérifiée par l'administration avant activation de l'abonnement.":"Compte créé. Vous pouvez maintenant publier votre recherche de ramassage.");
+  }catch(e){alert("Inscription impossible : "+e.message);}
+}
+async function connecterCompteRamassage(role){
+  const compagnie=role==="compagnie";
+  const email=document.getElementById(compagnie?"ramassageCompanyEmail":"ramassageUserEmail").value.trim();
+  const password=document.getElementById(compagnie?"ramassageCompanyPassword":"ramassageUserPassword").value;
+  if(!email||!password)return alert("Saisissez votre e-mail et votre mot de passe.");
+  try{
+    const credential=await auth.signInWithEmailAndPassword(email,password);
+    const snap=await db.collection("comptes_ramassage").doc(credential.user.uid).get();
+    if(!snap.exists||snap.data().role!==role){await auth.signOut();throw new Error("Ce compte n'est pas inscrit dans cet espace.");}
+    ramassageRoleActif=role;
+    await afficherEspaceRamassage(credential.user,snap.data());
+  }catch(e){alert("Connexion impossible : "+e.message);}
+}
+async function afficherEspaceRamassage(user,profil=null){
+  const snap=profil?null:await db.collection("comptes_ramassage").doc(user.uid).get();
+  const p=profil||(snap&&snap.exists?snap.data():null);
+  if(!p)throw new Error("Profil de ramassage introuvable.");
+  const company=p.role==="compagnie";
+  document.getElementById(company?"ramassageCompagnieAuth":"ramassageUsagerAuth").style.display="none";
+  document.getElementById(company?"ramassageCompagnieEspace":"ramassageUsagerEspace").style.display="block";
+  if(company){
+    const active=p.statut==="approuve"&&p.abonnement==="actif";
+    document.getElementById("ramassageCompanyStatus").textContent=active?"Compagnie approuvée — abonnement actif. Vous pouvez publier vos trajets et consulter les demandes.":p.statut!=="approuve"?"Votre dossier est en attente de validation par l'administration.":"Votre abonnement n'est pas encore actif. Contactez l'administration.";
+    document.getElementById("ramassageCompanyActions").style.display=active?"block":"none";
+    if(active)await chargerDemandesRamassage();
+  }else{
+    document.getElementById("ramassageUserWelcome").textContent="Bienvenue "+p.nom+". Publiez votre besoin ou consultez les places disponibles.";
+    await chargerOffresRamassage();
+  }
+}
+async function publierDemandeRamassage(){
+  const user=auth.currentUser;if(!user)return alert("Connectez-vous d'abord.");
+  const val=id=>document.getElementById(id).value.trim();
+  const commune=val("demandeRamassageCommune"),depart=val("demandeRamassageDepart"),destination=val("demandeRamassageDestination"),jours=val("demandeRamassageJours"),heure=val("demandeRamassageHeure"),places=Number(val("demandeRamassagePlaces"));
+  if(!commune||!depart||!destination||!jours||!heure||!Number.isInteger(places)||places<1||places>10)return alert("Vérifiez les informations de votre recherche.");
+  try{
+    await db.collection("demandes_ramassage").add({userId:user.uid,communeDepart:commune,pointDepart:depart,destination:destination,jours:jours,heure:heure,places:places,statut:"ouverte",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    alert("Votre recherche de ramassage est publiée. Les compagnies approuvées et abonnées pourront la consulter.");
+    await chargerOffresRamassage();
+  }catch(e){alert("Publication impossible : "+e.message);}
+}
+async function publierOffreRamassage(){
+  const user=auth.currentUser;if(!user)return alert("Connectez-vous à votre compte compagnie.");
+  const val=id=>document.getElementById(id).value.trim();
+  const commune=val("offreRamassageCommune"),points=val("offreRamassagePoints"),destination=val("offreRamassageDestination"),jours=val("offreRamassageJours"),heure=val("offreRamassageHeure"),places=Number(val("offreRamassagePlaces")),tarif=val("offreRamassageTarif");
+  if(!commune||!points||!destination||!jours||!heure||!Number.isInteger(places)||places<1||places>100)return alert("Vérifiez les informations du trajet et les places disponibles.");
+  const profil=await db.collection("comptes_ramassage").doc(user.uid).get();if(!profil.exists)return alert("Profil compagnie introuvable.");
+  try{
+    await db.collection("offres_ramassage").add({compagnieId:user.uid,compagnieNom:profil.data().nom,telephone:profil.data().telephone,communeDepart:commune,points:points,destination:destination,jours:jours,heure:heure,placesDisponibles:places,tarif:tarif?Number(tarif):null,statut:"publiee",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    alert("Votre trajet est publié.");
+    await chargerOffresRamassage();
+  }catch(e){alert("Publication impossible : "+e.message);}
+}
+async function chargerOffresRamassage(){
+  const zone=document.getElementById("listeOffresRamassage");if(!zone)return;
+  zone.innerHTML="<p class='notice'>Chargement des compagnies...</p>";
+  try{
+    const snap=await db.collection("offres_ramassage").where("statut","==","publiee").get();
+    if(snap.empty){zone.innerHTML="<p class='notice'>Aucune compagnie n'a encore publié de place disponible. Revenez consulter les offres.</p>";return;}
+    zone.innerHTML="";
+    snap.forEach(doc=>{
+      const d=doc.data(),item=document.createElement("div");item.className="ramassage-list-item";
+      const title=document.createElement("strong");title.textContent=d.compagnieNom||"Compagnie de cars";
+      const detail=document.createElement("p");detail.textContent=(d.communeDepart||"")+" — "+(d.points||"")+" → "+(d.destination||"");
+      const meta=document.createElement("p");meta.className="ramassage-muted";meta.textContent=(d.jours||"")+" · Départ "+(d.heure||"")+" · "+(d.placesDisponibles||0)+" place(s) · "+(d.tarif?Number(d.tarif).toLocaleString("fr-FR")+" FCFA":"Tarif à confirmer");
+      const contact=document.createElement("p");contact.className="ramassage-muted";contact.textContent="Contact : "+(d.telephone||"non renseigné");
+      item.append(title,detail,meta,contact);zone.appendChild(item);
+    });
+  }catch(e){zone.innerHTML="<p class='notice'>Impossible de charger les offres : "+echapperTexteCompagnie(e.message)+"</p>";}
+}
+async function chargerDemandesRamassage(){
+  const zone=document.getElementById("listeDemandesRamassage");if(!zone)return;
+  zone.innerHTML="<p class='notice'>Chargement des recherches...</p>";
+  try{
+    const snap=await db.collection("demandes_ramassage").where("statut","==","ouverte").get();
+    if(snap.empty){zone.innerHTML="<p class='notice'>Aucune recherche ouverte pour le moment.</p>";return;}
+    zone.innerHTML="";
+    snap.forEach(doc=>{
+      const d=doc.data(),item=document.createElement("div");item.className="ramassage-list-item";
+      const title=document.createElement("strong");title.textContent=(d.communeDepart||"")+" — "+(d.pointDepart||"");
+      const detail=document.createElement("p");detail.textContent="Destination : "+(d.destination||"");
+      const meta=document.createElement("p");meta.className="ramassage-muted";meta.textContent=(d.jours||"")+" · Heure souhaitée "+(d.heure||"")+" · "+(d.places||1)+" place(s)";
+      item.append(title,detail,meta);zone.appendChild(item);
+    });
+  }catch(e){zone.innerHTML="<p class='notice'>Accès aux demandes indisponible : "+echapperTexteCompagnie(e.message)+"</p>";}
+}
+async function deconnecterRamassage(){
+  await auth.signOut();ramassageRoleActif=null;
+  ["ramassageUsagerAuth","ramassageCompagnieAuth"].forEach(id=>document.getElementById(id).style.display="block");
+  ["ramassageUsagerEspace","ramassageCompagnieEspace"].forEach(id=>document.getElementById(id).style.display="none");
+  alert("Vous êtes déconnecté.");
+}
+
 function ouvrirEspaceClient(){
   ouvrirSection("transportColis");
   const user = auth.currentUser;
