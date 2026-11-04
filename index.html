@@ -2874,12 +2874,6 @@ async function chargerCommandesAdmin() {
     });
 
     zone.innerHTML = "";
-    const resetBtn = document.createElement("button");
-    resetBtn.type = "button";
-    resetBtn.className = "danger";
-    resetBtn.textContent = "Réinitialiser les commandes et partenaires de test";
-    resetBtn.addEventListener("click", reinitialiserDonneesTestCommandesPartenaires);
-    zone.appendChild(resetBtn);
 
     if (!commandes.length) {
       const info = document.createElement("p");
@@ -6171,87 +6165,6 @@ async function chargerHistoriqueCommandes() {
   }catch(e){console.error(e);zone.innerHTML="<p>Impossible de charger votre historique : "+echapperTexteCompagnie(e.message)+"</p>";}
 }
 
-
-// Migration sans suppression de commande : les champs sensibles sont copiés dans
-// informations_privees/details puis retirés du document public dans une transaction.
-async function reinitialiserDonneesTestCommandesPartenaires() {
-  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
-    alert("Cette opération est réservée à l'administrateur.");
-    return;
-  }
-
-  try {
-    const [commandesSnap, partenairesSnap] = await Promise.all([
-      db.collection("commandes_colis").get(),
-      db.collection("partenaires").get()
-    ]);
-    const nbCommandes = commandesSnap.size;
-    const nbPartenaires = partenairesSnap.size;
-
-    if (nbCommandes === 0 && nbPartenaires === 0) {
-      alert("Aucune commande ni aucun partenaire à réinitialiser.");
-      return;
-    }
-
-    const confirmation = prompt(
-      "Cette opération supprimera définitivement " + nbCommandes +
-      " commande(s) et " + nbPartenaires +
-      " profil(s) partenaire de test, ainsi que leurs détails privés et verrous de mission.\n\n" +
-      "Les comptes Firebase Authentication, les clients, les gares, les routes et les autres données ne seront pas supprimés.\n\n" +
-      "Pour confirmer, tape exactement : SUPPRIMER TESTS"
-    );
-    if (confirmation !== "SUPPRIMER TESTS") {
-      alert("Réinitialisation annulée.");
-      return;
-    }
-
-    let batch = db.batch();
-    let operations = 0;
-    let commandesSupprimees = 0;
-    let partenairesSupprimes = 0;
-
-    async function supprimerReference(ref) {
-      batch.delete(ref);
-      operations++;
-      if (operations >= 400) {
-        await batch.commit();
-        batch = db.batch();
-        operations = 0;
-      }
-    }
-
-    for (const doc of commandesSnap.docs) {
-      const privees = await doc.ref.collection("informations_privees").get();
-      for (const prive of privees.docs) {
-        await supprimerReference(prive.ref);
-      }
-      await supprimerReference(doc.ref);
-      commandesSupprimees++;
-    }
-
-    for (const doc of partenairesSnap.docs) {
-      const verrous = await doc.ref.collection("verrous").get();
-      for (const verrou of verrous.docs) {
-        await supprimerReference(verrou.ref);
-      }
-      await supprimerReference(doc.ref);
-      partenairesSupprimes++;
-    }
-
-    if (operations > 0) await batch.commit();
-
-    alert(
-      "Réinitialisation terminée. " + commandesSupprimees +
-      " commande(s) et " + partenairesSupprimes +
-      " profil(s) partenaire supprimés. Les comptes Firebase Authentication sont conservés."
-    );
-    await Promise.all([chargerCommandesAdmin(), chargerPartenairesAdmin()]);
-  } catch (erreur) {
-    console.error("Réinitialisation des données de test :", erreur);
-    alert("Réinitialisation interrompue : " + erreur.message +
-      ". Les suppressions déjà validées ne sont pas annulées.");
-  }
-}
 
 async function migrerAnciennesCommandesPrivees() {
   if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
