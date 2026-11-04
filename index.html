@@ -4302,7 +4302,16 @@ async function chargerHistoriqueCommandes(){
       return;
     }
 
-    const commandes = resultat.docs.map(doc => doc.data());
+    const commandes = await Promise.all(resultat.docs.map(async doc => {
+      const commande = {id: doc.id, ...doc.data()};
+      try {
+        const prive = await doc.ref.collection("informations_privees").doc("details").get();
+        commande.informationsPrivees = prive.exists ? prive.data() : {};
+      } catch (e) {
+        commande.informationsPrivees = {};
+      }
+      return commande;
+    }));
 
     commandes.sort((a,b) => {
       const dateA = a.createdAt ? a.createdAt.toMillis() : 0;
@@ -4325,7 +4334,7 @@ async function chargerHistoriqueCommandes(){
       carte.className = "stop";
 
       const numero = document.createElement("strong");
-      numero.textContent = "Commande : " + (commande.trackingNumber || "Non disponible");
+      numero.textContent = "Commande : " + (commande.informationsPrivees?.trackingNumber || commande.trackingNumber || commande.id);
 
       const statut = document.createElement("p");
       statut.textContent = "Statut : " + (statuts[commande.statut] || commande.statut || "Non renseigné");
