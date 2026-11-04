@@ -180,6 +180,8 @@ service cloud.firestore {
           || request.resource.data.service == "livraison_programmee")
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time
+        && existsAfter(detailsPrivesPath(commandeId))
+        && getAfter(detailsPrivesPath(commandeId)).data.clientId == request.auth.uid
         && (
           request.resource.data.service != "livraison_programmee"
           || (request.resource.data.dateHeureSouhaitee is timestamp
@@ -288,6 +290,7 @@ service cloud.firestore {
           && request.resource.data.createdAt == request.time
           && (
             (estConnecte()
+              && !exists(commandePath(commandeId))
               && getAfter(commandePath(commandeId)).data.clientId == request.auth.uid
               && getAfter(commandePath(commandeId)).data.statut == "en_attente"
               && request.resource.data.clientId == request.auth.uid)
