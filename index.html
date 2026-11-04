@@ -2299,10 +2299,136 @@ async function connecterPartenaire(){
       : "Connexion réussie. Votre compte est approuvé. ")
       + accesAbonnement;
 
+    afficherEspacePartenaire(dossier, uid);
+
   } catch(erreur) {
     statut.textContent = "Connexion impossible : " + erreur.message;
   }
 }
+function afficherEspacePartenaire(dossier, uid) {
+  let zone = document.getElementById("zoneEspacePartenaire");
+  if (!zone) {
+    zone = document.createElement("div");
+    zone.id = "zoneEspacePartenaire";
+    const connexion = document.getElementById("connexionPartenaire");
+    if (connexion) connexion.appendChild(zone);
+    else document.body.appendChild(zone);
+  }
+
+  const finEssai = dossier.dateFinEssai && dossier.dateFinEssai.toDate
+    ? dossier.dateFinEssai.toDate()
+    : (dossier.dateFinEssai ? new Date(dossier.dateFinEssai) : null);
+  const finAbonnement = dossier.dateExpirationAbonnement && dossier.dateExpirationAbonnement.toDate
+    ? dossier.dateExpirationAbonnement.toDate()
+    : (dossier.dateExpirationAbonnement ? new Date(dossier.dateExpirationAbonnement) : null);
+  const enEssai = dossier.statutAbonnementPartenaire === "Essai" && finEssai;
+  const actif = dossier.statutAbonnementPartenaire === "Actif" && finAbonnement;
+  const dateFin = actif ? finAbonnement : finEssai;
+
+  zone.innerHTML = `
+    <hr>
+    <h3>👋 Mon espace partenaire</h3>
+    <p><strong>Nom :</strong> ${echapperTexteCompagnie(dossier.nom || "")}</p>
+    <p><strong>Profil :</strong> ${dossier.type === "livreur_independant" ? "Livreur indépendant" : "Responsable de gare"}</p>
+    <div class="notice">
+      <strong>Mon abonnement :</strong>
+      ${actif ? "Actif" : (enEssai ? "Essai gratuit" : "À renouveler")}
+      ${dateFin ? " — échéance : " + dateFin.toLocaleDateString("fr-FR") : ""}
+    </div>
+    <h3>📦 Mes commandes attribuées</h3>
+    <button type="button" class="primary" onclick="chargerCommandesPartenaire()">Actualiser mes commandes</button>
+    <div id="listeCommandesPartenaire"><p>Appuyez sur « Actualiser mes commandes » pour consulter vos missions.</p></div>
+    <button type="button" onclick="deconnecterPartenaire()">Se déconnecter</button>
+  `;
+  zone.scrollIntoView({behavior:"smooth", block:"start"});
+  chargerCommandesPartenaire();
+}
+
+async function chargerCommandesPartenaire() {
+  const zone = document.getElementById("listeCommandesPartenaire");
+  const user = auth.currentUser;
+  if (!zone) return;
+  if (!user) {
+    zone.textContent = "Veuillez vous reconnecter.";
+    return;
+  }
+
+  zone.innerHTML = "<p>Chargement de vos commandes...</p>";
+  try {
+    const partenaireDoc = await db.collection("partenaires").doc(user.uid).get();
+    if (!partenaireDoc.exists) {
+      zone.textContent = "Dossier partenaire introuvable.";
+      return;
+    }
+    const partenaire = partenaireDoc.data();
+    const maintenant = new Date();
+    const finEssai = partenaire.dateFinEssai && partenaire.dateFinEssai.toDate
+      ? partenaire.dateFinEssai.toDate()
+      : (partenaire.dateFinEssai ? new Date(partenaire.dateFinEssai) : null);
+    const finAbonnement = partenaire.dateExpirationAbonnement && partenaire.dateExpirationAbonnement.toDate
+      ? partenaire.dateExpirationAbonnement.toDate()
+      : (partenaire.dateExpirationAbonnement ? new Date(partenaire.dateExpirationAbonnement) : null);
+    const abonnementActif = partenaire.statutAbonnementPartenaire === "Actif" && finAbonnement && finAbonnement > maintenant;
+    const essaiActif = partenaire.statutAbonnementPartenaire === "Essai" && finEssai && finEssai > maintenant;
+
+    if (partenaire.statut !== "approuve" || (partenaire.etatCompte || "actif") !== "actif" || (!abonnementActif && !essaiActif)) {
+      zone.innerHTML = "<p>Votre compte ou votre abonnement ne permet pas de recevoir des commandes actuellement.</p>";
+      return;
+    }
+
+    const resultat = await db.collection("commandes_colis")
+      .where("partenaireId", "==", user.uid)
+      .get();
+
+    if (resultat.empty) {
+      zone.innerHTML = "<p>Aucune commande ne vous a encore été attribuée.</p>";
+      return;
+    }
+
+    const libelles = {
+      en_attente: "En attente",
+      livreur_affecte: "Attribuée",
+      colis_recupere: "Colis récupéré",
+      en_transit: "En transit",
+      livre: "Livrée",
+      annule: "Annulée"
+    };
+    const commandes = resultat.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    commandes.sort((a, b) => {
+      const da = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+      const dbDate = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+      return dbDate - da;
+    });
+
+    zone.innerHTML = "";
+    commandes.forEach(commande => {
+      const carte = document.createElement("div");
+      carte.className = "stop";
+      const titre = document.createElement("strong");
+      titre.textContent = "Commande : " + (commande.trackingNumber || commande.id);
+      const trajet = document.createElement("p");
+      trajet.textContent = (commande.depart || "Départ non précisé") + " → " + (commande.destination || "Destination non précisée");
+      const statut = document.createElement("p");
+      statut.textContent = "Statut : " + (libelles[commande.statut] || commande.statut || "Non renseigné");
+      const service = document.createElement("p");
+      service.textContent = "Service : " + (commande.service || "Non précisé");
+      carte.append(titre, trajet, statut, service);
+      zone.appendChild(carte);
+    });
+  } catch (erreur) {
+    console.error("Chargement commandes partenaire :", erreur);
+    zone.innerHTML = "<p>Impossible de charger les commandes. Vérifiez les autorisations Firestore.</p>";
+  }
+}
+
+async function deconnecterPartenaire() {
+  await auth.signOut();
+  const zone = document.getElementById("zoneEspacePartenaire");
+  if (zone) zone.innerHTML = "";
+  const statut = document.getElementById("statutConnexionPartenaire");
+  if (statut) statut.textContent = "Vous êtes déconnecté.";
+}
+
 async function ouvrirDocumentPartenaire(cle) {
   if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
     alert("Accès réservé à l'administrateur.");
