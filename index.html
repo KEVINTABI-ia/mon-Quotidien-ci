@@ -636,8 +636,8 @@ footer { color: #718076; }
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 150px;
-  flex: 1 1 48%;
+  min-height: 230px;
+  flex: 1 1 100%;
   padding: 14px;
   border: 0;
   border-radius: 18px;
@@ -649,6 +649,8 @@ footer { color: #718076; }
   background-position: center 38%;
   box-shadow: 0 8px 20px rgba(28,63,40,.16);
   margin: 0;
+  grid-column: 1 / -1;
+  width: 100%;
 }
 .carte-acces-colis .acces-colis-contenu {
   display: flex;
@@ -669,16 +671,16 @@ footer { color: #718076; }
   font-size: 23px;
 }
 .carte-acces-colis .acces-colis-texte h2 {
-  margin: 0 0 4px;
+  margin: 0 0 8px;
   color: #FFFFFF !important;
-  font-size: 17px;
+  font-size: 25px;
   text-shadow: 0 2px 8px rgba(0,0,0,.28);
 }
 .carte-acces-colis .acces-colis-texte p {
   margin: 0;
   color: #FFFFFF;
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 15px;
+  line-height: 1.45;
   text-shadow: 0 2px 8px rgba(0,0,0,.35);
 }
 .carte-acces-colis .bouton-acces-colis {
@@ -1318,22 +1320,22 @@ resultat.style.display = "block";
   </div>
   <div class="accueil-services-grid">
     <button type="button" class="accueil-service tuile-gbaka" onclick="ouvrirResultatPleinEcran('Gares de Gbaka'); afficherGaresStations('Gbaka')">
-      <span class="accueil-service-illustration">🚐</span><strong>Gares de Gbaka</strong><small>Points de départ et destinations</small>
+      <strong>Gares de Gbaka</strong><small>Points de départ et destinations</small>
     </button>
     <button type="button" class="accueil-service tuile-taxi" onclick="ouvrirResultatPleinEcran('Gares de taxi communal'); afficherGaresStations('Taxi communal')">
-      <span class="accueil-service-illustration">🚖</span><strong>Gares de taxi communal</strong><small>Repérez les gares proches de votre trajet</small>
+      <strong>Gares de taxi communal</strong><small>Repérez les gares proches de votre trajet</small>
     </button>
     <button type="button" class="accueil-service tuile-sotra" onclick="ouvrirResultatPleinEcran('Réseau SOTRA'); afficherReseauSotra()">
-      <span class="accueil-service-illustration">🚌</span><strong>SOTRA</strong><small>Lignes, gares et arrêts</small>
+      <strong>SOTRA</strong><small>Lignes, gares et arrêts</small>
     </button>
     <button type="button" class="accueil-service tuile-ramassage" onclick="ouvrirSectionPleinEcran('serviceRamassage','Cars de ramassage')">
-      <span class="accueil-service-illustration">🚍</span><strong>Cars de ramassage</strong><small>Déplacements réguliers et places disponibles</small>
+      <strong>Cars de ramassage</strong><small>Déplacements réguliers et places disponibles</small>
     </button>
     <button type="button" class="accueil-service tuile-marches" onclick="ouvrirResultatPleinEcran('Marchés de la commune'); afficherMarchesCommune()">
-      <span class="accueil-service-illustration">🏬</span><strong>Marchés de la commune</strong><small>Retrouvez les marchés par commune</small>
+      <strong>Marchés de la commune</strong><small>Retrouvez les marchés par commune</small>
     </button>
     <button type="button" class="accueil-service tuile-woro" onclick="ouvrirResultatPleinEcran('Gares de Woro-woro'); afficherGaresStations('Woro-woro')">
-      <span class="accueil-service-illustration">🚕</span><strong>Woro-woro</strong><small>Gares et dessertes disponibles</small>
+      <strong>Woro-woro</strong><small>Gares et dessertes disponibles</small>
     </button>
   </div>
 </section>
@@ -1341,6 +1343,12 @@ resultat.style.display = "block";
 <p class="notice">
 Les tarifs affichés sont des informations de terrain communiquées par des usagers. Ils ne constituent pas une certification officielle.
 </p>
+
+  <section class="accueil-raccourci carte-compagnies">
+    <div class="raccourci-icone">🚍</div>
+    <div class="raccourci-texte"><strong>Compagnies de voyage</strong><small>Agences, destinations et tarifs</small></div>
+    <button type="button" onclick="ouvrirSectionPleinEcran('repertoireCompagnies','Compagnies de voyage')">Consulter</button>
+  </section>
 
 <section class="carte-acces-admin" aria-label="Signaler un problème">
   <p>Une difficulté avec l’application ou un trajet ?</p>
