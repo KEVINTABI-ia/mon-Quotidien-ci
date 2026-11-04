@@ -5239,6 +5239,29 @@ async function afficherItineraireCommande(){
   }
 }
 
+const ecoutesSuiviLivreurClient = {};
+function ecouterSuiviLivreurClient(commandeId, info, mapZone) {
+  if (ecoutesSuiviLivreurClient[commandeId]) ecoutesSuiviLivreurClient[commandeId]();
+  let carte = null, marqueur = null;
+  ecoutesSuiviLivreurClient[commandeId] = db.collection("commandes_colis").doc(commandeId).onSnapshot(doc => {
+    if (!doc.exists) return;
+    const pos = doc.data().positionLivreur;
+    if (!pos || !Number.isFinite(Number(pos.latitude)) || !Number.isFinite(Number(pos.longitude))) {
+      info.textContent = "📍 En attente de la première position GPS du livreur.";
+      return;
+    }
+    info.textContent = "📍 Position du livreur actualisée automatiquement.";
+    const point = [Number(pos.latitude), Number(pos.longitude)];
+    if (!window.L || !mapZone.isConnected) return;
+    if (!carte) {
+      carte = L.map(mapZone).setView(point, 16);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {attribution:"© OpenStreetMap"}).addTo(carte);
+      marqueur = L.marker(point).addTo(carte).bindPopup("Position du livreur");
+    } else { marqueur.setLatLng(point); carte.panTo(point, {animate:true}); }
+    setTimeout(() => carte && carte.invalidateSize(), 150);
+  }, erreur => { console.warn("Suivi GPS client :", erreur); info.textContent = "Le suivi GPS est momentanément indisponible."; });
+}
+
 async function chargerHistoriqueCommandes(){
   const zone = document.getElementById("zoneHistoriqueCommandes");
   const user = auth.currentUser;
@@ -5321,6 +5344,22 @@ async function chargerHistoriqueCommandes(){
         const gare=document.createElement("p"); gare.textContent="Gare de destination : "+refs.gareDestination;
         const code=document.createElement("p"); code.textContent="Code du colis : "+refs.codeColis;
         bloc.append(titreRefs,compagnie,gare,code); carte.appendChild(bloc);
+      }
+      if (["livreur_affecte","colis_recupere","en_transit","arrive_destination"].includes(commande.statut) && commande.partenaireId) {
+        const suivi = document.createElement("div"); suivi.className = "notice";
+        const nom = document.createElement("p"); nom.textContent = "🚚 Votre livreur : " + (commande.partenaireNom || "Partenaire affecté"); suivi.appendChild(nom);
+        const telephone = String(commande.partenaireTelephone || "").trim();
+        if (telephone) {
+          const appel = document.createElement("a");
+          appel.href = "tel:" + telephone.replace(/[^+0-9]/g, "");
+          appel.textContent = "📞 Appeler le livreur : " + telephone;
+          appel.style.cssText = "display:inline-block;padding:10px 14px;background:#087443;color:white;border-radius:8px;font-weight:bold;text-decoration:none;";
+          suivi.appendChild(appel);
+        }
+        const info = document.createElement("p"); info.textContent = "📍 En attente de la position GPS du livreur."; suivi.appendChild(info);
+        const map = document.createElement("div"); map.style.cssText = "width:100%;height:230px;border-radius:10px;margin-top:10px;background:#eee;"; suivi.appendChild(map);
+        carte.appendChild(suivi);
+        ecouterSuiviLivreurClient(commande.id, info, map);
       }
       zone.appendChild(carte);
     });
@@ -6626,7 +6665,7 @@ async function accepterCommandePartenaire(commandeId) {
       if (lSnap.exists) throw new Error("Vous avez déjà une mission en cours.");
       const typeAttendu = c.service === "compagnie" ? "representant_gare" : "livreur_independant";
       if (p.type !== typeAttendu) throw new Error("Cette commande ne correspond pas à votre profil.");
-      tx.update(commandeRef, {partenaireId:user.uid, partenaireNom:p.nom || "", partenaireType:p.type, statut:"livreur_affecte", dateAffectation:firebase.firestore.FieldValue.serverTimestamp()});
+      tx.update(commandeRef, {partenaireId:user.uid, partenaireNom:p.nom || "", partenaireTelephone:p.telephone || "", partenaireType:p.type, statut:"livreur_affecte", dateAffectation:firebase.firestore.FieldValue.serverTimestamp()});
       tx.set(verrouRef, {commandeId, statut:"active", createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     });
     alert("Commande acceptée. Préparez-vous à rejoindre le point de récupération.");
@@ -6636,6 +6675,31 @@ async function accepterCommandePartenaire(commandeId) {
     console.error(e);
     alert("Impossible d'accepter cette commande : " + e.message);
     chargerCommandesPartenaire();
+  }
+}
+
+let suiviPositionLivreurActif = null;
+let derniereMajPositionLivreur = 0;
+function demarrerPartagePositionLivreur(commandeId) {
+  if (!navigator.geolocation) return;
+  if (suiviPositionLivreurActif !== null) navigator.geolocation.clearWatch(suiviPositionLivreurActif);
+  derniereMajPositionLivreur = 0;
+  suiviPositionLivreurActif = navigator.geolocation.watchPosition(async position => {
+    const maintenant = Date.now();
+    if (maintenant - derniereMajPositionLivreur < 12000) return;
+    derniereMajPositionLivreur = maintenant;
+    try {
+      await db.collection("commandes_colis").doc(commandeId).update({
+        positionLivreur: {latitude:position.coords.latitude, longitude:position.coords.longitude, precision:Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null},
+        positionLivreurMaj: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (e) { console.warn("Mise à jour GPS livreur :", e); }
+  }, erreur => console.warn("GPS livreur :", erreur), {enableHighAccuracy:true, maximumAge:5000, timeout:20000});
+}
+function arreterPartagePositionLivreur() {
+  if (suiviPositionLivreurActif !== null && navigator.geolocation) {
+    navigator.geolocation.clearWatch(suiviPositionLivreurActif);
+    suiviPositionLivreurActif = null;
   }
 }
 
@@ -6709,6 +6773,8 @@ async function afficherMissionPartenaire(c, partenaire, zone) {
       const note=document.createElement("p"); note.textContent="Confirmez uniquement après le règlement convenu avec le client."; card.appendChild(note);
     }
   }
+  if (["livreur_affecte","colis_recupere","en_transit","arrive_destination"].includes(c.statut)) demarrerPartagePositionLivreur(c.id);
+  else arreterPartagePositionLivreur();
   zone.appendChild(card);
 }
 
