@@ -806,6 +806,13 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 #zoneEspaceClient:empty,#connexionPartenaire:empty{display:none}
 @media(max-width:380px){#vuePleinEcranContenu>#transportColis.transport-colis-screen{padding:20px 13px 24px}.transport-colis-connexion-titre{margin-top:clamp(45px,10vh,80px);font-size:25px}#transportColis .colis-choix{gap:8px;margin-top:34px}#transportColis .colis-choix-bouton{font-size:12px;min-height:54px}}
 
+
+/* ESPACE ADMINISTRATEUR : MENU PAR RUBRIQUES */
+#adminMenuRubriques{display:grid;grid-template-columns:1fr;gap:11px;margin:18px 0 8px}
+.admin-rubrique{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:64px;padding:16px;text-align:left;background:#F2F8F3!important;color:#17663D!important;border:1px solid #D8E8DC!important;border-left:5px solid #16834A!important;border-radius:15px!important;box-shadow:0 4px 12px rgba(22,75,45,.07)!important;font-size:15px}
+.admin-rubrique span:last-child{font-size:22px;color:#F28C28}
+.admin-retour-menu{display:block;width:100%;margin:0 0 16px;background:#FFF4E8!important;color:#17663D!important;border:1px solid #F2C58F!important}
+#espaceAdmin.admin-rubrique-ouverte>h2{margin-bottom:12px}
 </style>
 </head>
 <body>
@@ -934,21 +941,18 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 <section class="card" id="espaceAdmin" style="display:none;">
   <h2>🔐 Espace administrateur</h2>
 
-  <label for="emailAdmin">Adresse e-mail</label>
-  <input type="email" id="emailAdmin" placeholder="Ton adresse Gmail">
+  <div id="adminConnexion">
+    <label for="emailAdmin">Adresse e-mail</label>
+    <input type="email" id="emailAdmin" placeholder="Ton adresse Gmail">
 
-  <label for="motDePasseAdmin">Mot de passe</label>
-  <input type="password" id="motDePasseAdmin" placeholder="Ton mot de passe">
+    <label for="motDePasseAdmin">Mot de passe</label>
+    <input type="password" id="motDePasseAdmin" placeholder="Ton mot de passe">
 
-  <button class="primary" onclick="connexionAdmin()">
-    Se connecter
-  </button>
-
-  <button type="button" onclick="deconnexionAdmin()">
-    Se déconnecter
-  </button>
-
+    <button class="primary" onclick="connexionAdmin()">Se connecter</button>
+  </div>
   <p id="statutAdmin" class="notice"></p>
+  <div id="adminMenuRubriques" style="display:none;"></div>
+  <button id="adminDeconnexion" type="button" onclick="deconnexionAdmin()" style="display:none;width:100%;margin:12px 0;">Se déconnecter</button>
 <div id="gestionAbonnementsRamassage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🚌 Validation des compagnies de ramassage</h3><p class="notice">Vérifie les dossiers et les paiements avant d’approuver une compagnie ou d’activer son forfait mensuel.</p><div id="listeCompagniesRamassageAdmin">Chargement...</div></div>
 <div id="gestionGares" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
   <h3>📍 Gestion des gares et terminus</h3>
@@ -1265,6 +1269,44 @@ firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 const db = firebase.firestore();
+// MENU ADMINISTRATEUR : une seule rubrique visible à la fois
+const RUBRIQUES_ADMIN = [
+  {id:"gestionGares",titre:"📍 Gestion des gares et terminus"},
+  {id:"gestionRoutes",titre:"🛣️ Gestion des itinéraires et lignes SOTRA"},
+  {id:"gestionCompagnies",titre:"🚍 Gestion des compagnies de voyage"},
+  {id:"gestionAbonnementsRamassage",titre:"🚌 Validation des compagnies de ramassage"},
+  {id:"gestionPartenaires",titre:"👥 Gestion des partenaires"},
+  {id:"gestionCommandesPartenaires",titre:"📦 Attribution des commandes aux partenaires"}
+];
+function afficherMenuAdmin(){
+  const menu=document.getElementById("adminMenuRubriques");
+  if(!menu)return;
+  menu.innerHTML=RUBRIQUES_ADMIN.map(r=>`<button type="button" class="admin-rubrique" onclick="ouvrirRubriqueAdmin('${r.id}')"><span>${r.titre}</span><span>›</span></button>`).join("");
+  menu.style.display="grid";
+  RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display="none";});
+}
+function ouvrirRubriqueAdmin(id){
+  const menu=document.getElementById("adminMenuRubriques");
+  if(menu)menu.style.display="none";
+  RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display=r.id===id?"block":"none";});
+  const cible=document.getElementById(id);
+  if(!cible)return;
+  let retour=cible.querySelector(":scope > .admin-retour-menu");
+  if(!retour){retour=document.createElement("button");retour.type="button";retour.className="admin-retour-menu";retour.textContent="← Retour au menu administrateur";retour.onclick=retourMenuAdmin;cible.insertBefore(retour,cible.firstChild);}
+  cible.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function retourMenuAdmin(){
+  RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display="none";});
+  const menu=document.getElementById("adminMenuRubriques");if(menu)menu.style.display="grid";
+  document.getElementById("espaceAdmin")?.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function actualiserInterfaceAdmin(autorise){
+  const connexion=document.getElementById("adminConnexion"),menu=document.getElementById("adminMenuRubriques"),deconnexion=document.getElementById("adminDeconnexion");
+  if(connexion)connexion.style.display=autorise?"none":"block";
+  if(deconnexion)deconnexion.style.display=autorise?"block":"none";
+  if(menu){if(autorise)afficherMenuAdmin();else menu.style.display="none";}
+  RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display="none";});
+}
 // CONNEXION ADMINISTRATEUR
 const ADMIN_UID = "3LpoTLyQdtVcdtnSMAJFc7Cvnpz2";
 const WORKER_URL = "https://red-mountain-3e59.tabikevin57.workers.dev";
@@ -1287,6 +1329,7 @@ function connexionAdmin() {
       }
 
       statut.textContent = "Connexion administrateur réussie.";
+      actualiserInterfaceAdmin(true);
       chargerCompagniesRamassageAdmin();
     })
     .catch((erreur) => {
@@ -1299,6 +1342,7 @@ function deconnexionAdmin() {
     .then(() => {
       document.getElementById("statutAdmin").textContent =
         "Vous êtes déconnecté.";
+      actualiserInterfaceAdmin(false);
     });
 }
 // GESTION DES ITINERAIRES FIRESTORE
@@ -1314,40 +1358,22 @@ const routesInitiales = JSON.parse(
 );
 
 auth.onAuthStateChanged((user) => {
-  const autorise = !!user && user.uid === ADMIN_UID;
-  const panneau = document.getElementById("gestionRoutes");
-  const panneauGares = document.getElementById("gestionGares");
-const panneauCompagnies = document.getElementById("gestionCompagnies");
-  panneau.style.display = autorise ? "block" : "none";
-  panneauGares.style.display = autorise ? "block" : "none";
-panneauCompagnies.style.display = autorise ? "block" : "none";
-
-if (autorise) {
-  chargerCompagniesRamassageAdmin();
-  chargerCompagniesAdmin();
-  chargerPartenairesAdmin();
-  chargerCommandesAdmin();
-} else {
-  const panneauRamassageAdmin = document.getElementById("gestionAbonnementsRamassage");
-  if (panneauRamassageAdmin) panneauRamassageAdmin.style.display = "none";
-  document.getElementById("listeCompagniesAdmin").innerHTML = "";
-  document.getElementById("listePartenairesAdmin").innerHTML = "";
-  const commandesAdmin = document.getElementById("listeCommandesAdmin");
-  if (commandesAdmin) commandesAdmin.innerHTML = "";
-}
-  if (autorise) {
+  const autorise=!!user&&user.uid===ADMIN_UID;
+  actualiserInterfaceAdmin(autorise);
+  if(autorise){
+    chargerCompagniesRamassageAdmin();
+    chargerCompagniesAdmin();
+    chargerPartenairesAdmin();
+    chargerCommandesAdmin();
     chargerRoutesFirestore();
     chargerGaresFirestore();
-  } else {
-    if (arretEcouteRoutes) {
-      arretEcouteRoutes();
-      arretEcouteRoutes = null;
-    }
-
-    if (arretEcouteGares) {
-      arretEcouteGares();
-      arretEcouteGares = null;
-    }
+  }else{
+    document.getElementById("listeCompagniesAdmin").innerHTML="";
+    document.getElementById("listePartenairesAdmin").innerHTML="";
+    const commandesAdmin=document.getElementById("listeCommandesAdmin");
+    if(commandesAdmin)commandesAdmin.innerHTML="";
+    if(arretEcouteRoutes){arretEcouteRoutes();arretEcouteRoutes=null;}
+    if(arretEcouteGares){arretEcouteGares();arretEcouteGares=null;}
   }
 });
 
