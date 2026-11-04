@@ -342,4 +342,43 @@ describe("Mon Transport CI — règles Firestore", function () {
     }));
   });
 
+
+  it("autorise la requête réelle de file d'attente des livreurs éligibles", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await db.doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, service: "livraison", statut: "en_attente",
+        depart: "Yopougon", destination: "Adjamé"
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { collection, query, where, limit, getDocs } = require("firebase/firestore");
+    const q = query(
+      collection(db, "commandes_colis"),
+      where("statut", "==", "en_attente"),
+      where("service", "in", ["livraison", "livraison_programmee"]),
+      limit(30)
+    );
+    const result = await assertSucceeds(getDocs(q));
+    if (result.empty) throw new Error("La commande disponible n'a pas été retournée.");
+  });
+
+  it("refuse la requête de file d'attente d'un livreur pour les commandes de gare", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, service: "compagnie", statut: "en_attente",
+        depart: "Gare test", destination: "Gare destination"
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { collection, query, where, limit, getDocs } = require("firebase/firestore");
+    const q = query(
+      collection(db, "commandes_colis"),
+      where("statut", "==", "en_attente"),
+      where("service", "in", ["livraison", "livraison_programmee"]),
+      limit(30)
+    );
+    await assertFails(getDocs(q));
+  });
+
 });
