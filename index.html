@@ -1332,9 +1332,9 @@ async function chargerDemandesPublicitesAdmin() {
       const date = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toLocaleString("fr-FR") : "Date en cours";
       const statut = d.statut || "en_attente";
       const actions = statut === "en_attente"
-        ? '<button type="button" onclick="changerStatutDemandePublicite(\\'' + doc.id + '\\',\\'paiement_confirme\\')">Confirmer le paiement</button><button type="button" onclick="changerStatutDemandePublicite(\\'' + doc.id + '\\',\\'refusee\\')">Refuser</button>'
+        ? '<button type="button" onclick="changerStatutDemandePublicite(&quot;' + doc.id + '&quot;,&quot;paiement_confirme&quot;)">Confirmer le paiement</button><button type="button" onclick="changerStatutDemandePublicite(&quot;' + doc.id + '&quot;,&quot;refusee&quot;)">Refuser</button>'
         : statut === "paiement_confirme"
-          ? '<label>Visuel reçu sur WhatsApp (image ou vidéo MP4/WebM, 25 Mo maximum)</label><input type="file" id="mediaPublicite_' + doc.id + '" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"><button type="button" class="primary" onclick="publierDemandePublicite(\\'' + doc.id + '\\')">Publier cette publicité</button>'
+          ? '<label>Visuel reçu sur WhatsApp (image ou vidéo MP4/WebM, 25 Mo maximum)</label><input type="file" id="mediaPublicite_' + doc.id + '" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"><button type="button" class="primary" onclick="publierDemandePublicite(&quot;' + doc.id + '&quot;)">Publier cette publicité</button>'
           : '<span class="notice">Demande traitée : ' + echapperTextePublicite(statut) + '</span>';
       return '<article class="card" style="margin:12px 0;padding:14px;">'
         + '<strong>' + echapperTextePublicite(d.activite) + '</strong>'
@@ -1442,8 +1442,8 @@ async function chargerPublicitesAdmin() {
         + '<p class="notice">' + etat + ' · Fin prévue : ' + dateFin + '</p>'
         + '<label>Nom de l’activité</label><input id="titrePub_' + doc.id + '" maxlength="100" value="' + echapperTextePublicite(d.titre) + '">'
         + '<label>Description</label><textarea id="descriptionPub_' + doc.id + '" maxlength="1000" rows="3">' + echapperTextePublicite(d.description) + '</textarea>'
-        + '<button type="button" onclick="modifierPublicite(\\'' + doc.id + '\\')">Enregistrer les modifications</button>'
-        + '<button type="button" onclick="supprimerPublicite(\\'' + doc.id + '\\')">Supprimer la publicité</button>'
+        + '<button type="button" onclick="modifierPublicite(&quot;' + doc.id + '&quot;)">Enregistrer les modifications</button>'
+        + '<button type="button" onclick="supprimerPublicite(&quot;' + doc.id + '&quot;)">Supprimer la publicité</button>'
         + '</article>';
     }).join("");
   } catch (erreur) {
