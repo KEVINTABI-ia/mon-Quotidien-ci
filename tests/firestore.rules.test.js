@@ -378,7 +378,8 @@ describe("Mon Transport CI — règles Firestore", function () {
       where("service", "in", ["livraison", "livraison_programmee"]),
       limit(30)
     );
-    await assertFails(getDocs(q));
+    const result = await assertSucceeds(getDocs(q));
+    if (!result.empty) throw new Error("Une commande de gare ne doit pas apparaître dans la file des livreurs.");
   });
 
 
