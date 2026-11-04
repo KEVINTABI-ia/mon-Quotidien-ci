@@ -1485,7 +1485,6 @@ function chargerPublicitesAccueil() {
   if (!zone) return;
   db.collection("publicites")
     .where("statut", "==", "publiee")
-    .where("dateFin", ">", firebase.firestore.Timestamp.now())
     .onSnapshot(snapshot => {
       window.publicitesAccueilDocs = snapshot.docs;
       const afficherAnnoncesActives = () => {
