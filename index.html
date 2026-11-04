@@ -1438,9 +1438,10 @@ async function chargerPublicitesAdmin() {
         + (visuel ? '<img src="' + echapperTextePublicite(visuel) + '" alt="" style="width:100%;max-width:220px;max-height:140px;object-fit:contain;border-radius:10px;">' : '')
         + '<strong>' + echapperTextePublicite(d.titre) + '</strong>'
         + '<p class="notice">' + etat + (dateFin !== "Non définie" ? ' · Fin prévue : ' + dateFin : '') + '</p>'
-        + '<label>Nom de l’activité</label><input id="titrePub_' + doc.id + '" maxlength="100" value="' + echapperTextePublicite(d.titre) + '">'
-        + '<label>Description</label><textarea id="descriptionPub_' + doc.id + '" maxlength="1000" rows="3">' + echapperTextePublicite(d.description) + '</textarea>'
-        + '<button type="button" onclick="modifierPublicite(&quot;' + doc.id + '&quot;)">Enregistrer les modifications</button>'
+        + '<label>Nom de l’activité</label><input id="titrePub_' + doc.id + '" maxlength="100" value="' + echapperTextePublicite(d.titre) + '" readonly>'
+        + '<label>Description</label><textarea id="descriptionPub_' + doc.id + '" maxlength="1000" rows="3" readonly>' + echapperTextePublicite(d.description) + '</textarea>'
+        + '<button type="button" onclick="activerEditionPublicite(&quot;' + doc.id + '&quot;)">Modifier</button>'
+        + '<button type="button" id="enregistrerPub_' + doc.id + '" onclick="modifierPublicite(&quot;' + doc.id + '&quot;)" disabled>Enregistrer les modifications</button>'
         + '<button type="button" class="primary" onclick="basculerVisibilitePublicite(&quot;' + doc.id + '&quot;,&quot;' + (visible ? 'masquee' : 'publiee') + '&quot;)">' + (visible ? 'Masquer' : 'Afficher') + '</button>'
         + '<button type="button" onclick="supprimerPublicite(&quot;' + doc.id + '&quot;)">Supprimer définitivement</button>'
         + '</article>';
@@ -1522,6 +1523,18 @@ async function basculerVisibilitePublicite(id, statut) {
     await db.collection("publicites").doc(id).update({statut,visibiliteModifieeLe:firebase.firestore.FieldValue.serverTimestamp()});
     await chargerPublicitesAdmin();
   } catch (erreur) { alert("Modification de visibilité impossible : " + erreur.message); }
+}
+
+function activerEditionPublicite(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
+  const titre = document.getElementById("titrePub_" + id);
+  const description = document.getElementById("descriptionPub_" + id);
+  const enregistrer = document.getElementById("enregistrerPub_" + id);
+  if (!titre || !description || !enregistrer) return;
+  titre.readOnly = false;
+  description.readOnly = false;
+  titre.focus();
+  enregistrer.disabled = false;
 }
 
 async function modifierPublicite(id) {
