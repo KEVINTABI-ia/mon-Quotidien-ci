@@ -6652,7 +6652,31 @@ async function afficherMissionPartenaire(c, partenaire, zone) {
   if (privateSnap.exists) {
     details = privateSnap.data();
     const detail = document.createElement("p");
-    detail.textContent = "Suivi : " + (details.trackingNumber || c.id) + " | Expéditeur : " + (details.telephoneExpediteur || "non renseigné") + " | Destinataire : " + (details.telephoneDestinataire || "non renseigné");
+    detail.append("Suivi : " + (details.trackingNumber || c.id));
+    detail.appendChild(document.createElement("br"));
+    detail.append("Téléphone récupération : ");
+    const telExpediteur = String(details.telephoneExpediteur || "").trim();
+    if (telExpediteur) {
+      const appelExpediteur = document.createElement("a");
+      appelExpediteur.href = "tel:" + telExpediteur.replace(/[^+0-9]/g, "");
+      appelExpediteur.textContent = "📞 " + telExpediteur;
+      appelExpediteur.style.cssText = "color:#087443;font-weight:bold;text-decoration:underline;";
+      detail.appendChild(appelExpediteur);
+    } else {
+      detail.append("non renseigné");
+    }
+    detail.appendChild(document.createElement("br"));
+    detail.append("Téléphone destinataire : ");
+    const telDestinataire = String(details.telephoneDestinataire || "").trim();
+    if (telDestinataire) {
+      const appelDestinataire = document.createElement("a");
+      appelDestinataire.href = "tel:" + telDestinataire.replace(/[^+0-9]/g, "");
+      appelDestinataire.textContent = "📞 " + telDestinataire;
+      appelDestinataire.style.cssText = "color:#087443;font-weight:bold;text-decoration:underline;";
+      detail.appendChild(appelDestinataire);
+    } else {
+      detail.append("non renseigné");
+    }
     card.appendChild(detail);
     const adresses = document.createElement("p");
     adresses.textContent = "Récupération : " + (details.adresseRecuperation || "non renseignée") + " | Livraison : " + (details.adresseLivraison || "non renseignée");
