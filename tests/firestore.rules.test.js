@@ -160,6 +160,33 @@ describe("Mon Transport CI — règles Firestore", function () {
     await assertFails(getDoc(doc(other,"demandes_ramassage","demande-test")));
   });
 
+  if (process.env.FIRESTORE_RULES_FILE === "firestore.rules.transition") {
+    it("préserve la création d'une commande avec l'ancien format pendant la transition", async () => {
+      const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
+      await assertSucceeds(setDoc(doc(db,"commandes_colis","legacy-order"),{
+        clientId:CLIENT_UID,service:"livraison",depart:"Yopougon",destination:"Adjamé",
+        trackingNumber:"TCI-LEGACY-TEST",statut:"en_attente",telephoneExpediteur:"0100000000",
+        telephoneDestinataire:"0200000000",adresseRecuperation:"Yopougon",
+        adresseLivraison:"Adjamé",createdAt:serverTimestamp()
+      }));
+    });
+
+    it("préserve la lecture et la mise à jour de statut d'une ancienne mission affectée", async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        await context.firestore().doc("commandes_colis/legacy-assigned").set({
+          clientId:CLIENT_UID,partenaireId:PARTNER_UID,service:"livraison",
+          statut:"livreur_affecte",trackingNumber:"TCI-LEGACY-ASSIGNED"
+        });
+      });
+      const db=testEnv.authenticatedContext(PARTNER_UID).firestore();
+      const {doc,getDoc,updateDoc}=require("firebase/firestore");
+      const ref=doc(db,"commandes_colis","legacy-assigned");
+      await assertSucceeds(getDoc(ref));
+      await assertSucceeds(updateDoc(ref,{statut:"en_transit"}));
+    });
+  }
+
   it("autorise le client à créer ensemble la commande publique et ses détails privés", async () => {
     const db = testEnv.authenticatedContext(CLIENT_UID, {
       email: "client@example.test"
