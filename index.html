@@ -3003,18 +3003,14 @@ function ouvrirConnexionPartenaire(){
     <hr>
     <h3>🔐 Connexion partenaire</h3>
 
-    <label>Adresse e-mail</label>
-    <input type="email" id="partenaireEmail"
-      placeholder="Votre adresse e-mail">
+    <div id="champsConnexionPartenaire">
+      <label>Adresse e-mail</label>
+      <input type="email" id="partenaireEmail" placeholder="Votre adresse e-mail">
 
-    <label>Mot de passe</label>
-    <input type="password" id="partenaireMotDePasse"
-      placeholder="Votre mot de passe">
-
-    <button type="button" class="primary"
-      onclick="connecterPartenaire()">
-      Se connecter
-    </button>
+      <label>Mot de passe</label>
+      <input type="password" id="partenaireMotDePasse" placeholder="Votre mot de passe">
+    </div>
+    <button id="boutonConnexionPartenaire" type="button" class="primary" onclick="connecterPartenaire()">Se connecter</button>
 
     <p id="statutConnexionPartenaire" class="notice"></p>
   `;
@@ -3119,6 +3115,13 @@ async function connecterPartenaire(){
       : "Connexion réussie. Votre compte est approuvé. ")
       + accesAbonnement;
 
+    const champsConnexion = document.getElementById("champsConnexionPartenaire");
+    const boutonConnexion = document.getElementById("boutonConnexionPartenaire");
+    if (champsConnexion) champsConnexion.style.display = "none";
+    if (boutonConnexion) {
+      boutonConnexion.textContent = "Me déconnecter";
+      boutonConnexion.onclick = deconnecterPartenaire;
+    }
     afficherEspacePartenaire(dossier, uid);
 
   } catch(erreur) {
@@ -3158,7 +3161,7 @@ function afficherEspacePartenaire(dossier, uid) {
     <h3>📦 Mes commandes attribuées</h3>
     <button type="button" class="primary" onclick="chargerCommandesPartenaire()">Actualiser mes commandes</button>
     <div id="listeCommandesPartenaire"><p>Appuyez sur « Actualiser mes commandes » pour consulter vos missions.</p></div>
-    <button type="button" onclick="deconnecterPartenaire()">Se déconnecter</button>
+
   `;
   zone.scrollIntoView({behavior:"smooth", block:"start"});
   chargerCommandesPartenaire();
@@ -3321,6 +3324,13 @@ async function deconnecterPartenaire() {
   if (zone) zone.innerHTML = "";
   const statut = document.getElementById("statutConnexionPartenaire");
   if (statut) statut.textContent = "Vous êtes déconnecté.";
+  const champsConnexion = document.getElementById("champsConnexionPartenaire");
+  const boutonConnexion = document.getElementById("boutonConnexionPartenaire");
+  if (champsConnexion) champsConnexion.style.display = "block";
+  if (boutonConnexion) {
+    boutonConnexion.textContent = "Se connecter";
+    boutonConnexion.onclick = connecterPartenaire;
+  }
 }
 
 async function ouvrirDocumentPartenaire(cle) {
@@ -4582,6 +4592,7 @@ async function afficherAccueilClient(user){
   zone.innerHTML = `
     <hr>
     <h3>👋 Bienvenue ${nom}</h3>
+    <button type="button" class="primary" onclick="deconnecterClient()">Me déconnecter</button>
     <p>Votre espace client est ouvert.</p>
 
 <button type="button" class="primary"
@@ -4598,9 +4609,6 @@ async function afficherAccueilClient(user){
 
     <div id="zoneHistoriqueCommandes"></div>
 
-    <button type="button" onclick="deconnecterClient()">
-      Se déconnecter
-    </button>
   `;
 }
 function afficherFormulaireCommande(){
@@ -6608,7 +6616,7 @@ function afficherEspacePartenaire(dossier, uid) {
     <div id="missionActivePartenaire"><p>Vérification...</p></div>
     <h3>📋 Mes missions précédentes</h3>
     <div id="historiquePartenaire"></div>
-    <button type="button" onclick="deconnecterPartenaire()">Se déconnecter</button>`;
+`;
   chargerCommandesPartenaire();
 }
 
