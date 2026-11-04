@@ -342,7 +342,9 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/comptes_ramassage/$(uid))
         && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.role == "compagnie"
         && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.statut == "approuve"
-        && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.abonnement == "actif";
+        && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.abonnement == "actif"
+        && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.dateExpirationAbonnement is timestamp
+        && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.dateExpirationAbonnement > request.time;
     }
 
     match /comptes_ramassage/{uid} {
