@@ -51,6 +51,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/commandes_colis/$(commandeId);
     }
 
+    function detailsPrivesPath(commandeId) {
+      return /databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details;
+    }
+
     match /routes/{routeId} {
       allow read: if true;
       allow create, update, delete: if estAdmin();
@@ -258,21 +262,40 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["statut", "dateLivraison"])
           && !existsAfter(verrouPath(request.auth.uid))
+        )
+        // Migration administrative contrôlée des anciennes commandes vers le document privé.
+        || (
+          estAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "clientNom", "clientTelephone", "telephoneExpediteur", "telephoneDestinataire",
+            "adresseRecuperation", "adresseLivraison", "descriptionColis", "trackingNumber",
+            "provenance", "codeColis", "typeColis", "livreurId", "operation", "compagnie",
+            "gare", "latitudeRecuperation", "longitudeRecuperation",
+            "latitudeLivraison", "longitudeLivraison"
+          ])
+          && existsAfter(detailsPrivesPath(commandeId))
+          && getAfter(detailsPrivesPath(commandeId)).data.clientId == resource.data.clientId
+          && getAfter(detailsPrivesPath(commandeId)).data.trackingNumber
+            == (resource.data.trackingNumber is string ? resource.data.trackingNumber : commandeId)
         );
 
       allow delete: if estAdmin();
 
       match /informations_privees/{docId} {
-        allow create: if estConnecte()
-          && docId == "details"
-          && getAfter(commandePath(commandeId)).data.clientId == request.auth.uid
-          && request.resource.data.clientId == request.auth.uid
+        allow create: if docId == "details"
           && request.resource.data.keys().hasAll([
             "clientId", "clientNom", "clientTelephone", "telephoneExpediteur",
             "telephoneDestinataire", "adresseRecuperation", "adresseLivraison",
             "descriptionColis", "trackingNumber", "createdAt"
           ])
-          && request.resource.data.createdAt == request.time;
+          && request.resource.data.createdAt == request.time
+          && (
+            (estConnecte()
+              && getAfter(commandePath(commandeId)).data.clientId == request.auth.uid
+              && request.resource.data.clientId == request.auth.uid)
+            || (estAdmin()
+              && get(commandePath(commandeId)).data.clientId == request.resource.data.clientId)
+          );
 
         allow read: if estAdmin()
           || (estConnecte()
