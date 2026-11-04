@@ -929,6 +929,7 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
   }
 }
 
+.btn-suppression-admin{display:block!important;width:100%;margin:12px 0 4px!important;padding:12px 14px!important;background:#B42318!important;color:#fff!important;border:1px solid #8F1D15!important;border-radius:10px!important;font-weight:700!important;cursor:pointer!important;visibility:visible!important;opacity:1!important}
 </style>
 </head>
 <body>
@@ -3644,6 +3645,7 @@ ${partenaire.type === "livreur_independant" ? `
           ${partenaire.etatCompte === "suspendu_temporairement" ? `
             <button type="button" class="primary" onclick="reactiverPartenaire('${doc.id}')">Réactiver le compte</button>
           ` : ""}
+          <button type="button" class="btn-suppression-admin" onclick="supprimerPartenaire('${doc.id}')">🗑️ Supprimer le partenaire</button>
         </div>
       `;
     });
@@ -6288,7 +6290,7 @@ if (
   onclick="preparerRappelEmail('${doc.id}')">
   Préparer le rappel par e-mail
 </button>
-<button type="button" onclick="supprimerCompagnie('${doc.id}')">
+<button type="button" class="btn-suppression-admin" onclick="supprimerCompagnie('${doc.id}')">
   Supprimer la compagnie
 </button>
         </div>
@@ -7316,6 +7318,31 @@ async function afficherCompagniesPubliques() {
  '<h3>Tarifs indicatifs relevés au départ d’Abidjan</h3><ul>'+(prixHTML||'<li>Aucun tarif indicatif disponible pour ce filtre.</li>')+'</ul>'+
  '<h3>Compagnies</h3>'+(listeHTML||'<p class="notice">Aucun résultat pour cette recherche.</p>')+
  '<p class="notice">Source de référence : <a href="https://yacar.ci/compagnies" target="_blank" rel="noopener">YaCar — annuaire des compagnies</a>. Tarifs indicatifs : <a href="https://yacar.ci/" target="_blank" rel="noopener">YaCar</a>. Les prix affichés ne sont pas des offres garanties et doivent être confirmés au guichet.</p>';
+}
+
+
+async function supprimerPartenaire(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) { alert("Accès administrateur requis."); return; }
+  try {
+    const reference = db.collection("partenaires").doc(id);
+    const snap = await reference.get();
+    if (!snap.exists) { alert("Dossier partenaire introuvable."); await chargerPartenairesAdmin(); return; }
+    const partenaire = snap.data();
+    const nom = partenaire.nom || partenaire.email || "ce partenaire";
+    const verrou = await reference.collection("verrous").doc("missionActive").get();
+    if (verrou.exists && verrou.data().statut === "active") {
+      alert("Suppression bloquée : ce partenaire possède une mission active. Terminez ou réattribuez d'abord la mission.");
+      return;
+    }
+    if (!confirm("Supprimer définitivement le dossier de " + nom + " ?\n\nLe profil sera retiré de Mon Transport CI. Les commandes et leur historique seront conservés. Le compte de connexion Firebase ne sera pas supprimé automatiquement.")) return;
+    if (verrou.exists) await verrou.ref.delete();
+    await reference.delete();
+    alert("Dossier partenaire supprimé. Son compte de connexion peut encore exister.");
+    await chargerPartenairesAdmin();
+  } catch (erreur) {
+    console.error("Suppression partenaire :", erreur);
+    alert("Suppression impossible : " + erreur.message);
+  }
 }
 
 </script>
