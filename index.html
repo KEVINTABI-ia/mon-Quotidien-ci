@@ -634,10 +634,17 @@ footer { color: #718076; }
 /* ACCÈS DIRECT AU SERVICE TRANSPORT COLIS DEPUIS L'ACCUEIL */
 .carte-acces-colis {
   display: block;
-  padding: 20px;
-  border: 1px solid #F2D2B2;
-  border-top: 5px solid #F28C28;
-  background: linear-gradient(135deg, #FFFFFF 0%, #F2F8F2 100%);
+  min-height: 250px;
+  padding: 22px;
+  border: 0;
+  border-radius: 22px;
+  overflow: hidden;
+  background-image:
+    linear-gradient(110deg, rgba(20, 48, 31, .88), rgba(20, 48, 31, .42)),
+    url("https://images.pexels.com/photos/6170470/pexels-photo-6170470.jpeg?cs=srgb&dl=pexels-tima-miroshnichenko-6170470.jpg&fm=jpg");
+  background-size: cover;
+  background-position: center 38%;
+  box-shadow: 0 10px 26px rgba(28,63,40,.18);
 }
 .acces-colis-contenu {
   display: flex;
@@ -652,17 +659,21 @@ footer { color: #718076; }
   display: grid;
   place-items: center;
   border-radius: 18px;
-  background: #FFF0E1;
+  color: #FFFFFF;
+  background: rgba(242,140,40,.92);
+  border: 1px solid rgba(255,255,255,.55);
   font-size: 30px;
 }
 .acces-colis-texte h2 {
   margin: 0 0 6px;
-  color: #17663D !important;
+  color: #FFFFFF !important;
+  text-shadow: 0 2px 8px rgba(0,0,0,.28);
 }
 .acces-colis-texte p {
   margin: 0;
-  color: #53645A;
-  line-height: 1.5;
+  color: #FFFFFF;
+  line-height: 1.55;
+  text-shadow: 0 2px 8px rgba(0,0,0,.35);
 }
 .bouton-acces-colis {
   display: block;
@@ -1075,7 +1086,7 @@ Calculer mon budget
 <button class="mode" onclick="choisir('Woro-woro')">🚕 Woro-woro</button>
 <button class="mode" onclick="choisir('Taxi communal')">🚖 Taxi communal</button>
 <button class="mode" onclick="choisir('SOTRA')">🚌 SOTRA</button>
-<button class="mode" onclick="choisir('Car interurbain')">🚍 Cars interurbains</button>
+<button class="mode" onclick="choisir('Car interurbain')">🚌 Service de cars de ramassage</button>
 </div>
 </section>
 
@@ -1083,7 +1094,7 @@ Calculer mon budget
 <h2>Explorer</h2>
 <div class="quick">
 <button onclick="afficherGaresStations()">📍 Gares et stations</button>
-<button onclick="afficherTarifs()">💰 Tarifs</button>
+
 <button onclick="ouvrirCarteItineraire()">🗺️ Carte</button>
 <button onclick="afficherReseauNational()">🇨🇮 Réseau national</button>
 </div>
