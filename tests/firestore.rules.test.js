@@ -508,7 +508,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     await assertFails(deleteDoc(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive")));
   });
 
-  it("autorise la clôture de livraison puis la suppression du verrou", async () => {
+  it("autorise l'arrivée à destination, la lecture du tarif puis la clôture et la suppression du verrou", async () => {
     await testEnv.withSecurityRulesDisabled(async context => {
       const db = context.firestore();
       await db.doc(`commandes_colis/${ORDER_ID}`).set({
@@ -516,16 +516,43 @@ describe("Mon Transport CI — règles Firestore", function () {
         partenaireNom: "Partenaire test", partenaireType: "livreur_independant",
         service: "livraison", statut: "colis_recupere"
       });
+      await db.doc(`commandes_colis/${ORDER_ID}/tarification/prix`).set({
+        distanceKm: 4.2, distanceMetres: 4200, tarifKm: 100,
+        montantLivraison: 420, fraisService: 0, montantTotal: 420,
+        devise: "FCFA", operation: "livraison", createdAt: Timestamp.now()
+      });
       await db.doc(`partenaires/${PARTNER_UID}/verrous/missionActive`).set({
         commandeId: ORDER_ID, statut: "active", createdAt: Timestamp.now()
       });
     });
     const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
-    const { doc, updateDoc, deleteDoc, serverTimestamp } = require("firebase/firestore");
+    const { doc, updateDoc, deleteDoc, serverTimestamp, getDoc } = require("firebase/firestore");
+    await assertSucceeds(updateDoc(doc(db, "commandes_colis", ORDER_ID), {
+      statut: "arrive_destination", dateArriveeDestination: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(doc(db, "commandes_colis", ORDER_ID, "tarification", "prix")));
     await assertSucceeds(updateDoc(doc(db, "commandes_colis", ORDER_ID), {
       statut: "livre", dateLivraison: serverTimestamp()
     }));
     await assertSucceeds(deleteDoc(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive")));
+  });
+
+  it("interdit au livreur de lire le tarif avant son arrivée à destination", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await db.doc(`commandes_colis/${ORDER_ID}`).set({
+        clientId: CLIENT_UID, partenaireId: PARTNER_UID,
+        service: "livraison", statut: "colis_recupere"
+      });
+      await db.doc(`commandes_colis/${ORDER_ID}/tarification/prix`).set({
+        distanceKm: 4.2, distanceMetres: 4200, tarifKm: 100,
+        montantLivraison: 420, fraisService: 0, montantTotal: 420,
+        devise: "FCFA", operation: "livraison", createdAt: Timestamp.now()
+      });
+    });
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { doc, getDoc } = require("firebase/firestore");
+    await assertFails(getDoc(doc(db, "commandes_colis", ORDER_ID, "tarification", "prix")));
   });
 
   it("refuse l'attribution administrative à un partenaire hors ligne", async () => {
