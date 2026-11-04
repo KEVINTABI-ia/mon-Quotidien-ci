@@ -2403,7 +2403,13 @@ ${partenaire.type === "livreur_independant" ? `
             const abonnementEnCours = partenaire.statutAbonnementPartenaire === "Actif" && finAbonnement && finAbonnement > new Date();
             const statutAbonnement = abonnementEnCours ? "Actif" : essaiEnCours ? "Essai gratuit" : (partenaire.statutAbonnementPartenaire === "En attente" ? "Paiement en attente" : (partenaire.statut === "approuve" ? "Expiré / à activer" : "Non commencé"));
             const dateAffichee = abonnementEnCours ? finAbonnement : (finEssai || finAbonnement);
-            return `<p><strong>Abonnement :</strong> ${statutAbonnement}${dateAffichee ? " — échéance : " + dateAffichee.toLocaleDateString("fr-FR") : ""}</p>`;
+            const historique = Array.isArray(partenaire.historiqueAbonnements) ? partenaire.historiqueAbonnements : [];
+            const lignesHistorique = historique.slice(-5).reverse().map(element => {
+              const dateValidation = element.dateValidation && element.dateValidation.toDate ? element.dateValidation.toDate() : (element.dateValidation ? new Date(element.dateValidation) : null);
+              return "<li>" + echapperTexteCompagnie(element.formule || "") + " — " + Number(element.montant || 0).toLocaleString("fr-FR") + " FCFA" + (dateValidation ? " — validé le " + dateValidation.toLocaleDateString("fr-FR") : "") + "</li>";
+            }).join("");
+            return `<p><strong>Abonnement :</strong> ${statutAbonnement}${dateAffichee ? " — échéance : " + dateAffichee.toLocaleDateString("fr-FR") : ""}</p>`
+              + (lignesHistorique ? "<p><strong>Historique des paiements validés :</strong></p><ul>" + lignesHistorique + "</ul>" : "<p><em>Aucun paiement validé enregistré.</em></p>");
           })()}
           ${partenaire.motifModeration ? `<p><strong>Motif :</strong> ${echapperTexteCompagnie(partenaire.motifModeration)}</p>` : ""}
           ${partenaire.suspensionFin ? `<p><strong>Fin de suspension :</strong> ${new Date(partenaire.suspensionFin.toDate ? partenaire.suspensionFin.toDate() : partenaire.suspensionFin).toLocaleString("fr-FR")}</p>` : ""}
