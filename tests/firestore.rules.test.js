@@ -381,4 +381,14 @@ describe("Mon Transport CI — règles Firestore", function () {
     await assertFails(getDocs(q));
   });
 
+
+  it("permet de créer le verrou d'un partenaire éligible", async () => {
+    const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+    const { doc, setDoc, serverTimestamp } = require("firebase/firestore");
+    await assertSucceeds(setDoc(
+      doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive"),
+      { commandeId: ORDER_ID, statut: "active", createdAt: serverTimestamp() }
+    ));
+  });
+
 });
