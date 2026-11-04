@@ -5336,20 +5336,35 @@ async function naviguerVersEtapeCommande(commandeId, etape) {
 }
 
 async function refuserMissionPartenaire(commandeId) {
-  const user = auth.currentUser; if (!user) return;
+  const user = auth.currentUser;
+  if (!user) return alert("Veuillez vous reconnecter.");
   if (!confirm("Confirmer le refus ? Cette action est possible uniquement avant la récupération du colis.")) return;
   const ref = db.collection("commandes_colis").doc(commandeId);
   const lock = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
   try {
     await db.runTransaction(async tx => {
-      const snap = await tx.get(ref); const lockSnap = await tx.get(lock);
-      if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut !== "livreur_affecte") throw new Error("Le colis a déjà été récupéré ou la mission n'est plus à votre nom. Contactez l'administrateur.");
-      if (lockSnap.exists && lockSnap.data().commandeId === commandeId) tx.delete(lock);
-      tx.update(ref,{partenaireId:firebase.firestore.FieldValue.delete(),partenaireNom:firebase.firestore.FieldValue.delete(),partenaireType:firebase.firestore.FieldValue.delete(),dateAffectation:firebase.firestore.FieldValue.delete(),statut:"en_attente"});
+      const [snap, lockSnap] = await Promise.all([tx.get(ref), tx.get(lock)]);
+      if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut !== "livreur_affecte") {
+        throw new Error("Le colis a déjà été récupéré ou la mission n'est plus à votre nom.");
+      }
+      if (!lockSnap.exists || lockSnap.data().commandeId !== commandeId || lockSnap.data().statut !== "active") {
+        throw new Error("Le verrou de cette mission est introuvable. Contactez l'administrateur.");
+      }
+      tx.delete(lock);
+      tx.update(ref, {
+        partenaireId: firebase.firestore.FieldValue.delete(),
+        partenaireNom: firebase.firestore.FieldValue.delete(),
+        partenaireType: firebase.firestore.FieldValue.delete(),
+        dateAffectation: firebase.firestore.FieldValue.delete(),
+        affectePar: firebase.firestore.FieldValue.delete(),
+        statut: "en_attente"
+      });
     });
     alert("Mission refusée. La commande est de nouveau disponible.");
-    chargerCommandesPartenaire();
-  } catch(e) { alert("Refus impossible : " + e.message); }
+    await chargerCommandesPartenaire();
+  } catch (e) {
+    alert("Refus impossible : " + e.message);
+  }
 }
 
 async function marquerColisRecupere(commandeId) {
