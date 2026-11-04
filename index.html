@@ -931,7 +931,8 @@ footer { color: #718076; }
   <div id="listeGaresAdmin"></div>
 </div>
 <div id="gestionRoutes" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
-  <h3>Gestion des itinéraires</h3>
+  <h3>Gestion des itinéraires et lignes SOTRA</h3>
+  <p class="notice">Pour ajouter une ligne SOTRA : sélectionne SOTRA, indique la gare de départ, la destination principale, le numéro de ligne dans « Précision », puis les arrêts ou destinations et leurs tarifs.</p>
 
   <label>Moyen de transport</label>
   <select id="routeTransport">
@@ -942,17 +943,17 @@ footer { color: #718076; }
     <option>Car interurbain</option>
   </select>
 
-  <label>Départ</label>
-  <input id="routeDepart" placeholder="Ex. Yopougon">
+  <label>Gare / point de départ</label>
+  <input id="routeDepart" placeholder="Ex. Gare SOTRA de Yopougon">
 
-  <label>Destination</label>
-  <input id="routeArrivee" placeholder="Ex. Adjamé">
+  <label>Destination principale</label>
+  <input id="routeArrivee" placeholder="Ex. Plateau">
 
-  <label>Précision (facultatif)</label>
-  <input id="routeStatut">
+  <label>Numéro de ligne (pour SOTRA) / précision</label>
+  <input id="routeStatut" placeholder="Ex. Ligne 39">
 
-  <label>Arrêts et tarifs</label>
-  <textarea id="routeArrets" rows="6" placeholder="Arrêt 1 | 200&#10;Arrêt 2 | 300" style="width:100%;padding:12px;"></textarea>
+  <label>Destinations ou arrêts et tarifs</label>
+  <textarea id="routeArrets" rows="6" placeholder="Gare Sud | 200&#10;Arrêt intermédiaire | 200&#10;Destination finale | 200" style="width:100%;padding:12px;"></textarea>
 
   <button class="primary" onclick="enregistrerRoute()">Enregistrer l'itinéraire</button>
 
@@ -1172,7 +1173,7 @@ Calculer mon budget
 <button class="mode" onclick="choisir('Gbaka')">🚐 Gbaka</button>
 <button class="mode" onclick="afficherGaresStations('Gbaka')">🚐 Gare de Gbaka</button>
 <button class="mode" onclick="afficherGaresStations('Taxi communal')">🚖 Gare de taxi communal</button>
-<button class="mode" onclick="choisir('SOTRA')">🚌 SOTRA</button>
+<button class="mode" onclick="afficherReseauSotra()">🚌 Réseau SOTRA</button>
 <button class="mode" onclick="ouvrirSection('serviceRamassage')">🚌 Service de cars de ramassage</button>
 </div>
 </section>
@@ -4881,6 +4882,64 @@ function filtrerGaresParCommune(){
     document.getElementById("resultat").appendChild(message);
   }
 }
+async function afficherReseauSotra(){
+  const resultat = document.getElementById("resultat");
+  resultat.style.display = "block";
+  resultat.innerHTML = "<p>Chargement du réseau SOTRA...</p>";
+
+  try {
+    const snapshot = await db.collection("routes").where("transport", "==", "SOTRA").get();
+    const lignes = snapshot.docs.map(doc => ({...doc.data(), firestoreId: doc.id}));
+
+    let html = "<strong>🚌 Réseau SOTRA — Gares, lignes, destinations et tarifs</strong>";
+    if (!lignes.length) {
+      html += "<p class='notice'>Aucune ligne SOTRA n'est encore enregistrée. Les informations seront ajoutées par l'administrateur.</p>";
+    } else {
+      const gares = [...new Set(lignes.map(l => l.depart).filter(Boolean))].sort();
+      html += "<label for='filtreGareSotra'>Choisir une gare :</label>";
+      html += "<select id='filtreGareSotra' onchange='filtrerLignesSotra()'><option value=''>Toutes les gares</option>";
+      gares.forEach(g => { html += "<option value='" + echapperTexteCompagnie(g) + "'>" + echapperTexteCompagnie(g) + "</option>"; });
+      html += "</select><div id='listeLignesSotra'>";
+      lignes.forEach(ligne => {
+        const gare = echapperTexteCompagnie(ligne.depart || "Gare non précisée");
+        const destination = echapperTexteCompagnie(ligne.arrivee || "Destination non précisée");
+        const numero = echapperTexteCompagnie(ligne.statut || "Numéro non renseigné");
+        html += "<article class='stop carte-ligne-sotra' data-gare='" + gare + "'>";
+        html += "<h3>🚌 " + numero + "</h3><p><strong>Gare :</strong> " + gare + "</p>";
+        html += "<p><strong>Destination principale :</strong> " + destination + "</p>";
+        if (Array.isArray(ligne.stops) && ligne.stops.length) {
+          html += "<details><summary>Voir les arrêts et tarifs</summary><ul>";
+          ligne.stops.forEach(stop => {
+            const nom = echapperTexteCompagnie(Array.isArray(stop) ? stop[0] : stop.nom);
+            const prix = Number(Array.isArray(stop) ? stop[1] : stop.tarif);
+            html += "<li><strong>" + nom + "</strong> — " +
+              (Number.isFinite(prix) && prix >= 0 ? prix.toLocaleString("fr-FR") + " FCFA" : "Tarif à préciser") + "</li>";
+          });
+          html += "</ul></details>";
+        } else {
+          html += "<p class='notice'>Tarifs à renseigner.</p>";
+        }
+        html += "</article>";
+      });
+      html += "</div>";
+    }
+    html += "<p class='notice'>Les tarifs sont indicatifs et doivent être confirmés auprès de la SOTRA.</p>";
+    resultat.innerHTML = html;
+    resultat.scrollIntoView({behavior:"smooth", block:"start"});
+  } catch (erreur) {
+    console.error("Erreur réseau SOTRA :", erreur);
+    resultat.innerHTML = "<strong>🚌 Réseau SOTRA</strong><p class='notice'>Impossible de charger les lignes pour le moment.</p>";
+  }
+}
+
+function filtrerLignesSotra(){
+  const filtre = document.getElementById("filtreGareSotra");
+  if (!filtre) return;
+  document.querySelectorAll("#listeLignesSotra .carte-ligne-sotra").forEach(carte => {
+    carte.style.display = !filtre.value || carte.dataset.gare === filtre.value ? "block" : "none";
+  });
+}
+
 function afficherTarifs(){
   const routes = window.MON_TRANSPORT_CI_ROUTES || [];
   const resultat = document.getElementById("resultat");
