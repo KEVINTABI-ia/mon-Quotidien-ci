@@ -193,6 +193,13 @@ service cloud.firestore {
         || (estConnecte() && resource.data.clientId == request.auth.uid)
         || (estConnecte() && resource.data.partenaireId == request.auth.uid)
         || (resource.data.statut == "en_attente"
+          && !resource.data.keys().hasAny([
+            "clientNom", "clientTelephone", "telephoneExpediteur", "telephoneDestinataire",
+            "adresseRecuperation", "adresseLivraison", "descriptionColis", "trackingNumber",
+            "provenance", "codeColis", "typeColis", "livreurId", "operation", "compagnie",
+            "gare", "latitudeRecuperation", "longitudeRecuperation",
+            "latitudeLivraison", "longitudeLivraison"
+          ])
           && partenaireEnLignePour(resource.data['service']));
 
       // Acceptation ou attribution : l'ordre et le verrou doivent être écrits dans la même transaction.
