@@ -31,20 +31,6 @@
           "order": "ASCENDING"
         }
       ]
-    },
-    {
-      "collectionGroup": "publicites",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "statut",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "dateFin",
-          "order": "ASCENDING"
-        }
-      ]
     }
   ],
   "fieldOverrides": []
