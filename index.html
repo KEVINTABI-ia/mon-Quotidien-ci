@@ -5979,6 +5979,9 @@ async function afficherMissionPartenaire(c, partenaire, zone) {
     const detail = document.createElement("p");
     detail.textContent = "Suivi : " + (d.trackingNumber || c.id) + " | Expéditeur : " + (d.telephoneExpediteur || "non renseigné") + " | Destinataire : " + (d.telephoneDestinataire || "non renseigné");
     card.appendChild(detail);
+    const adresses = document.createElement("p");
+    adresses.textContent = "Récupération : " + (d.adresseRecuperation || "non renseignée") + " | Livraison : " + (d.adresseLivraison || "non renseignée");
+    card.appendChild(adresses);
   }
   const map = document.createElement("div"); map.id = "carteMissionPartenaire"; map.style.cssText = "height:280px;width:100%;border-radius:10px;margin:12px 0;";
   card.appendChild(map);
@@ -6128,7 +6131,21 @@ async function enregistrerCommande() {
     const profilDoc=await db.collection("clients").doc(user.uid).get(), profil=profilDoc.exists?profilDoc.data():{};
     const numeroSuivi="TCI-"+Date.now().toString(36).toUpperCase()+"-"+Math.floor(1000+Math.random()*9000);
     // La commande publique ne contient que les informations nécessaires à la file d'attente.
-    const publicData={clientId:user.uid,service,depart,destination,statut:"en_attente",publicVersion:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+    // Les commandes visibles dans la file partenaire ne révèlent qu'une zone générale.
+    // Les adresses complètes restent dans informations_privees/details.
+    const resumeAdressePublique = valeur => {
+      const morceaux = String(valeur || "").split(",").map(x => x.trim()).filter(Boolean);
+      return morceaux.length >= 2 ? morceaux.slice(0, 2).join(", ") : "Zone à confirmer";
+    };
+    let departPublic, destinationPublic;
+    if (service === "compagnie") {
+      departPublic = operation === "expedition" ? resumeAdressePublique(adresseRecuperation) : compagnie + " - " + gare;
+      destinationPublic = operation === "expedition" ? compagnie + " - " + gare : resumeAdressePublique(adresseLivraison);
+    } else {
+      departPublic = resumeAdressePublique(depart);
+      destinationPublic = resumeAdressePublique(destination);
+    }
+    const publicData={clientId:user.uid,service,depart:departPublic,destination:destinationPublic,statut:"en_attente",publicVersion:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
     if(dateSouhaitee)publicData.dateHeureSouhaitee=dateSouhaitee;
     const pr=window.positionsCommande?.recuperation, pl=window.positionsCommande?.destination;
     const ref=db.collection("commandes_colis").doc();
