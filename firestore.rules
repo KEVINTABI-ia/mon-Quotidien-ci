@@ -153,7 +153,8 @@ service cloud.firestore {
             && (
               (get(commandePath(resource.data.commandeId)).data.statut == "en_attente"
                 && get(commandePath(resource.data.commandeId)).data.get("partenaireId", null) == null)
-              || (get(commandePath(resource.data.commandeId)).data.statut == "livre"
+              || ((get(commandePath(resource.data.commandeId)).data.statut == "livre"
+                  || get(commandePath(resource.data.commandeId)).data.statut == "arrive_destination")
                 && get(commandePath(resource.data.commandeId)).data.partenaireId == partenaireId)
             ));
         allow update: if false;
@@ -267,13 +268,24 @@ service cloud.firestore {
           estConnecte()
           && resource.data.partenaireId == request.auth.uid
           && (resource.data.statut == "colis_recupere" || resource.data.statut == "en_transit")
-          && request.resource.data.statut == "livre"
-          && request.resource.data.dateLivraison == request.time
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["statut", "dateLivraison"])
+          && request.resource.data.statut == "arrive_destination"
+          && request.resource.data.dateArriveeDestination == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut", "dateArriveeDestination"])
           && exists(verrouPath(request.auth.uid))
           && get(verrouPath(request.auth.uid)).data.commandeId == commandeId
           && get(verrouPath(request.auth.uid)).data.statut == "active"
+        )
+        || (
+          estConnecte()
+          && resource.data.partenaireId == request.auth.uid
+          && resource.data.statut == "arrive_destination"
+          && request.resource.data.statut == "livre"
+          && request.resource.data.dateLivraison == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut", "dateLivraison"])
+          && exists(verrouPath(request.auth.uid))
+          && get(verrouPath(request.auth.uid)).data.commandeId == commandeId
+          && get(verrouPath(request.auth.uid)).data.statut == "active"
+          && exists(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix)
         )
         // Migration administrative contrôlée des anciennes commandes vers le document privé.
         || (
@@ -301,7 +313,7 @@ service cloud.firestore {
       allow delete: if estAdmin();
 
       match /informations_privees/{docId} {
-        allow create: if docId == "details"
+        allow create: if (docId == "details"
           && request.resource.data.keys().hasAll([
             "clientId", "clientNom", "clientTelephone", "telephoneExpediteur",
             "telephoneDestinataire", "adresseRecuperation", "adresseLivraison",
@@ -311,7 +323,7 @@ service cloud.firestore {
             "clientId", "clientNom", "clientTelephone", "telephoneExpediteur",
             "telephoneDestinataire", "adresseRecuperation", "descriptionColis",
             "adresseLivraison", "trackingNumber", "provenance", "codeColis",
-            "operation", "compagnie", "gare", "latitudeRecuperation",
+            "operation", "compagnie", "gare", "expeditionPayee", "latitudeRecuperation",
             "longitudeRecuperation", "latitudeLivraison", "longitudeLivraison",
             "typeColis", "livreurId", "createdAt"
           ])
@@ -324,7 +336,18 @@ service cloud.firestore {
               && request.resource.data.clientId == request.auth.uid)
             || (estAdmin()
               && get(commandePath(commandeId)).data.clientId == request.resource.data.clientId)
-          );
+          ))
+          || (docId == "expedition"
+            && estConnecte()
+            && get(commandePath(commandeId)).data.partenaireId == request.auth.uid
+            && get(commandePath(commandeId)).data.statut == "arrive_destination"
+            && request.resource.data.keys().hasAll(["compagnieExpedition","gareDestination","codeColis","partenaireId","createdAt"])
+            && request.resource.data.keys().hasOnly(["compagnieExpedition","gareDestination","codeColis","partenaireId","createdAt"])
+            && request.resource.data.partenaireId == request.auth.uid
+            && request.resource.data.compagnieExpedition is string
+            && request.resource.data.gareDestination is string
+            && request.resource.data.codeColis is string
+            && request.resource.data.createdAt == request.time);
 
         allow read: if estAdmin()
           || (estConnecte()
@@ -334,6 +357,33 @@ service cloud.firestore {
 
         allow update, delete: if estAdmin();
       }
+
+      match /tarification/{docId} {
+        allow create: if docId == "prix"
+          && estConnecte()
+          && !exists(commandePath(commandeId))
+          && getAfter(commandePath(commandeId)).data.clientId == request.auth.uid
+          && getAfter(commandePath(commandeId)).data.statut == "en_attente"
+          && request.resource.data.keys().hasAll(["distanceKm","distanceMetres","tarifKm","montantLivraison","fraisService","montantTotal","devise","operation","createdAt"])
+          && request.resource.data.keys().hasOnly(["distanceKm","distanceMetres","tarifKm","montantLivraison","fraisService","montantTotal","devise","operation","createdAt"])
+          && request.resource.data.distanceKm is number
+          && request.resource.data.distanceMetres is number
+          && request.resource.data.tarifKm in [100,120,150,190]
+          && request.resource.data.montantLivraison is int
+          && request.resource.data.fraisService in [0,300]
+          && request.resource.data.montantTotal == request.resource.data.montantLivraison + request.resource.data.fraisService
+          && request.resource.data.devise == "FCFA"
+          && request.resource.data.createdAt == request.time;
+        allow read: if estAdmin()
+          || (estConnecte()
+            && get(commandePath(commandeId)).data.clientId == request.auth.uid)
+          || (estConnecte()
+            && get(commandePath(commandeId)).data.partenaireId == request.auth.uid
+            && (get(commandePath(commandeId)).data.statut == "arrive_destination"
+              || get(commandePath(commandeId)).data.statut == "livre"));
+        allow update, delete: if estAdmin();
+      }
+
     }
 
 
