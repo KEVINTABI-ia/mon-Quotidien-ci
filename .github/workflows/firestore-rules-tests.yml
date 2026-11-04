@@ -17,4 +17,4 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Run Firestore emulator tests
-        run: npm run test:rules
+        run: npm test
