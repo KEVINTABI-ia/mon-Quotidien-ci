@@ -5534,29 +5534,6 @@ async function migrerAnciennesCommandesPrivees() {
   }
 }
 
-// Attribution administrative : même verrou de mission que l'acceptation par un partenaire.
-async function affecterCommandePartenaire(commandeId, partenaireId) {
-  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
-  if(!partenaireId)return alert("Choisis un partenaire.");
-  const cRef=db.collection("commandes_colis").doc(commandeId), pRef=db.collection("partenaires").doc(partenaireId), lRef=pRef.collection("verrous").doc("missionActive");
-  try{
-    await db.runTransaction(async tx=>{
-      const [cs,ps,ls]=await Promise.all([tx.get(cRef),tx.get(pRef),tx.get(lRef)]);
-      if(!cs.exists||!ps.exists)throw new Error("Commande ou partenaire introuvable.");
-      const c=cs.data(),p=ps.data();
-      if(c.statut!=="en_attente"||c.partenaireId)throw new Error("Cette commande n'est plus disponible.");
-      if(!partenaireAbonnementValide(p))throw new Error("Partenaire non éligible.");
-      if(p.type!==(c.service==="compagnie"?"representant_gare":"livreur_independant"))throw new Error("Profil incompatible.");
-      if(ls.exists)throw new Error("Ce partenaire a déjà une mission active.");
-      tx.update(cRef,{partenaireId,partenaireNom:p.nom||"",partenaireType:p.type,statut:"livreur_affecte",dateAffectation:firebase.firestore.FieldValue.serverTimestamp(),affectePar:auth.currentUser.uid});
-      tx.set(lRef,{commandeId,statut:"active",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    });
-    alert("Commande attribuée avec verrou de mission.");
-    chargerCommandesAdmin();
-  }catch(e){alert("Attribution impossible : "+e.message);}
-}
-
-
 </script>
 </body>
 </html>
