@@ -1198,6 +1198,8 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
   <p class="notice">Consulte les demandes reçues. Confirme le paiement après vérification sur WhatsApp ou refuse la demande.</p>
   <button type="button" class="primary" onclick="chargerDemandesPublicitesAdmin()">Actualiser les demandes</button>
   <div id="listeDemandesPublicitesAdmin"><p class="notice">Connecte-toi comme administrateur pour consulter les demandes.</p></div>
+  <h3>Publicités en ligne et programmées</h3>
+  <div id="listePublicitesAdmin"><p class="notice">Aucune annonce chargée.</p></div>
 </div>
 
 
@@ -1330,8 +1332,10 @@ async function chargerDemandesPublicitesAdmin() {
       const date = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toLocaleString("fr-FR") : "Date en cours";
       const statut = d.statut || "en_attente";
       const actions = statut === "en_attente"
-        ? '<button type="button" onclick="changerStatutDemandePublicite(\'' + doc.id + '\',\'paiement_confirme\')">Confirmer le paiement</button><button type="button" onclick="changerStatutDemandePublicite(\'' + doc.id + '\',\'refusee\')">Refuser</button>'
-        : '<span class="notice">Demande traitée : ' + echapperTextePublicite(statut) + '</span>';
+        ? '<button type="button" onclick="changerStatutDemandePublicite(\\'' + doc.id + '\\',\\'paiement_confirme\\')">Confirmer le paiement</button><button type="button" onclick="changerStatutDemandePublicite(\\'' + doc.id + '\\',\\'refusee\\')">Refuser</button>'
+        : statut === "paiement_confirme"
+          ? '<label>Visuel reçu sur WhatsApp (image ou vidéo MP4/WebM, 25 Mo maximum)</label><input type="file" id="mediaPublicite_' + doc.id + '" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"><button type="button" class="primary" onclick="publierDemandePublicite(\\'' + doc.id + '\\')">Publier cette publicité</button>'
+          : '<span class="notice">Demande traitée : ' + echapperTextePublicite(statut) + '</span>';
       return '<article class="card" style="margin:12px 0;padding:14px;">'
         + '<strong>' + echapperTextePublicite(d.activite) + '</strong>'
         + '<p>Contact : ' + echapperTextePublicite(d.nom) + ' · ' + echapperTextePublicite(d.telephone) + '</p>'
@@ -1362,6 +1366,146 @@ async function changerStatutDemandePublicite(id, statut) {
     console.error("Mise à jour demande publicitaire :", erreur);
     alert("Impossible de mettre à jour cette demande.");
   }
+}
+
+async function publierDemandePublicite(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert("Accès administrateur requis.");
+    return;
+  }
+  const fichier = document.getElementById("mediaPublicite_" + id)?.files?.[0];
+  if (!fichier) {
+    alert("Choisis d’abord la photo ou la vidéo reçue sur WhatsApp.");
+    return;
+  }
+  const types = ["image/jpeg","image/png","image/webp","video/mp4","video/webm"];
+  if (!types.includes(fichier.type) || fichier.size > 25 * 1024 * 1024) {
+    alert("Format non accepté ou fichier supérieur à 25 Mo. Utilise JPG, PNG, WebP, MP4 ou WebM.");
+    return;
+  }
+  try {
+    const demandeRef = db.collection("demandes_publicites").doc(id);
+    const demandeSnap = await demandeRef.get();
+    if (!demandeSnap.exists || demandeSnap.data().statut !== "paiement_confirme") {
+      alert("Confirme d’abord le paiement de cette demande.");
+      return;
+    }
+    const d = demandeSnap.data();
+    const cle = await envoyerFichierCloudflare(fichier, "publicite");
+    const mediaUrl = WORKER_URL + "/public/publicite/" + encodeURIComponent(cle);
+    const dateFin = new Date(Date.now() + Number(d.dureeJours) * 86400000);
+    const publiciteRef = await db.collection("publicites").add({
+      titre: d.activite,
+      description: d.description,
+      mediaKey: cle,
+      mediaUrl,
+      mediaType: fichier.type,
+      statut: "publiee",
+      forfait: d.forfait,
+      dureeJours: d.dureeJours,
+      montantFCFA: d.montantFCFA,
+      dateDebut: firebase.firestore.FieldValue.serverTimestamp(),
+      dateFin: firebase.firestore.Timestamp.fromDate(dateFin),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      demandeId: id
+    });
+    await demandeRef.update({
+      statut: "publiee",
+      publiciteId: publiciteRef.id,
+      traiteLe: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await chargerDemandesPublicitesAdmin();
+    await chargerPublicitesAdmin();
+    alert("Publicité publiée. Elle sera automatiquement masquée à la fin du forfait.");
+  } catch (erreur) {
+    console.error("Publication publicité :", erreur);
+    alert("Publication impossible : " + (erreur.message || "erreur inconnue"));
+  }
+}
+
+async function chargerPublicitesAdmin() {
+  const zone = document.getElementById("listePublicitesAdmin");
+  if (!zone || !auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
+  try {
+    const snap = await db.collection("publicites").orderBy("createdAt", "desc").limit(100).get();
+    if (snap.empty) {
+      zone.innerHTML = '<p class="notice">Aucune publicité publiée.</p>';
+      return;
+    }
+    zone.innerHTML = snap.docs.map(doc => {
+      const d = doc.data();
+      const dateFin = d.dateFin?.toDate ? d.dateFin.toDate().toLocaleDateString("fr-FR") : "Non définie";
+      const terminee = d.dateFin?.toDate && d.dateFin.toDate() <= new Date();
+      const etat = d.statut === "publiee" && !terminee ? "En ligne" : "Masquée / terminée";
+      return '<article class="card" style="margin:12px 0;padding:14px;">'
+        + '<strong>' + echapperTextePublicite(d.titre) + '</strong>'
+        + '<p class="notice">' + etat + ' · Fin prévue : ' + dateFin + '</p>'
+        + '<label>Nom de l’activité</label><input id="titrePub_' + doc.id + '" maxlength="100" value="' + echapperTextePublicite(d.titre) + '">'
+        + '<label>Description</label><textarea id="descriptionPub_' + doc.id + '" maxlength="1000" rows="3">' + echapperTextePublicite(d.description) + '</textarea>'
+        + '<button type="button" onclick="modifierPublicite(\\'' + doc.id + '\\')">Enregistrer les modifications</button>'
+        + '<button type="button" onclick="supprimerPublicite(\\'' + doc.id + '\\')">Supprimer la publicité</button>'
+        + '</article>';
+    }).join("");
+  } catch (erreur) {
+    console.error("Gestion publicités :", erreur);
+    zone.innerHTML = '<p class="notice">Impossible de charger les publicités.</p>';
+  }
+}
+
+async function modifierPublicite(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
+  const titre = document.getElementById("titrePub_" + id)?.value.trim();
+  const description = document.getElementById("descriptionPub_" + id)?.value.trim();
+  if (!titre || !description) {
+    alert("Le titre et la description sont obligatoires.");
+    return;
+  }
+  try {
+    await db.collection("publicites").doc(id).update({titre, description});
+    await chargerPublicitesAdmin();
+    alert("Publicité mise à jour.");
+  } catch (erreur) {
+    alert("Modification impossible : " + erreur.message);
+  }
+}
+
+async function supprimerPublicite(id) {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
+  if (!confirm("Supprimer cette publicité de l’affichage public ?")) return;
+  try {
+    await db.collection("publicites").doc(id).delete();
+    await chargerPublicitesAdmin();
+  } catch (erreur) {
+    alert("Suppression impossible : " + erreur.message);
+  }
+}
+
+function chargerPublicitesAccueil() {
+  const zone = document.getElementById("publiciteMedia");
+  if (!zone) return;
+  db.collection("publicites")
+    .where("statut", "==", "publiee")
+    .where("dateFin", ">", firebase.firestore.Timestamp.now())
+    .onSnapshot(snapshot => {
+      if (snapshot.empty) {
+        zone.innerHTML = '<div class="publicite-placeholder"><span class="publicite-icone">📢</span><strong>Votre publicité ici</strong><span>Réservez un emplacement et présentez votre activité à nos utilisateurs.</span></div>';
+        return;
+      }
+      const annonces = snapshot.docs.map(doc => ({id:doc.id,...doc.data()}))
+        .sort((a,b) => (a.dateDebut?.toMillis?.() || 0) - (b.dateDebut?.toMillis?.() || 0));
+      zone.innerHTML = annonces.map(d => {
+        const titre = echapperTextePublicite(d.titre);
+        const description = echapperTextePublicite(d.description);
+        const media = String(d.mediaType || "").startsWith("video/")
+          ? '<video src="' + echapperTextePublicite(d.mediaUrl) + '" controls muted playsinline preload="metadata" style="width:100%;max-height:260px;object-fit:contain;border-radius:14px;"></video>'
+          : '<img src="' + echapperTextePublicite(d.mediaUrl) + '" alt="Publicité ' + titre + '" loading="lazy" style="width:100%;max-height:260px;object-fit:contain;border-radius:14px;">';
+        return '<article class="publicite-annonce" style="padding:10px;">' + media
+          + '<strong style="display:block;margin-top:8px;">' + titre + '</strong>'
+          + '<p>' + description + '</p></article>';
+      }).join("");
+    }, erreur => {
+      console.error("Affichage publicités :", erreur);
+    });
 }
 </script>
 
@@ -1537,6 +1681,7 @@ firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 const db = firebase.firestore();
+chargerPublicitesAccueil();
 // MENU ADMINISTRATEUR : une seule rubrique visible à la fois
 const RUBRIQUES_ADMIN = [
   {id:"gestionGares",titre:"📍 Gestion des gares et terminus"},
@@ -1601,6 +1746,7 @@ function connexionAdmin() {
       actualiserInterfaceAdmin(true);
       chargerCompagniesRamassageAdmin();
       chargerDemandesPublicitesAdmin();
+      chargerPublicitesAdmin();
     })
     .catch((erreur) => {
       statut.textContent = "Connexion impossible : " + erreur.message;
@@ -1637,6 +1783,8 @@ auth.onAuthStateChanged((user) => {
     chargerCommandesAdmin();
     chargerRoutesFirestore();
     chargerGaresFirestore();
+    chargerDemandesPublicitesAdmin();
+    chargerPublicitesAdmin();
   }else{
     document.getElementById("listeCompagniesAdmin").innerHTML="";
     document.getElementById("listePartenairesAdmin").innerHTML="";
