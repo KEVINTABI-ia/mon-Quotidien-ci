@@ -930,6 +930,22 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 }
 
 .btn-suppression-admin{display:block!important;width:100%;margin:12px 0 4px!important;padding:12px 14px!important;background:#B42318!important;color:#fff!important;border:1px solid #8F1D15!important;border-radius:10px!important;font-weight:700!important;cursor:pointer!important;visibility:visible!important;opacity:1!important}
+
+/* Fenêtre de confirmation moderne */
+.confirmation-overlay{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(12,20,35,.62);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);animation:confirmationFondu .18s ease-out}
+.confirmation-dialog{width:min(100%,420px);background:linear-gradient(145deg,#fff 0%,#f5f8ff 100%);color:#182230;border:1px solid rgba(255,255,255,.85);border-radius:22px;padding:25px;box-shadow:0 24px 70px rgba(0,0,0,.28);animation:confirmationEntree .22s ease-out}
+.confirmation-icone{width:54px;height:54px;display:grid;place-items:center;border-radius:17px;background:#fff0ed;color:#c43224;font-size:27px;margin-bottom:16px;border:1px solid #ffd5ce}
+.confirmation-dialog h2{font-size:20px;line-height:1.3;margin:0 0 10px;color:#152238}
+.confirmation-dialog p{font-size:14px;line-height:1.65;color:#536174;margin:0;white-space:pre-line}
+.confirmation-actions{display:flex;gap:10px;margin-top:24px}
+.confirmation-actions button{flex:1;min-height:46px;border-radius:12px;padding:10px 14px;font-weight:700;font-size:14px;cursor:pointer}
+.confirmation-annuler{background:#fff!important;color:#344054!important;border:1px solid #d8e0eb!important}
+.confirmation-valider{background:linear-gradient(135deg,#d9362b,#a91f19)!important;color:#fff!important;border:1px solid #a91f19!important;box-shadow:0 5px 14px rgba(169,31,25,.2)}
+.confirmation-actions button:focus-visible{outline:3px solid #7aa7f7;outline-offset:3px}
+@keyframes confirmationFondu{from{opacity:0}to{opacity:1}}
+@keyframes confirmationEntree{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.confirmation-overlay,.confirmation-dialog{animation:none}}
+
 </style>
 </head>
 <body>
@@ -6308,7 +6324,7 @@ async function supprimerCompagnie(id) {
     const snap = await reference.get();
     if (!snap.exists) { alert("Compagnie introuvable."); await chargerCompagniesAdmin(); return; }
     const nom = snap.data().nom || "cette compagnie";
-    if (!confirm("Supprimer définitivement " + nom + " ?\n\nLa fiche de la compagnie sera supprimée. Les gares, trajets et commandes enregistrés seront conservés.")) return;
+    if (!(await demanderConfirmation("Supprimer cette compagnie ?", "Supprimer définitivement " + nom + " ?\n\nLa fiche de la compagnie sera supprimée. Les gares, trajets et commandes enregistrés seront conservés.", "Oui, supprimer"))) return;
     await reference.delete();
     alert("Compagnie supprimée. Les autres données sont conservées.");
     await chargerCompagniesAdmin();
@@ -7334,7 +7350,7 @@ async function supprimerPartenaire(id) {
       alert("Suppression bloquée : ce partenaire possède une mission active. Terminez ou réattribuez d'abord la mission.");
       return;
     }
-    if (!confirm("Supprimer définitivement le dossier de " + nom + " ?\n\nLe profil sera retiré de Mon Transport CI. Les commandes et leur historique seront conservés. Le compte de connexion Firebase ne sera pas supprimé automatiquement.")) return;
+    if (!(await demanderConfirmation("Supprimer ce partenaire ?", "Supprimer définitivement le dossier de " + nom + " ?\n\nLe profil sera retiré de Mon Transport CI. Les commandes et leur historique seront conservés. Le compte de connexion Firebase ne sera pas supprimé automatiquement.", "Oui, supprimer"))) return;
     if (verrou.exists) await verrou.ref.delete();
     await reference.delete();
     alert("Dossier partenaire supprimé. Son compte de connexion peut encore exister.");
@@ -7343,6 +7359,26 @@ async function supprimerPartenaire(id) {
     console.error("Suppression partenaire :", erreur);
     alert("Suppression impossible : " + erreur.message);
   }
+}
+
+
+function demanderConfirmation(titre, message, libelleValidation) {
+  return new Promise(resolve => {
+    const overlay = document.createElement("div");
+    overlay.className = "confirmation-overlay";
+    overlay.innerHTML = '<section class="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmationTitre" aria-describedby="confirmationMessage"><div class="confirmation-icone" aria-hidden="true">⚠</div><h2 id="confirmationTitre"></h2><p id="confirmationMessage"></p><div class="confirmation-actions"><button type="button" class="confirmation-annuler">Annuler</button><button type="button" class="confirmation-valider"></button></div></section>';
+    overlay.querySelector("#confirmationTitre").textContent = titre;
+    overlay.querySelector("#confirmationMessage").textContent = message;
+    overlay.querySelector(".confirmation-valider").textContent = libelleValidation || "Confirmer";
+    document.body.appendChild(overlay);
+    const fermer = valeur => { document.removeEventListener("keydown", touche); overlay.remove(); resolve(valeur); };
+    const touche = event => { if (event.key === "Escape") fermer(false); };
+    overlay.querySelector(".confirmation-annuler").addEventListener("click", () => fermer(false));
+    overlay.querySelector(".confirmation-valider").addEventListener("click", () => fermer(true));
+    overlay.addEventListener("click", event => { if (event.target === overlay) fermer(false); });
+    document.addEventListener("keydown", touche);
+    overlay.querySelector(".confirmation-annuler").focus();
+  });
 }
 
 </script>
