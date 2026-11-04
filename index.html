@@ -1170,8 +1170,8 @@ Calculer mon budget
 <h2>Nos moyens de transport</h2>
 <div class="modes">
 <button class="mode" onclick="choisir('Gbaka')">🚐 Gbaka</button>
-<button class="mode" onclick="choisir('Woro-woro')">🚕 Woro-woro</button>
-<button class="mode" onclick="choisir('Taxi communal')">🚖 Taxi communal</button>
+<button class="mode" onclick="afficherGaresStations('Gbaka')">🚐 Gare de Gbaka</button>
+<button class="mode" onclick="afficherGaresStations('Taxi communal')">🚖 Gare de taxi communal</button>
 <button class="mode" onclick="choisir('SOTRA')">🚌 SOTRA</button>
 <button class="mode" onclick="ouvrirSection('serviceRamassage')">🚌 Service de cars de ramassage</button>
 </div>
@@ -4718,8 +4718,9 @@ function signalerProblemeGeneral(){
 }
 
 // COLLE ICI LA NOUVELLE FONCTION
-async function afficherGaresStations(){
+async function afficherGaresStations(typeTransport){
   const resultat = document.getElementById("resultat");
+  const typeChoisi = typeTransport || "Gbaka";
 
   resultat.style.display = "block";
   resultat.innerHTML = "<p>Chargement des gares et terminus...</p>";
@@ -4734,10 +4735,20 @@ async function afficherGaresStations(){
       return;
     }
 
-    let html = "<strong>📍 Répertoire des gares et terminus</strong>";
+    const garesType = snapshot.docs.filter(doc => {
+      const transports = doc.data().transports || [];
+      return transports.some(t => normaliser(String(t)) === normaliser(typeChoisi));
+    });
+
+    if(garesType.length === 0){
+      resultat.innerHTML = "<strong>📍 Gare de " + typeChoisi + "</strong><p class=\"notice\">Aucune gare de ce type n’est encore enregistrée.</p>";
+      return;
+    }
+
+    let html = "<strong>📍 Répertoire — " + (typeChoisi === "Gbaka" ? "Gares de Gbaka" : "Gares de taxi communal") + "</strong>";
 
 const communes = [...new Set(
-  snapshot.docs
+  garesType
     .map(doc => (doc.data().commune || "").trim())
     .filter(commune => commune !== "")
 )].sort();
@@ -4753,7 +4764,7 @@ communes.forEach(commune => {
 html += "</select>";
 html += "<p><strong>Rechercher une gare ou un quartier :</strong></p>";
 html += "<input type='text' id='rechercheGare' placeholder='Ex. : Bagnon, Niangon, Adjamé...' oninput='filtrerGaresParCommune()'>";
-    snapshot.forEach(doc => {
+    garesType.forEach(doc => {
       const gare = doc.data();
 
       html += `<div class="stop" data-commune="${(gare.commune || "").trim()}">`;
