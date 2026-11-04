@@ -299,7 +299,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     await assertSucceeds(batch.commit());
   });
 
-  it("autorise le refus avant récupération et libère le verrou dans la même opération", async () => {
+  it("autorise le refus avant récupération puis libère le verrou", async () => {
     await testEnv.withSecurityRulesDisabled(async context => {
       const db = context.firestore();
       await db.doc(`commandes_colis/${ORDER_ID}`).set({
@@ -312,7 +312,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       });
     });
     const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
-    const { doc, writeBatch, deleteField } = require("firebase/firestore");
+    const { doc, updateDoc, deleteField } = require("firebase/firestore");
     await assertSucceeds(updateDoc(doc(db, "commandes_colis", ORDER_ID), {
       partenaireId: deleteField(), partenaireNom: deleteField(),
       partenaireType: deleteField(), dateAffectation: deleteField(),
