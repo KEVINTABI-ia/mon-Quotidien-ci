@@ -1,0 +1,282 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function estAdmin() {
+      return request.auth != null
+        && request.auth.uid == "3LpoTLyQdtVcdtnSMAJFc7Cvnpz2";
+    }
+
+    function estConnecte() {
+      return request.auth != null;
+    }
+
+    function partenaire(uid) {
+      return get(/databases/$(database)/documents/partenaires/$(uid)).data;
+    }
+
+    function abonnementValide(p) {
+      return p.statut == "approuve"
+        && (!("etatCompte" in p) || p.etatCompte == "actif")
+        && (
+          (p.statutAbonnementPartenaire == "Essai"
+            && p.dateFinEssai is timestamp
+            && p.dateFinEssai > request.time)
+          ||
+          (p.statutAbonnementPartenaire == "Actif"
+            && p.dateExpirationAbonnement is timestamp
+            && p.dateExpirationAbonnement > request.time)
+        );
+    }
+
+    function partenaireEnLignePour(service) {
+      return estConnecte()
+        && exists(/databases/$(database)/documents/partenaires/$(request.auth.uid))
+        && partenaire(request.auth.uid).enLigne == true
+        && abonnementValide(partenaire(request.auth.uid))
+        && (
+          (service == "compagnie" && partenaire(request.auth.uid).type == "representant_gare")
+          ||
+          ((service == "livraison" || service == "livraison_programmee")
+            && partenaire(request.auth.uid).type == "livreur_independant")
+        );
+    }
+
+    function verrouPath(uid) {
+      return /databases/$(database)/documents/partenaires/$(uid)/verrous/missionActive;
+    }
+
+    function commandePath(commandeId) {
+      return /databases/$(database)/documents/commandes_colis/$(commandeId);
+    }
+
+    match /routes/{routeId} {
+      allow read: if true;
+      allow create, update, delete: if estAdmin();
+    }
+
+    match /compagnies/{compagnieId} {
+      allow read: if true;
+      allow create, update, delete: if estAdmin();
+    }
+
+    match /gares/{gareId} {
+      allow read: if true;
+      allow create, update, delete: if estAdmin();
+    }
+
+    match /partenaires/{partenaireId} {
+      allow read: if estAdmin()
+        || (estConnecte() && request.auth.uid == partenaireId);
+
+      allow create: if estConnecte()
+        && request.auth.uid == partenaireId
+        && request.resource.data.keys().hasAll([
+          "uid", "type", "nom", "telephone", "commune",
+          "email", "dateNaissance", "lieuNaissance",
+          "numeroIdentite", "statut", "createdAt"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "uid", "type", "nom", "telephone", "commune",
+          "email", "dateNaissance", "lieuNaissance",
+          "numeroIdentite", "quartiers", "numeroPermis",
+          "nomGare", "posteOccupe", "photoProfil",
+          "statut", "createdAt"
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && (request.resource.data.type == "livreur_independant"
+          || request.resource.data.type == "representant_gare")
+        && (
+          (request.resource.data.type == "livreur_independant"
+            && request.resource.data.keys().hasAll(["quartiers", "numeroPermis"))
+          ||
+          (request.resource.data.type == "representant_gare"
+            && request.resource.data.keys().hasAll(["nomGare", "posteOccupe"))
+        )
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.createdAt == request.time
+        && (
+          !request.resource.data.keys().hasAny(["photoProfil"])
+          || (request.resource.data.photoProfil is string
+            && request.resource.data.photoProfil.size() <= 200000
+            && request.resource.data.photoProfil.matches('^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$'))
+        );
+
+      allow update: if estAdmin()
+        || (estConnecte()
+          && request.auth.uid == partenaireId
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["enLigne", "derniereActivite"])
+          && request.resource.data.enLigne is bool
+          && request.resource.data.derniereActivite == request.time
+          && (request.resource.data.enLigne == false
+            || abonnementValide(request.resource.data)));
+
+      allow delete: if estAdmin();
+
+      match /verrous/{verrouId} {
+        allow read: if estAdmin()
+          || (estConnecte() && request.auth.uid == partenaireId);
+        allow create: if estConnecte()
+          && request.auth.uid == partenaireId
+          && verrouId == "missionActive"
+          && request.resource.data.keys().hasOnly(["commandeId", "statut", "createdAt"])
+          && request.resource.data.commandeId is string
+          && request.resource.data.statut == "active"
+          && getAfter(commandePath(request.resource.data.commandeId)).data.partenaireId == partenaireId
+          && getAfter(commandePath(request.resource.data.commandeId)).data.statut == "livreur_affecte"
+          && abonnementValide(partenaire(partenaireId));
+        allow delete: if estAdmin()
+          || (estConnecte()
+            && request.auth.uid == partenaireId
+            && verrouId == "missionActive"
+            && (
+              getAfter(commandePath(resource.data.commandeId)).data.statut == "en_attente"
+              || getAfter(commandePath(resource.data.commandeId)).data.statut == "livre"
+            ));
+        allow update: if false;
+      }
+    }
+
+    match /clients/{clientId} {
+      allow create: if estConnecte()
+        && request.auth.uid == clientId
+        && request.resource.data.uid == clientId
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.keys().hasAll(["uid", "nom", "telephone", "email", "createdAt"])
+        && request.resource.data.keys().hasOnly(["uid", "nom", "telephone", "email", "createdAt"])
+        && request.resource.data.createdAt == request.time;
+
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == clientId);
+
+      allow update: if estConnecte()
+        && request.auth.uid == clientId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nom", "telephone"]);
+
+      allow delete: if estAdmin();
+    }
+
+    match /commandes_colis/{commandeId} {
+      allow create: if estConnecte()
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.keys().hasAll([
+          "clientId", "service", "depart", "destination", "statut", "createdAt"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "clientId", "service", "depart", "destination", "statut", "createdAt",
+          "operation", "compagnie", "gare", "latitudeRecuperation",
+          "longitudeRecuperation", "latitudeLivraison", "longitudeLivraison",
+          "dateHeureSouhaitee"
+        ])
+        && (request.resource.data.service == "compagnie"
+          || request.resource.data.service == "livraison"
+          || request.resource.data.service == "livraison_programmee")
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time
+        && (
+          !request.resource.data.keys().hasAny(["latitudeRecuperation", "longitudeRecuperation"])
+          || (request.resource.data.keys().hasAll(["latitudeRecuperation", "longitudeRecuperation"])
+            && request.resource.data.latitudeRecuperation is number
+            && request.resource.data.longitudeRecuperation is number
+            && request.resource.data.latitudeRecuperation >= -90
+            && request.resource.data.latitudeRecuperation <= 90
+            && request.resource.data.longitudeRecuperation >= -180
+            && request.resource.data.longitudeRecuperation <= 180)
+        )
+        && (
+          !request.resource.data.keys().hasAny(["latitudeLivraison", "longitudeLivraison"])
+          || (request.resource.data.keys().hasAll(["latitudeLivraison", "longitudeLivraison"])
+            && request.resource.data.latitudeLivraison is number
+            && request.resource.data.longitudeLivraison is number
+            && request.resource.data.latitudeLivraison >= -90
+            && request.resource.data.latitudeLivraison <= 90
+            && request.resource.data.longitudeLivraison >= -180
+            && request.resource.data.longitudeLivraison <= 180)
+        )
+        && (
+          request.resource.data.service != "livraison_programmee"
+          || (request.resource.data.dateHeureSouhaitee is timestamp
+            && request.resource.data.dateHeureSouhaitee >= request.time + duration.value(1, "h")
+            && request.resource.data.dateHeureSouhaitee <= request.time + duration.value(1, "d"))
+        );
+
+      allow read: if estAdmin()
+        || (estConnecte() && resource.data.clientId == request.auth.uid)
+        || (estConnecte() && resource.data.partenaireId == request.auth.uid)
+        || (resource.data.statut == "en_attente"
+          && partenaireEnLignePour(resource.data.service));
+
+      // Acceptation ou attribution : l'ordre et le verrou doivent être écrits dans la même transaction.
+      allow update: if estAdmin()
+        || (
+          estConnecte()
+          && resource.data.statut == "en_attente"
+          && !("partenaireId" in resource.data)
+          && request.resource.data.partenaireId == request.auth.uid
+          && request.resource.data.statut == "livreur_affecte"
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation"])
+          && existsAfter(verrouPath(request.auth.uid))
+          && getAfter(verrouPath(request.auth.uid)).data.commandeId == commandeId
+          && partenaireEnLignePour(resource.data.service)
+        )
+        || (
+          estConnecte()
+          && resource.data.partenaireId == request.auth.uid
+          && resource.data.statut == "livreur_affecte"
+          && request.resource.data.statut == "en_attente"
+          && !("partenaireId" in request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation"])
+          && !existsAfter(verrouPath(request.auth.uid))
+        )
+        || (
+          estConnecte()
+          && resource.data.partenaireId == request.auth.uid
+          && resource.data.statut == "livreur_affecte"
+          && request.resource.data.statut == "colis_recupere"
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["statut", "dateRecuperation"])
+          && exists(verrouPath(request.auth.uid))
+        )
+        || (
+          estConnecte()
+          && resource.data.partenaireId == request.auth.uid
+          && (resource.data.statut == "colis_recupere" || resource.data.statut == "en_transit")
+          && request.resource.data.statut == "livre"
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["statut", "dateLivraison"])
+          && !existsAfter(verrouPath(request.auth.uid))
+        );
+
+      allow delete: if estAdmin();
+
+      match /informations_privees/{docId} {
+        allow create: if estConnecte()
+          && docId == "details"
+          && getAfter(commandePath(commandeId)).data.clientId == request.auth.uid
+          && request.resource.data.clientId == request.auth.uid
+          && request.resource.data.keys().hasAll([
+            "clientId", "clientNom", "clientTelephone", "telephoneExpediteur",
+            "telephoneDestinataire", "adresseRecuperation", "adresseLivraison",
+            "descriptionColis", "trackingNumber", "createdAt"
+          ])
+          && request.resource.data.createdAt == request.time;
+
+        allow read: if estAdmin()
+          || (estConnecte()
+            && get(commandePath(commandeId)).data.clientId == request.auth.uid)
+          || (estConnecte()
+            && get(commandePath(commandeId)).data.partenaireId == request.auth.uid);
+
+        allow update, delete: if estAdmin();
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
