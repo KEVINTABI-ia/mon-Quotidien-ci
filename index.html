@@ -1804,82 +1804,6 @@ const temporaire=depart.value;
 depart.value=arrivee.value;
 arrivee.value=temporaire;
 }
-function calculerBudget(){
-const tarif=Number(document.getElementById("tarifUnitaire").value);
-const nombre=Number(document.getElementById("nombreTrajets").value);
-
-if(tarif<=0 || nombre<=0){
-document.getElementById("budgetTotal").textContent="Veuillez saisir un tarif et un nombre de trajets valides.";
-return;
-}
-
-const total=tarif*nombre;
-
-document.getElementById("budgetTotal").textContent=
-"Budget total : "+total.toLocaleString("fr-FR")+" FCFA";
-}
-let favoris=JSON.parse(localStorage.getItem("monTransportFavoris") || "[]");
-
-function afficherFavoris(){
-const liste=document.getElementById("listeFavoris");
-
-if(favoris.length===0){
-liste.innerHTML='<p class="notice">Aucun trajet favori enregistré.</p>';
-return;
-}
-
-liste.innerHTML=favoris.map((trajet,index)=>`
-<div class="stop">
-<span>${trajet.depart} → ${trajet.destination} (${trajet.transport})</span>
-<button type="button" onclick="rechercherFavori(${index})">🔎</button>
-<button type="button" onclick="supprimerFavori(${index})">🗑️</button>
-</div>
-`).join("");
-}
-
-function ajouterFavori(index){
-const item=window.trajetsTrouves[index];
-
-if(!item)return;
-
-const trajet={
-depart:item.route.depart,
-destination:item.route.stops[item.index][0],
-transport:item.route.transport
-};
-
-if(favoris.some(f=>f.depart===trajet.depart && f.destination===trajet.destination && f.transport===trajet.transport)){
-alert("Ce trajet est déjà dans vos favoris.");
-return;
-}
-
-favoris.push(trajet);
-localStorage.setItem("monTransportFavoris",JSON.stringify(favoris));
-afficherFavoris();
-alert("Trajet ajouté aux favoris !");
-}
-
-function supprimerFavori(index){
-favoris.splice(index,1);
-localStorage.setItem("monTransportFavoris",JSON.stringify(favoris));
-afficherFavoris();
-}
-
-function rechercherFavori(index){
-const trajet=favoris[index];
-
-if(!trajet)return;
-
-document.getElementById("depart").value=trajet.depart;
-document.getElementById("arrivee").value=trajet.destination;
-
-document.getElementById("transport").value=
-trajet.transport.startsWith("SOTRA") ? "SOTRA" : trajet.transport;
-
-rechercher();
-}
-
-afficherFavoris();
 function partagerTrajet(index){
 const item=window.trajetsTrouves[index];
 
@@ -2098,54 +2022,6 @@ const url=
 
 window.open(url,"_blank");
 }
-let historique=JSON.parse(localStorage.getItem("monTransportHistorique") || "[]");
-
-function afficherHistorique(){
-const liste=document.getElementById("listeHistorique");
-
-if(historique.length===0){
-liste.innerHTML='<p class="notice">Aucune recherche enregistrée.</p>';
-return;
-}
-
-liste.innerHTML=historique.map((trajet,index)=>`
-<div class="stop">
-<span>${trajet.depart} → ${trajet.destination} (${trajet.transport})</span>
-<button type="button" onclick="rechercherHistorique(${index})">🔎</button>
-</div>
-`).join("");
-}
-
-function effacerHistorique(){
-historique=[];
-localStorage.setItem("monTransportHistorique",JSON.stringify(historique));
-afficherHistorique();
-}
-
-function rechercherHistorique(index){
-const trajet=historique[index];
-if(!trajet)return;
-
-document.getElementById("depart").value=trajet.depart;
-document.getElementById("arrivee").value=trajet.destination;
-document.getElementById("transport").value=trajet.transport;
-
-rechercher();
-}
-
-function enregistrerHistorique(depart,arrivee,transport){
-historique=historique.filter(trajet=>
-!(trajet.depart===depart && trajet.destination===arrivee && trajet.transport===transport)
-);
-
-historique.unshift({depart, destination:arrivee, transport});
-historique=historique.slice(0,10);
-
-localStorage.setItem("monTransportHistorique",JSON.stringify(historique));
-afficherHistorique();
-}
-
-afficherHistorique();
 function rechercher(){
 const depart=normaliser(document.getElementById("depart").value);
 const arrivee=normaliser(document.getElementById("arrivee").value);
@@ -2217,11 +2093,6 @@ return;
 resultat.textContent="Aucun trajet ni tarif correspondant n'a été trouvé pour cette sélection.";
 return;
 }
-enregistrerHistorique(
-document.getElementById("depart").value,
-document.getElementById("arrivee").value,
-document.getElementById("transport").value
-);
 window.trajetsTrouves=trouvees;
 let html="<strong>Résultat de votre recherche</strong>";
 
@@ -2235,7 +2106,6 @@ html+=`<p class="notice"><strong>Information :</strong> ${route.statut}. Parcour
 }
 html+=`<p>Destination recherchée : ${stop[0]}</p>`;
 html+=`<p><strong>Tarif indiqué : ${stop[1]} FCFA</strong></p>`;
-html+=`<button type="button" onclick="ajouterFavori(${index})">⭐ Ajouter aux favoris</button>`;
 html+=`<button type="button" onclick="partagerTrajet(${index})">📲 Partager sur WhatsApp</button>`;
 html+=`<button type="button" onclick="signalerTrajet(${index})" style="margin-top:10px;background:#fff0e8;color:#a34416;">⚠️ Signaler un problème</button>`;
 html+="<h4>Arrêts et tarifs</h4>";
