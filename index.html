@@ -784,6 +784,28 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 .ramassage-list-item strong{color:#17663D}
 .ramassage-muted{font-size:12px;color:#68786E}
 
+
+/* TRANSPORT COLIS CI — ÉCRAN DE CONNEXION IMMERSIF */
+#vuePleinEcran:has(#transportColis){background:#f7faf7}
+#vuePleinEcran:has(#transportColis) .vue-plein-ecran-entete{background:linear-gradient(110deg,#16834A,#11663B)}
+#vuePleinEcran:has(#transportColis) .vue-plein-ecran-entete button{background:#F28C28;color:#fff}
+#vuePleinEcran:has(#transportColis) .vue-plein-ecran-titre{display:none}
+#vuePleinEcranContenu:has(#transportColis){padding:0;overflow-y:auto;background:#fff}
+#vuePleinEcranContenu>#transportColis.transport-colis-screen{position:relative;isolation:isolate;display:flex!important;flex-direction:column;align-items:center;width:100%;max-width:none;min-height:calc(100dvh - 62px);margin:0;padding:24px 18px 30px;border:0;border-radius:0;box-shadow:none;overflow:hidden;background:linear-gradient(rgba(255,255,255,.50),rgba(255,255,255,.50)),url("https://images.pexels.com/photos/6170470/pexels-photo-6170470.jpeg?cs=srgb&dl=pexels-tima-miroshnichenko-6170470.jpg&fm=jpg") center/cover no-repeat}
+.transport-colis-intro{width:100%;text-align:center;margin:0 auto}
+.transport-colis-intro h2{margin:0 0 3px!important;color:#16834A!important;font-size:clamp(23px,5vw,30px)!important;font-weight:900}
+.transport-colis-service{margin:0 0 5px;color:#17663D;font-size:14px;font-weight:800}
+.transport-colis-description{max-width:340px;margin:0 auto;color:#244532;font-size:12px;line-height:1.35;font-weight:650}
+.transport-colis-connexion-titre{width:100%;margin:clamp(55px,12vh,105px) 0 0;padding:17px 12px;text-align:center;color:#fff!important;background:rgba(22,131,74,.94);border:2px solid rgba(255,255,255,.9);border-radius:18px;font-size:clamp(25px,6vw,36px);font-weight:950;line-height:1.15;box-shadow:0 8px 24px #153d2928}
+#transportColis .colis-choix{width:100%;max-width:520px;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:clamp(34px,8vh,66px) auto 0}
+#transportColis .colis-choix-bouton{min-height:58px;padding:13px 8px;border:2px solid #fff;border-radius:15px;color:#fff;font-size:14px;font-weight:850;box-shadow:0 6px 18px #173b2930}
+#transportColis .colis-client{background:linear-gradient(135deg,#16834A,#11663B)}
+#transportColis .colis-partenaire{background:linear-gradient(135deg,#F28C28,#E97816)}
+#zoneMenuColisClient,#zoneMenuColisPartenaire{width:100%;max-width:520px;margin-top:18px}
+#zoneEspaceClient,#connexionPartenaire{padding:15px;background:rgba(255,255,255,.94);border:1px solid #dce8df;border-radius:16px;box-shadow:0 5px 18px #173b2918}
+#zoneEspaceClient:empty,#connexionPartenaire:empty{display:none}
+@media(max-width:380px){#vuePleinEcranContenu>#transportColis.transport-colis-screen{padding:20px 13px 24px}.transport-colis-connexion-titre{margin-top:clamp(45px,10vh,80px);font-size:25px}#transportColis .colis-choix{gap:8px;margin-top:34px}#transportColis .colis-choix-bouton{font-size:12px;min-height:54px}}
+
 </style>
 </head>
 <body>
@@ -814,15 +836,16 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 </header>
 
 <main>
-  <section class="card" id="transportColis" style="display:none;">
-  <div style="text-align:center;padding:15px;">
-    <h2 style="color:#D97706;">📦 Transport Colis CI</h2>
-    <p><strong>Un service de Mon Transport CI</strong></p>
-    <p>Envoyez et recevez vos colis partout à Abidjan.</p>
+  <section class="card transport-colis-screen" id="transportColis" style="display:none;">
+  <div class="transport-colis-intro">
+    <h2>📦 Transport Colis CI</h2>
+    <p class="transport-colis-service">Un service de Mon Transport CI</p>
+    <p class="transport-colis-description">Envoyez et recevez vos colis partout à Abidjan.</p>
   </div>
+  <h1 class="transport-colis-connexion-titre">ESPACE DE CONNEXION</h1>
   <div class="colis-choix">
-    <button type="button" class="colis-choix-bouton" onclick="ouvrirEspaceClient()">👤 Espace client</button>
-    <button type="button" class="colis-choix-bouton" onclick="ouvrirConnexionPartenaire()">🤝 Espace partenaire</button>
+    <button type="button" class="colis-choix-bouton colis-client" onclick="ouvrirEspaceClient()">👤 Espace client</button>
+    <button type="button" class="colis-choix-bouton colis-partenaire" onclick="ouvrirConnexionPartenaire()">🤝 Espace partenaire</button>
   </div>
   <div id="zoneMenuColisClient"><div id="zoneEspaceClient"></div></div>
   <div id="zoneMenuColisPartenaire" style="display:none;"><div id="connexionPartenaire"></div></div>
@@ -1156,7 +1179,7 @@ resultat.style.display = "block";
     </div>
   </div>
   <button type="button" class="primary bouton-acces-colis"
-    onclick="ouvrirSection('transportColis')">
+    onclick="ouvrirSectionPleinEcran('transportColis','')">
     Accéder au service Transport Colis →
   </button>
 </section>
@@ -3791,7 +3814,8 @@ function afficherSousMenuColis(espace){
 }
 
 function ouvrirEspaceClient(){
-  ouvrirSection("transportColis");
+  const section = document.getElementById("transportColis");
+  if(section) section.style.display = "block";
   afficherSousMenuColis("client");
   const user = auth.currentUser;
 
