@@ -748,12 +748,17 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 .accueil-service-illustration{font-size:39px;line-height:1.2;filter:drop-shadow(0 3px 2px #102D3518)}
 .accueil-service strong{font-size:13px;line-height:1.3}
 .accueil-service small{font-size:10px;line-height:1.35;font-weight:500;color:#68786E}
-.tuile-gbaka{background:linear-gradient(145deg,#FFF8E9,#FBEACB)}
-.tuile-taxi{background:linear-gradient(145deg,#F0F7FF,#DFECFA)}
-.tuile-sotra{background:linear-gradient(145deg,#ECF8F2,#DCEFE4)}
-.tuile-ramassage{background:linear-gradient(145deg,#FFF3E9,#FCE2CF)}
-.tuile-marches{background:linear-gradient(145deg,#F9F2FF,#EDE2F7)}
-.tuile-woro{background:linear-gradient(145deg,#F1F5F5,#E1E9E9)}
+.accueil-service{position:relative;isolation:isolate;overflow:hidden;color:#fff!important;border:0!important;background-size:cover!important;background-position:center!important;text-shadow:0 2px 5px #000b}
+.accueil-service::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,#071b18a8,#071b18a8)}
+.accueil-service strong,.accueil-service small{color:#fff!important;text-shadow:0 1px 4px #000}
+.accueil-service-illustration{filter:drop-shadow(0 3px 4px #0008)}
+.tuile-gbaka{background-image:url("https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80")!important}
+.tuile-taxi{background-image:url("https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=900&q=80")!important}
+.tuile-sotra{background-image:url("https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=900&q=80")!important}
+.tuile-ramassage{background-image:url("https://images.unsplash.com/photo-1507514601121-0f3b1c1f6f9a?auto=format&fit=crop&w=900&q=80")!important}
+.tuile-marches{background-image:url("https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=900&q=80")!important}
+.tuile-woro{background-image:url("https://images.unsplash.com/photo-1504215680853-026ed2a45def?auto=format&fit=crop&w=900&q=80")!important}
+#carteMarchesCommune{width:100%;height:330px;margin:14px 0;border-radius:14px;border:1px solid #dce7de}
 .colis-choix{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
 .colis-choix-bouton{min-height:54px;background:#F0F6F2;color:#075744;border:1px solid #DCE8E0}
 @media(max-width:360px){.accueil-service{min-height:145px;padding:12px 7px}.accueil-service-illustration{font-size:34px}.accueil-service strong{font-size:12px}}
@@ -782,7 +787,6 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 
 <div class="menu-dropdown" id="menuDropdown">
   <button onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur')">🔐 Espace administrateur</button>
-  <button onclick="ouvrirSectionPleinEcran('transportColis','Transport Colis CI')">📦 Transport Colis CI</button>
   <button onclick="ouvrirSectionPleinEcran('devenirPartenaire','Devenir partenaire')">🤝 Devenir partenaire</button>
 </div>
 </div>
@@ -5001,32 +5005,50 @@ function filtrerMarchesCommune(){
   marches.forEach((marche,index) => {
     html += "<article class='stop'><strong>🏬 " + echapperTexteCompagnie(marche.nom) + "</strong>";
     html += "<p>" + echapperTexteCompagnie(marche.commune) + "</p>";
-    html += "<button type='button' class='primary' onclick='guiderVersMarche(" + index + ")'>";
-    html += "🧭 Tracer mon itinéraire GPS</button></article>";
+    html += "<button type='button' class='primary' onclick='tracerItineraireMarche(" + index + ")'>";
+    html += "🧭 Afficher mon itinéraire sur la carte</button></article>";
   });
   zone.innerHTML = html;
   window.marchesCommuneAffiches = marches;
 }
 
-function guiderVersMarche(index){
-  const marche = (window.marchesCommuneAffiches || [])[index];
-  if (!marche) return;
-  const destination = marche.repere + ", Côte d'Ivoire";
-  const ouvrir = (origine) => {
-    let url = "https://www.google.com/maps/dir/?api=1&destination=" +
-      encodeURIComponent(destination) + "&travelmode=driving";
-    if (origine) url += "&origin=" + encodeURIComponent(origine);
-    window.open(url,"_blank","noopener");
-  };
-  if (!navigator.geolocation) {
-    ouvrir("");
-    return;
-  }
-  navigator.geolocation.getCurrentPosition(
-    position => ouvrir(position.coords.latitude + "," + position.coords.longitude),
-    () => ouvrir(""),
-    {enableHighAccuracy:true,timeout:12000,maximumAge:60000}
-  );
+async function tracerItineraireMarche(index){
+  const marche=(window.marchesCommuneAffiches||[])[index];
+  if(!marche)return;
+  if(!navigator.geolocation){alert("La géolocalisation n'est pas disponible sur cet appareil.");return;}
+  const zone=document.getElementById("listeMarchesCommune");
+  let carteZone=document.getElementById("carteMarchesCommune");
+  if(!carteZone){carteZone=document.createElement("div");carteZone.id="carteMarchesCommune";carteZone.setAttribute("role","region");carteZone.setAttribute("aria-label","Carte de l'itinéraire vers le marché");zone.appendChild(carteZone);}
+  carteZone.innerHTML="<p class='notice'>Autorisez la localisation pour calculer et afficher votre itinéraire...</p>";
+  navigator.geolocation.getCurrentPosition(async position=>{
+    try{
+      const depart=[position.coords.latitude,position.coords.longitude];
+      const recherche=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(marche.repere+", Côte d'Ivoire"));
+      if(!recherche.ok)throw new Error("Le service de localisation des marchés ne répond pas.");
+      const lieux=await recherche.json();
+      if(!lieux.length)throw new Error("L'emplacement de ce marché n'a pas été trouvé.");
+      const arrivee=[Number(lieux[0].lat),Number(lieux[0].lon)];
+      const url="https://router.project-osrm.org/route/v1/driving/"+depart[1]+","+depart[0]+";"+arrivee[1]+","+arrivee[0]+"?overview=full&geometries=geojson";
+      const reponse=await fetch(url);
+      if(!reponse.ok)throw new Error("Le calcul du trajet est momentanément indisponible.");
+      const donnees=await reponse.json();
+      if(!donnees.routes||!donnees.routes.length)throw new Error("Aucun itinéraire routier n'a été trouvé.");
+      const trajet=donnees.routes[0];
+      carteZone.innerHTML="<strong>Itinéraire vers "+echapperTexteCompagnie(marche.nom)+"</strong><p>Distance : "+(trajet.distance/1000).toFixed(1)+" km · Durée estimée : "+Math.round(trajet.duration/60)+" min</p><div id='carteMarchesLeaflet' style='width:100%;height:290px;border-radius:12px'></div>";
+      if(window.carteItineraireMarche){window.carteItineraireMarche.remove();window.carteItineraireMarche=null;}
+      const carte=L.map("carteMarchesLeaflet").setView(depart,13);window.carteItineraireMarche=carte;
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(carte);
+      const ligne=L.geoJSON(trajet.geometry,{style:{color:"#16834A",weight:6,opacity:.85}}).addTo(carte);
+      L.marker(depart).addTo(carte).bindPopup("Votre position");
+      L.marker(arrivee).addTo(carte).bindPopup(marche.nom);
+      carte.fitBounds(ligne.getBounds(),{padding:[22,22]});
+      setTimeout(()=>carte.invalidateSize(),250);
+      carteZone.scrollIntoView({behavior:"smooth",block:"nearest"});
+    }catch(e){carteZone.innerHTML="<p class='notice'>"+echapperTexteCompagnie(e.message)+"</p>";}
+  },erreur=>{
+    const message=erreur.code===1?"Autorisation refusée. Activez la localisation pour ce site dans les réglages de Safari ou de l’iPhone, puis réessayez.":(erreur.code===3?"La demande de localisation a expiré. Réessayez.":"Position GPS indisponible. Vérifiez les réglages de localisation.");
+    carteZone.innerHTML="<p class='notice'>"+message+"</p>";
+  },{enableHighAccuracy:true,timeout:20000,maximumAge:60000});
 }
 
 function afficherTarifs(){
