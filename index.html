@@ -5646,12 +5646,12 @@ async function migrerAnciennesCommandesPrivees() {
     const commandes = await db.collection("commandes_colis").get();
     for (const doc of commandes.docs) {
       const refPrivee = doc.ref.collection("informations_privees").doc("details");
-      await db.runTransaction(async tx => {
+      const aMigre = await db.runTransaction(async tx => {
         const [commandeSnap, priveSnap] = await Promise.all([tx.get(doc.ref), tx.get(refPrivee)]);
-        if (!commandeSnap.exists || priveSnap.exists) { ignorees++; return; }
+        if (!commandeSnap.exists || priveSnap.exists) return false;
         const data = commandeSnap.data();
         const contientAncienPrive = champsPrives.some(k => data[k] !== undefined);
-        if (!contientAncienPrive) { ignorees++; return; }
+        if (!contientAncienPrive) return false;
         const details = {
           clientId: data.clientId,
           clientNom: data.clientNom || "Client",
@@ -5673,8 +5673,10 @@ async function migrerAnciennesCommandesPrivees() {
         });
         tx.set(refPrivee, details);
         if (Object.keys(retrait).length) tx.update(doc.ref, retrait);
-        migrees++;
+        return true;
       });
+      if (aMigre) migrees++;
+      else ignorees++;
     }
     alert("Migration terminée. Commandes sécurisées : " + migrees + " ; déjà sécurisées ou sans données privées : " + ignorees + ".");
     await chargerCommandesAdmin();
