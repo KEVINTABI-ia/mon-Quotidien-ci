@@ -171,8 +171,6 @@ service cloud.firestore {
         ])
         && request.resource.data.keys().hasOnly([
           "clientId", "service", "depart", "destination", "statut", "createdAt",
-          "operation", "compagnie", "gare", "latitudeRecuperation",
-          "longitudeRecuperation", "latitudeLivraison", "longitudeLivraison",
           "dateHeureSouhaitee"
         ])
         && (request.resource.data.service == "compagnie"
@@ -293,6 +291,14 @@ service cloud.firestore {
             "clientId", "clientNom", "clientTelephone", "telephoneExpediteur",
             "telephoneDestinataire", "adresseRecuperation", "adresseLivraison",
             "descriptionColis", "trackingNumber", "createdAt"
+          ])
+          && request.resource.data.keys().hasOnly([
+            "clientId", "clientNom", "clientTelephone", "telephoneExpediteur",
+            "telephoneDestinataire", "adresseRecuperation", "descriptionColis",
+            "adresseLivraison", "trackingNumber", "provenance", "codeColis",
+            "operation", "compagnie", "gare", "latitudeRecuperation",
+            "longitudeRecuperation", "latitudeLivraison", "longitudeLivraison",
+            "typeColis", "livreurId", "createdAt"
           ])
           && request.resource.data.createdAt == request.time
           && (
