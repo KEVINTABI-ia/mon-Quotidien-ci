@@ -205,7 +205,7 @@ service cloud.firestore {
         && request.resource.data.clientId == request.auth.uid
         && request.resource.data.keys().hasAll(["clientId","service","depart","destination","trackingNumber","statut","createdAt"])
         && request.resource.data.keys().hasOnly(["clientId","service","operation","depart","destination","compagnie","gare","codeColis","provenance","descriptionColis","typeColis","dateHeureSouhaitee","trackingNumber","statut","createdAt","clientNom","clientTelephone","telephoneExpediteur","telephoneDestinataire","adresseRecuperation","adresseLivraison","latitudeRecuperation","longitudeRecuperation","latitudeLivraison","longitudeLivraison","livreurId"])
-        && (request.resource.data.service == "compagnie" || request.resource.data.service == "livraison" || request.resource.data.service == "livraison_programmee")
+        && (request.resource.data['service'] == "compagnie" || request.resource.data['service'] == "livraison" || request.resource.data['service'] == "livraison_programmee")
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time
         && (request.resource.data.get("service","") != "livraison_programmee" || (request.resource.data.dateHeureSouhaitee is timestamp && request.resource.data.dateHeureSouhaitee >= request.time + duration.value(1,"h") && request.resource.data.dateHeureSouhaitee <= request.time + duration.value(1,"d")))
