@@ -2414,11 +2414,6 @@ async function chargerCommandesPartenaire() {
     });
 
     zone.innerHTML = "";
-    const migrationBtn = document.createElement("button");
-    migrationBtn.type = "button";
-    migrationBtn.textContent = "Sécuriser les anciennes commandes";
-    migrationBtn.addEventListener("click", migrerAnciennesCommandesPrivees);
-    zone.appendChild(migrationBtn);
     commandes.forEach(commande => {
       const carte = document.createElement("div");
       carte.className = "stop";
@@ -2532,6 +2527,11 @@ async function chargerCommandesAdmin() {
 
     const libelles = {en_attente:"En attente",livreur_affecte:"Partenaire affecté",colis_recupere:"Colis récupéré",en_transit:"En transit",livre:"Livré",annule:"Annulé"};
     zone.innerHTML = "";
+    const migrationBtn = document.createElement("button");
+    migrationBtn.type = "button";
+    migrationBtn.textContent = "Sécuriser les anciennes commandes";
+    migrationBtn.addEventListener("click", migrerAnciennesCommandesPrivees);
+    zone.appendChild(migrationBtn);
     commandes.forEach(commande => {
       const typeAttendu = commande.service === "compagnie" ? "representant_gare" : "livreur_independant";
       const candidats = partenaires.filter(p => p.disponible && p.type === typeAttendu);
