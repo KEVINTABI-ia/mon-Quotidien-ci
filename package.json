@@ -5,7 +5,8 @@
   "scripts": {
     "test:rules": "firebase emulators:exec --only firestore \"mocha --timeout 15000 tests/firestore.rules.test.js\"",
     "test:syntax": "node tests/check-inline-scripts.js",
-    "test": "npm run test:syntax && npm run test:rules"
+    "test": "npm run test:syntax && npm run test:rules && npm run test:rules:transition",
+    "test:rules:transition": "FIRESTORE_RULES_FILE=firestore.rules.transition firebase emulators:exec --only firestore \"mocha --timeout 15000 tests/firestore.rules.test.js\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "6.0.0",
