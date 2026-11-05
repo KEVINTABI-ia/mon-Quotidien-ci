@@ -527,9 +527,19 @@ service cloud.firestore {
     match /demandes_nouveaux_services/{demandeId} {
       allow create: if estConnecte()
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","telephone","description","email","photoUrl","statut","createdAt"])
-        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","telephone","description","email","photoUrl","statut","createdAt"])
+        && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","telephone","description","email","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","telephone","description","email","photoUrl","produits","paiementMoyen","paiementReference","montantAbonnement","dureeAbonnementJours","paiementStatut","statut","createdAt"])
         && request.resource.data.type in ["depannage","commerce","annonce"]
+        && (request.resource.data.type != "commerce"
+          || (request.resource.data.produits is list
+            && request.resource.data.produits.size() > 0
+            && request.resource.data.paiementMoyen in ["Wave","Orange Money"]
+            && request.resource.data.paiementReference is string
+            && request.resource.data.paiementReference.size() >= 4
+            && request.resource.data.paiementReference.size() <= 80
+            && request.resource.data.montantAbonnement == 2500
+            && request.resource.data.dureeAbonnementJours == 30
+            && request.resource.data.paiementStatut == "a_verifier"))
         && request.resource.data.titre is string && request.resource.data.titre.size() > 0 && request.resource.data.titre.size() <= 100
         && request.resource.data.categorie is string && request.resource.data.categorie.size() <= 80
         && request.resource.data.commune is string && request.resource.data.commune.size() > 0 && request.resource.data.commune.size() <= 60
@@ -540,6 +550,39 @@ service cloud.firestore {
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time;
       allow read: if estAdmin() || (resource.data.statut == "approuve" && (resource.data.type != "depannage" || estAbonneAutomobiliste()));
+      allow update, delete: if estAdmin();
+    }
+
+    match /avis_boutiques/{avisId} {
+      allow create: if request.resource.data.keys().hasAll([
+          "boutiqueId","boutiqueUid","nom","produit","commentaire",
+          "satisfaction","achatDeclare","createdAt"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "boutiqueId","boutiqueUid","nom","produit","commentaire",
+          "satisfaction","achatDeclare","createdAt"
+        ])
+        && request.resource.data.boutiqueId is string
+        && exists(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId))
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.type == "commerce"
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.uid == request.resource.data.boutiqueUid
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.statut == "approuve"
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin is timestamp
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin > request.time
+        && request.resource.data.nom is string
+        && request.resource.data.nom.size() > 0
+        && request.resource.data.nom.size() <= 80
+        && request.resource.data.produit is string
+        && request.resource.data.produit.size() > 0
+        && request.resource.data.produit.size() <= 100
+        && request.resource.data.commentaire is string
+        && request.resource.data.commentaire.size() > 0
+        && request.resource.data.commentaire.size() <= 700
+        && request.resource.data.satisfaction in ["satisfait","mitige","insatisfait"]
+        && request.resource.data.achatDeclare == true
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin()
+        || (estConnecte() && resource.data.boutiqueUid == request.auth.uid);
       allow update, delete: if estAdmin();
     }
 
