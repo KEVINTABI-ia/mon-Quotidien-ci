@@ -2315,7 +2315,8 @@ function choisirNouveauService(type){
  <label>Description et détails</label><textarea id="nsDescription" rows="4" maxlength="1200" placeholder="Décrivez le service, le commerce ou l'annonce" required></textarea>
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
- <button class="primary" type="button" onclick="envoyerNouveauService()">Envoyer pour validation</button>
+ ${type==="commerce"?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Abonnement obligatoire : 2 500 FCFA / 30 jours</strong><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p>Wave : <strong>0757522319</strong><br>Orange Money : <strong>0757522319</strong><br>Titulaire : <strong>TA BI SERGE KEVIN</strong></p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
+ <button class="primary" type="button" onclick="envoyerNouveauService()">${type==="commerce"?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
  </div>`;
  chargerNouveauxServicesPublics(type);
@@ -2352,7 +2353,9 @@ async function envoyerNouveauService(){
  const statut=document.getElementById("nsStatut");
  const valeur=id=>document.getElementById(id)?.value.trim()||"";
  const titre=valeur("nsTitre"),commune=valeur("nsCommune"),telephone=valeur("nsTelephone"),description=valeur("nsDescription"),email=valeur("nsEmail"),password=document.getElementById("nsPassword").value;
- if(!titre||!commune||!telephone||!description||!email||password.length<6){statut.textContent="Remplissez tous les champs. Le mot de passe doit contenir au moins 6 caractères.";return;}
+ const paiementMoyen=nouveauServiceActif==="commerce"?(document.getElementById("nsPaiementMoyen")?.value||""):"";
+ const paiementReference=nouveauServiceActif==="commerce"?(document.getElementById("nsPaiementReference")?.value.trim()||""):"";
+ if(!titre||!commune||!telephone||!description||!email||password.length<6||(nouveauServiceActif==="commerce"&&(!paiementMoyen||!paiementReference))){statut.textContent="Remplissez tous les champs obligatoires, y compris les informations de paiement pour une boutique.";return;}
  statut.textContent="Envoi du dossier...";
  try{
   let user=auth.currentUser;
@@ -2371,6 +2374,7 @@ async function envoyerNouveauService(){
   await db.collection("demandes_nouveaux_services").add({
    uid:user.uid,type:nouveauServiceActif,titre,categorie:valeur("nsCategorie"),commune,telephone,description,email,
    ...(photoUrl?{photoUrl}:{}),
+   ...(nouveauServiceActif==="commerce"?{paiementMoyen,paiementReference,montantAbonnement:2500,dureeAbonnementJours:30,paiementStatut:"a_verifier"}:{}),
    statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()
   });
   statut.textContent="Dossier envoyé. Il sera visible après vérification et approbation par Mon Transport CI.";
@@ -2385,9 +2389,11 @@ async function chargerNouveauxServicesPublics(type){
  }
  zone.innerHTML='<p class="notice">Chargement...</p>';
  try{
-  const snap=await db.collection("demandes_nouveaux_services").where("type","==",type).where("statut","==","approuve").limit(60).get();
-  if(snap.empty){zone.innerHTML='<p class="notice">Aucun résultat publié dans cette rubrique pour le moment.</p>';return;}
-  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();return '<article class="card" style="padding:13px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo de profil" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':'')+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.description)+'</p><a class="primary" style="display:inline-block;text-align:center;text-decoration:none;margin-top:10px;" href="tel:'+String(d.telephone||"").replace(/[^+0-9]/g,"")+'">📞 Appeler le prestataire</a></article>';}).join("");
+  const snap=await db.collection("demandes_nouveaux_services").where("type","==",type).where("statut","==","approuve").limit(100).get();
+  const maintenant=Date.now();
+  const documents=snap.docs.filter(doc=>{const d=doc.data();if(type!=="commerce")return true;return d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;});
+  if(!documents.length){zone.innerHTML='<p class="notice">'+(type==="commerce"?"Aucune boutique avec un abonnement actif pour le moment.":"Aucun résultat publié dans cette rubrique pour le moment.")+'</p>';return;}
+  zone.innerHTML=documents.map(doc=>{const d=doc.data();return '<article class="card" style="padding:13px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo de profil" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':'')+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.description)+'</p><a class="primary" style="display:inline-block;text-align:center;text-decoration:none;margin-top:10px;" href="tel:'+String(d.telephone||"").replace(/[^+0-9]/g,"")+'">📞 Contacter la boutique / le prestataire</a>'+(type==="commerce"&&d.abonnementFin?'<p class="notice">Abonnement actif jusqu’au '+d.abonnementFin.toDate().toLocaleDateString("fr-FR")+'</p>':'')+'</article>';}).join("");
  }catch(e){console.error(e);zone.innerHTML='<p class="notice">Impossible de charger les résultats. Vérifiez les règles Firestore.</p>';}
 }
 async function chargerNouveauxServicesAdmin(){
@@ -2397,13 +2403,13 @@ async function chargerNouveauxServicesAdmin(){
  try{
   const snap=await db.collection("demandes_nouveaux_services").orderBy("createdAt","desc").limit(150).get();
   if(snap.empty){zone.innerHTML='<p class="notice">Aucun dossier reçu.</p>';return;}
-  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();const type=NOUVEAUX_SERVICES[d.type]?.titre||d.type;const date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date en cours";const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'approuve\')">Approuver et publier</button><button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'refuse\')">Refuser</button>': '<span class="notice">Dossier '+echapperTextePublicite(d.statut)+'</span>';return '<article class="card" style="padding:14px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo proposée" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':'')+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(type)+' · '+echapperTextePublicite(d.categorie)+'</p><p>'+echapperTextePublicite(d.commune)+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+' · '+date+'</p>'+actions+'</article>';}).join("");
+  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();const type=NOUVEAUX_SERVICES[d.type]?.titre||d.type;const date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date en cours";const paiement=d.type==="commerce"?'<p><strong>Abonnement boutique : 2 500 FCFA / 30 jours</strong></p><p>Paiement : '+echapperTextePublicite(d.paiementMoyen||"Non indiqué")+' · Référence : '+echapperTextePublicite(d.paiementReference||"Non fournie")+' · Statut : '+echapperTextePublicite(d.paiementStatut||"à vérifier")+'</p>':"";const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'approuve\')">'+(d.type==="commerce"?"Confirmer paiement et activer 30 jours":"Approuver et publier")+'</button><button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'refuse\')">Refuser</button>': '<span class="notice">Dossier '+echapperTextePublicite(d.statut)+(d.abonnementFin&&d.abonnementFin.toDate?" · Fin abonnement : "+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"")+'</span>';return '<article class="card" style="padding:14px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo proposée" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':'')+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(type)+' · '+echapperTextePublicite(d.categorie)+'</p><p>'+echapperTextePublicite(d.commune)+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+' · '+date+'</p>'+paiement+actions+'</article>';}).join("");
  }catch(e){console.error(e);zone.innerHTML='<p class="notice">Erreur de chargement. Vérifiez les règles Firestore.</p>';}
 }
 async function traiterNouveauService(id,statut){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
  if(!["approuve","refuse"].includes(statut))return;
- try{await db.collection("demandes_nouveaux_services").doc(id).update({statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()});await chargerNouveauxServicesAdmin();}
+ try{const ref=db.collection("demandes_nouveaux_services").doc(id);const doc=await ref.get();if(!doc.exists)return alert("Dossier introuvable.");const data=doc.data();const maj={statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()};if(statut==="approuve"&&data.type==="commerce"){if(!data.paiementMoyen||!data.paiementReference)return alert("Impossible d’activer : informations de paiement manquantes.");if(!confirm("Confirmer que les 2 500 FCFA ont bien été reçus ? L’abonnement sera activé pour 30 jours."))return;const debut=new Date();const fin=new Date(debut.getTime()+30*24*60*60*1000);maj.paiementStatut="confirme";maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);}await ref.update(maj);await chargerNouveauxServicesAdmin();}
  catch(e){console.error(e);alert("Impossible de modifier ce dossier. Vérifiez les règles Firestore.");}
 }
 
