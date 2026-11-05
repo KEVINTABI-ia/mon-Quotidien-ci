@@ -5148,7 +5148,6 @@ async function ouvrirSectionPleinEcran(id, titre){
 }
 
 function ouvrirResultatPleinEcran(titre){
-  window.generationAffichageResultat = (window.generationAffichageResultat || 0) + 1;
   const resultat = document.getElementById("resultat");
   if(!resultat) return;
   ouvrirElementPleinEcran(resultat, titre);
@@ -6412,14 +6411,7 @@ async function afficherGaresStations(typeTransport){
         return transports.some(t => normaliser(String(t)) === normaliser(typeChoisi));
       });
 
-    const titresGares = {
-      "Gbaka": "Gares de Gbaka",
-      "Woro-woro": "Gares de Woro-woro",
-      "Taxi communal": "Gares de taxi communal",
-      "SOTRA": "Gares et arrêts SOTRA",
-      "Car interurbain": "Gares de cars interurbains"
-    };
-    const titre = titresGares[typeChoisi] || ("Gares de " + typeChoisi);
+    const titre = typeChoisi === "Gbaka" ? "Gares de Gbaka" : "Gares de taxi communal";
     if (!garesType.length) {
       resultat.innerHTML = "<strong>📍 " + titre + "</strong><p class='notice'>Aucune gare n'est encore enregistrée pour ce transport.</p>";
       return;
@@ -6670,7 +6662,6 @@ const LIGNES_SOTRA_ABIDJAN = `02|Gare Marcory|Terminus Cité Fairmont, Attécoub
 });
 
 async function afficherReseauSotra(){
-  const generationAffichage = window.generationAffichageResultat || 0;
   const resultat = document.getElementById("resultat");
   resultat.style.display = "block";
   resultat.innerHTML = "<p>Chargement du réseau SOTRA...</p>";
@@ -6681,7 +6672,6 @@ async function afficherReseauSotra(){
   } catch (erreur) {
     console.warn("Lignes administrateur non chargées :",erreur);
   }
-  if (generationAffichage !== (window.generationAffichageResultat || 0)) return;
   const numerosAdmin = new Set(lignesAdmin.map(l => String(l.statut || "").replace(/^Ligne\\s*/i,"").trim()));
   const lignes = LIGNES_SOTRA_ABIDJAN.filter(l => !numerosAdmin.has(l.numero))
     .map(l => ({...l,statut:"Ligne " + l.numero})).concat(lignesAdmin);
