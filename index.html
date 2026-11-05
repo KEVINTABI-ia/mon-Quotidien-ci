@@ -1061,6 +1061,7 @@ header{padding:22px 18px 24px!important}
   <button onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur')">🔐 Espace administrateur</button>
   <button onclick="ouvrirSectionPleinEcran('devenirPartenaire','Devenir partenaire')">🤝 Devenir partenaire</button>
   <button type="button" onclick="document.getElementById('menuDropdown').style.display='none'; ouvrirFormulairePublicite();">📣 Faire ma pub</button>
+  <button onclick="ouvrirSectionPleinEcran('pharmaciesProches','Pharmacie la plus proche')">💊 Pharmacie la plus proche</button>
 </div>
 </div>
 
@@ -2043,6 +2044,24 @@ resultat.style.display = "block";
 <section class="carte-acces-admin" aria-label="Trouver le commissariat le plus proche" style="margin:0;padding:0 16px;border:0;">
   <a href="https://www.google.com/maps/search/?api=1&query=commissariat+de+police+près+de+moi" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;background:#087C62;color:#fff;padding:13px 16px;border-radius:12px;font-weight:700;margin:0;">📍 Trouver le commissariat le plus proche</a>
 </section>
+
+<section class="card" id="pharmaciesProches" style="display:none;">
+  <h2>💊 Pharmacie la plus proche</h2>
+  <p>Trouvez une pharmacie autour de votre position ou consultez les pharmacies de garde.</p>
+  <div style="border:1px solid #dce8df;border-radius:14px;padding:14px;margin:12px 0;">
+    <h3 style="margin:0 0 8px;">📍 Pharmacies autour de moi</h3>
+    <p>Ouvrez la carte pour rechercher les pharmacies à proximité de votre position.</p>
+    <a href="https://www.google.com/maps/search/?api=1&query=pharmacie+près+de+moi" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;background:#087C62;color:#fff;padding:13px 16px;border-radius:12px;font-weight:700;">Trouver une pharmacie proche</a>
+  </div>
+  <div style="border:1px solid #dce8df;border-radius:14px;padding:14px;margin:12px 0;">
+    <h3 style="margin:0 0 8px;">🌙 Pharmacies de garde</h3>
+    <p>Consultez les listes de garde par commune et par période. Les tours de garde changent régulièrement.</p>
+    <a href="https://annuaireci.com/pharmacies-de-garde/abidjan/" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;background:#087C62;color:#fff;padding:13px 16px;border-radius:12px;font-weight:700;margin:8px 0;">Consulter les pharmacies de garde à Abidjan</a>
+    <a href="https://annuaireci.com/pharmacies-de-garde/" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;background:#fff;color:#087C62;border:1px solid #087C62;padding:12px 16px;border-radius:12px;font-weight:700;">Pharmacies de garde dans les autres villes</a>
+  </div>
+  <p class="notice">Les horaires et les gardes peuvent changer. Appelez la pharmacie pour confirmer sa disponibilité avant de vous déplacer.</p>
+</section>
+
 </main>
 
 <footer>Mon Transport CI · La mobilité en Côte d'Ivoire</footer>
