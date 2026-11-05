@@ -5024,8 +5024,13 @@ async function actualiserEtatAbonnementAutomobiliste(){
   zone.textContent="Vérification de votre abonnement...";
   const actif=await verifierAbonnementAutomobiliste();
   if(actif){zone.textContent="Votre abonnement est actif jusqu'au "+(await db.collection("abonnements_automobiliste").doc(auth.currentUser.uid).get()).data().dateExpiration.toDate().toLocaleDateString("fr-FR")+". Vous pouvez accéder aux services.";return;}
-  const demandes=await db.collection("demandes_abonnement_automobiliste").where("uid","==",auth.currentUser.uid).orderBy("createdAt","desc").limit(1).get();
-  if(!demandes.empty && demandes.docs[0].data().statut==="en_attente"){
+  const demandes=await db.collection("demandes_abonnement_automobiliste").where("uid","==",auth.currentUser.uid).get();
+  const derniereDemande=demandes.docs.slice().sort((a,b)=>{
+    const dateA=a.data().createdAt?.toMillis?.()||0;
+    const dateB=b.data().createdAt?.toMillis?.()||0;
+    return dateB-dateA;
+  })[0];
+  if(derniereDemande && derniereDemande.data().statut==="en_attente"){
     zone.textContent="Votre demande est en attente de vérification. Vous serez autorisé après validation par l'administrateur.";
     document.getElementById("operateurAbonnementAuto").disabled=true;
     document.getElementById("referenceAbonnementAuto").disabled=true;
