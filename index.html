@@ -1883,7 +1883,7 @@ resultat.style.display = "block";
 
 
 
-<section class="carte-acces-admin" id="fenetreAccident" aria-label="Accident de la circulation" style="border:2px solid #D5A84B;background:#FFF8E8;margin-bottom:16px;">
+<section class="carte-acces-admin" id="fenetreAccident" style="display:none;" aria-label="Accident de la circulation" style="border:2px solid #D5A84B;background:#FFF8E8;margin-bottom:16px;">
   <h2 style="margin:0 0 8px;color:#9B2C1F;">🚨 Accident de la circulation</h2>
   <p style="margin:0 0 12px;">En cas d’accident, contactez rapidement les services de secours :</p>
   <a href="tel:+2250103019094" style="display:block;text-align:center;text-decoration:none;background:#B42318;color:#fff;padding:13px 16px;border-radius:12px;font-weight:700;margin:8px 0;">🚒 1. Appeler les sapeurs-pompiers — 01 03 019 094</a>
@@ -1944,7 +1944,7 @@ resultat.style.display = "block";
   </div>
 </section>
 
-<section class="carte-acces-admin" id="fenetreInfractions" aria-label="Infractions routières" style="border:2px solid #D5A84B;background:#F7FAF7;margin:16px 0;">
+<section class="carte-acces-admin" id="fenetreInfractions" style="display:none;" aria-label="Infractions routières" style="border:2px solid #D5A84B;background:#F7FAF7;margin:16px 0;">
   <h2 style="margin:0 0 8px;">🚦 Infractions routières et montants</h2>
   <p style="margin:0 0 12px;">Consultez les amendes forfaitaires prévues par la réglementation ivoirienne.</p>
   <details>
@@ -2029,12 +2029,23 @@ resultat.style.display = "block";
 </section>
 
 
-<section id="verificationAssuranceAuto" class="carte-acces-admin" aria-label="Vérifier mon assurance auto" style="border:2px solid #087C62;background:#EFFAF4;margin:16px 0;">
+<section id="verificationAssuranceAuto" class="carte-acces-admin" style="display:none;" aria-label="Vérifier mon assurance auto" style="border:2px solid #087C62;background:#EFFAF4;margin:16px 0;">
   <h2 style="margin:0 0 8px;color:#075744;">🚘 Vérifier mon assurance auto</h2>
   <label for="immatriculationAssurance" style="display:block;font-weight:700;margin:8px 0;">Immatriculation du véhicule</label>
   <input id="immatriculationAssurance" type="text" autocomplete="off" autocapitalize="characters" placeholder="Ex. : AB 1234 CI" maxlength="24" style="box-sizing:border-box;width:100%;padding:14px;border:1px solid #9BBEAA;border-radius:10px;font-size:16px;text-transform:uppercase;">
   <button type="button" onclick="ouvrirPortailAssuranceASACI()" style="display:block;width:100%;border:0;background:#087C62;color:#fff;padding:14px 16px;border-radius:12px;font-weight:700;font-size:16px;margin-top:12px;">🔎 Lancer la vérification officielle</button>
   <p id="messageVerificationAssurance" class="notice" aria-live="polite" style="margin:10px 0 0;"></p>
+</section>
+
+<section id="espaceAutomobiliste" class="card" aria-label="Espace de l’automobiliste" style="margin:14px 0 12px;padding:16px;border:2px solid #F28C28;background:linear-gradient(145deg,#FFF9F1,#F0F8F1);">
+  <h2 style="margin:0 0 6px;color:#17663D;">🚘 L’espace de l’automobiliste</h2>
+  <p style="margin:0 0 13px;font-size:13px;color:#68786E;">Retrouvez ici les services utiles pour votre véhicule et vos déplacements.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
+    <button type="button" onclick="ouvrirSectionPleinEcran('fenetreAccident','Accident de la circulation')" style="min-height:72px;background:#FFF0E9;color:#9B2C1F;border:1px solid #F2C8B8;text-align:left;">🚨 Accident de la circulation</button>
+    <button type="button" onclick="ouvrirSectionPleinEcran('fenetreInfractions','Infractions routières et montants')" style="min-height:72px;background:#F0F7F1;color:#17663D;border:1px solid #DCEBDD;text-align:left;">🚦 Infractions routières et prix</button>
+    <button type="button" onclick="ouvrirSectionPleinEcran('verificationAssuranceAuto','Vérifier mon assurance auto')" style="min-height:72px;background:#F0F7F1;color:#17663D;border:1px solid #DCEBDD;text-align:left;">🛡️ Vérifier mon assurance auto</button>
+    <button type="button" onclick="ouvrirSectionPleinEcran('nouveauxServices','Dépannage automobile');choisirNouveauService('depannage')" style="min-height:72px;background:#FFF5E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">🔧 Service de dépannage</button>
+  </div>
 </section>
 
 <section class="carte-acces-admin" aria-label="Signaler un problème" style="margin-bottom:0;padding-bottom:0;">
