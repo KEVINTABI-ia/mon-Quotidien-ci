@@ -235,6 +235,7 @@ service cloud.firestore {
       allow read: if estAdmin()
         || (estConnecte() && resource.data.clientId == request.auth.uid)
         || (estConnecte() && resource.data.partenaireId == request.auth.uid)
+        || (estConnecte() && resource.data.boutiqueUid == request.auth.uid)
         || (resource.data.publicVersion == true
           && resource.data.statut == "en_attente"
           && !contientChampsPrives(resource.data)
@@ -392,7 +393,9 @@ service cloud.firestore {
             (estConnecte()
               && !exists(commandePath(commandeId))
               && getAfter(commandePath(commandeId)).data.clientId == request.auth.uid
-              && getAfter(commandePath(commandeId)).data.statut == "en_attente"
+              && (getAfter(commandePath(commandeId)).data.statut == "en_attente"
+                || (getAfter(commandePath(commandeId)).data.typeCommande == "boutique"
+                  && getAfter(commandePath(commandeId)).data.statut == "commande_boutique"))
               && request.resource.data.clientId == request.auth.uid)
             || (estAdmin()
               && get(commandePath(commandeId)).data.clientId == request.resource.data.clientId)
@@ -425,7 +428,9 @@ service cloud.firestore {
           && estConnecte()
           && !exists(commandePath(commandeId))
           && getAfter(commandePath(commandeId)).data.clientId == request.auth.uid
-          && getAfter(commandePath(commandeId)).data.statut == "en_attente"
+          && (getAfter(commandePath(commandeId)).data.statut == "en_attente"
+            || (getAfter(commandePath(commandeId)).data.typeCommande == "boutique"
+              && getAfter(commandePath(commandeId)).data.statut == "commande_boutique"))
           && request.resource.data.keys().hasAll(["distanceKm","distanceMetres","tarifKm","montantLivraison","fraisService","montantTotal","devise","operation","createdAt"])
           && request.resource.data.keys().hasOnly(["distanceKm","distanceMetres","tarifKm","montantLivraison","fraisService","montantTotal","devise","operation","createdAt"])
           && request.resource.data.distanceKm is number
