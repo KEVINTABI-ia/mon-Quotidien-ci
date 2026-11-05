@@ -5141,14 +5141,37 @@ async function abrirVerificarAccesoAutomovilista(id){
   return await verifierAbonnementAutomobiliste();
 }
 async function ouvrirSectionPleinEcran(id, titre){
-  if(SECTIONS_PROTEGEES_AUTOMOBILISTE.has(id) && !(await abrirVerificarAccesoAutomovilista(id))){
-    await ouvrirEspaceAbonnementAutomobiliste();return;
+  try {
+    const section = document.getElementById(id);
+    if(!section){
+      alert("Cette rubrique est momentanément indisponible : " + id);
+      console.error("Rubrique introuvable :", id);
+      return;
+    }
+    if(SECTIONS_PROTEGEES_AUTOMOBILISTE.has(id) && !(await abrirVerificarAccesoAutomoviliste(id))){
+      await ouvrirEspaceAbonnementAutomobiliste();
+      return;
+    }
+    const menu = document.getElementById("menuDropdown");
+    if(menu) menu.style.display = "none";
+    if(id === "transportColis" && typeof afficherSousMenuColis === "function") afficherSousMenuColis("client");
+    const overlay = document.getElementById("vuePleinEcran");
+    const contenu = document.getElementById("vuePleinEcranContenu");
+    const entete = document.getElementById("vuePleinEcranTitre");
+    if(!overlay || !contenu || !entete){
+      section.style.display = "block";
+      section.scrollIntoView({behavior:"smooth",block:"start"});
+      alert("L'écran de navigation plein écran est indisponible. La rubrique a été ouverte dans la page.");
+      return;
+    }
+    ouvrirElementPleinEcran(section, titre);
+    overlay.classList.add("actif");
+    overlay.style.display = "flex";
+    contenu.scrollTop = 0;
+  } catch(erreur) {
+    console.error("Ouverture de la rubrique " + id + " :", erreur);
+    alert("Impossible d'ouvrir cette rubrique : " + (erreur && erreur.message ? erreur.message : erreur));
   }
-  const section = document.getElementById(id);
-  if(!section) return;
-  document.getElementById("menuDropdown").style.display = "none";
-  if(id === "transportColis") afficherSousMenuColis("client");
-  ouvrirElementPleinEcran(section, titre);
 }
 
 function ouvrirResultatPleinEcran(titre){
