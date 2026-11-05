@@ -1860,8 +1860,8 @@ resultat.style.display = "block";
     <button type="button" class="accueil-service tuile-ramassage" onclick="ouvrirSectionPleinEcran('serviceRamassage','Cars de ramassage')">
       <strong>Cars de ramassage</strong><small>Déplacements réguliers et places disponibles</small>
     </button>
-    <button type="button" class="accueil-service tuile-marches" onclick="ouvrirResultatPleinEcran('Marchés de la commune'); afficherMarchesCommune()">
-      <strong>Marchés de la commune</strong><small>Retrouvez les marchés par commune</small>
+    <button type="button" class="accueil-service tuile-marches" onclick="ouvrirResultatPleinEcran('Commerce et boutique'); afficherMarchesCommune()">
+      <strong>Commerce et boutique</strong><small>Découvrez les commerces, boutiques et marchés par commune</small>
     </button>
     <button type="button" class="accueil-service tuile-woro" onclick="ouvrirResultatPleinEcran('Gares de Woro-woro'); afficherGaresStations('Woro-woro')">
       <strong>Woro-woro</strong><small>Gares et dessertes disponibles</small>
@@ -6255,7 +6255,7 @@ function afficherMarchesCommune(){
   resultat.style.display = "block";
   const communes = [...new Set(MARCHES_COMMUNES.map(m => m.commune))]
     .sort((a,b) => a.localeCompare(b,"fr"));
-  let html = "<strong>🏬 Marchés de la commune</strong>";
+  let html = "<strong>🏪 Commerce et boutique</strong>";
   html += "<p>Recherchez ou choisissez une commune pour afficher les marchés disponibles.</p>";
   html += "<button type='button' class='primary' style='margin:8px 0 14px;' onclick=\"ouvrirSectionPleinEcran('nouveauxServices','Annuaire des commerces');choisirNouveauService('commerce')\">🏪 Consulter l’annuaire des commerces</button>";
   html += "<label for='rechercheCommuneMarche'>Commune :</label>";
