@@ -1268,6 +1268,7 @@ header{padding:22px 18px 24px!important}
   </div>
   <p id="statutAdmin" class="notice"></p>
   <div id="adminMenuRubriques" style="display:none;"></div>
+  <div id="gestionVisibiliteMenus" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>👁️ Affichage et masquage des menus</h3><p class="notice">Choisis les rubriques visibles par les utilisateurs. Un menu masqué disparaît de l’application sans supprimer ses données.</p><div id="listeVisibiliteMenusAdmin"><p class="notice">Chargement des menus...</p></div></div>
   <button id="adminDeconnexion" type="button" onclick="deconnexionAdmin()" style="display:none;width:100%;margin:12px 0;">Se déconnecter</button>
 <div id="gestionAbonnementsRamassage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🚌 Validation des compagnies de ramassage</h3><p class="notice">Vérifie les dossiers et les paiements avant d’approuver une compagnie ou d’activer son forfait mensuel.</p><div id="listeCompagniesRamassageAdmin">Chargement...</div></div>
 <div id="gestionAbonnementsAutomobiliste" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🚘 Validation des abonnements automobiles</h3><p class="notice">Vérifie le moyen de paiement et la référence avant d'activer 12 mois d'accès. Ne valide qu'après réception effective des 1 000 FCFA.</p><div id="listeAbonnementsAutomobilisteAdmin">Chargement...</div></div>
@@ -2282,6 +2283,7 @@ firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 const db = firebase.firestore();
+activerVisibiliteMenusPublique();
 chargerPublicitesAccueil();
 
 const NOUVEAUX_SERVICES = {
@@ -2594,7 +2596,8 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionCommandesPartenaires",titre:"📦 Attribution des commandes aux partenaires"},
   {id:"gestionPublicites",titre:"📣 Gestion des publicités"},
   {id:"gestionAbonnementsAutomobiliste",titre:"🚘 Abonnements de l’automobiliste"},
-  {id:"gestionNouveauxServices",titre:"🧰 Validation dépannages, commerces et annonces"}
+  {id:"gestionNouveauxServices",titre:"🧰 Validation dépannages, commerces et annonces"},
+  {id:"gestionVisibiliteMenus",titre:"👁️ Affichage et masquage des menus"}
 ];
 function afficherMenuAdmin(){
   const menu=document.getElementById("adminMenuRubriques");
@@ -2610,6 +2613,7 @@ function ouvrirRubriqueAdmin(id){
   const cible=document.getElementById(id);
   if(!cible)return;
   if(id==="gestionNouveauxServices") chargerNouveauxServicesAdmin();
+  if(id==="gestionVisibiliteMenus") afficherGestionVisibiliteMenus();
   if(id==="gestionAbonnementsAutomobiliste") chargerDemandesAbonnementAutomobilisteAdmin();
   let retour=cible.querySelector(":scope > .admin-retour-menu");
   if(!retour){retour=document.createElement("button");retour.type="button";retour.className="admin-retour-menu";retour.textContent="← Retour au menu administrateur";retour.onclick=retourMenuAdmin;cible.insertBefore(retour,cible.firstChild);}
@@ -8477,6 +8481,72 @@ function filtrerServiceConstat(){
     catch(e){alert("Suppression impossible : "+(e.message||"erreur de stockage"));}
   };
 })();
+
+/* VISIBILITE DES MENUS — REGLAGE CENTRAL ADMINISTRATEUR */
+const MENUS_VISIBILITE_DOC = "configuration_application/visibilite_menus";
+let visibiliteMenus = {};
+let arretEcouteVisibiliteMenus = null;
+function sectionsGerablesParAdmin(){
+  return Array.from(document.querySelectorAll("main > section[id]"))
+    .filter(el => el.id !== "espaceAdmin" && el.id !== "abonnementAutomobiliste" && !el.id.startsWith("gestion"));
+}
+function nomSectionMenu(el){
+  const titre=el.querySelector("h2,h3");
+  return (titre ? titre.textContent : el.getAttribute("aria-label") || el.id).replace(/\\s+/g," ").trim();
+}
+function appliquerVisibiliteMenus(){
+  sectionsGerablesParAdmin().forEach(el=>{
+    const visible=visibiliteMenus[el.id] !== false;
+    el.dataset.menuMasque=visible ? "false" : "true";
+    if(!visible){
+      el.style.display="none";
+      if(typeof vuePleinEcranActive!=="undefined" && vuePleinEcranActive && vuePleinEcranActive.element===el) fermerVuePleinEcran();
+    }else if(el.dataset.menuMasqueApplique==="true"){
+      el.style.display="";
+    }
+    el.dataset.menuMasqueApplique=visible ? "false" : "true";
+  });
+}
+function activerVisibiliteMenusPublique(){
+  if(arretEcouteVisibiliteMenus) arretEcouteVisibiliteMenus();
+  arretEcouteVisibiliteMenus=db.doc(MENUS_VISIBILITE_DOC).onSnapshot(doc=>{
+    visibiliteMenus=doc.exists && doc.data().menus && typeof doc.data().menus==="object" ? doc.data().menus : {};
+    appliquerVisibiliteMenus();
+    const zone=document.getElementById("listeVisibiliteMenusAdmin");
+    if(zone && zone.dataset.initialise==="true") afficherGestionVisibiliteMenus();
+  },erreur=>console.error("Visibilité des menus :",erreur));
+}
+async function afficherGestionVisibiliteMenus(){
+  const zone=document.getElementById("listeVisibiliteMenusAdmin");
+  if(!zone)return;
+  if(!auth.currentUser || auth.currentUser.uid!==ADMIN_UID){zone.textContent="Accès administrateur requis.";return;}
+  zone.innerHTML='<p class="notice">Chargement des menus...</p>';
+  try{
+    const sections=sectionsGerablesParAdmin();
+    zone.innerHTML=sections.map(el=>{
+      const visible=visibiliteMenus[el.id]!==false;
+      const nom=echapperTextePublicite(nomSectionMenu(el));
+      return '<article style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;margin:9px 0;border:1px solid #E1EAE2;border-radius:12px;background:#fff;">'
+        +'<div style="min-width:0;flex:1"><strong>'+nom+'</strong><p class="notice" style="margin:3px 0 0;">'+(visible?'Actuellement visible':'Actuellement masqué')+'</p></div>'
+        +'<button type="button" style="flex:0 0 auto;background:'+(visible?'#B42318':'#16834A')+';color:#fff;padding:10px 12px;" onclick="modifierVisibiliteMenu(\''+el.id+'\','+(!visible)+')">'+(visible?'Masquer':'Afficher')+'</button>'
+        +'</article>';
+    }).join("") || '<p class="notice">Aucun menu disponible.</p>';
+    zone.dataset.initialise="true";
+  }catch(e){console.error(e);zone.textContent="Impossible de charger les menus.";}
+}
+async function modifierVisibiliteMenu(id,visible){
+  if(!auth.currentUser || auth.currentUser.uid!==ADMIN_UID){alert("Accès administrateur requis.");return;}
+  const section=sectionsGerablesParAdmin().find(el=>el.id===id);
+  if(!section)return;
+  try{
+    await db.doc(MENUS_VISIBILITE_DOC).set({menus:{[id]:visible},modifieLe:firebase.firestore.FieldValue.serverTimestamp(),modifiePar:auth.currentUser.uid},{merge:true});
+    visibiliteMenus[id]=visible;
+    appliquerVisibiliteMenus();
+    afficherGestionVisibiliteMenus();
+    alert(visible ? "Menu affiché dans l’application." : "Menu masqué dans l’application.");
+  }catch(e){console.error(e);alert("Modification impossible : vérifie les règles Firestore. "+e.message);}
+}
+
 </script>
 
 </body>
