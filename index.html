@@ -1338,8 +1338,8 @@ header{padding:22px 18px 24px!important}
   <label>Nom de l'entreprise / titre</label><input id="nouvellePubTitre" maxlength="100" placeholder="Ex. : Restaurant Le Délice">
   <label>Description</label><textarea id="nouvellePubDescription" maxlength="1000" rows="3" placeholder="Description de l'activité"></textarea>
   <label>Présentation</label><select id="nouvellePubType"><option value="banniere">Bannière publicitaire</option><option value="logo">Logo partenaire</option></select>
-  <label>Logo ou image du client</label><input id="nouvellePubImage" type="file" accept="image/jpeg,image/png,image/webp">
-  <p class="notice">Sélectionne l'image depuis la galerie. La publicité sera enregistrée masquée. Tu décideras ensuite de l'afficher.</p>
+  <label>Image ou vidéo publicitaire</label><input id="nouvellePubImage" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime">
+  <p class="notice">Choisis une image JPG, PNG, WebP ou une vidéo MP4, WebM ou MOV depuis ton appareil. Taille maximale : 25 Mo. La publicité sera enregistrée masquée ; tu décideras ensuite de l’afficher.</p>
   <button type="button" class="primary" onclick="creerPubliciteManuelle()">Enregistrer la publicité</button>
   <p id="statutNouvellePub" class="notice"></p>
   <h4>Demandes reçues</h4><button type="button" class="primary" onclick="chargerDemandesPublicitesAdmin()">Actualiser les demandes</button>
@@ -1568,8 +1568,13 @@ async function chargerPublicitesAdmin() {
       const visible = d.statut === "publiee" && !terminee;
       const etat = visible ? "Affichée" : "Masquée";
       const visuel = d.imageDataUrl || d.mediaUrl || "";
+      const apercuMedia = visuel
+        ? (String(d.mediaType || "").startsWith("video/")
+          ? '<video src="' + echapperTextePublicite(visuel) + '" controls muted playsinline preload="metadata" style="width:100%;max-width:260px;max-height:180px;border-radius:10px;"></video>'
+          : '<img src="' + echapperTextePublicite(visuel) + '" alt="" style="width:100%;max-width:220px;max-height:140px;object-fit:contain;border-radius:10px;">')
+        : "";
       return '<article class="card" style="margin:12px 0;padding:14px;">'
-        + (visuel ? '<img src="' + echapperTextePublicite(visuel) + '" alt="" style="width:100%;max-width:220px;max-height:140px;object-fit:contain;border-radius:10px;">' : '')
+        + apercuMedia
         + '<strong>' + echapperTextePublicite(d.titre) + '</strong>'
         + '<p class="notice">' + etat + (dateFin !== "Non définie" ? ' · Fin prévue : ' + dateFin : '') + '</p>'
         + '<label>Nom de l’activité</label><input id="titrePub_' + doc.id + '" maxlength="100" value="' + echapperTextePublicite(d.titre) + '" readonly>'
@@ -1628,13 +1633,15 @@ async function creerPubliciteManuelle() {
   const typeAffichage = document.getElementById("nouvellePubType").value;
   const fichier = document.getElementById("nouvellePubImage").files[0];
   const statut = document.getElementById("statutNouvellePub");
-  if (!titre || !description || !fichier) { statut.textContent = "Renseigne le titre, la description et sélectionne une image."; return; }
-  if (!["image/jpeg","image/png","image/webp"].includes(fichier.type)) { statut.textContent = "Formats acceptés : JPG, PNG ou WebP."; return; }
+  const typesAcceptes = ["image/jpeg","image/png","image/webp","video/mp4","video/webm","video/quicktime"];
+  if (!titre || !description || !fichier) { statut.textContent = "Renseigne le titre, la description et sélectionne une image ou une vidéo."; return; }
+  if (!typesAcceptes.includes(fichier.type) || fichier.size > 25 * 1024 * 1024) { statut.textContent = "Format non accepté ou fichier supérieur à 25 Mo. Formats acceptés : JPG, PNG, WebP, MP4, WebM ou MOV."; return; }
   try {
-    statut.textContent = "Préparation de l'image...";
-    const imageDataUrl = await compresserImagePublicite(fichier);
+    statut.textContent = "Envoi du média vers le stockage sécurisé...";
+    const cle = await envoyerFichierCloudflare(fichier, "publicite");
+    const mediaUrl = WORKER_URL + "/public/publicite/" + encodeURIComponent(cle);
     await db.collection("publicites").add({
-      titre, description, typeAffichage, imageDataUrl, mediaType:"image/jpeg",
+      titre, description, typeAffichage, mediaKey:cle, mediaUrl, mediaType:fichier.type,
       statut:"masquee",
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       dateDebut:firebase.firestore.FieldValue.serverTimestamp()
@@ -1642,7 +1649,7 @@ async function creerPubliciteManuelle() {
     document.getElementById("nouvellePubTitre").value = "";
     document.getElementById("nouvellePubDescription").value = "";
     document.getElementById("nouvellePubImage").value = "";
-    statut.textContent = "Publicité enregistrée et masquée. Tu peux l'afficher quand tu le souhaites.";
+    statut.textContent = "Publicité enregistrée et masquée. Tu peux l’afficher quand tu le souhaites.";
     await chargerPublicitesAdmin();
   } catch (erreur) {
     console.error("Création publicité manuelle :", erreur);
