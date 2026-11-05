@@ -1889,6 +1889,16 @@ resultat.style.display = "block";
   </details>
 </section>
 
+
+<section id="verificationAssuranceAuto" class="carte-acces-admin" aria-label="Vérifier mon assurance auto" style="border:2px solid #087C62;background:#EFFAF4;margin:16px 0;">
+  <h2 style="margin:0 0 8px;color:#075744;">🚘 Vérifier mon assurance auto</h2>
+  <p style="margin:0 0 12px;">Saisissez l’immatriculation du véhicule. La vérification sera réalisée sur le portail officiel e-Attestation de l’ASACI.</p>
+  <label for="immatriculationAssurance" style="display:block;font-weight:700;margin:8px 0;">Immatriculation du véhicule</label>
+  <input id="immatriculationAssurance" type="text" autocomplete="off" autocapitalize="characters" placeholder="Ex. : AB 1234 CI" maxlength="24" style="box-sizing:border-box;width:100%;padding:14px;border:1px solid #9BBEAA;border-radius:10px;font-size:16px;text-transform:uppercase;">
+  <button type="button" onclick="ouvrirPortailAssuranceASACI()" style="display:block;width:100%;border:0;background:#087C62;color:#fff;padding:14px 16px;border-radius:12px;font-weight:700;font-size:16px;margin-top:12px;">🔎 Lancer la vérification officielle</button>
+  <p id="messageVerificationAssurance" class="notice" aria-live="polite" style="margin:10px 0 0;">Le portail ASACI affichera le résultat officiel de la recherche. Mon Transport CI ne stocke pas votre immatriculation.</p>
+</section>
+
 <section class="carte-acces-admin" aria-label="Signaler un problème">
   <p>Une difficulté avec l’application ou un trajet ?</p>
   <button type="button" class="bouton-acces-admin" onclick="signalerProblemeGeneral()">
@@ -7519,6 +7529,33 @@ if ("serviceWorker" in navigator) {
     });
   });
 }
+
+function ouvrirPortailAssuranceASACI(){
+  const champ=document.getElementById("immatriculationAssurance");
+  const message=document.getElementById("messageVerificationAssurance");
+  if(!champ||!message)return;
+  const immatriculation=champ.value.trim().toUpperCase().replace(/\\s+/g," ");
+  if(!immatriculation){
+    message.textContent="Veuillez saisir l’immatriculation du véhicule avant de continuer.";
+    champ.focus();
+    return;
+  }
+  const portail=window.open("https://eattestationci.asacitech.com/","_blank");
+  if(!portail){
+    message.textContent="Le navigateur a bloqué l’ouverture. Autorisez les fenêtres surgissantes ou utilisez le lien officiel ci-dessous.";
+    return;
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(immatriculation).then(()=>{
+      message.textContent="Immatriculation copiée. Dans le portail ASACI qui vient de s’ouvrir, collez-la dans le champ de recherche puis validez.";
+    }).catch(()=>{
+      message.textContent="Le portail ASACI est ouvert. Copiez cette immatriculation et collez-la dans son champ de recherche : "+immatriculation;
+    });
+  }else{
+    message.textContent="Le portail ASACI est ouvert. Copiez cette immatriculation et collez-la dans son champ de recherche : "+immatriculation;
+  }
+}
+
 </script>
 </body>
 </html>
