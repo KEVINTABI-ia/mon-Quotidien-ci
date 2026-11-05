@@ -2410,7 +2410,7 @@ async function chargerNouveauxServicesPublics(type){
  try{
   const snap=await db.collection("demandes_nouveaux_services").where("type","==",type).where("statut","==","approuve").limit(100).get();
   const maintenant=Date.now();
-  const documents=snap.docs.filter(doc=>{const d=doc.data();if(type!=="commerce")return true;return d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;});
+  const documents=snap.docs.filter(doc=>{const d=doc.data();if(type!=="commerce")return true;return d.visibleManuellement!==false&&d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;});
   if(!documents.length){zone.innerHTML='<p class="notice">'+(type==="commerce"?"Aucune boutique avec un abonnement actif pour le moment.":"Aucun résultat publié dans cette rubrique pour le moment.")+'</p>';return;}
   zone.innerHTML=documents.map(doc=>{
    const d=doc.data();
@@ -2497,7 +2497,7 @@ async function enregistrerCommandeBoutique(boutiqueId,index){
  const user=auth.currentUser;if(!user)return alert("Connectez-vous comme client.");
  const profilSnap=await db.collection("clients").doc(user.uid).get();if(!profilSnap.exists)return alert("Compte client introuvable.");
  const shopSnap=await db.collection("demandes_nouveaux_services").doc(boutiqueId).get();if(!shopSnap.exists)return alert("Boutique introuvable.");
- const b=shopSnap.data(),p=b.produits?.[index];if(!p)return alert("Produit introuvable.");
+ const b=shopSnap.data(),p=b.produits?.[index];if(!p)return alert("Produit introuvable.");if(b.visibleManuellement===false)return alert("Cette boutique est temporairement masquée par l’administration.");
  const qte=Number(document.getElementById("qteBoutique_"+boutiqueId)?.value||0),adresse=document.getElementById("adresseClientBoutique_"+boutiqueId)?.value.trim()||"",tel=document.getElementById("telClientBoutique_"+boutiqueId)?.value.trim()||"",commentaire=document.getElementById("commentaireClientBoutique_"+boutiqueId)?.value.trim()||"";
  const statut=document.getElementById("statutCommandeBoutique_"+boutiqueId);
  const telOk=n=>{let v=n.replace(/\D/g,"");if(v.startsWith("225")&&v.length===13)v=v.substring(3);return /^(01|05|07)\d{8}$/.test(v);};
@@ -2514,7 +2514,7 @@ async function enregistrerCommandeBoutique(boutiqueId,index){
   const ref=db.collection("commandes_colis").doc(),createdAt=firebase.firestore.FieldValue.serverTimestamp();
   const publicData={clientId:user.uid,service:"livraison",depart:b.adresseBoutique||b.commune,destination:adresse,statut:"commande_boutique",publicVersion:false,createdAt,typeCommande:"boutique",boutiqueId,boutiqueUid:b.uid,boutiqueNom:b.titre,montantLivraisonBoutique:prixLivraison};
   const privateData={clientId:user.uid,clientNom:profilSnap.data().nom||"Client",clientTelephone:profilSnap.data().telephone||"",telephoneExpediteur:b.telephone||"",telephoneDestinataire:tel,adresseRecuperation:b.adresseBoutique||b.commune,adresseLivraison:adresse,descriptionColis:"Commande boutique : "+p.nom,trackingNumber:numero,operation:"livraison_boutique",boutiqueUid:b.uid,telephoneBoutique:b.telephone||"",telephoneClient:tel,produitCommande:p.nom,quantiteCommande:qte,prixProduit:prixArticles,commentaireCommande:commentaire,latitudeRecuperation:coordRecuperation.latitude,longitudeRecuperation:coordRecuperation.longitude,latitudeLivraison:coordLivraison.latitude,longitudeLivraison:coordLivraison.longitude,createdAt};
-  const prixData={distanceKm:0,distanceMetres:0,tarifKm:100,montantLivraison:prixLivraison,fraisService:0,montantTotal:prixLivraison,devise:"FCFA",operation:"livraison",createdAt};
+  const prixData={distanceKm:0,distanceMetres:0,tarifKm:100,montantLivraison:prixLivraison,fraisService:0,montantTotal:prixLivraison,devise:"FCFA",operation:"livraison_boutique",createdAt};
   await db.runTransaction(async tx=>{tx.set(ref,publicData);tx.set(ref.collection("informations_privees").doc("details"),privateData);tx.set(ref.collection("tarification").doc("prix"),prixData);});
   statut.textContent="Commande envoyée à la boutique. Vous pourrez suivre la livraison dans votre historique client.";
   const zone=document.getElementById("zoneHistoriqueCommandes");if(zone)chargerHistoriqueCommandes();
@@ -2550,8 +2550,32 @@ async function chargerNouveauxServicesAdmin(){
  try{
   const snap=await db.collection("demandes_nouveaux_services").orderBy("createdAt","desc").limit(150).get();
   if(snap.empty){zone.innerHTML='<p class="notice">Aucun dossier reçu.</p>';return;}
-  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();const type=NOUVEAUX_SERVICES[d.type]?.titre||d.type;const date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date en cours";const paiement=d.type==="commerce"?'<p><strong>Abonnement boutique : 2 500 FCFA / 30 jours</strong></p><p>Paiement : '+echapperTextePublicite(d.paiementMoyen||"Non indiqué")+' · Référence : '+echapperTextePublicite(d.paiementReference||"Non fournie")+' · Statut : '+echapperTextePublicite(d.paiementStatut||"à vérifier")+'</p>':"";const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'approuve\')">'+(d.type==="commerce"?"Confirmer paiement et activer 30 jours":"Approuver et publier")+'</button><button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'refuse\')">Refuser</button>': '<span class="notice">Dossier '+echapperTextePublicite(d.statut)+(d.abonnementFin&&d.abonnementFin.toDate?" · Fin abonnement : "+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"")+'</span>';return '<article class="card" style="padding:14px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo proposée" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':'')+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(type)+' · '+echapperTextePublicite(d.categorie)+'</p><p>'+echapperTextePublicite(d.commune)+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+' · '+date+'</p>'+paiement+actions+'</article>';}).join("");
+  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();const type=NOUVEAUX_SERVICES[d.type]?.titre||d.type;const date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date en cours";const expire=d.abonnementFin?.toDate?d.abonnementFin.toDate().getTime()<=Date.now():false;const paiement=d.type==="commerce"?'<p><strong>Abonnement boutique : 2 500 FCFA / 30 jours</strong></p><p>Paiement : '+echapperTextePublicite(d.paiementMoyen||"Non indiqué")+' · Référence : '+echapperTextePublicite(d.paiementReference||"Non fournie")+' · Statut : '+echapperTextePublicite(d.paiementStatut||"à vérifier")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée automatiquement — abonnement expiré":d.visibleManuellement===false?"Masquée manuellement":"Visible si abonnement actif")+'</p>':"";const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'approuve\')">'+(d.type==="commerce"?"Confirmer paiement et activer 30 jours":"Approuver et publier")+'</button><button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'refuse\')">Refuser</button>': '<span class="notice">Dossier '+echapperTextePublicite(d.statut)+(d.abonnementFin&&d.abonnementFin.toDate?" · Fin abonnement : "+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"")+'</span>';const controle=d.type==="commerce"&&d.statut==="approuve"?'<button type="button" class="primary" onclick="basculerVisibiliteBoutiqueAdmin(\''+doc.id+'\','+(d.visibleManuellement===false?'true':'false')+')">'+(d.visibleManuellement===false?"Afficher manuellement la boutique":"Masquer manuellement la boutique")+'</button><button type="button" onclick="chargerAvisBoutiqueAdmin(\''+doc.id+'\')">⭐ Consulter les avis clients</button><div id="avisAdminBoutique_'+doc.id+'"></div>':"";return '<article class="card" style="padding:14px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo proposée" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':"")+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(type)+' · '+echapperTextePublicite(d.categorie)+'</p><p>'+echapperTextePublicite(d.commune)+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+' · '+date+'</p>'+paiement+actions+controle+'</article>';}).join("");
  }catch(e){console.error(e);zone.innerHTML='<p class="notice">Erreur de chargement. Vérifiez les règles Firestore.</p>';}
+}
+async function basculerVisibiliteBoutiqueAdmin(id,afficher){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ const ref=db.collection("demandes_nouveaux_services").doc(id);
+ try{
+  const snap=await ref.get();if(!snap.exists||snap.data().type!=="commerce")return alert("Boutique introuvable.");
+  const d=snap.data();
+  if(afficher&&d.abonnementFin?.toDate&&d.abonnementFin.toDate().getTime()<=Date.now())return alert("Impossible d’afficher cette boutique : son abonnement a expiré. Renouvelez d’abord son abonnement.");
+  const motif=afficher?"":(prompt("Motif du masquage manuel (obligatoire) :")||"").trim();
+  if(!afficher&&!motif)return alert("Le motif du masquage est obligatoire.");
+  await ref.update({visibleManuellement:!!afficher,motifVisibilite:afficher?firebase.firestore.FieldValue.delete():motif,visibiliteModifieeLe:firebase.firestore.FieldValue.serverTimestamp(),visibiliteModifieePar:auth.currentUser.uid});
+  await chargerNouveauxServicesAdmin();
+ }catch(e){console.error(e);alert("Modification de visibilité impossible : "+e.message);}
+}
+async function chargerAvisBoutiqueAdmin(boutiqueId){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ const zone=document.getElementById("avisAdminBoutique_"+boutiqueId);if(!zone)return;
+ zone.textContent="Chargement des avis clients...";
+ try{
+  const snap=await db.collection("avis_boutiques").where("boutiqueId","==",boutiqueId).limit(150).get();
+  if(snap.empty){zone.innerHTML='<p class="notice">Aucun avis client enregistré pour cette boutique.</p>';return;}
+  const avis=snap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
+  zone.innerHTML=avis.map(doc=>{const a=doc.data(),date=a.createdAt?.toDate?a.createdAt.toDate().toLocaleString("fr-FR"):"Date non disponible";return '<article style="padding:12px;margin:9px 0;background:#F7FAF8;border:1px solid #DCE7DE;border-radius:12px;"><strong>'+echapperTextePublicite(a.satisfaction||"Avis")+' · '+echapperTextePublicite(a.produit||"Produit non précisé")+'</strong><p><strong>Client :</strong> '+echapperTextePublicite(a.nom||"Non renseigné")+'</p><p style="white-space:pre-wrap;"><strong>Description complète de l’avis :</strong><br>'+echapperTextePublicite(a.commentaire||"Aucune description")+'</p><small>'+date+'</small></article>';}).join("");
+ }catch(e){console.error(e);zone.textContent="Impossible de charger les avis : "+e.message;}
 }
 async function traiterNouveauService(id,statut){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
