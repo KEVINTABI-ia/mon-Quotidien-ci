@@ -2624,9 +2624,11 @@ function ouvrirRubriqueAdmin(id){
 }
 function retourMenuAdmin(){
   RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display="none";});
-  const menu=document.getElementById("adminMenuRubriques");if(menu)menu.style.display="grid";
   const menu=document.getElementById("adminMenuRubriques");
-  if(menu) menu.scrollIntoView({behavior:"smooth",block:"nearest"});
+  if(menu){
+    menu.style.display="grid";
+    menu.scrollIntoView({behavior:"smooth",block:"nearest"});
+  }
 }
 function actualiserInterfaceAdmin(autorise){
   const connexion=document.getElementById("adminConnexion"),menu=document.getElementById("adminMenuRubriques"),deconnexion=document.getElementById("adminDeconnexion");
