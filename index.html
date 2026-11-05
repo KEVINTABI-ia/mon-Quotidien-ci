@@ -1034,6 +1034,11 @@ header{padding:22px 18px 24px!important}
 }
 </style>
 
+
+<style>
+#fenetreAccident .menu-service-constat summary{margin:0 0 8px;}
+#fenetreAccident .menu-service-constat[open] summary{margin-bottom:8px;}
+</style>
 </head>
 <body>
 
@@ -1875,7 +1880,10 @@ resultat.style.display = "block";
   <p class="notice" style="margin:8px 0 0;">Police secours : <a href="tel:170" style="color:#075744;font-weight:800;">170</a>. En ouvrant la carte, autorisez la localisation pour rechercher les commissariats autour de vous.</p>
 
   <div aria-label="Service constat" style="border-top:1px solid #E6D7B5;margin-top:16px;padding-top:14px;">
-    <h3 style="margin:0 0 8px;color:#8A4B12;">📋 Service constat — Contacts par commune</h3>
+    <details class="menu-service-constat">
+      <summary style="cursor:pointer;background:#087C62;color:#fff;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:700;list-style-position:inside;">📋 Service constat — Contacts par commune</summary>
+      <div style="padding:9px 0 0;">
+
     <p style="margin:0 0 10px;">Sélectionnez le numéro de votre commune pour appeler le service constat.</p>
     <label for="rechercheServiceConstat" style="display:block;font-weight:700;margin:10px 0 6px;">🔎 Rechercher une commune</label>
     <input id="rechercheServiceConstat" type="search" placeholder="Ex. : Yopougon, Cocody, Abobo..." oninput="filtrerServiceConstat()" style="box-sizing:border-box;width:100%;padding:13px;border:1px solid #CDBB98;border-radius:10px;font-size:16px;margin-bottom:8px;">
@@ -1922,6 +1930,8 @@ resultat.style.display = "block";
         <a href="tel:+225101559834" style="display:inline-block;color:#075744;font-weight:700;text-decoration:none;padding:4px 8px 4px 0;">☎ 0101559834</a>
       </div>
     </div>
+      </div>
+    </details>
   </div>
 </section>
 
