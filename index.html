@@ -2118,6 +2118,12 @@ function choisirNouveauService(type){
  <h3>${cfg.icone} ${cfg.titre}</h3>
  <p>Proposez votre service ou votre annonce. La publication sera possible après validation de l'administration.</p>
  <label>Nom / entreprise / titre de l'annonce</label><input id="nsTitre" maxlength="100" placeholder="Nom ou titre" required>
+ <div id="nsPhotoZone" style="display:${type==="depannage"||type==="commerce"?"block":"none"};margin:12px 0;">
+ <label>${type==="commerce"?"Photo de la boutique":"Photo de profil du service de dépannage"} (facultatif)</label>
+ <input id="nsPhoto" type="file" accept="image/jpeg,image/png,image/webp" onchange="previsualiserPhotoNouveauService(event)">
+ <small>Formats JPG, PNG ou WEBP · 3 Mo maximum.</small>
+ <img id="nsPhotoPreview" alt="Aperçu de la photo sélectionnée" style="display:none;width:120px;height:120px;object-fit:cover;border-radius:12px;margin-top:8px;">
+ </div>
  <label>Catégorie</label><select id="nsCategorie">${cfg.categories.map(c=>'<option>'+c+'</option>').join("")}</select>
  <label>Commune</label><input id="nsCommune" maxlength="60" placeholder="Ex. Yopougon" required>
  <label>Téléphone</label><input id="nsTelephone" type="tel" maxlength="20" placeholder="Ex. 07 00 00 00 00" required>
@@ -2128,6 +2134,34 @@ function choisirNouveauService(type){
  <p id="nsStatut" class="notice" aria-live="polite"></p>
  </div>`;
  chargerNouveauxServicesPublics(type);
+}
+function previsualiserPhotoNouveauService(event){
+ const file=event.target.files && event.target.files[0],img=document.getElementById("nsPhotoPreview");
+ if(!img)return;
+ if(!file){img.style.display="none";return;}
+ if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>3*1024*1024){alert("Choisissez une image JPG, PNG ou WEBP de 3 Mo maximum.");event.target.value="";img.style.display="none";return;}
+ img.src=URL.createObjectURL(file);img.style.display="block";
+}
+function compresserPhotoNouveauService(file){
+ return new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onerror=()=>reject(new Error("Lecture de la photo impossible."));
+  reader.onload=()=>{
+   const img=new Image();
+   img.onerror=()=>reject(new Error("Cette image ne peut pas être ouverte."));
+   img.onload=()=>{
+    const canvas=document.createElement("canvas"),ratio=Math.min(1,480/Math.max(img.width,img.height));
+    canvas.width=Math.round(img.width*ratio);canvas.height=Math.round(img.height*ratio);
+    canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+    let data=canvas.toDataURL("image/jpeg",0.68);
+    if(data.length>380000)data=canvas.toDataURL("image/jpeg",0.48);
+    if(data.length>400000){reject(new Error("Photo trop volumineuse après compression."));return;}
+    resolve(data);
+   };
+   img.src=reader.result;
+  };
+  reader.readAsDataURL(file);
+ });
 }
 async function envoyerNouveauService(){
  const statut=document.getElementById("nsStatut");
@@ -2142,8 +2176,16 @@ async function envoyerNouveauService(){
    try{const cred=await auth.createUserWithEmailAndPassword(email,password);user=cred.user;}
    catch(e){if(e.code==="auth/email-already-in-use"){const cred=await auth.signInWithEmailAndPassword(email,password);user=cred.user;}else throw e;}
   }
+  let photoUrl=null;
+  const photo=document.getElementById("nsPhoto") && document.getElementById("nsPhoto").files[0];
+  if(photo && (nouveauServiceActif==="depannage"||nouveauServiceActif==="commerce")){
+   if(!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>3*1024*1024)throw new Error("Photo JPG, PNG ou WEBP de 3 Mo maximum.");
+   statut.textContent="Préparation de la photo...";
+   photoUrl=await compresserPhotoNouveauService(photo);
+  }
   await db.collection("demandes_nouveaux_services").add({
    uid:user.uid,type:nouveauServiceActif,titre,categorie:valeur("nsCategorie"),commune,telephone,description,email,
+   ...(photoUrl?{photoUrl}:{}),
    statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()
   });
   statut.textContent="Dossier envoyé. Il sera visible après vérification et approbation par Mon Transport CI.";
