@@ -4602,35 +4602,45 @@ async function envoyerFichierCloudflare(
   if (!fichier) return null;
 
   const user = utilisateur || auth.currentUser;
-
   if (!user) {
-    throw new Error(
-      "Session Firebase introuvable après création du compte."
-    );
+    throw new Error("Session Firebase introuvable. Reconnecte-toi à l'espace administrateur.");
   }
 
-  await user.reload();
-
-  const token = await user.getIdToken(true);
+  let token;
+  try {
+    await user.reload();
+    token = await user.getIdToken(true);
+  } catch (erreur) {
+    console.error("Authentification avant envoi Cloudflare :", erreur);
+    throw new Error("Connexion Firebase impossible avant l'envoi. Vérifie ta connexion Internet puis reconnecte-toi.");
+  }
 
   const formulaire = new FormData();
   formulaire.append("file", fichier);
   formulaire.append("category", categorie);
 
-  const reponse = await fetch(`${WORKER_URL}/upload`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`
-    },
-    body: formulaire
-  });
+  let reponse;
+  try {
+    reponse = await fetch(`${WORKER_URL}/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formulaire
+    });
+  } catch (erreur) {
+    console.error("Connexion au stockage Cloudflare :", erreur);
+    throw new Error("Impossible de joindre le stockage Cloudflare. Vérifie la connexion Internet et réessaie.");
+  }
 
-  const resultat = await reponse.json();
+  let resultat;
+  try {
+    resultat = await reponse.json();
+  } catch (erreur) {
+    console.error("Réponse Cloudflare illisible :", erreur);
+    throw new Error("Le stockage Cloudflare a répondu de façon inattendue (HTTP " + reponse.status + ").");
+  }
 
   if (!reponse.ok || !resultat.ok || !resultat.key) {
-    throw new Error(
-      resultat.error || "Échec de l'envoi du fichier."
-    );
+    throw new Error(resultat.error || "Échec de l'envoi du fichier (HTTP " + reponse.status + ").");
   }
 
   return resultat.key;
