@@ -1061,9 +1061,7 @@ header{padding:22px 18px 24px!important}
 <div class="menu-dropdown" id="menuDropdown">
   <button onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur')">🔐 Espace administrateur</button>
   <button onclick="ouvrirSectionPleinEcran('devenirPartenaire','Devenir partenaire')">🤝 Devenir partenaire</button>
-  <button type="button" onclick="document.getElementById('menuDropdown').style.display='none'; ouvrirFormulairePublicite();">📣 Faire ma pub</button>
-  <button onclick="ouvrirSectionPleinEcran('pharmaciesProches','Pharmacie la plus proche')">💊 Pharmacie la plus proche</button>
-  <button onclick="ouvrirSectionPleinEcran('nouveauxServices','Services et commerces')">🧰 Dépannage · Commerces · Annonces</button>
+  <button onclick="ouvrirSectionPleinEcran('nouveauxServices','Dépannage automobile');choisirNouveauService('depannage')">🔧 Dépannage automobile</button>
 </div>
 </div>
 
@@ -2048,6 +2046,16 @@ resultat.style.display = "block";
   </div>
 </section>
 
+<section id="menuQuotidien" class="card" aria-label="Le quotidien" style="margin:14px 0 12px;padding:16px;border:2px solid #D5A84B;background:linear-gradient(145deg,#FFFDF5,#F0F8F4);">
+  <h2 style="margin:0 0 6px;color:#174B40;">🌞 Le quotidien</h2>
+  <p style="margin:0 0 13px;font-size:13px;color:#68786E;">Les services pratiques, les annonces et les offres près de vous.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
+    <button type="button" onclick="ouvrirSectionPleinEcran('pharmaciesProches','Pharmacie la plus proche')" style="min-height:68px;background:#F0F7F1;color:#17663D;border:1px solid #DCEBDD;text-align:left;">💊 Pharmacie la plus proche</button>
+    <button type="button" onclick="ouvrirSectionPleinEcran('nouveauxServices','Petites annonces et offres');choisirNouveauService('annonce')" style="min-height:68px;background:#FFF5E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">📢 Petites annonces et offres</button>
+    <button type="button" onclick="ouvrirFormulairePublicite()" style="min-height:68px;grid-column:1/-1;background:#F2F0FF;color:#51418A;border:1px solid #DDD6FA;text-align:left;">📣 Faire ma pub / proposer une offre</button>
+  </div>
+</section>
+
 <section class="carte-acces-admin" aria-label="Signaler un problème" style="margin-bottom:0;padding-bottom:0;">
   <p>Une difficulté avec l’application ou un trajet ?</p>
   <button type="button" class="bouton-acces-admin" onclick="signalerProblemeGeneral()">
@@ -2080,10 +2088,8 @@ resultat.style.display = "block";
 <section class="card" id="nouveauxServices" style="display:none;">
   <h2>🧰 Services et bonnes adresses</h2>
   <p>Découvrez les professionnels et annonces validés par Mon Transport CI.</p>
-  <div class="quick" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-    <button type="button" onclick="choisirNouveauService('depannage')">🚗 Dépannage</button>
-    <button type="button" onclick="choisirNouveauService('commerce')">🏪 Commerces</button>
-    <button type="button" onclick="choisirNouveauService('annonce')">📢 Annonces & emplois</button>
+  <div class="quick" style="display:grid;grid-template-columns:1fr;gap:8px;">
+    <button type="button" onclick="choisirNouveauService('depannage')">🚗 Dépannage automobile</button>
   </div>
   <div id="nouveauServiceFormZone" style="margin-top:16px;"></div>
   <h3>Services et annonces disponibles</h3>
@@ -6251,6 +6257,7 @@ function afficherMarchesCommune(){
     .sort((a,b) => a.localeCompare(b,"fr"));
   let html = "<strong>🏬 Marchés de la commune</strong>";
   html += "<p>Recherchez ou choisissez une commune pour afficher les marchés disponibles.</p>";
+  html += "<button type='button' class='primary' style='margin:8px 0 14px;' onclick=\"ouvrirSectionPleinEcran('nouveauxServices','Annuaire des commerces');choisirNouveauService('commerce')\">🏪 Consulter l’annuaire des commerces</button>";
   html += "<label for='rechercheCommuneMarche'>Commune :</label>";
   html += "<input id='rechercheCommuneMarche' type='search' list='listeCommunesMarches' ";
   html += "placeholder='Ex. : Yopougon, Abobo, Cocody...' oninput='filtrerMarchesCommune()' autocomplete='off'>";
