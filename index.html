@@ -5114,7 +5114,7 @@ async function ouvrirSectionPleinEcran(id, titre){
       console.error("Rubrique introuvable :", id);
       return;
     }
-    if(SECTIONS_PROTEGEES_AUTOMOBILISTE.has(id) && !(await abrirVerificarAccesoAutomoviliste(id))){
+    if(SECTIONS_PROTEGEES_AUTOMOBILISTE.has(id) && !(await abrirVerificarAccesoAutomovilista(id))){
       await ouvrirEspaceAbonnementAutomobiliste();
       return;
     }
@@ -5368,7 +5368,8 @@ async function chargerCompagniesRamassageAdmin(){
   const zone=document.getElementById("listeCompagniesRamassageAdmin");
   const panneau=document.getElementById("gestionAbonnementsRamassage");
   if(!zone||!panneau||!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;
-  panneau.style.display="block";zone.textContent="Chargement des dossiers...";
+  // Le panneau reste masqué tant que l'administrateur n'a pas ouvert cette rubrique.
+  zone.textContent="Chargement des dossiers...";
   try{
     const snap=await db.collection("comptes_ramassage").where("role","==","compagnie").get();
     if(snap.empty){zone.innerHTML="<p class='notice'>Aucune compagnie inscrite pour le moment.</p>";return;}
