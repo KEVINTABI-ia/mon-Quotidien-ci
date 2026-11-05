@@ -968,6 +968,72 @@ header{padding:22px 18px 24px!important}
 @media(max-width:380px){header{padding:19px 14px 21px!important}.brand-title{font-size:19px}.brand-icon{width:37px!important;height:37px!important;flex-basis:37px!important}}
 
 </style>
+
+<style>
+/* Fenêtres de services compactes */
+#fenetreAccident,#verificationAssuranceAuto,#fenetreInfractions{
+  padding:10px 12px !important;
+  border-radius:12px !important;
+  margin:9px 0 !important;
+}
+#fenetreAccident h2,#verificationAssuranceAuto h2,#fenetreInfractions h2{
+  font-size:16px !important;
+  margin:0 0 5px !important;
+  line-height:1.25 !important;
+}
+#fenetreAccident p,#verificationAssuranceAuto p,#fenetreInfractions p{
+  font-size:13px !important;
+  margin:4px 0 7px !important;
+  line-height:1.35 !important;
+}
+#fenetreAccident a[href^="tel:"],#fenetreAccident a[target="_blank"]{
+  padding:8px 10px !important;
+  margin:5px 0 !important;
+  font-size:13px !important;
+  border-radius:9px !important;
+}
+#fenetreAccident [aria-label="Service constat"]{
+  margin-top:9px !important;
+  padding-top:9px !important;
+}
+#fenetreAccident [aria-label="Service constat"] h3{
+  font-size:14px !important;
+  margin:0 0 5px !important;
+}
+#fenetreAccident [data-commune-constat]{
+  padding:7px 9px !important;
+  border-radius:8px !important;
+}
+#fenetreAccident [data-commune-constat] strong{
+  font-size:13px !important;
+  margin-bottom:2px !important;
+}
+#fenetreAccident [data-commune-constat] a{
+  font-size:12px !important;
+  padding:2px 6px 2px 0 !important;
+}
+#verificationAssuranceAuto label{
+  font-size:13px !important;
+  margin:5px 0 !important;
+}
+#verificationAssuranceAuto input{
+  padding:10px !important;
+  font-size:14px !important;
+}
+#verificationAssuranceAuto button{
+  padding:10px 12px !important;
+  margin-top:8px !important;
+  font-size:14px !important;
+}
+#fenetreInfractions summary{
+  padding:10px 12px !important;
+  font-size:14px !important;
+}
+#fenetreInfractions details>div{
+  padding:8px 0 !important;
+}
+</style>
+
 </head>
 <body>
 
@@ -1801,7 +1867,7 @@ resultat.style.display = "block";
 
 
 
-<section class="carte-acces-admin" aria-label="Accident de la circulation" style="border:2px solid #D5A84B;background:#FFF8E8;margin-bottom:16px;">
+<section class="carte-acces-admin" id="fenetreAccident" aria-label="Accident de la circulation" style="border:2px solid #D5A84B;background:#FFF8E8;margin-bottom:16px;">
   <h2 style="margin:0 0 8px;color:#9B2C1F;">🚨 Accident de la circulation</h2>
   <p style="margin:0 0 12px;">En cas d’accident, contactez rapidement les services de secours :</p>
   <a href="tel:+2250103019094" style="display:block;text-align:center;text-decoration:none;background:#B42318;color:#fff;padding:13px 16px;border-radius:12px;font-weight:700;margin:8px 0;">🚒 1. Appeler les sapeurs-pompiers — 01 03 019 094</a>
@@ -1859,7 +1925,7 @@ resultat.style.display = "block";
   </div>
 </section>
 
-<section class="carte-acces-admin" aria-label="Infractions routières" style="border:2px solid #D5A84B;background:#F7FAF7;margin:16px 0;">
+<section class="carte-acces-admin" id="fenetreInfractions" aria-label="Infractions routières" style="border:2px solid #D5A84B;background:#F7FAF7;margin:16px 0;">
   <h2 style="margin:0 0 8px;">🚦 Infractions routières et montants</h2>
   <p style="margin:0 0 12px;">Consultez les amendes forfaitaires prévues par la réglementation ivoirienne.</p>
   <details>
