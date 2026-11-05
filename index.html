@@ -2200,6 +2200,7 @@ function ouvrirRubriqueAdmin(id){
   RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display=r.id===id?"block":"none";});
   const cible=document.getElementById(id);
   if(!cible)return;
+  if(id==="gestionNouveauxServices") chargerNouveauxServicesAdmin();
   let retour=cible.querySelector(":scope > .admin-retour-menu");
   if(!retour){retour=document.createElement("button");retour.type="button";retour.className="admin-retour-menu";retour.textContent="← Retour au menu administrateur";retour.onclick=retourMenuAdmin;cible.insertBefore(retour,cible.firstChild);}
   cible.scrollIntoView({behavior:"smooth",block:"start"});
