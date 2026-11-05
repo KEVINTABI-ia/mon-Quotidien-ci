@@ -1435,7 +1435,7 @@ header{padding:22px 18px 24px!important}
 </section>
 
 <!-- ESPACE PUBLICITAIRE -->
-<section class="espace-publicitaire" id="espacePublicitaire" aria-label="Espace publicitaire">
+<section class="espace-publicitaire" id="espacePublicitaire" aria-label="Espace publicitaire" style="display:none;">
   <div class="publicite-entete">
     <span>ESPACE PUBLICITAIRE</span>
     <small>Faites connaître votre activité sur Mon Transport CI</small>
@@ -1799,10 +1799,13 @@ function chargerPublicitesAccueil() {
           .map(doc => ({id:doc.id,...doc.data()}))
           .filter(d => !d.dateFin?.toDate || d.dateFin.toDate().getTime() > maintenant)
           .sort((a,b) => (a.dateDebut?.toMillis?.() || 0) - (b.dateDebut?.toMillis?.() || 0));
+        const sectionPublicite = document.getElementById("espacePublicitaire");
         if (!annonces.length) {
-          zone.innerHTML = '<div class="publicite-placeholder"><span class="publicite-icone">📢</span><strong>Votre publicité ici</strong><span>Réservez un emplacement et présentez votre activité à nos utilisateurs.</span></div>';
+          if (sectionPublicite) sectionPublicite.style.display = "none";
+          zone.innerHTML = "";
           return;
         }
+        if (sectionPublicite) sectionPublicite.style.display = "";
         zone.innerHTML = annonces.map(d => {
           const titre = echapperTextePublicite(d.titre);
           const description = echapperTextePublicite(d.description);
