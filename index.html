@@ -2269,6 +2269,8 @@ resultat.style.display = "block";
 <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore-compat.js"></script>
 <script src="routes.js"></script>
 <script>
+// Déclaré dès le début pour éviter toute erreur d'initialisation lors de l'ouverture des rubriques.
+const SECTIONS_PROTEGEES_AUTOMOBILISTE = new Set(["fenetreAccident","fenetreInfractions","verificationAssuranceAuto","mesDocumentsAutomobiles"]);
 // CONFIGURATION FIREBASE
 const firebaseConfig = {
 apiKey:"AIzaSyBJFCyGS-cEaEm0_c_-p0CzunNcME9-u7Q",
@@ -5024,7 +5026,6 @@ function ouvrirElementPleinEcran(element, titre){
   contenu.scrollTop = 0;
 }
 
-const SECTIONS_PROTEGEES_AUTOMOBILISTE = new Set(["fenetreAccident","fenetreInfractions","verificationAssuranceAuto","mesDocumentsAutomobiles"]);
 let abonnementAutomobilisteValide = false;
 let verificationAbonnementAutomobilisteEnCours = false;
 
