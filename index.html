@@ -2245,11 +2245,11 @@ resultat.style.display = "block";
 
 
 <section class="card" id="nouveauxServices" style="display:none;">
-  <h2>📢 Petites annonces et offres</h2>
-  <p>Consultez et publiez des annonces et offres validées par Mon Transport CI.</p>
+  <h2 id="nouveauxServicesTitre">📢 Petites annonces et emplois</h2>
+  <p id="nouveauxServicesDescription">Consultez et publiez des annonces et offres validées par Mon Transport CI.</p>
   <div id="nouveauServiceFormZone" style="margin-top:16px;"></div>
-  <h3>Annonces et offres disponibles</h3>
-  <div id="nouveauxServicesPublics"><p class="notice">Chargement des petites annonces et offres...</p></div>
+  <h3 id="nouveauxServicesListeTitre">Annonces et offres disponibles</h3>
+  <div id="nouveauxServicesPublics"><p class="notice">Chargement...</p></div>
 </section>
 </main>
 
@@ -2285,6 +2285,18 @@ function choisirNouveauService(type){
  if(!NOUVEAUX_SERVICES[type])return;
  nouveauServiceActif=type;
  const cfg=NOUVEAUX_SERVICES[type];
+ const titre=document.getElementById("nouveauxServicesTitre");
+ const description=document.getElementById("nouveauxServicesDescription");
+ const titreListe=document.getElementById("nouveauxServicesListeTitre");
+ if(titre) titre.textContent=cfg.icone+" "+cfg.titre;
+ if(description) description.textContent=type==="depannage"
+   ?"Consultez les professionnels du dépannage automobile et proposez vos services après validation."
+   :type==="commerce"
+     ?"Consultez les boutiques et commerces référencés, ou proposez votre établissement après validation."
+     :"Consultez et publiez des petites annonces et offres validées par Mon Transport CI.";
+ if(titreListe) titreListe.textContent=type==="depannage"
+   ?"Professionnels du dépannage disponibles"
+   :type==="commerce"?"Commerces et boutiques référencés":"Annonces et offres disponibles";
  const zone=document.getElementById("nouveauServiceFormZone");
  zone.innerHTML=`
  <div class="card" style="padding:14px;margin-bottom:14px;">
