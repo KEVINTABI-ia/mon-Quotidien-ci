@@ -2483,6 +2483,14 @@ async function ouvrirCommandeBoutique(boutiqueId,index){
  const zone=document.getElementById("commandeBoutiqueZone_"+boutiqueId);if(!zone)return;
  zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><h4>Commander : '+echapperTextePublicite(p.nom)+'</h4><p>Prix unitaire : '+Number(p.prix).toLocaleString("fr-FR")+' FCFA</p><label>Quantité</label><input type="number" id="qteBoutique_'+boutiqueId+'" min="1" max="99" value="1"><label>Adresse de livraison</label><input id="adresseClientBoutique_'+boutiqueId+'" maxlength="220" placeholder="Quartier, rue, repère, commune"><label>Votre numéro de téléphone</label><input id="telClientBoutique_'+boutiqueId+'" type="tel" maxlength="20" value="'+echapperTextePublicite(profil.data().telephone||"")+'"><label>Commentaire pour la boutique</label><textarea id="commentaireClientBoutique_'+boutiqueId+'" maxlength="500" rows="3" placeholder="Précision sur votre commande (facultatif)"></textarea><p>Frais de livraison : <strong>'+Number(b.tarifLivraisonBoutique||1000).toLocaleString("fr-FR")+' FCFA</strong></p><button type="button" class="primary" onclick="enregistrerCommandeBoutique(\''+boutiqueId+'\','+index+')">Confirmer ma commande</button><p id="statutCommandeBoutique_'+boutiqueId+'" class="notice"></p></div>';
 }
+async function geocoderAdresseBoutique(adresse){
+ const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=ci&q="+encodeURIComponent(adresse+", Côte d'Ivoire");
+ const reponse=await fetch(url,{headers:{"Accept":"application/json"}});
+ if(!reponse.ok)throw new Error("Le service de localisation est indisponible.");
+ const resultats=await reponse.json();
+ if(!resultats.length)throw new Error("Adresse introuvable sur la carte : "+adresse+". Ajoutez un quartier ou un repère plus précis.");
+ return {latitude:Number(resultats[0].lat),longitude:Number(resultats[0].lon)};
+}
 async function enregistrerCommandeBoutique(boutiqueId,index){
  const user=auth.currentUser;if(!user)return alert("Connectez-vous comme client.");
  const profilSnap=await db.collection("clients").doc(user.uid).get();if(!profilSnap.exists)return alert("Compte client introuvable.");
@@ -2498,10 +2506,12 @@ async function enregistrerCommandeBoutique(boutiqueId,index){
  if(!confirm("Confirmer votre commande ?\nArticles : "+prixArticles.toLocaleString("fr-FR")+" FCFA\nLivraison : "+prixLivraison.toLocaleString("fr-FR")+" FCFA\nTotal : "+(prixArticles+prixLivraison).toLocaleString("fr-FR")+" FCFA"))return;
  statut.textContent="Enregistrement de la commande...";
  try{
+  statut.textContent="Localisation des adresses pour le livreur...";
+  const [coordRecuperation,coordLivraison]=await Promise.all([geocoderAdresseBoutique(b.adresseBoutique||b.commune),geocoderAdresseBoutique(adresse)]);
   const numero="BTQ-"+Date.now().toString(36).toUpperCase();
   const ref=db.collection("commandes_colis").doc(),createdAt=firebase.firestore.FieldValue.serverTimestamp();
   const publicData={clientId:user.uid,service:"livraison",depart:b.adresseBoutique||b.commune,destination:adresse,statut:"commande_boutique",publicVersion:false,createdAt,typeCommande:"boutique",boutiqueId,boutiqueUid:b.uid,boutiqueNom:b.titre,montantLivraisonBoutique:prixLivraison};
-  const privateData={clientId:user.uid,clientNom:profilSnap.data().nom||"Client",clientTelephone:profilSnap.data().telephone||"",telephoneExpediteur:b.telephone||"",telephoneDestinataire:tel,adresseRecuperation:b.adresseBoutique||b.commune,adresseLivraison:adresse,descriptionColis:"Commande boutique : "+p.nom,trackingNumber:numero,operation:"livraison_boutique",boutiqueUid:b.uid,telephoneBoutique:b.telephone||"",telephoneClient:tel,produitCommande:p.nom,quantiteCommande:qte,prixProduit:prixArticles,commentaireCommande:commentaire,createdAt};
+  const privateData={clientId:user.uid,clientNom:profilSnap.data().nom||"Client",clientTelephone:profilSnap.data().telephone||"",telephoneExpediteur:b.telephone||"",telephoneDestinataire:tel,adresseRecuperation:b.adresseBoutique||b.commune,adresseLivraison:adresse,descriptionColis:"Commande boutique : "+p.nom,trackingNumber:numero,operation:"livraison_boutique",boutiqueUid:b.uid,telephoneBoutique:b.telephone||"",telephoneClient:tel,produitCommande:p.nom,quantiteCommande:qte,prixProduit:prixArticles,commentaireCommande:commentaire,latitudeRecuperation:coordRecuperation.latitude,longitudeRecuperation:coordRecuperation.longitude,latitudeLivraison:coordLivraison.latitude,longitudeLivraison:coordLivraison.longitude,createdAt};
   const prixData={distanceKm:0,distanceMetres:0,tarifKm:100,montantLivraison:prixLivraison,fraisService:0,montantTotal:prixLivraison,devise:"FCFA",operation:"livraison",createdAt};
   await db.runTransaction(async tx=>{tx.set(ref,publicData);tx.set(ref.collection("informations_privees").doc("details"),privateData);tx.set(ref.collection("tarification").doc("prix"),prixData);});
   statut.textContent="Commande envoyée à la boutique. Vous pourrez suivre la livraison dans votre historique client.";
@@ -4002,9 +4012,9 @@ function ecouterNouvellesCommandesPartenaire(uid, partenaire, missionActive) {
     file.innerHTML = "";
     docs.forEach(doc => {
       const c = doc.data(), card = document.createElement("div"); card.className = "stop";
-      const h = document.createElement("strong"); h.textContent = "🔔 Nouvelle commande";
+      const h = document.createElement("strong"); h.textContent = c.typeCommande === "boutique" ? "🏪 Livraison boutique" : "🔔 Nouvelle commande";
       const route = document.createElement("p"); route.textContent = (c.depart || "Départ non précisé") + " → " + (c.destination || "Destination non précisée");
-      const service = document.createElement("p"); service.textContent = "Service : " + (c.service || "Non précisé");
+      const service = document.createElement("p"); service.textContent = c.typeCommande === "boutique" ? "Service : Livraison boutique · Frais : " + Number(c.montantLivraisonBoutique||0).toLocaleString("fr-FR") + " FCFA" : "Service : " + (c.service || "Non précisé");
       const btn = document.createElement("button"); btn.type = "button"; btn.className = "primary bouton-commande-clignotant"; btn.textContent = "Accepter la commande";
       btn.addEventListener("click", () => accepterCommandePartenaire(doc.id));
       card.append(h, route, service, btn); file.appendChild(card);
