@@ -4423,10 +4423,23 @@ const fichiers = {};
         throw erreurCreation;
       }
 
-      resultat = await auth.signInWithEmailAndPassword(
-        email,
-        motDePasse
-      );
+      try {
+        resultat = await auth.signInWithEmailAndPassword(
+          email,
+          motDePasse
+        );
+      } catch (erreurConnexion) {
+        if (
+          erreurConnexion.code === "auth/invalid-credential" ||
+          erreurConnexion.code === "auth/wrong-password" ||
+          erreurConnexion.code === "auth/user-not-found"
+        ) {
+          throw new Error(
+            "Cette adresse e-mail possède déjà un compte, mais le mot de passe saisi ne correspond pas. Connectez-vous avec le mot de passe de ce compte ou utilisez une autre adresse e-mail."
+          );
+        }
+        throw erreurConnexion;
+      }
     }
     
     const uid = resultat.user.uid;
