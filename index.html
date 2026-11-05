@@ -2294,6 +2294,8 @@ function choisirNouveauService(type){
  if(!NOUVEAUX_SERVICES[type])return;
  nouveauServiceActif=type;
  const cfg=NOUVEAUX_SERVICES[type];
+ const connexionBoutique=document.getElementById("connexionBoutiqueZone");
+ if(connexionBoutique)connexionBoutique.style.display=type==="commerce"?"block":"none";
  const titre=document.getElementById("nouveauxServicesTitre");
  const description=document.getElementById("nouveauxServicesDescription");
  const titreListe=document.getElementById("nouveauxServicesListeTitre");
