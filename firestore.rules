@@ -439,6 +439,12 @@ service cloud.firestore {
           && request.resource.data.montantLivraison is int
           && request.resource.data.fraisService in [0,300]
           && request.resource.data.montantTotal == request.resource.data.montantLivraison + request.resource.data.fraisService
+          && (getAfter(commandePath(commandeId)).data.get("typeCommande", null) != "boutique"
+            || (request.resource.data.distanceKm == 0
+              && request.resource.data.distanceMetres == 0
+              && request.resource.data.fraisService == 0
+              && request.resource.data.montantLivraison == getAfter(commandePath(commandeId)).data.montantLivraisonBoutique
+              && request.resource.data.montantTotal == getAfter(commandePath(commandeId)).data.montantLivraisonBoutique))
           && request.resource.data.devise == "FCFA"
           && request.resource.data.createdAt == request.time;
         allow read: if estAdmin()
