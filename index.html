@@ -5131,7 +5131,6 @@ async function ouvrirSectionPleinEcran(id, titre){
     }
     ouvrirElementPleinEcran(section, titre);
     overlay.classList.add("actif");
-    overlay.style.display = "flex";
     contenu.scrollTop = 0;
   } catch(erreur) {
     console.error("Ouverture de la rubrique " + id + " :", erreur);
@@ -5154,9 +5153,13 @@ function fermerVuePleinEcran(){
   vuePleinEcranActive = null;
 
   const overlay = document.getElementById("vuePleinEcran");
-  overlay.classList.remove("actif");
-  overlay.setAttribute("aria-hidden","true");
-  document.getElementById("vuePleinEcranContenu").replaceChildren();
+  if(overlay){
+    overlay.classList.remove("actif");
+    overlay.style.display = "none";
+    overlay.setAttribute("aria-hidden","true");
+  }
+  const contenu = document.getElementById("vuePleinEcranContenu");
+  if(contenu) contenu.replaceChildren();
   document.body.style.overflow = "";
 }
 
