@@ -6766,7 +6766,7 @@ function afficherMarchesCommune(){
     .sort((a,b) => a.localeCompare(b,"fr"));
   let html = "<strong>🏪 Commerce et boutique</strong>";
   html += "<p>Recherchez ou choisissez une commune pour afficher les marchés disponibles.</p>";
-  html += "<button type='button' class='primary' style='margin:8px 0 14px;' onclick=\"ouvrirSectionPleinEcran('nouveauxServices','Annuaire des commerces');choisirNouveauService('commerce')\">🏪 Consulter l’annuaire des commerces</button>";
+
   html += "<label for='rechercheCommuneMarche'>Commune :</label>";
   html += "<input id='rechercheCommuneMarche' type='search' list='listeCommunesMarches' ";
   html += "placeholder='Ex. : Yopougon, Abobo, Cocody...' oninput='filtrerMarchesCommune()' autocomplete='off'>";
@@ -6774,6 +6774,10 @@ function afficherMarchesCommune(){
   communes.forEach(c => html += "<option value='" + echapperTexteCompagnie(c) + "'></option>");
   html += "</datalist><div id='listeMarchesCommune' aria-live='polite'>";
   html += "<p class='notice'>Saisissez le nom d'une commune pour voir ses marchés.</p></div>";
+  html += "<hr style='margin:18px 0;border:0;border-top:1px solid #DCE7E0;'>";
+  html += "<h3>🛍️ Découvrez les commerces</h3>";
+  html += "<button type='button' class='primary' style='width:100%;margin:7px 0;' onclick='ouvrirTourBoutiques()'>🛍️ Faire un tour en boutique</button>";
+  html += "<button type='button' style='width:100%;margin:7px 0;' onclick='ouvrirEspaceProprietaireBoutique()'>🔐 Espace propriétaire : connexion / inscription</button>";
   resultat.innerHTML = html;
   if(vuePleinEcranActive && vuePleinEcranActive.element === resultat){
     document.getElementById("vuePleinEcranContenu").scrollTop = 0;
@@ -6782,6 +6786,49 @@ function afficherMarchesCommune(){
   }
 }
 
+function ouvrirTourBoutiques(){
+  ouvrirSectionPleinEcran("nouveauxServices","Un tour en boutique");
+  choisirNouveauService("commerce");
+  const connexion=document.getElementById("connexionBoutiqueZone");
+  const formulaire=document.getElementById("nouveauServiceFormZone");
+  const liste=document.getElementById("nouveauxServicesPublics");
+  if(connexion)connexion.style.display="none";
+  if(formulaire)formulaire.style.display="none";
+  if(liste)liste.style.display="block";
+  const titre=document.getElementById("nouveauxServicesTitre");
+  const description=document.getElementById("nouveauxServicesDescription");
+  if(titre)titre.textContent="🛍️ Un tour en boutique";
+  if(description)description.textContent="Découvrez les boutiques, les commerces et les articles proposés. Vous pouvez passer commande directement auprès d’une boutique.";
+}
+function ouvrirEspaceProprietaireBoutique(){
+  ouvrirSectionPleinEcran("nouveauxServices","Espace propriétaire boutique et commerce");
+  choisirNouveauService("commerce");
+  const connexion=document.getElementById("connexionBoutiqueZone");
+  const formulaire=document.getElementById("nouveauServiceFormZone");
+  const liste=document.getElementById("nouveauxServicesPublics");
+  if(connexion)connexion.style.display="block";
+  if(formulaire)formulaire.style.display="none";
+  if(liste)liste.style.display="none";
+  const titre=document.getElementById("nouveauxServicesTitre");
+  const description=document.getElementById("nouveauxServicesDescription");
+  if(titre)titre.textContent="🔐 Espace propriétaire";
+  if(description)description.textContent="Connectez-vous à votre espace ou inscrivez votre boutique ou commerce. L’inscription est soumise à l’abonnement en vigueur.";
+  if(connexion && !document.getElementById("boutiqueInscriptionToggle")){
+    const bouton=document.createElement("button");
+    bouton.type="button";
+    bouton.id="boutiqueInscriptionToggle";
+    bouton.className="primary";
+    bouton.style.marginTop="12px";
+    bouton.textContent="📝 Inscrire une boutique ou un commerce";
+    bouton.onclick=()=>{
+      const visible=formulaire && formulaire.style.display!=="none";
+      if(formulaire)formulaire.style.display=visible?"none":"block";
+      bouton.textContent=visible?"📝 Inscrire une boutique ou un commerce":"✖ Fermer le formulaire d’inscription";
+      if(!visible && formulaire)formulaire.scrollIntoView({behavior:"smooth",block:"start"});
+    };
+    connexion.appendChild(bouton);
+  }
+}
 function filtrerMarchesCommune(){
   const champ = document.getElementById("rechercheCommuneMarche");
   const zone = document.getElementById("listeMarchesCommune");
