@@ -448,11 +448,11 @@ service cloud.firestore {
         && request.resource.data.compagnieId == request.auth.uid
         && compagnieRamassageActive(request.auth.uid)
         && request.resource.data.keys().hasAll([
-          "compagnieId","compagnieNom","communeDepart","points","destination",
+          "compagnieId","compagnieNom","telephone","communeDepart","points","destination",
           "jours","heure","placesDisponibles","tarif","statut","createdAt"
         ])
         && request.resource.data.keys().hasOnly([
-          "compagnieId","compagnieNom","communeDepart","points","destination",
+          "compagnieId","compagnieNom","telephone","communeDepart","points","destination",
           "jours","heure","placesDisponibles","tarif","statut","createdAt"
         ])
         && request.resource.data.statut == "publiee"
