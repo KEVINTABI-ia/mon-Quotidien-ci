@@ -5889,6 +5889,17 @@ function instructionNavigationMarche(etape,index){
   return (index===0?"Départ : ":"")+action+(nom&&type!=="arrive"?" sur "+echapperTexteCompagnie(nom):"")+" ("+distance+")";
 }
 
+async function fetchMarcheAvecDelai(url, options={}, delai=15000){
+  const controleur=new AbortController();
+  const minuterie=setTimeout(()=>controleur.abort(),delai);
+  try{
+    return await fetch(url,{...options,signal:controleur.signal});
+  }catch(erreur){
+    if(erreur.name==="AbortError") throw new Error("Le service cartographique met trop de temps à répondre. Vérifiez votre connexion puis réessayez.");
+    throw erreur;
+  }finally{clearTimeout(minuterie);}
+}
+
 async function tracerItineraireMarche(index){
   const marche=(window.marchesCommuneAffiches||[])[index];
   if(!marche)return;
@@ -5896,18 +5907,20 @@ async function tracerItineraireMarche(index){
   const zone=document.getElementById("listeMarchesCommune");
   let carteZone=document.getElementById("carteMarchesCommune");
   if(!carteZone){carteZone=document.createElement("div");carteZone.id="carteMarchesCommune";carteZone.setAttribute("role","region");carteZone.setAttribute("aria-label","Carte de l'itinéraire vers le marché");zone.appendChild(carteZone);}
-  carteZone.innerHTML="<p class='notice'>Autorisez la localisation pour calculer et afficher votre itinéraire...</p>";
+  carteZone.innerHTML="<p class='notice'>📍 Recherche de votre position GPS…</p>";
   navigator.geolocation.getCurrentPosition(async position=>{
     try{
       const depart=[position.coords.latitude,position.coords.longitude];
-      const recherche=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(marche.repere+", Côte d'Ivoire"));
-      if(!recherche.ok)throw new Error("Le service de localisation des marchés ne répond pas.");
+      carteZone.innerHTML="<p class='notice'>🔎 Localisation du marché…</p>";
+       const recherche=await fetchMarcheAvecDelai("https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(marche.repere+", Côte d'Ivoire"));
+      if(!recherche.ok)throw new Error("Le service de localisation des marchés ne répond pas (HTTP "+recherche.status+"). Réessayez dans quelques instants.");
       const lieux=await recherche.json();
       if(!lieux.length)throw new Error("L'emplacement de ce marché n'a pas été trouvé.");
       const arrivee=[Number(lieux[0].lat),Number(lieux[0].lon)];
       const url="https://router.project-osrm.org/route/v1/driving/"+depart[1]+","+depart[0]+";"+arrivee[1]+","+arrivee[0]+"?overview=full&geometries=geojson&steps=true";
-      const reponse=await fetch(url);
-      if(!reponse.ok)throw new Error("Le calcul du trajet est momentanément indisponible.");
+      carteZone.innerHTML="<p class='notice'>🧭 Calcul de votre itinéraire…</p>";
+       const reponse=await fetchMarcheAvecDelai(url);
+      if(!reponse.ok)throw new Error("Le calcul du trajet est momentanément indisponible (HTTP "+reponse.status+"). Réessayez.");
       const donnees=await reponse.json();
       if(!donnees.routes||!donnees.routes.length)throw new Error("Aucun itinéraire routier n'a été trouvé.");
       const trajet=donnees.routes[0];
