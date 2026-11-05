@@ -5,6 +5,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#087443">
+<link rel="manifest" href="./app.webmanifest">
+<link rel="icon" href="./icon-transport-ci.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon-transport-ci.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Transport CI">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Mon Transport CI</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
@@ -7417,5 +7423,14 @@ function demanderConfirmation(titre, message, libelleValidation) {
   </div>
   <div id="vuePleinEcranContenu"></div>
 </div>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(error => {
+      console.warn("Installation PWA indisponible :", error);
+    });
+  });
+}
+</script>
 </body>
 </html>
