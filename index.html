@@ -2286,7 +2286,7 @@ firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 const db = firebase.firestore();
-activerVisibiliteMenusPublique();
+// Initialisation déplacée après la déclaration du module de visibilité des menus.
 chargerPublicitesAccueil();
 
 const NOUVEAUX_SERVICES = {
@@ -8571,6 +8571,9 @@ async function modifierVisibiliteMenu(id,visible){
     alert(visible ? "Menu affiché dans l’application." : "Menu masqué dans l’application.");
   }catch(e){console.error(e);alert("Modification impossible : vérifie les règles Firestore. "+e.message);}
 }
+
+// Lancer l’écoute seulement après que toutes les fonctions et variables du module existent.
+activerVisibiliteMenusPublique();
 
 </script>
 
