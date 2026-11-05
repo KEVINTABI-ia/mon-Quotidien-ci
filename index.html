@@ -5190,14 +5190,31 @@ function masquerParcours(){
 }
 
 function retourAccueil(){
-  // Fermer d'abord l'écran plein écran pour libérer l'accueil et les autres menus.
+  // Mémoriser la rubrique affichée avant de fermer son conteneur plein écran.
+  const rubriqueActive = vuePleinEcranActive && vuePleinEcranActive.element
+    ? vuePleinEcranActive.element
+    : null;
+
   fermerVuePleinEcran();
+
+  // Masquer aussi la rubrique restaurée dans la page, sinon elle peut recouvrir l'accueil.
+  if(rubriqueActive) rubriqueActive.style.display = "none";
 
   const menu = document.getElementById("menuDropdown");
   if(menu) menu.style.display = "none";
   masquerParcours();
   document.getElementById("zoneEspaceClient")?.replaceChildren();
   document.getElementById("connexionPartenaire")?.remove();
+
+  // Nettoyer les états d'affichage qui peuvent intercepter les clics sur iPhone.
+  const overlay = document.getElementById("vuePleinEcran");
+  if(overlay){
+    overlay.classList.remove("actif");
+    overlay.style.display = "none";
+    overlay.setAttribute("aria-hidden","true");
+  }
+  const contenu = document.getElementById("vuePleinEcranContenu");
+  if(contenu) contenu.replaceChildren();
   document.body.style.overflow = "";
   window.scrollTo({top: 0, behavior: "smooth"});
 }
@@ -8323,7 +8340,7 @@ function demanderConfirmation(titre, message, libelleValidation) {
 </script>
 <div id="vuePleinEcran" aria-hidden="true">
   <div class="vue-plein-ecran-entete">
-    <button type="button" onclick="fermerVuePleinEcran()">← Retour</button>
+    <button type="button" onclick="retourAccueil()">← Retour à l’accueil</button>
     <div class="vue-plein-ecran-titre" id="vuePleinEcranTitre"></div>
   </div>
   <div id="vuePleinEcranContenu"></div>
