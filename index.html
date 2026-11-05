@@ -3307,99 +3307,62 @@ let carteTransport=null;
 
 async function afficherCarte(depart,destination){
 const zone=document.getElementById("carte");
+const info=document.getElementById("infoRoute");
+if(!zone){console.error("Conteneur de carte introuvable.");return;}
 zone.style.display="block";
+if(info)info.textContent="Chargement de la carte et du trajet...";
+if(!window.L){if(info)info.textContent="La bibliothèque cartographique ne s'est pas chargée. Vérifiez votre connexion puis rechargez la page.";return;}
 
 async function trouverCoordonnees(lieu){
 const url="https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(lieu+", Côte d'Ivoire");
 const reponse=await fetch(url);
+if(!reponse.ok)throw new Error("Le service de recherche géographique ne répond pas (HTTP "+reponse.status+").");
 const donnees=await reponse.json();
-
 if(!donnees.length)return null;
-
-return [
-parseFloat(donnees[0].lat),
-parseFloat(donnees[0].lon)
-];
+return [parseFloat(donnees[0].lat),parseFloat(donnees[0].lon)];
 }
 
 try{
 const pointDepart=await trouverCoordonnees(depart);
 const pointArrivee=await trouverCoordonnees(destination);
-
-if(!pointDepart || !pointArrivee){
-alert("Impossible de trouver les deux lieux sur la carte.");
+if(!pointDepart||!pointArrivee){
+if(info)info.textContent="Impossible de localiser le départ ou la destination. Vérifiez les noms des lieux.";
 return;
 }
-
-if(carteTransport){
-carteTransport.remove();
-}
-
-carteTransport=L.map("carte").setView(pointDepart,13);
-
+if(carteTransport){carteTransport.remove();carteTransport=null;}
+carteTransport=L.map(zone).setView(pointDepart,13);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
 attribution:"© OpenStreetMap"
 }).addTo(carteTransport);
+L.marker(pointDepart).addTo(carteTransport).bindPopup("Départ : "+depart);
+L.marker(pointArrivee).addTo(carteTransport).bindPopup("Destination : "+destination);
 
-const marqueurDepart=L.marker(pointDepart).addTo(carteTransport)
-.bindPopup("Départ : "+depart);
-
-const marqueurArrivee=L.marker(pointArrivee).addTo(carteTransport)
-.bindPopup("Destination : "+destination);
-
-const urlRoute=
-"https://router.project-osrm.org/route/v1/driving/"+
-pointDepart[1]+","+pointDepart[0]+";"+
-pointArrivee[1]+","+pointArrivee[0]+
+const urlRoute="https://router.project-osrm.org/route/v1/driving/"+
+pointDepart[1]+","+pointDepart[0]+";"+pointArrivee[1]+","+pointArrivee[0]+
 "?overview=full&geometries=geojson&steps=true";
-
 const reponseRoute=await fetch(urlRoute);
+if(!reponseRoute.ok)throw new Error("Le calcul de l'itinéraire est momentanément indisponible.");
 const donneesRoute=await reponseRoute.json();
-
-if(donneesRoute.code!=="Ok"){
-alert("Impossible de calculer le trajet routier.");
+if(donneesRoute.code!=="Ok"||!donneesRoute.routes||!donneesRoute.routes.length){
+if(info)info.textContent="Les lieux sont localisés, mais aucun itinéraire routier n'a été trouvé.";
+setTimeout(()=>carteTransport&&carteTransport.invalidateSize(),250);
 return;
 }
-
-const trajet=donneesRoute.routes[0];
-const rues=[];
-
-trajet.legs.forEach(leg=>{
-leg.steps.forEach(etape=>{
-if(etape.name && !rues.includes(etape.name)){
-rues.push(etape.name);
-}
-});
-});
-
-const detailRues=rues.length
-? rues.map((rue,index)=>(index+1)+". "+rue).join("<br>")
-: "Aucun nom de rue disponible pour ce trajet.";
-
-const parcours=trajet.geometry.coordinates.map(point=>[
-point[1],point[0]
-]);
-
-const ligne=L.polyline(parcours,{
-color:"green",
-weight:5
-}).addTo(carteTransport);
-
-carteTransport.fitBounds(ligne.getBounds(),{
-padding:[30,30]
-});
-
-const distance=(trajet.distance/1000).toFixed(1);
-const duree=Math.round(trajet.duration/60);
-
-document.getElementById("infoRoute").innerHTML=
-"📏 Distance : "+distance+" km<br>"+
-"⏱️ Durée estimée : "+duree+" minutes<br>"+
-"⚠️ Durée indicative, sans prise en compte des embouteillages en temps réel.<br><br>"+
-"<strong>🛣️ Rues et routes empruntées :</strong><br>"+
-detailRues;
+const trajet=donneesRoute.routes[0],rues=[];
+trajet.legs.forEach(leg=>leg.steps.forEach(etape=>{
+if(etape.name&&!rues.includes(etape.name))rues.push(etape.name);
+}));
+const detailRues=rues.length?rues.map((rue,index)=>(index+1)+". "+rue).join("<br>"):"Aucun nom de rue disponible pour ce trajet.";
+const parcours=trajet.geometry.coordinates.map(point=>[point[1],point[0]]);
+const ligne=L.polyline(parcours,{color:"green",weight:5}).addTo(carteTransport);
+carteTransport.fitBounds(ligne.getBounds(),{padding:[30,30]});
+const distance=(trajet.distance/1000).toFixed(1),duree=Math.round(trajet.duration/60);
+if(info)info.innerHTML="📏 Distance : "+distance+" km<br>⏱️ Durée estimée : "+duree+" minutes<br>⚠️ Durée indicative, sans prise en compte des embouteillages en temps réel.<br><br><strong>🛣️ Rues et routes empruntées :</strong><br>"+detailRues;
+setTimeout(()=>carteTransport&&carteTransport.invalidateSize(),250);
 }catch(erreur){
-alert("La carte n'a pas pu être chargée. Vérifiez votre connexion Internet.");
+console.error("Chargement de la carte :",erreur);
+if(info)info.textContent="La carte n'a pas pu être chargée : "+(erreur.message||"vérifiez votre connexion Internet.");
+setTimeout(()=>carteTransport&&carteTransport.invalidateSize(),250);
 }
 }
 function signalerTrajet(index){
