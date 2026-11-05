@@ -193,7 +193,7 @@ service cloud.firestore {
         && request.resource.data.clientId == request.auth.uid
         && request.resource.data.keys().hasAll(["clientId","service","depart","destination","statut","createdAt","publicVersion","typeCommande","boutiqueId","boutiqueUid","boutiqueNom","montantLivraisonBoutique"])
         && request.resource.data.keys().hasOnly(["clientId","service","depart","destination","statut","createdAt","publicVersion","typeCommande","boutiqueId","boutiqueUid","boutiqueNom","montantLivraisonBoutique"])
-        && request.resource.data.service == "livraison"
+        && request.resource.data['service'] == "livraison"
         && request.resource.data.statut == "commande_boutique"
         && request.resource.data.publicVersion == false
         && request.resource.data.typeCommande == "boutique"
