@@ -2270,6 +2270,7 @@ resultat.style.display = "block";
 <script src="routes.js"></script>
 <script>
 // Déclaré dès le début pour éviter toute erreur d'initialisation lors de l'ouverture des rubriques.
+var vuePleinEcranActive = null;
 const SECTIONS_PROTEGEES_AUTOMOBILISTE = new Set(["fenetreAccident","fenetreInfractions","verificationAssuranceAuto","mesDocumentsAutomobiles"]);
 // CONFIGURATION FIREBASE
 const firebaseConfig = {
@@ -5003,7 +5004,7 @@ alert("Inscription réussie. Ton dossier est en attente de validation.");
     alert("Erreur lors de la création : " + erreur.message);
   }
 }
-let vuePleinEcranActive = null;
+
 
 function ouvrirElementPleinEcran(element, titre){
   if(!element) return;
