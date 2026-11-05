@@ -851,6 +851,16 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 .publicite-placeholder span:last-child{font-size:12px;color:#64746a}
 @media(max-width:480px){.espace-publicitaire{margin-bottom:14px;padding:8px}.publicite-media{min-height:180px;max-height:260px;aspect-ratio:16/9}.publicite-entete small{font-size:9px}}
 
+/* Agrandissement de l'espace d'affichage publicitaire */
+.espace-publicitaire{padding:14px}
+.publicite-media{min-height:360px;max-height:480px;aspect-ratio:16/9}
+.publicite-media img,.publicite-media video{max-height:480px}
+@media(max-width:480px){
+  .espace-publicitaire{padding:10px}
+  .publicite-media{min-height:280px;max-height:360px;aspect-ratio:4/3}
+  .publicite-media img,.publicite-media video{max-height:360px}
+}
+
 /* Formulaire de réservation publicitaire */
 .formulaire-publicite{background:#fff;padding:18px;border-radius:16px;margin-top:16px;border:1px solid #e2e9e4}
 .formulaire-publicite h3{margin-top:0}
