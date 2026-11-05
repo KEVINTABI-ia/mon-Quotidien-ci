@@ -839,6 +839,86 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
   .carte-compagnies-voyage{animation:none;background-position:50% 50%}
 }
 
+
+/* CORRECTION AFFICHAGE PUBLICITES : pleine largeur et textes complets */
+#espacePublicitaire{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin-left:0!important;
+  margin-right:0!important;
+  padding:0!important;
+  overflow:visible!important;
+}
+#espacePublicitaire .publicite-entete{padding:0 12px;margin:0 0 8px}
+#espacePublicitaire .publicite-media{
+  display:block!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  aspect-ratio:auto!important;
+  padding:0!important;
+  margin:0!important;
+  overflow:hidden!important;
+  border-radius:0!important;
+  background:#fff!important;
+}
+#espacePublicitaire .publicite-annonce{
+  display:block!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:visible!important;
+  text-align:left!important;
+}
+#espacePublicitaire .publicite-annonce img,
+#espacePublicitaire .publicite-annonce video{
+  display:block!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  height:auto!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:0!important;
+  object-fit:contain!important;
+  border:0!important;
+  border-radius:0!important;
+}
+#espacePublicitaire .publicite-annonce strong{
+  display:block!important;
+  padding:12px 14px 4px!important;
+  margin:0!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  overflow-wrap:anywhere!important;
+  line-height:1.4!important;
+}
+#espacePublicitaire .publicite-annonce p{
+  display:block!important;
+  padding:0 14px 14px!important;
+  margin:0!important;
+  white-space:pre-wrap!important;
+  overflow:visible!important;
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+  text-overflow:clip!important;
+  max-height:none!important;
+  height:auto!important;
+  line-height:1.5!important;
+}
+#espacePublicitaire .publicite-annonce video{background:#000!important}
+@media(max-width:480px){
+  #espacePublicitaire{border-radius:12px!important}
+  #espacePublicitaire .publicite-annonce strong{padding:10px 12px 4px!important}
+  #espacePublicitaire .publicite-annonce p{padding:0 12px 12px!important}
+}
+
 /* ESPACE PUBLICITAIRE ACCUEIL : images et vidéos */
 .espace-publicitaire{width:100%;max-width:none;margin:0 auto 18px;padding:10px;background:#fff;border:1px solid #dce8df;border-radius:16px;box-shadow:0 5px 18px rgba(20,65,40,.08);overflow:hidden}
 .publicite-entete{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 2px 9px;color:#17663D}
