@@ -516,6 +516,24 @@ service cloud.firestore {
       allow read, update, delete: if estAdmin();
     }
 
+    match /demandes_nouveaux_services/{demandeId} {
+      allow create: if estConnecte()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","telephone","description","email","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","telephone","description","email","statut","createdAt"])
+        && request.resource.data.type in ["depannage","commerce","annonce"]
+        && request.resource.data.titre is string && request.resource.data.titre.size() > 0 && request.resource.data.titre.size() <= 100
+        && request.resource.data.categorie is string && request.resource.data.categorie.size() <= 80
+        && request.resource.data.commune is string && request.resource.data.commune.size() > 0 && request.resource.data.commune.size() <= 60
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 20
+        && request.resource.data.description is string && request.resource.data.description.size() > 0 && request.resource.data.description.size() <= 1200
+        && request.resource.data.email is string && request.resource.data.email.size() <= 120
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || resource.data.statut == "approuve";
+      allow update, delete: if estAdmin();
+    }
+
     match /publicites/{publiciteId} {
       allow read: if estAdmin() || resource.data.statut == "publiee";
       allow create, update, delete: if estAdmin();
