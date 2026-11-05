@@ -540,6 +540,31 @@ service cloud.firestore {
       allow create, update, delete: if estAdmin();
     }
 
+    match /demandes_abonnement_automobiliste/{demandeId} {
+      allow create: if estConnecte()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasAll(["uid","email","operateur","referencePaiement","nomPayeur","montantFCFA","dureeMois","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","email","operateur","referencePaiement","nomPayeur","montantFCFA","dureeMois","statut","createdAt"])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.operateur in ["Wave","Orange Money"]
+        && request.resource.data.referencePaiement is string
+        && request.resource.data.referencePaiement.size() >= 4
+        && request.resource.data.referencePaiement.size() <= 80
+        && request.resource.data.nomPayeur is string
+        && request.resource.data.nomPayeur.size() <= 80
+        && request.resource.data.montantFCFA == 1000
+        && request.resource.data.dureeMois == 12
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update, delete: if estAdmin();
+    }
+
+    match /abonnements_automobiliste/{uid} {
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
+      allow create, update, delete: if estAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
