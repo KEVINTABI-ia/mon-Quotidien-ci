@@ -2313,6 +2313,7 @@ function choisirNouveauService(type){
  <label>Commune</label><input id="nsCommune" maxlength="60" placeholder="Ex. Yopougon" required>
  <label>Téléphone</label><input id="nsTelephone" type="tel" maxlength="20" placeholder="Ex. 07 00 00 00 00" required>
  <label>Description et détails</label><textarea id="nsDescription" rows="4" maxlength="1200" placeholder="Décrivez le service, le commerce ou l'annonce" required></textarea>
+ ${type==="commerce"?'<label>Produits proposés et prix (un produit par ligne)</label><textarea id="nsProduits" rows="5" maxlength="3000" placeholder="Riz 25 kg | 15 000\nHuile 1 L | 1 200\nSucre 1 kg | 800"></textarea><small>Indiquez le nom du produit et son prix en FCFA, séparés par |.</small>':''}
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
  ${type==="commerce"?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Abonnement obligatoire : 2 500 FCFA / 30 jours</strong><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p>Wave : <strong>0757522319</strong><br>Orange Money : <strong>0757522319</strong><br>Titulaire : <strong>TA BI SERGE KEVIN</strong></p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
@@ -2355,6 +2356,9 @@ async function envoyerNouveauService(){
  const titre=valeur("nsTitre"),commune=valeur("nsCommune"),telephone=valeur("nsTelephone"),description=valeur("nsDescription"),email=valeur("nsEmail"),password=document.getElementById("nsPassword").value;
  const paiementMoyen=nouveauServiceActif==="commerce"?(document.getElementById("nsPaiementMoyen")?.value||""):"";
  const paiementReference=nouveauServiceActif==="commerce"?(document.getElementById("nsPaiementReference")?.value.trim()||""):"";
+ const produitsTexte=nouveauServiceActif==="commerce"?(document.getElementById("nsProduits")?.value.trim()||""):"";
+ const produits=produitsTexte.split("\n").map(l=>{const p=l.split("|");return {nom:(p[0]||"").trim(),prix:Number((p[1]||"").trim().replace(/\s/g,""))};}).filter(p=>p.nom);
+ if(nouveauServiceActif==="commerce"&&(!produits.length||produits.some(p=>!p.nom||!Number.isFinite(p.prix)||p.prix<=0))){statut.textContent="Ajoutez au moins un produit avec un prix valide : Produit | Prix en FCFA.";return;}
  if(!titre||!commune||!telephone||!description||!email||password.length<6||(nouveauServiceActif==="commerce"&&(!paiementMoyen||!paiementReference))){statut.textContent="Remplissez tous les champs obligatoires, y compris les informations de paiement pour une boutique.";return;}
  statut.textContent="Envoi du dossier...";
  try{
@@ -2374,7 +2378,7 @@ async function envoyerNouveauService(){
   await db.collection("demandes_nouveaux_services").add({
    uid:user.uid,type:nouveauServiceActif,titre,categorie:valeur("nsCategorie"),commune,telephone,description,email,
    ...(photoUrl?{photoUrl}:{}),
-   ...(nouveauServiceActif==="commerce"?{paiementMoyen,paiementReference,montantAbonnement:2500,dureeAbonnementJours:30,paiementStatut:"a_verifier"}:{}),
+   ...(nouveauServiceActif==="commerce"?{produits,paiementMoyen,paiementReference,montantAbonnement:2500,dureeAbonnementJours:30,paiementStatut:"a_verifier"}:{}),
    statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()
   });
   statut.textContent="Dossier envoyé. Il sera visible après vérification et approbation par Mon Transport CI.";
@@ -2393,8 +2397,37 @@ async function chargerNouveauxServicesPublics(type){
   const maintenant=Date.now();
   const documents=snap.docs.filter(doc=>{const d=doc.data();if(type!=="commerce")return true;return d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;});
   if(!documents.length){zone.innerHTML='<p class="notice">'+(type==="commerce"?"Aucune boutique avec un abonnement actif pour le moment.":"Aucun résultat publié dans cette rubrique pour le moment.")+'</p>';return;}
-  zone.innerHTML=documents.map(doc=>{const d=doc.data();return '<article class="card" style="padding:13px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo de profil" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':'')+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.description)+'</p><a class="primary" style="display:inline-block;text-align:center;text-decoration:none;margin-top:10px;" href="tel:'+String(d.telephone||"").replace(/[^+0-9]/g,"")+'">📞 Contacter la boutique / le prestataire</a>'+(type==="commerce"&&d.abonnementFin?'<p class="notice">Abonnement actif jusqu’au '+d.abonnementFin.toDate().toLocaleDateString("fr-FR")+'</p>':'')+'</article>';}).join("");
+  zone.innerHTML=documents.map(doc=>{
+   const d=doc.data();
+   const produits=type==="commerce"&&Array.isArray(d.produits)&&d.produits.length?'<div style="margin:10px 0;padding:10px;background:#F7FAF8;border-radius:10px;"><strong>🛍️ Produits et prix</strong>'+d.produits.map(p=>'<p style="display:flex;justify-content:space-between;gap:10px;margin:6px 0;"><span>'+echapperTextePublicite(p.nom)+'</span><strong>'+Number(p.prix).toLocaleString("fr-FR")+' FCFA</strong></p>').join("")+'</div>':"";
+   const avis=type==="commerce"?'<details style="margin-top:12px;"><summary style="cursor:pointer;font-weight:700;">⭐ Donner mon avis après un achat</summary><div style="padding:10px 0;"><label>Votre nom</label><input id="avisNom_'+doc.id+'" maxlength="80" placeholder="Nom ou prénom"><label>Produit acheté</label><input id="avisProduit_'+doc.id+'" maxlength="100" placeholder="Produit acheté"><label>Satisfaction</label><select id="avisNote_'+doc.id+'"><option value="satisfait">Satisfait(e)</option><option value="mitige">Mitigé(e)</option><option value="insatisfait">Mécontent(e)</option></select><label>Commentaire (transmis au commerçant)</label><textarea id="avisTexte_'+doc.id+'" rows="3" maxlength="700" placeholder="Votre expérience après cet achat"></textarea><button type="button" onclick="envoyerAvisBoutique(\''+doc.id+'\',\''+String(d.uid||"")+'\')">Envoyer mon retour</button><p id="avisStatut_'+doc.id+'" class="notice"></p></div></details>':"";
+   const gestion=type==="commerce"&&auth.currentUser&&auth.currentUser.uid===d.uid?'<button type="button" onclick="chargerAvisBoutique(\''+doc.id+'\')">Voir les retours des clients</button><div id="avisCommercant_'+doc.id+'"></div>':"";
+   return '<article class="card" style="padding:13px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo de profil" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':'')+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.description)+'</p>'+produits+'<a class="primary" style="display:inline-block;text-align:center;text-decoration:none;margin-top:10px;" href="tel:'+String(d.telephone||"").replace(/[^+0-9]/g,"")+'">📞 Contacter la boutique</a>'+avis+gestion+(type==="commerce"&&d.abonnementFin?'<p class="notice">Abonnement actif jusqu’au '+d.abonnementFin.toDate().toLocaleDateString("fr-FR")+'</p>':'')+'</article>';
+  }).join("");
  }catch(e){console.error(e);zone.innerHTML='<p class="notice">Impossible de charger les résultats. Vérifiez les règles Firestore.</p>';}
+}
+async function envoyerAvisBoutique(boutiqueId,boutiqueUid){
+ const valeur=id=>document.getElementById(id)?.value.trim()||"";
+ const nom=valeur("avisNom_"+boutiqueId),produit=valeur("avisProduit_"+boutiqueId),commentaire=valeur("avisTexte_"+boutiqueId),satisfaction=document.getElementById("avisNote_"+boutiqueId)?.value||"";
+ const statut=document.getElementById("avisStatut_"+boutiqueId);
+ if(!nom||!produit||!commentaire){statut.textContent="Indiquez votre nom, le produit acheté et votre commentaire.";return;}
+ if(!confirm("Confirmez-vous avoir acheté ce produit dans cette boutique ?"))return;
+ statut.textContent="Envoi du retour...";
+ try{
+  await db.collection("avis_boutiques").add({boutiqueId,boutiqueUid,nom,produit,commentaire,satisfaction,achatDeclare:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  statut.textContent="Votre retour a été transmis au commerçant. Merci.";
+  document.getElementById("avisTexte_"+boutiqueId).value="";
+ }catch(e){console.error(e);statut.textContent="Envoi impossible. Les règles Firestore doivent autoriser l'envoi des avis.";}
+}
+async function chargerAvisBoutique(boutiqueId){
+ const zone=document.getElementById("avisCommercant_"+boutiqueId);if(!zone)return;
+ if(!auth.currentUser){zone.textContent="Connectez-vous avec le compte de votre boutique.";return;}
+ zone.textContent="Chargement des retours clients...";
+ try{
+  const snap=await db.collection("avis_boutiques").where("boutiqueId","==",boutiqueId).where("boutiqueUid","==",auth.currentUser.uid).limit(100).get();
+  if(snap.empty){zone.innerHTML='<p class="notice">Aucun retour client pour le moment.</p>';return;}
+  zone.innerHTML=snap.docs.map(doc=>{const a=doc.data();const date=a.createdAt?.toDate?a.createdAt.toDate().toLocaleDateString("fr-FR"):"";return '<article style="padding:10px;margin:8px 0;background:#F7FAF8;border-radius:10px;"><strong>'+echapperTextePublicite(a.satisfaction)+' · '+echapperTextePublicite(a.produit)+'</strong><p>'+echapperTextePublicite(a.commentaire)+'</p><small>'+echapperTextePublicite(a.nom)+' · '+date+'</small></article>';}).join("");
+ }catch(e){console.error(e);zone.textContent="Impossible de charger les avis. Vérifiez les règles Firestore de la collection avis_boutiques.";}
 }
 async function chargerNouveauxServicesAdmin(){
  const zone=document.getElementById("listeNouveauxServicesAdmin");
