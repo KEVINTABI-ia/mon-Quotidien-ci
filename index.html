@@ -1399,14 +1399,14 @@ header{padding:22px 18px 24px!important}
 
 </div>
 
-<div id="gestionPartenaires" style="margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;">
+<div id="gestionPartenaires" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;">
   <h3>👥 Gestion des partenaires</h3>
   <p>Consulte les demandes d'inscription des livreurs et représentants de gare.</p>
   <div id="listePartenairesAdmin">
     <p class="notice">Chargement des dossiers partenaires...</p>
   </div>
 </div>
-<div id="gestionCommandesPartenaires" style="margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;">
+<div id="gestionCommandesPartenaires" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;">
   <h3>📦 Attribution des commandes aux partenaires</h3>
   <p>Attribue les expéditions et livraisons aux partenaires dont le dossier est approuvé, le compte actif et l'essai ou l'abonnement valide.</p>
   <button type="button" class="primary" onclick="chargerCommandesAdmin()">Actualiser les commandes</button>
@@ -2284,8 +2284,8 @@ apiKey:"AIzaSyBJFCyGS-cEaEm0_c_-p0CzunNcME9-u7Q",
 
 firebase.initializeApp(firebaseConfig);
 
-const auth = firebase.auth();
-const db = firebase.firestore();
+var auth = firebase.auth();
+var db = firebase.firestore();
 // Initialisation déplacée après la déclaration du module de visibilité des menus.
 chargerPublicitesAccueil();
 
@@ -2625,7 +2625,8 @@ function ouvrirRubriqueAdmin(id){
 function retourMenuAdmin(){
   RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display="none";});
   const menu=document.getElementById("adminMenuRubriques");if(menu)menu.style.display="grid";
-  document.getElementById("espaceAdmin")?.scrollIntoView({behavior:"smooth",block:"start"});
+  const menu=document.getElementById("adminMenuRubriques");
+  if(menu) menu.scrollIntoView({behavior:"smooth",block:"nearest"});
 }
 function actualiserInterfaceAdmin(autorise){
   const connexion=document.getElementById("adminConnexion"),menu=document.getElementById("adminMenuRubriques"),deconnexion=document.getElementById("adminDeconnexion");
@@ -5216,7 +5217,7 @@ function retourAccueil(){
   const contenu = document.getElementById("vuePleinEcranContenu");
   if(contenu) contenu.replaceChildren();
   document.body.style.overflow = "";
-  window.scrollTo({top: 0, behavior: "smooth"});
+  // Ne pas forcer le retour en haut : conserver la position de la page d'origine.
 }
 
 function ouvrirSection(id){
