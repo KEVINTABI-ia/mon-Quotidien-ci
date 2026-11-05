@@ -2280,6 +2280,9 @@ async function envoyerNouveauService(){
 }
 async function chargerNouveauxServicesPublics(type){
  const zone=document.getElementById("nouveauxServicesPublics");if(!zone)return;
+ if(type==="depannage" && !(await verifierAbonnementAutomobiliste())){
+   zone.innerHTML='<p class="notice">Le dépannage automobile est réservé aux abonnés. <button type="button" onclick="ouvrirEspaceAbonnementAutomobiliste()">Voir l’abonnement annuel à 1 000 FCFA</button></p>';return;
+ }
  zone.innerHTML='<p class="notice">Chargement...</p>';
  try{
   const snap=await db.collection("demandes_nouveaux_services").where("type","==",type).where("statut","==","approuve").limit(60).get();
@@ -4730,7 +4733,7 @@ function ouvrirElementPleinEcran(element, titre){
   contenu.scrollTop = 0;
 }
 
-const SECTIONS_PROTEGEES_AUTOMOBILISTE = new Set(["fenetreAccident","fenetreInfractions","verificationAssuranceAuto","mesDocumentsAutomobiles","nouveauxServices"]);
+const SECTIONS_PROTEGEES_AUTOMOBILISTE = new Set(["fenetreAccident","fenetreInfractions","verificationAssuranceAuto","mesDocumentsAutomobiles"]);
 let abonnementAutomobilisteValide = false;
 let verificationAbonnementAutomobilisteEnCours = false;
 
@@ -4842,9 +4845,13 @@ async function traiterDemandeAbonnementAutomobiliste(id,approuver){
   }catch(e){console.error(e);alert("Traitement impossible : "+e.message);}
 }
 
-function ouvrirSectionPleinEcran(id, titre){
-  if(SECTIONS_PROTEGEES_AUTOMOBILISTE.has(id) && !abonnementAutomobilisteValide){
-    ouvrirEspaceAbonnementAutomobiliste();return;
+async function abrirVerificarAccesoAutomovilista(id){
+  if(!SECTIONS_PROTEGEES_AUTOMOBILISTE.has(id))return true;
+  return await verifierAbonnementAutomobiliste();
+}
+async function ouvrirSectionPleinEcran(id, titre){
+  if(SECTIONS_PROTEGEES_AUTOMOBILISTE.has(id) && !(await abrirVerificarAccesoAutomovilista(id))){
+    await ouvrirEspaceAbonnementAutomobiliste();return;
   }
   const section = document.getElementById(id);
   if(!section) return;
