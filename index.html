@@ -946,6 +946,21 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 @keyframes confirmationEntree{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(prefers-reduced-motion:reduce){.confirmation-overlay,.confirmation-dialog{animation:none}}
 
+
+/* En-tête compact et identité visuelle MON TRANSPORT CI */
+header{padding:22px 18px 24px!important}
+.brand{display:flex!important;align-items:center!important;gap:10px!important;font-size:inherit!important;line-height:1!important}
+.brand-icon{width:40px!important;height:40px!important;flex:0 0 40px!important;border-radius:12px!important;font-size:23px!important}
+.brand-name{display:flex;flex-direction:column;align-items:flex-start;gap:2px;line-height:.98}
+.brand-mon{font-family:"Arial Black","Avenir Next",Arial,sans-serif;font-size:14px;font-weight:900;letter-spacing:3px;line-height:1;color:#F0D89F}
+.brand-title{font-family:"Avenir Next",Arial,sans-serif;font-size:22px;font-weight:900;letter-spacing:.35px;line-height:1;color:#fff}
+.header-badge{margin-top:14px!important}
+.tagline{margin-top:8px!important;line-height:1.5!important}
+.menu-container{top:10px!important;right:10px!important}
+.menu-toggle{font-size:20px!important;padding:7px 11px!important;border-radius:10px!important}
+.menu-dropdown{top:58px!important;right:10px!important}
+@media(max-width:380px){header{padding:19px 14px 21px!important}.brand-title{font-size:19px}.brand-icon{width:37px!important;height:37px!important;flex-basis:37px!important}}
+
 </style>
 </head>
 <body>
@@ -964,7 +979,7 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 <header>
   <div class="brand">
     <span class="brand-icon">🇨🇮</span>
-    <span>MON TRANSPORT CI</span>
+    <span class="brand-name"><span class="brand-mon">MON</span><span class="brand-title">TRANSPORT CI</span></span>
   </div>
 
   <div class="header-badge">VOTRE GUIDE DE MOBILITÉ</div>
