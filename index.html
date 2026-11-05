@@ -6411,7 +6411,14 @@ async function afficherGaresStations(typeTransport){
         return transports.some(t => normaliser(String(t)) === normaliser(typeChoisi));
       });
 
-    const titre = typeChoisi === "Gbaka" ? "Gares de Gbaka" : "Gares de taxi communal";
+    const titresGares = {
+      "Gbaka": "Gares de Gbaka",
+      "Woro-woro": "Gares de Woro-woro",
+      "Taxi communal": "Gares de taxi communal",
+      "SOTRA": "Gares et arrêts SOTRA",
+      "Car interurbain": "Gares de cars interurbains"
+    };
+    const titre = titresGares[typeChoisi] || ("Gares de " + typeChoisi);
     if (!garesType.length) {
       resultat.innerHTML = "<strong>📍 " + titre + "</strong><p class='notice'>Aucune gare n'est encore enregistrée pour ce transport.</p>";
       return;
