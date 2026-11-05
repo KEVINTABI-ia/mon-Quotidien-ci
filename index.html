@@ -2287,7 +2287,7 @@ async function chargerNouveauxServicesPublics(type){
  try{
   const snap=await db.collection("demandes_nouveaux_services").where("type","==",type).where("statut","==","approuve").limit(60).get();
   if(snap.empty){zone.innerHTML='<p class="notice">Aucun résultat publié dans cette rubrique pour le moment.</p>';return;}
-  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();return '<article class="card" style="padding:13px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo de profil" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':'')+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.description)+'</p><a href="tel:'+echapperTextePublicite(d.telephone)+'">Appeler : '+echapperTextePublicite(d.telephone)+'</a></article>';}).join("");
+  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();return '<article class="card" style="padding:13px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo de profil" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':'')+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.description)+'</p><a class="primary" style="display:inline-block;text-align:center;text-decoration:none;margin-top:10px;" href="tel:'+String(d.telephone||"").replace(/[^+0-9]/g,"")+'">📞 Appeler le prestataire</a></article>';}).join("");
  }catch(e){console.error(e);zone.innerHTML='<p class="notice">Impossible de charger les résultats. Vérifiez les règles Firestore.</p>';}
 }
 async function chargerNouveauxServicesAdmin(){
@@ -5019,7 +5019,7 @@ async function publierOffreRamassage(){
   if(!commune||!points||!destination||!jours||!heure||!Number.isInteger(places)||places<1||places>100)return alert("Vérifiez les informations du trajet et les places disponibles.");
   const profil=await db.collection("comptes_ramassage").doc(user.uid).get();if(!profil.exists)return alert("Profil compagnie introuvable.");
   try{
-    await db.collection("offres_ramassage").add({compagnieId:user.uid,compagnieNom:profil.data().nom,communeDepart:commune,points:points,destination:destination,jours:jours,heure:heure,placesDisponibles:places,tarif:tarif?Number(tarif):null,statut:"publiee",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    await db.collection("offres_ramassage").add({compagnieId:user.uid,compagnieNom:profil.data().nom,telephone:profil.data().telephone||"",communeDepart:commune,points:points,destination:destination,jours:jours,heure:heure,placesDisponibles:places,tarif:tarif?Number(tarif):null,statut:"publiee",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     alert("Votre trajet est publié.");
     await chargerOffresRamassage();
   }catch(e){alert("Publication impossible : "+e.message);}
@@ -5036,7 +5036,7 @@ async function chargerOffresRamassage(){
       const title=document.createElement("strong");title.textContent=d.compagnieNom||"Compagnie de cars";
       const detail=document.createElement("p");detail.textContent=(d.communeDepart||"")+" — "+(d.points||"")+" → "+(d.destination||"");
       const meta=document.createElement("p");meta.className="ramassage-muted";meta.textContent=(d.jours||"")+" · Départ "+(d.heure||"")+" · "+(d.placesDisponibles||0)+" place(s) · "+(d.tarif?Number(d.tarif).toLocaleString("fr-FR")+" FCFA":"Tarif à confirmer");
-      item.append(title,detail,meta);zone.appendChild(item);
+      item.append(title,detail,meta);if(d.telephone){const appel=document.createElement("a");appel.href="tel:"+String(d.telephone).replace(/[^+0-9]/g,"");appel.textContent="📞 Appeler la compagnie";appel.className="primary";appel.style.cssText="display:inline-block;text-align:center;text-decoration:none;margin-top:8px;";item.appendChild(appel);}zone.appendChild(item);
     });
   }catch(e){zone.innerHTML="<p class='notice'>Impossible de charger les offres : "+echapperTexteCompagnie(e.message)+"</p>";}
 }
