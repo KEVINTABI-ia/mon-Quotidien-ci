@@ -1050,6 +1050,7 @@ header{padding:22px 18px 24px!important}
 <div class="menu-dropdown" id="menuDropdown">
   <button onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur')">🔐 Espace administrateur</button>
   <button onclick="ouvrirSectionPleinEcran('devenirPartenaire','Devenir partenaire')">🤝 Devenir partenaire</button>
+  <button type="button" onclick="document.getElementById('menuDropdown').style.display='none'; ouvrirFormulairePublicite();">📣 Faire ma pub</button>
 </div>
 </div>
 
@@ -1353,10 +1354,6 @@ header{padding:22px 18px 24px!important}
       <strong>Votre publicité ici</strong>
       <span>Réservez un emplacement et présentez votre activité à nos utilisateurs.</span>
     </div>
-  </div>
-  <div class="publicite-action">
-    
-    <button type="button" class="primary" onclick="ouvrirFormulairePublicite()">📣 FAIRE MA PUB</button>
   </div>
   <form id="formulairePublicite" class="formulaire-publicite" onsubmit="envoyerDemandePublicite(event)" style="display:none">
     <h3>Votre demande de publicité</h3>
