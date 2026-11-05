@@ -1815,6 +1815,10 @@ resultat.style.display = "block";
   <details>
     <summary style="cursor:pointer;background:#087C62;color:#fff;padding:13px 15px;border-radius:12px;font-weight:700;list-style-position:inside;">Consulter les infractions et leurs montants</summary>
     <div style="padding:10px 2px;">
+      <label for="rechercheInfractionsRoutieres" style="display:block;font-weight:700;margin:4px 0 7px;">🔎 Rechercher une infraction ou un montant</label>
+      <input id="rechercheInfractionsRoutieres" type="search" placeholder="Ex. : stationnement, dépassement, 5 000..." oninput="filtrerInfractionsRoutieres()" style="box-sizing:border-box;width:100%;padding:13px;border:1px solid #A9C5B3;border-radius:10px;font-size:16px;margin-bottom:8px;">
+      <p id="resultatRechercheInfractions" aria-live="polite" style="font-size:13px;color:#426354;margin:0 0 12px;">Toutes les infractions sont affichées. Recherchez par nom ou par montant.</p>
+
       <p><strong>Excès de vitesse — barème publié par le Gouvernement en février 2026 :</strong></p>
       <ul style="padding-left:20px;">
         <li>De 1 à 5 km/h au-dessus de la limite : <strong>2 000 FCFA</strong></li>
@@ -7553,6 +7557,33 @@ function ouvrirPortailAssuranceASACI(){
     });
   }else{
     message.textContent="Le portail ASACI est ouvert. Copiez cette immatriculation et collez-la dans son champ de recherche : "+immatriculation;
+  }
+}
+
+
+function filtrerInfractionsRoutieres(){
+  const champ=document.getElementById("rechercheInfractionsRoutieres");
+  const details=champ&&champ.closest("details");
+  const statut=document.getElementById("resultatRechercheInfractions");
+  if(!champ||!details||!statut)return;
+  const normaliser=valeur=>String(valeur||"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase();
+  const terme=normaliser(champ.value).trim();
+  const termeMontant=terme.replace(/[^0-9]/g,"");
+  const elements=details.querySelectorAll("li");
+  let visibles=0;
+  elements.forEach(element=>{
+    const texte=normaliser(element.textContent);
+    const montant=texte.replace(/[^0-9]/g,"");
+    const correspond=!terme||texte.includes(terme)||(termeMontant.length>0&&montant.includes(termeMontant));
+    element.style.display=correspond?"":"none";
+    if(correspond)visibles++;
+  });
+  if(!terme){
+    statut.textContent="Toutes les infractions sont affichées ("+visibles+").";
+  }else if(visibles===0){
+    statut.textContent="Aucune infraction trouvée pour « "+champ.value.trim()+" ».";
+  }else{
+    statut.textContent=visibles+" infraction(s) trouvée(s).";
   }
 }
 
