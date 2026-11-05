@@ -188,7 +188,27 @@ service cloud.firestore {
     }
 
     match /commandes_colis/{commandeId} {
-      allow create: if estConnecte()
+      allow create: if (
+        estConnecte()
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.keys().hasAll(["clientId","service","depart","destination","statut","createdAt","publicVersion","typeCommande","boutiqueId","boutiqueUid","boutiqueNom","montantLivraisonBoutique"])
+        && request.resource.data.keys().hasOnly(["clientId","service","depart","destination","statut","createdAt","publicVersion","typeCommande","boutiqueId","boutiqueUid","boutiqueNom","montantLivraisonBoutique"])
+        && request.resource.data.service == "livraison"
+        && request.resource.data.statut == "commande_boutique"
+        && request.resource.data.publicVersion == false
+        && request.resource.data.typeCommande == "boutique"
+        && request.resource.data.boutiqueUid is string
+        && exists(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId))
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.uid == request.resource.data.boutiqueUid
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.statut == "approuve"
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin is timestamp
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin > request.time
+        && request.resource.data.montantLivraisonBoutique in [1000,1500,2000,2500]
+        && existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details)
+        && getAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details).data.clientId == request.auth.uid
+        && existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix)
+        && getAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix).data.montantLivraison == request.resource.data.montantLivraisonBoutique
+      ) || (estConnecte()
         && request.resource.data.clientId == request.auth.uid
         && request.resource.data.keys().hasAll([
           "clientId", "service", "depart", "destination", "statut", "createdAt", "publicVersion"
@@ -250,6 +270,16 @@ service cloud.firestore {
           && existsAfter(verrouPath(request.auth.uid))
           && getAfter(verrouPath(request.auth.uid)).data.commandeId == commandeId
           && partenaireEnLignePour(resource.data['service'])
+        )
+        || (
+          estConnecte()
+          && resource.data.typeCommande == "boutique"
+          && resource.data.boutiqueUid == request.auth.uid
+          && resource.data.statut == "commande_boutique"
+          && request.resource.data.statut == "en_attente"
+          && request.resource.data.publicVersion == true
+          && request.resource.data.dateMiseEnLivraison == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","publicVersion","dateMiseEnLivraison"])
         )
         || (
           estConnecte()
@@ -353,7 +383,9 @@ service cloud.firestore {
             "adresseLivraison", "trackingNumber", "provenance", "codeColis",
             "operation", "compagnie", "gare", "expeditionPayee", "latitudeRecuperation",
             "longitudeRecuperation", "latitudeLivraison", "longitudeLivraison",
-            "typeColis", "livreurId", "createdAt"
+            "typeColis", "livreurId", "createdAt",
+            "produitCommande", "quantiteCommande", "prixProduit", "commentaireCommande",
+            "boutiqueUid", "telephoneBoutique", "telephoneClient"
           ])
           && request.resource.data.createdAt == request.time
           && (
@@ -381,7 +413,9 @@ service cloud.firestore {
           || (estConnecte()
             && get(commandePath(commandeId)).data.clientId == request.auth.uid)
           || (estConnecte()
-            && get(commandePath(commandeId)).data.partenaireId == request.auth.uid);
+            && get(commandePath(commandeId)).data.partenaireId == request.auth.uid)
+          || (estConnecte()
+            && get(commandePath(commandeId)).data.boutiqueUid == request.auth.uid);
 
         allow update, delete: if estAdmin();
       }
@@ -528,11 +562,15 @@ service cloud.firestore {
       allow create: if estConnecte()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","telephone","description","email","statut","createdAt"])
-        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","telephone","description","email","photoUrl","produits","paiementMoyen","paiementReference","montantAbonnement","dureeAbonnementJours","paiementStatut","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","telephone","description","email","photoUrl","produits","adresseBoutique","tarifLivraisonBoutique","paiementMoyen","paiementReference","montantAbonnement","dureeAbonnementJours","paiementStatut","statut","createdAt"])
         && request.resource.data.type in ["depannage","commerce","annonce"]
         && (request.resource.data.type != "commerce"
           || (request.resource.data.produits is list
             && request.resource.data.produits.size() > 0
+            && request.resource.data.adresseBoutique is string
+            && request.resource.data.adresseBoutique.size() > 4
+            && request.resource.data.adresseBoutique.size() <= 220
+            && request.resource.data.tarifLivraisonBoutique in [1000,1500,2000,2500]
             && request.resource.data.paiementMoyen in ["Wave","Orange Money"]
             && request.resource.data.paiementReference is string
             && request.resource.data.paiementReference.size() >= 4
