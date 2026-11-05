@@ -230,7 +230,7 @@ service cloud.firestore {
           || (request.resource.data.dateHeureSouhaitee is timestamp
             && request.resource.data.dateHeureSouhaitee >= request.time + duration.value(1, "h")
             && request.resource.data.dateHeureSouhaitee <= request.time + duration.value(1, "d"))
-        );
+        ));
 
       allow read: if estAdmin()
         || (estConnecte() && resource.data.clientId == request.auth.uid)
