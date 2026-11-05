@@ -12,6 +12,14 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function estAbonneAutomobiliste() {
+      return estConnecte()
+        && exists(/databases/$(database)/documents/abonnements_automobiliste/$(request.auth.uid))
+        && get(/databases/$(database)/documents/abonnements_automobiliste/$(request.auth.uid)).data.statut == "actif"
+        && get(/databases/$(database)/documents/abonnements_automobiliste/$(request.auth.uid)).data.dateExpiration is timestamp
+        && get(/databases/$(database)/documents/abonnements_automobiliste/$(request.auth.uid)).data.dateExpiration > request.time;
+    }
+
     function partenaire(uid) {
       return get(/databases/$(database)/documents/partenaires/$(uid)).data;
     }
@@ -531,7 +539,7 @@ service cloud.firestore {
         && (!request.resource.data.keys().hasAny(["photoUrl"]) || (request.resource.data.photoUrl is string && request.resource.data.photoUrl.size() <= 400000 && request.resource.data.photoUrl.matches("^data:image/jpeg;base64,.*$")))
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time;
-      allow read: if estAdmin() || resource.data.statut == "approuve";
+      allow read: if estAdmin() || (resource.data.statut == "approuve" && (resource.data.type != "depannage" || estAbonneAutomobiliste()));
       allow update, delete: if estAdmin();
     }
 
