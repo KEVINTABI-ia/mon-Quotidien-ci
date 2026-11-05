@@ -1811,42 +1811,45 @@ resultat.style.display = "block";
   <div aria-label="Service constat" style="border-top:1px solid #E6D7B5;margin-top:16px;padding-top:14px;">
     <h3 style="margin:0 0 8px;color:#8A4B12;">📋 Service constat — Contacts par commune</h3>
     <p style="margin:0 0 10px;">Sélectionnez le numéro de votre commune pour appeler le service constat.</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;">
-      <div style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
+    <label for="rechercheServiceConstat" style="display:block;font-weight:700;margin:10px 0 6px;">🔎 Rechercher une commune</label>
+    <input id="rechercheServiceConstat" type="search" placeholder="Ex. : Yopougon, Cocody, Abobo..." oninput="filtrerServiceConstat()" style="box-sizing:border-box;width:100%;padding:13px;border:1px solid #CDBB98;border-radius:10px;font-size:16px;margin-bottom:8px;">
+    <p id="resultatServiceConstat" aria-live="polite" style="font-size:13px;color:#66543A;margin:0 0 10px;">Les 9 communes sont affichées.</p>
+    <div id="listeCommunesServiceConstat" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;">
+      <div data-commune-constat style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
         <strong style="display:block;margin-bottom:5px;">Abobo</strong>
         <a href="tel:+225151401298" style="display:inline-block;color:#075744;font-weight:700;text-decoration:none;padding:4px 8px 4px 0;">☎ 0151401298</a>
       </div>
-      <div style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
+      <div data-commune-constat style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
         <strong style="display:block;margin-bottom:5px;">Adjamé</strong>
         <a href="tel:+225153627588" style="display:inline-block;color:#075744;font-weight:700;text-decoration:none;padding:4px 8px 4px 0;">☎ 0153627588</a>
       </div>
-      <div style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
+      <div data-commune-constat style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
         <strong style="display:block;margin-bottom:5px;">Attécoubé</strong>
         <a href="tel:+225173910960" style="display:inline-block;color:#075744;font-weight:700;text-decoration:none;padding:4px 8px 4px 0;">☎ 0173910960</a>
         <a href="tel:+225173909145" style="display:inline-block;color:#075744;font-weight:700;text-decoration:none;padding:4px 8px 4px 0;">☎ 0173909145</a>
       </div>
-      <div style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
+      <div data-commune-constat style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
         <strong style="display:block;margin-bottom:5px;">Cocody</strong>
         <a href="tel:+225102420804" style="display:inline-block;color:#075744;font-weight:700;text-decoration:none;padding:4px 8px 4px 0;">☎ 0102420804</a>
         <a href="tel:+225102420817" style="display:inline-block;color:#075744;font-weight:700;text-decoration:none;padding:4px 8px 4px 0;">☎ 0102420817</a>
       </div>
-      <div style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
+      <div data-commune-constat style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
         <strong style="display:block;margin-bottom:5px;">Koumassi</strong>
         <a href="tel:+225152798605" style="display:inline-block;color:#075744;font-weight:700;text-decoration:none;padding:4px 8px 4px 0;">☎ 0152798605</a>
       </div>
-      <div style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
+      <div data-commune-constat style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
         <strong style="display:block;margin-bottom:5px;">Marcory</strong>
         <a href="tel:+225102423157" style="display:inline-block;color:#075744;font-weight:700;text-decoration:none;padding:4px 8px 4px 0;">☎ 0102423157</a>
       </div>
-      <div style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
+      <div data-commune-constat style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
         <strong style="display:block;margin-bottom:5px;">Port-Bouët</strong>
         <a href="tel:+225151401296" style="display:inline-block;color:#075744;font-weight:700;text-decoration:none;padding:4px 8px 4px 0;">☎ 0151401296</a>
       </div>
-      <div style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
+      <div data-commune-constat style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
         <strong style="display:block;margin-bottom:5px;">Treichville</strong>
         <a href="tel:+225102423194" style="display:inline-block;color:#075744;font-weight:700;text-decoration:none;padding:4px 8px 4px 0;">☎ 0102423194</a>
       </div>
-      <div style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
+      <div data-commune-constat style="background:#fff;border:1px solid #E7DCC5;border-radius:10px;padding:10px;">
         <strong style="display:block;margin-bottom:5px;">Yopougon</strong>
         <a href="tel:+225102420873" style="display:inline-block;color:#075744;font-weight:700;text-decoration:none;padding:4px 8px 4px 0;">☎ 0102420873</a>
         <a href="tel:+225140190092" style="display:inline-block;color:#075744;font-weight:700;text-decoration:none;padding:4px 8px 4px 0;">☎ 0140190092</a>
@@ -7632,6 +7635,25 @@ function filtrerInfractionsRoutieres(){
   }else{
     statut.textContent=visibles+" infraction(s) trouvée(s).";
   }
+}
+
+
+function filtrerServiceConstat(){
+  const champ=document.getElementById("rechercheServiceConstat");
+  const liste=document.getElementById("listeCommunesServiceConstat");
+  const statut=document.getElementById("resultatServiceConstat");
+  if(!champ||!liste||!statut)return;
+  const normaliser=texte=>String(texte||"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().trim();
+  const terme=normaliser(champ.value);
+  const communes=liste.querySelectorAll("[data-commune-constat]");
+  let total=0;
+  communes.forEach(carte=>{
+    const commune=normaliser(carte.querySelector("strong")?.textContent);
+    const visible=!terme||commune.includes(terme);
+    carte.style.display=visible?"":"none";
+    if(visible)total++;
+  });
+  statut.textContent=terme?(total?total+" commune(s) trouvée(s).":"Aucune commune trouvée."):"Les "+total+" communes sont affichées.";
 }
 
 </script>
