@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "Mon Transport CI",
+  "short_name": "Transport CI",
+  "description": "Trouvez vos moyens de transport, vos itinéraires, les gares et les marchés en Côte d’Ivoire.",
+  "lang": "fr-CI",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F5F0",
+  "theme_color": "#087C62",
+  "icons": [
+    {
+      "src": "./icon-transport-ci.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
