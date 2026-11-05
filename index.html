@@ -219,7 +219,7 @@ button:active {
   position: fixed;
   top: 15px;
   right: 15px;
-  z-index: 3000;
+  z-index: 6000;
 }
 
 .menu-toggle {
@@ -246,7 +246,7 @@ button:active {
   border-radius: 16px;
   box-shadow: 0 8px 28px #102D3525;
   padding: 8px;
-  z-index: 3001;
+  z-index: 6001;
 }
 
 .menu-dropdown button {
@@ -1134,7 +1134,7 @@ header{padding:22px 18px 24px!important}
 <body>
 
 <div class="menu-container">
-  <button class="menu-toggle" onclick="basculerMenu()" aria-label="Ouvrir le menu">
+  <button class="menu-toggle" type="button" onclick="var m=document.getElementById('menuDropdown'); if(m){m.style.display=m.style.display==='block'?'none':'block';}" aria-label="Ouvrir le menu">
     ☰
   </button>
 
