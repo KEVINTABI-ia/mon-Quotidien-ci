@@ -1190,6 +1190,7 @@ header{padding:22px 18px 24px!important}
   <div id="adminMenuRubriques" style="display:none;"></div>
   <button id="adminDeconnexion" type="button" onclick="deconnexionAdmin()" style="display:none;width:100%;margin:12px 0;">Se déconnecter</button>
 <div id="gestionAbonnementsRamassage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🚌 Validation des compagnies de ramassage</h3><p class="notice">Vérifie les dossiers et les paiements avant d’approuver une compagnie ou d’activer son forfait mensuel.</p><div id="listeCompagniesRamassageAdmin">Chargement...</div></div>
+<div id="gestionAbonnementsAutomobiliste" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🚘 Validation des abonnements automobiles</h3><p class="notice">Vérifie le moyen de paiement et la référence avant d'activer 12 mois d'accès. Ne valide qu'après réception effective des 1 000 FCFA.</p><div id="listeAbonnementsAutomobilisteAdmin">Chargement...</div></div>
 <div id="gestionNouveauxServices" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🧰 Validation des nouveaux services</h3><p class="notice">Vérifie les coordonnées et le contenu avant toute publication.</p><div id="listeNouveauxServicesAdmin">Chargement...</div></div>
 <div id="gestionGares" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
   <h3>📍 Gestion des gares et terminus</h3>
@@ -2044,6 +2045,43 @@ resultat.style.display = "block";
     <button type="button" onclick="ouvrirSectionPleinEcran('nouveauxServices','Dépannage automobile');choisirNouveauService('depannage')" style="min-height:72px;background:#FFF5E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">🔧 Service de dépannage</button>
     <button type="button" onclick="ouvrirSectionPleinEcran('mesDocumentsAutomobiles','Mes documents automobiles');chargerDocumentsAutomobiles()" style="min-height:72px;grid-column:1/-1;background:#EEF3FF;color:#234A8A;border:1px solid #CFDAF5;text-align:left;">📁 Mes documents automobiles</button>
   </div>
+
+</section>
+
+<section id="abonnementAutomobiliste" class="card" style="display:none;padding:18px;border:2px solid #D5A84B;background:#FFFCF4;">
+  <h2>🔐 Abonnement à l’espace de l’automobiliste</h2>
+  <p>Les services de cet espace sont réservés aux abonnés actifs.</p>
+  <div style="background:#F3F7F4;padding:14px;border-radius:12px;margin:12px 0;">
+    <strong>Abonnement annuel : 1 000 FCFA</strong>
+    <p style="margin:8px 0 4px;">Wave : <strong>0757522319</strong></p>
+    <p style="margin:4px 0;">Orange Money : <strong>0757522319</strong></p>
+    <p style="margin:4px 0;">Titulaire : <strong>TA BI SERGE KEVIN</strong></p>
+    <p style="font-size:13px;margin-bottom:0;">Effectuez le transfert de 1 000 FCFA, puis indiquez la référence de la transaction. L'accès sera activé après vérification manuelle.</p>
+  </div>
+  <div id="connexionAbonnementAuto" style="padding:12px;border:1px solid #E2E9E4;border-radius:12px;">
+    <h3>Créer un compte ou se connecter</h3>
+    <label for="emailAbonnementAuto">Adresse e-mail</label>
+    <input id="emailAbonnementAuto" type="email" autocomplete="email" placeholder="Votre adresse e-mail" style="width:100%;padding:12px;margin:5px 0 10px;">
+    <label for="motPasseAbonnementAuto">Mot de passe</label>
+    <input id="motPasseAbonnementAuto" type="password" autocomplete="current-password" placeholder="6 caractères minimum" style="width:100%;padding:12px;margin:5px 0 10px;">
+    <button type="button" onclick="connecterCompteAbonnementAuto()" style="width:100%;margin:4px 0;">Se connecter</button>
+    <button type="button" onclick="creerCompteAbonnementAuto()" style="width:100%;margin:4px 0;">Créer mon compte</button>
+    <p class="notice">Si vous avez déjà un compte Mon Transport CI, utilisez la même adresse e-mail.</p>
+  </div>
+  <div id="formulaireDemandeAbonnementAuto" style="display:none;padding:12px;border:1px solid #E2E9E4;border-radius:12px;margin-top:12px;">
+    <p id="etatAbonnementAuto" class="notice" aria-live="polite">Vérification de votre abonnement...</p>
+    <label for="operateurAbonnementAuto">Moyen de paiement</label>
+    <select id="operateurAbonnementAuto" style="width:100%;padding:12px;margin:5px 0 10px;">
+      <option value="Wave">Wave</option><option value="Orange Money">Orange Money</option>
+    </select>
+    <label for="referenceAbonnementAuto">Référence de la transaction</label>
+    <input id="referenceAbonnementAuto" type="text" maxlength="80" placeholder="Référence affichée après le transfert" style="width:100%;padding:12px;margin:5px 0 10px;">
+    <label for="nomPayeurAbonnementAuto">Nom du payeur (facultatif)</label>
+    <input id="nomPayeurAbonnementAuto" type="text" maxlength="80" placeholder="Nom indiqué lors du paiement" style="width:100%;padding:12px;margin:5px 0 10px;">
+    <button type="button" onclick="envoyerDemandeAbonnementAuto()" style="width:100%;background:#087C62;color:white;">Envoyer ma demande de validation</button>
+    <button type="button" onclick="deconnecterCompteAbonnementAuto()" style="width:100%;margin-top:8px;">Se déconnecter</button>
+  </div>
+  <p class="notice" style="margin-top:12px;">Ne transmettez jamais votre code secret Mobile Money. La validation peut nécessiter un délai de vérification.</p>
 </section>
 
 <section id="mesDocumentsAutomobiles" class="card" style="display:none;">
@@ -2275,6 +2313,7 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionPartenaires",titre:"👥 Gestion des partenaires"},
   {id:"gestionCommandesPartenaires",titre:"📦 Attribution des commandes aux partenaires"},
   {id:"gestionPublicites",titre:"📣 Gestion des publicités"},
+  {id:"gestionAbonnementsAutomobiliste",titre:"🚘 Abonnements de l’automobiliste"},
   {id:"gestionNouveauxServices",titre:"🧰 Validation dépannages, commerces et annonces"}
 ];
 function afficherMenuAdmin(){
@@ -2291,6 +2330,7 @@ function ouvrirRubriqueAdmin(id){
   const cible=document.getElementById(id);
   if(!cible)return;
   if(id==="gestionNouveauxServices") chargerNouveauxServicesAdmin();
+  if(id==="gestionAbonnementsAutomobiliste") chargerDemandesAbonnementAutomobilisteAdmin();
   let retour=cible.querySelector(":scope > .admin-retour-menu");
   if(!retour){retour=document.createElement("button");retour.type="button";retour.className="admin-retour-menu";retour.textContent="← Retour au menu administrateur";retour.onclick=retourMenuAdmin;cible.insertBefore(retour,cible.firstChild);}
   cible.scrollIntoView({behavior:"smooth",block:"start"});
@@ -2360,6 +2400,7 @@ const routesInitiales = JSON.parse(
 );
 
 auth.onAuthStateChanged((user) => {
+  abonnementAutomobilisteValide=false;
   const autorise=!!user&&user.uid===ADMIN_UID;
   actualiserInterfaceAdmin(autorise);
   if(autorise){
@@ -4689,7 +4730,122 @@ function ouvrirElementPleinEcran(element, titre){
   contenu.scrollTop = 0;
 }
 
+const SECTIONS_PROTEGEES_AUTOMOBILISTE = new Set(["fenetreAccident","fenetreInfractions","verificationAssuranceAuto","mesDocumentsAutomobiles","nouveauxServices"]);
+let abonnementAutomobilisteValide = false;
+let verificationAbonnementAutomobilisteEnCours = false;
+
+async function verifierAbonnementAutomobiliste(){
+  const user=auth.currentUser;
+  if(!user){abonnementAutomobilisteValide=false;return false;}
+  try{
+    const snap=await db.collection("abonnements_automobiliste").doc(user.uid).get();
+    const d=snap.exists?snap.data():null;
+    abonnementAutomobilisteValide=!!d && d.statut==="actif" && d.dateExpiration && d.dateExpiration.toDate && d.dateExpiration.toDate()>new Date();
+    return abonnementAutomobilisteValide;
+  }catch(e){console.error("Vérification abonnement automobile:",e);abonnementAutomobilisteValide=false;return false;}
+}
+
+async function ouvrirEspaceAbonnementAutomobiliste(){
+  ouvrirElementPleinEcran(document.getElementById("abonnementAutomobiliste"),"Abonnement automobile");
+  const form=document.getElementById("formulaireDemandeAbonnementAuto");
+  const connexion=document.getElementById("connexionAbonnementAuto");
+  if(!auth.currentUser){if(form)form.style.display="none";if(connexion)connexion.style.display="block";return;}
+  if(connexion)connexion.style.display="none";
+  if(form)form.style.display="block";
+  await actualiserEtatAbonnementAutomobiliste();
+}
+
+async function actualiserEtatAbonnementAutomobiliste(){
+  const zone=document.getElementById("etatAbonnementAuto");if(!zone)return;
+  if(!auth.currentUser){zone.textContent="Connectez-vous ou créez un compte pour demander l'activation.";return;}
+  zone.textContent="Vérification de votre abonnement...";
+  const actif=await verifierAbonnementAutomobiliste();
+  if(actif){zone.textContent="Votre abonnement est actif jusqu'au "+(await db.collection("abonnements_automobiliste").doc(auth.currentUser.uid).get()).data().dateExpiration.toDate().toLocaleDateString("fr-FR")+". Vous pouvez accéder aux services.";return;}
+  const demandes=await db.collection("demandes_abonnement_automobiliste").where("uid","==",auth.currentUser.uid).orderBy("createdAt","desc").limit(1).get();
+  if(!demandes.empty && demandes.docs[0].data().statut==="en_attente"){
+    zone.textContent="Votre demande est en attente de vérification. Vous serez autorisé après validation par l'administrateur.";
+    document.getElementById("operateurAbonnementAuto").disabled=true;
+    document.getElementById("referenceAbonnementAuto").disabled=true;
+    document.getElementById("nomPayeurAbonnementAuto").disabled=true;
+    return;
+  }
+  zone.textContent="Aucun abonnement actif. Après votre transfert de 1 000 FCFA, renseignez la référence ci-dessous.";
+  document.getElementById("operateurAbonnementAuto").disabled=false;
+  document.getElementById("referenceAbonnementAuto").disabled=false;
+  document.getElementById("nomPayeurAbonnementAuto").disabled=false;
+}
+
+async function connecterCompteAbonnementAuto(){
+  const email=document.getElementById("emailAbonnementAuto").value.trim(),mot=document.getElementById("motPasseAbonnementAuto").value;
+  if(!email||!mot)return alert("Renseignez votre e-mail et votre mot de passe.");
+  try{await auth.signInWithEmailAndPassword(email,mot);document.getElementById("connexionAbonnementAuto").style.display="none";document.getElementById("formulaireDemandeAbonnementAuto").style.display="block";await actualiserEtatAbonnementAutomobiliste();}
+  catch(e){alert("Connexion impossible : "+e.message);}
+}
+async function creerCompteAbonnementAuto(){
+  const email=document.getElementById("emailAbonnementAuto").value.trim(),mot=document.getElementById("motPasseAbonnementAuto").value;
+  if(!email||mot.length<6)return alert("Renseignez un e-mail valide et un mot de passe d'au moins 6 caractères.");
+  try{await auth.createUserWithEmailAndPassword(email,mot);document.getElementById("connexionAbonnementAuto").style.display="none";document.getElementById("formulaireDemandeAbonnementAuto").style.display="block";await actualiserEtatAbonnementAutomobiliste();}
+  catch(e){alert("Création du compte impossible : "+e.message);}
+}
+async function deconnecterCompteAbonnementAuto(){await auth.signOut();abonnementAutomobilisteValide=false;document.getElementById("formulaireDemandeAbonnementAuto").style.display="none";document.getElementById("connexionAbonnementAuto").style.display="block";}
+
+async function envoyerDemandeAbonnementAuto(){
+  const user=auth.currentUser;if(!user)return alert("Connectez-vous d'abord.");
+  const reference=document.getElementById("referenceAbonnementAuto").value.trim();
+  if(reference.length<4)return alert("Saisissez la référence de votre transaction.");
+  const operateur=document.getElementById("operateurAbonnementAuto").value;
+  const nomPayeur=document.getElementById("nomPayeurAbonnementAuto").value.trim();
+  try{
+    await db.collection("demandes_abonnement_automobiliste").add({
+      uid:user.uid,email:user.email||"",operateur,referencePaiement:reference,nomPayeur,
+      montantFCFA:1000,dureeMois:12,statut:"en_attente",
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById("referenceAbonnementAuto").value="";
+    alert("Demande envoyée. L'accès sera activé après vérification du paiement.");
+    await actualiserEtatAbonnementAutomobiliste();
+  }catch(e){console.error(e);alert("Envoi impossible. Vérifiez votre connexion et réessayez.");}
+}
+
+async function chargerDemandesAbonnementAutomobilisteAdmin(){
+  const zone=document.getElementById("listeAbonnementsAutomobilisteAdmin");
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){if(zone)zone.textContent="Accès administrateur requis.";return;}
+  zone.innerHTML="<p class='notice'>Chargement des demandes...</p>";
+  try{
+    const snap=await db.collection("demandes_abonnement_automobiliste").orderBy("createdAt","desc").limit(200).get();
+    if(snap.empty){zone.innerHTML="<p class='notice'>Aucune demande reçue.</p>";return;}
+    zone.innerHTML=snap.docs.map(doc=>{
+      const d=doc.data(),date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date non disponible";
+      const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterDemandeAbonnementAutomobiliste(\''+doc.id+'\',true)">Valider 12 mois</button><button type="button" onclick="traiterDemandeAbonnementAutomobiliste(\''+doc.id+'\',false)">Refuser</button>':'<p class="notice">Demande '+echapperTextePublicite(d.statut)+'</p>';
+      return '<article class="card" style="padding:12px;margin:10px 0;"><strong>'+echapperTextePublicite(d.email)+'</strong><p>'+echapperTextePublicite(d.operateur)+' · 1 000 FCFA</p><p>Référence : <strong>'+echapperTextePublicite(d.referencePaiement)+'</strong></p><p>Payeur : '+echapperTextePublicite(d.nomPayeur||"Non indiqué")+'</p><p>'+date+'</p>'+actions+'</article>';
+    }).join("");
+  }catch(e){console.error(e);zone.innerHTML="<p class='notice'>Erreur de chargement. Vérifiez les règles Firestore.</p>";}
+}
+async function traiterDemandeAbonnementAutomobiliste(id,approuver){
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+  try{
+    const ref=db.collection("demandes_abonnement_automobiliste").doc(id),snap=await ref.get();
+    if(!snap.exists||snap.data().statut!=="en_attente")return alert("Cette demande n'est plus en attente.");
+    const d=snap.data(),batch=db.batch();
+    if(approuver){
+      const debut=new Date(),fin=new Date(debut.getTime()+365*24*60*60*1000);
+      batch.set(db.collection("abonnements_automobiliste").doc(d.uid),{
+        uid:d.uid,statut:"actif",montantFCFA:1000,dureeMois:12,
+        dateActivation:firebase.firestore.Timestamp.fromDate(debut),
+        dateExpiration:firebase.firestore.Timestamp.fromDate(fin),
+        demandeId:id,activePar:auth.currentUser.uid
+      });
+      batch.update(ref,{statut:"approuve",traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});
+    }else batch.update(ref,{statut:"refuse",traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});
+    await batch.commit();await chargerDemandesAbonnementAutomobilisteAdmin();
+    alert(approuver?"Abonnement activé pour 12 mois.":"Demande refusée.");
+  }catch(e){console.error(e);alert("Traitement impossible : "+e.message);}
+}
+
 function ouvrirSectionPleinEcran(id, titre){
+  if(SECTIONS_PROTEGEES_AUTOMOBILISTE.has(id) && !abonnementAutomobilisteValide){
+    ouvrirEspaceAbonnementAutomobiliste();return;
+  }
   const section = document.getElementById(id);
   if(!section) return;
   document.getElementById("menuDropdown").style.display = "none";
