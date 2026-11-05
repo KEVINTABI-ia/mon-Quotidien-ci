@@ -4983,6 +4983,7 @@ function ouvrirElementPleinEcran(element, titre){
   element.style.display = "block";
 
   const overlay = document.getElementById("vuePleinEcran");
+  overlay.style.display = "flex";
   overlay.classList.add("actif");
   overlay.setAttribute("aria-hidden","false");
   document.body.style.overflow = "hidden";
@@ -5145,12 +5146,14 @@ function ouvrirResultatPleinEcran(titre){
 }
 
 function fermerVuePleinEcran(){
-  if(!vuePleinEcranActive) return;
-  const {element, placeholder, displayInitial} = vuePleinEcranActive;
-  placeholder.parentNode.insertBefore(element, placeholder);
-  placeholder.remove();
-  element.style.display = displayInitial;
+  const active = vuePleinEcranActive;
   vuePleinEcranActive = null;
+
+  if(active && active.element && active.placeholder && active.placeholder.parentNode){
+    active.placeholder.parentNode.insertBefore(active.element, active.placeholder);
+    active.placeholder.remove();
+    active.element.style.display = active.displayInitial;
+  }
 
   const overlay = document.getElementById("vuePleinEcran");
   if(overlay){
@@ -5187,10 +5190,15 @@ function masquerParcours(){
 }
 
 function retourAccueil(){
-  document.getElementById("menuDropdown").style.display = "none";
+  // Fermer d'abord l'écran plein écran pour libérer l'accueil et les autres menus.
+  fermerVuePleinEcran();
+
+  const menu = document.getElementById("menuDropdown");
+  if(menu) menu.style.display = "none";
   masquerParcours();
   document.getElementById("zoneEspaceClient")?.replaceChildren();
   document.getElementById("connexionPartenaire")?.remove();
+  document.body.style.overflow = "";
   window.scrollTo({top: 0, behavior: "smooth"});
 }
 
