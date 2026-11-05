@@ -5148,6 +5148,7 @@ async function ouvrirSectionPleinEcran(id, titre){
 }
 
 function ouvrirResultatPleinEcran(titre){
+  window.generationAffichageResultat = (window.generationAffichageResultat || 0) + 1;
   const resultat = document.getElementById("resultat");
   if(!resultat) return;
   ouvrirElementPleinEcran(resultat, titre);
@@ -6669,6 +6670,7 @@ const LIGNES_SOTRA_ABIDJAN = `02|Gare Marcory|Terminus Cité Fairmont, Attécoub
 });
 
 async function afficherReseauSotra(){
+  const generationAffichage = window.generationAffichageResultat || 0;
   const resultat = document.getElementById("resultat");
   resultat.style.display = "block";
   resultat.innerHTML = "<p>Chargement du réseau SOTRA...</p>";
@@ -6679,6 +6681,7 @@ async function afficherReseauSotra(){
   } catch (erreur) {
     console.warn("Lignes administrateur non chargées :",erreur);
   }
+  if (generationAffichage !== (window.generationAffichageResultat || 0)) return;
   const numerosAdmin = new Set(lignesAdmin.map(l => String(l.statut || "").replace(/^Ligne\\s*/i,"").trim()));
   const lignes = LIGNES_SOTRA_ABIDJAN.filter(l => !numerosAdmin.has(l.numero))
     .map(l => ({...l,statut:"Ligne " + l.numero})).concat(lignesAdmin);
