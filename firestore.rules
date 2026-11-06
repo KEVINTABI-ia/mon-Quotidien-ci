@@ -704,7 +704,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(["uid","pseudonyme","gratuitRestant","bonusRestant","resetAt","createdAt"])
         && request.resource.data.pseudonyme is string && request.resource.data.pseudonyme.size() >= 2 && request.resource.data.pseudonyme.size() <= 24
         && request.resource.data.gratuitRestant == 15 && request.resource.data.bonusRestant == 0
-        && request.resource.data.resetAt is timestamp && request.resource.data.createdAt == request.time;
+        && (request.resource.data.resetAt == null || request.resource.data.resetAt is timestamp) && request.resource.data.createdAt == request.time;
       allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
       allow update: if estAdmin() || (estConnecte() && request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["gratuitRestant","bonusRestant","resetAt","lastMessageId","lastSentAt"])
@@ -712,8 +712,13 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/gbairai_messages/$(request.resource.data.lastMessageId)).data.senderUid == uid
         && ((request.resource.data.gratuitRestant == resource.data.gratuitRestant - 1 && request.resource.data.bonusRestant == resource.data.bonusRestant)
           || (request.resource.data.bonusRestant == resource.data.bonusRestant - 1 && request.resource.data.gratuitRestant == resource.data.gratuitRestant)
-          || (resource.data.resetAt <= request.time && request.resource.data.gratuitRestant in [14,15]
-            && request.resource.data.bonusRestant in [resource.data.bonusRestant,resource.data.bonusRestant - 1] && request.resource.data.resetAt > request.time)));
+          || (resource.data.resetAt is timestamp && resource.data.resetAt <= request.time
+            && request.resource.data.gratuitRestant == 14
+            && request.resource.data.resetAt == null
+            && request.resource.data.bonusRestant in [resource.data.bonusRestant,resource.data.bonusRestant - 1])
+          || (resource.data.gratuitRestant == 1 && request.resource.data.gratuitRestant == 0
+            && request.resource.data.bonusRestant == resource.data.bonusRestant
+            && request.resource.data.resetAt is timestamp && request.resource.data.resetAt > request.time)));
       allow delete: if estAdmin();
     }
     match /gbairai_messages/{id} {
