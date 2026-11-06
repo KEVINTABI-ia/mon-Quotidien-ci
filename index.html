@@ -3509,16 +3509,47 @@ function tarifsConfirmesPourGare(gare,destination,transport){
     (transport==="Tous" || normaliserRechercheGare(d.transport)===normaliserRechercheGare(transport))
   );
 }
+let dernierResultatGaresHTML = "";
+
+function afficherFicheDetailleeGare(id){
+  const zone=document.getElementById("resultatRechercheGares");
+  const gare=garesFirestore.find(g=>g.firestoreId===id);
+  if(!gare){zone.textContent="Cette gare n’est plus disponible dans le répertoire.";return;}
+  const destinations=destinationsGareNormalisees(gare);
+  const lignes=destinations.map(d=>{
+    const nom=echapperTextePublicite(d.nom||"Destination non précisée");
+    const transport=echapperTextePublicite(d.transport||"Moyen de transport non précisé");
+    const prix=Number(d.prix);
+    const tarif=Number.isFinite(prix)&&prix>0
+      ? '<span class="price">'+prix.toLocaleString("fr-FR")+' FCFA</span>'
+      : '<span class="notice">Tarif non confirmé</span>';
+    return '<article class="stop"><strong>'+nom+'</strong><br>Transport : '+transport+'<br>Tarif : '+tarif+'</article>';
+  }).join("");
+  const transports=[...new Set(destinations.map(d=>String(d.transport||"").trim()).filter(Boolean))];
+  zone.innerHTML=
+    '<button type="button" onclick="document.getElementById(\'resultatRechercheGares\').innerHTML=dernierResultatGaresHTML" style="background:#F0F7F1;color:#17663D;margin-bottom:12px">← Retour aux résultats</button>'+
+    '<article class="card" style="padding:18px">'+
+    '<h3 style="margin-top:0">📍 '+echapperTextePublicite(gare.nom)+'</h3>'+
+    '<p><strong>Commune :</strong> '+echapperTextePublicite(gare.commune||"Non précisée")+'</p>'+
+    (gare.quartier?'<p><strong>Quartier :</strong> '+echapperTextePublicite(gare.quartier)+'</p>':'')+
+    (gare.description?'<p>'+echapperTextePublicite(gare.description)+'</p>':'')+
+    '<p><strong>Moyens de transport :</strong> '+(transports.length?transports.map(echapperTextePublicite).join(", "):"Non renseignés")+'</p>'+
+    '<h3>Destinations et tarifs</h3>'+
+    (lignes||'<p class="notice">Aucune destination n’est encore enregistrée pour cette gare.</p>')+
+    '<p class="notice">Les tarifs affichés sont ceux enregistrés dans Mon Transport CI. Confirmez le prix auprès du transporteur avant le départ.</p></article>';
+}
+
 function afficherResultatsGares(titre,gares,destination,transport){
   const zone=document.getElementById("resultatRechercheGares");
   zone.style.display="block";
   if(!gares.length){zone.textContent="Aucune gare avec un tarif confirmé n’a été trouvée pour cette recherche.";return;}
   const cartes=gares.map(g=>{
     const tarifs=tarifsConfirmesPourGare(g,destination,transport);
-    const lignes=tarifs.map(t=>"<p>🚌 "+t.transport+" : <strong>"+Number(t.prix).toLocaleString("fr-FR")+" FCFA</strong></p>").join("");
-    return "<article class='stop'><strong>"+g.nom+"</strong><br>Commune : "+(g.commune||"Non précisée")+"<br>Destination : "+destination+"<br>"+lignes+"</article>";
+    const lignes=tarifs.map(t=>"<p>🚌 "+echapperTextePublicite(t.transport)+" : <strong>"+Number(t.prix).toLocaleString("fr-FR")+" FCFA</strong></p>").join("");
+    return "<article class='stop'><strong>"+echapperTextePublicite(g.nom)+"</strong><br>Commune : "+echapperTextePublicite(g.commune||"Non précisée")+"<br>Destination : "+echapperTextePublicite(destination)+"<br>"+lignes+"<button type='button' onclick='afficherFicheDetailleeGare("+JSON.stringify(g.firestoreId)+")'>Voir la fiche détaillée</button></article>";
   }).join("");
-  zone.innerHTML="<strong>"+titre+"</strong>"+cartes+"<p class='notice'>Seuls les tarifs enregistrés dans la base des gares sont affichés. Confirmez le tarif auprès du transporteur avant le départ.</p>";
+  dernierResultatGaresHTML="<strong>"+echapperTextePublicite(titre)+"</strong>"+cartes+"<p class='notice'>Seuls les tarifs enregistrés dans la base des gares sont affichés. Confirmez le tarif auprès du transporteur avant le départ.</p>";
+  zone.innerHTML=dernierResultatGaresHTML;
 }
 function rechercherGaresParDestination(){
   const commune=document.getElementById("communeDepartGare").value.trim();
@@ -3553,7 +3584,7 @@ function verifierDestinationGare(){
   if(alternatives.length){
     const html=alternatives.map(g=>{
       const lignes=tarifsConfirmesPourGare(g,destination,transport).map(t=>"<p>"+t.transport+" : <strong>"+Number(t.prix).toLocaleString("fr-FR")+" FCFA</strong></p>").join("");
-      return "<article class='stop'><strong>"+g.nom+"</strong><br>"+(g.quartier||g.commune||"") + lignes+"</article>";
+      return "<article class='stop'><strong>"+echapperTextePublicite(g.nom)+"</strong><br>"+echapperTextePublicite(g.quartier||g.commune||"") + lignes+"<button type='button' onclick='afficherFicheDetailleeGare("+JSON.stringify(g.firestoreId)+")'>Voir la fiche détaillée</button></article>";
     }).join("");
     zone.innerHTML+="<h3>Autres gares de "+(gare.commune||"la commune")+" desservant "+destination+"</h3>"+html;
   }else{
