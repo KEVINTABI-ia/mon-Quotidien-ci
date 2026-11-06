@@ -586,8 +586,8 @@ service cloud.firestore {
             && request.resource.data.paiementReference is string
             && request.resource.data.paiementReference.size() >= 4
             && request.resource.data.paiementReference.size() <= 80
-            && request.resource.data.montantAbonnement == 2500
-            && request.resource.data.dureeAbonnementJours == 30
+            && ((request.resource.data.montantAbonnement == 4000 && request.resource.data.dureeAbonnementJours == 15)
+              || (request.resource.data.montantAbonnement == 7000 && request.resource.data.dureeAbonnementJours == 30))
             && request.resource.data.paiementStatut == "a_verifier"))
         && request.resource.data.titre is string && request.resource.data.titre.size() > 0 && request.resource.data.titre.size() <= 100
         && request.resource.data.categorie is string && request.resource.data.categorie.size() <= 80
@@ -683,9 +683,11 @@ service cloud.firestore {
     }
     match /annonces_offres/{id} {
       allow create: if estConnecte() && request.resource.data.uid == request.auth.uid
-        && request.resource.data.keys().hasAll(["uid","annonceurNom","typeAnnonce","titre","categorie","commune","telephone","description","paiementMoyen","referencePaiement","montantFCFA","paiementStatut","statut","createdAt"])
-        && request.resource.data.keys().hasOnly(["uid","annonceurNom","typeAnnonce","titre","categorie","commune","telephone","description","paiementMoyen","referencePaiement","montantFCFA","paiementStatut","statut","createdAt"])
-        && request.resource.data.montantFCFA == 500 && request.resource.data.paiementMoyen in ["Wave","Orange Money"]
+        && request.resource.data.keys().hasAll(["uid","annonceurNom","typeAnnonce","titre","categorie","commune","telephone","description","paiementMoyen","referencePaiement","montantFCFA","dureeJours","paiementStatut","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","annonceurNom","typeAnnonce","titre","categorie","commune","telephone","description","paiementMoyen","referencePaiement","montantFCFA","dureeJours","paiementStatut","statut","createdAt"])
+        && ((request.resource.data.montantFCFA == 2000 && request.resource.data.dureeJours == 15)
+          || (request.resource.data.montantFCFA == 3500 && request.resource.data.dureeJours == 30))
+        && request.resource.data.paiementMoyen in ["Wave","Orange Money"]
         && request.resource.data.referencePaiement is string && request.resource.data.referencePaiement.size() >= 4
         && request.resource.data.statut == "paiement_en_attente" && request.resource.data.paiementStatut == "a_verifier"
         && request.resource.data.createdAt == request.time;
