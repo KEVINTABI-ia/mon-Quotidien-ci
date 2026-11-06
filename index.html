@@ -1858,8 +1858,8 @@ function chargerPublicitesAccueil() {
   <label for="nomGareRecherche">Nom de la gare</label>
   <input id="nomGareRecherche" list="listeNomsGares" placeholder="Saisissez le nom de la gare" oninput="synchroniserSelectionGare()">
   <datalist id="listeNomsGares"></datalist>
-  <label for="selectionNomGareRecherche">Ou choisissez une gare dans la liste</label>
-  <select id="selectionNomGareRecherche" onchange="choisirGareDansListe()">
+  <label for="selectionNomGareRecherche">Ou choisissez une gare dans la liste déroulante</label>
+  <select id="selectionNomGareRecherche" onchange="choisirGareDansListe()" style="display:block;width:100%;min-height:52px;margin-bottom:8px;background:#fff;border:2px solid #16834A;border-radius:13px;padding:12px;font-size:16px;">
     <option value="">Sélectionner une gare</option>
   </select>
   <label for="transportGareConnue">Moyen de transport</label>
