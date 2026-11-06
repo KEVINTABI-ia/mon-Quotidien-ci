@@ -3566,24 +3566,10 @@ function afficherFicheDetailleeGare(id){
 function ouvrirItineraireVersGare(idGare){
   const gare=garesFirestore.find(g=>g.firestoreId===idGare);
   if(!gare){alert("Cette gare n’est plus disponible dans le répertoire.");return;}
-  if(!navigator.geolocation){
-    alert("La localisation n’est pas disponible sur cet appareil. Activez la localisation ou ouvrez la carte pour rechercher la gare manuellement.");
-    return;
-  }
-  // Ouvrir une fenêtre immédiatement pour éviter le blocage des fenêtres surgissantes sur iPhone.
-  const carte=window.open("about:blank","_blank");
-  navigator.geolocation.getCurrentPosition(position=>{
-    const origine=position.coords.latitude+","+position.coords.longitude;
-    const adresse=[gare.nom,gare.quartier,gare.commune,"Abidjan","Côte d’Ivoire"].filter(Boolean).join(", ");
-    const url="https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(origine)+"&destination="+encodeURIComponent(adresse)+"&travelmode=driving";
-    if(carte){carte.location.href=url;}else{window.location.href=url;}
-  },erreur=>{
-    if(carte)carte.close();
-    const message=erreur.code===1
-      ?"Autorisez Mon Transport CI à accéder à votre position pour afficher l’itinéraire."
-      :"Votre position n’a pas pu être déterminée. Vérifiez le GPS et réessayez.";
-    alert(message);
-  },{enableHighAccuracy:true,timeout:15000,maximumAge:30000});
+  // Sans origine imposée : Google Maps prend automatiquement la position actuelle du téléphone comme départ.
+  const adresse=[gare.nom,gare.quartier,gare.commune,"Abidjan","Côte d’Ivoire"].filter(Boolean).join(", ");
+  const url="https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(adresse)+"&travelmode=driving";
+  window.open(url,"_blank");
 }
 function afficherResultatsGares(titre,gares,destination,transport){
   const zone=document.getElementById("resultatRechercheGares");
