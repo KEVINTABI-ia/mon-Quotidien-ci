@@ -1856,8 +1856,12 @@ function chargerPublicitesAccueil() {
 </div>
 <div id="rechercheParGare" style="display:none">
   <label for="nomGareRecherche">Nom de la gare</label>
-  <input id="nomGareRecherche" list="listeNomsGares" placeholder="Ex. : Gare de Siporex">
+  <input id="nomGareRecherche" list="listeNomsGares" placeholder="Saisissez le nom de la gare" oninput="synchroniserSelectionGare()">
   <datalist id="listeNomsGares"></datalist>
+  <label for="selectionNomGareRecherche">Ou choisissez une gare dans la liste</label>
+  <select id="selectionNomGareRecherche" onchange="choisirGareDansListe()">
+    <option value="">Sélectionner une gare</option>
+  </select>
   <label for="transportGareConnue">Moyen de transport</label>
   <select id="transportGareConnue">
     <option value="Tous">Tous les transports</option><option>Gbaka</option><option>Woro-woro</option><option>Taxi communal</option><option>SOTRA</option><option>Car interurbain</option>
@@ -3500,7 +3504,27 @@ function actualiserListesRechercheGares(){
   const remplir=(id,valeurs)=>{const el=document.getElementById(id);if(el)el.innerHTML=valeurs.map(v=>"<option value=\""+String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")+ "\"></option>").join("");};
   remplir("listeCommunesGares",communes);
   remplir("listeDestinationsGares",destinations);
-  remplir("listeNomsGares",gares.map(g=>g.nom).filter(Boolean).sort());
+  const nomsGares=gares.map(g=>g.nom).filter(Boolean).sort((a,b)=>a.localeCompare(b,"fr"));
+  remplir("listeNomsGares",nomsGares);
+  const selection=document.getElementById("selectionNomGareRecherche");
+  if(selection){
+    const valeurActuelle=selection.value;
+    selection.innerHTML='<option value="">Sélectionner une gare</option>'+
+      nomsGares.map(nom=>'<option value="'+echapperTextePublicite(nom)+'">'+echapperTextePublicite(nom)+'</option>').join("");
+    if(nomsGares.includes(valeurActuelle))selection.value=valeurActuelle;
+  }
+}
+function choisirGareDansListe(){
+  const selection=document.getElementById("selectionNomGareRecherche");
+  const saisie=document.getElementById("nomGareRecherche");
+  if(selection&&saisie)saisie.value=selection.value;
+}
+function synchroniserSelectionGare(){
+  const saisie=document.getElementById("nomGareRecherche");
+  const selection=document.getElementById("selectionNomGareRecherche");
+  if(!saisie||!selection)return;
+  const option=[...selection.options].find(o=>o.value&&normaliserRechercheGare(o.value)===normaliserRechercheGare(saisie.value));
+  selection.value=option?option.value:"";
 }
 function tarifsConfirmesPourGare(gare,destination,transport){
   return destinationsGareNormalisees(gare).filter(d=>
