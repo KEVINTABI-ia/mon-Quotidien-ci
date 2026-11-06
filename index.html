@@ -1296,6 +1296,19 @@ header{padding:22px 18px 24px!important}
   <label>Description (facultatif)</label>
   <textarea id="gareDescription" rows="3" style="width:100%;padding:12px;"></textarea>
 
+  <div style="margin:16px 0;padding:12px;border:1px solid #cbd8d0;border-radius:12px;background:#f7fbf8;">
+    <strong>📍 Position exacte de la gare</strong>
+    <p class="notice">Place-toi à la gare, puis utilise le bouton GPS ou touche son emplacement sur la carte. La position sera enregistrée avec la gare.</p>
+    <button type="button" onclick="localiserPositionGare()" style="width:100%;margin:8px 0;">📍 Utiliser ma position actuelle</button>
+    <div id="carteSelectionGare" style="height:260px;width:100%;border-radius:10px;overflow:hidden;background:#e8eee9;"></div>
+    <p class="notice">Tu peux aussi toucher directement la carte pour placer ou déplacer le repère.</p>
+    <label>Latitude</label>
+    <input id="gareLatitude" type="number" step="any" placeholder="Ex. : 5.35">
+    <label>Longitude</label>
+    <input id="gareLongitude" type="number" step="any" placeholder="Ex. : -4.02">
+    <p id="statutPositionGare" class="notice">Aucune position enregistrée pour le moment.</p>
+  </div>
+
 <button id="btnEnregistrerGare" class="primary" onclick="enregistrerGare()">Enregistrer la gare</button>
 
   <button type="button" onclick="importerGaresExistantes()" style="width:100%;margin-top:10px;">
@@ -2964,6 +2977,17 @@ const destinations = document.getElementById("gareDestinations").value
     return;
   }
 
+  const latTexte=document.getElementById("gareLatitude").value.trim();
+  const lngTexte=document.getElementById("gareLongitude").value.trim();
+  const latitude=latTexte===""?null:Number(latTexte);
+  const longitude=lngTexte===""?null:Number(lngTexte);
+  if((latitude===null)!==(longitude===null) ||
+     (latitude!==null&&(!Number.isFinite(latitude)||latitude < -90||latitude > 90)) ||
+     (longitude!==null&&(!Number.isFinite(longitude)||longitude < -180||longitude > 180))){
+    statut.textContent="Vérifie la latitude et la longitude : les deux coordonnées doivent être renseignées correctement.";
+    return;
+  }
+
   const gare = {
     nom,
     commune,
@@ -2971,6 +2995,8 @@ const destinations = document.getElementById("gareDestinations").value
     transports,
     description,
     destinations,
+    latitude,
+    longitude,
     dateModification: firebase.firestore.FieldValue.serverTimestamp()
   };
 
@@ -3009,6 +3035,15 @@ document.getElementById("gareCommuneAdmin").value = gare.commune || "";
     : `${d.nom} | ${d.transport} | ${d.prix}`
 ).join("\n");
   document.getElementById("gareDescription").value = gare.description || "";
+  document.getElementById("gareLatitude").value = Number.isFinite(Number(gare.latitude)) && gare.latitude!==null && gare.latitude!==undefined ? gare.latitude : "";
+  document.getElementById("gareLongitude").value = Number.isFinite(Number(gare.longitude)) && gare.longitude!==null && gare.longitude!==undefined ? gare.longitude : "";
+  if(gare.latitude!==null&&gare.latitude!==undefined&&gare.longitude!==null&&gare.longitude!==undefined){
+    afficherCarteSelectionGare(Number(gare.latitude),Number(gare.longitude));
+    document.getElementById("statutPositionGare").textContent="Position enregistrée. Tu peux déplacer le repère si nécessaire.";
+  }else{
+    document.getElementById("statutPositionGare").textContent="Cette gare n'a pas encore de position GPS.";
+    if(window.__carteSelectionGare){window.__carteSelectionGare.remove();window.__carteSelectionGare=null;window.__marqueurSelectionGare=null;}
+  }
 
   document.getElementById("statutGares").textContent =
     "Modification de la gare sélectionnée.";
@@ -3023,10 +3058,14 @@ function annulerEditionGare() {
     "gareQuartier",
     "gareTransports",
     "gareDestinations",
-    "gareDescription"
+    "gareDescription",
+    "gareLatitude",
+    "gareLongitude"
   ].forEach(id => {
     document.getElementById(id).value = "";
   });
+  document.getElementById("statutPositionGare").textContent="Aucune position enregistrée pour le moment.";
+  if(window.__carteSelectionGare){window.__carteSelectionGare.remove();window.__carteSelectionGare=null;window.__marqueurSelectionGare=null;}
 
   document.getElementById("btnEnregistrerGare").textContent =
     "Enregistrer la gare";
@@ -3563,12 +3602,62 @@ function afficherFicheDetailleeGare(id){
     '<p class="notice">Les tarifs affichés sont ceux enregistrés dans Mon Transport CI. Confirmez le prix auprès du transporteur avant le départ.</p></article>';
 }
 
+function placerMarqueurPositionGare(lat,lng){
+  document.getElementById("gareLatitude").value=Number(lat).toFixed(7);
+  document.getElementById("gareLongitude").value=Number(lng).toFixed(7);
+  document.getElementById("statutPositionGare").textContent="Position sélectionnée. Enregistre la gare pour conserver ces coordonnées.";
+  if(window.__carteSelectionGare){
+    if(window.__marqueurSelectionGare) window.__marqueurSelectionGare.setLatLng([lat,lng]);
+    else window.__marqueurSelectionGare=L.marker([lat,lng],{draggable:true}).addTo(window.__carteSelectionGare);
+    window.__marqueurSelectionGare.on("dragend",function(e){const p=e.target.getLatLng();placerMarqueurPositionGare(p.lat,p.lng);});
+    window.__carteSelectionGare.setView([lat,lng],16);
+  }
+}
+function afficherCarteSelectionGare(lat,lng){
+  const zone=document.getElementById("carteSelectionGare");
+  if(!zone||!window.L)return;
+  const positionValide=Number.isFinite(lat)&&Number.isFinite(lng);
+  const centre=positionValide?[lat,lng]:[5.35,-4.02];
+  if(window.__carteSelectionGare){window.__carteSelectionGare.remove();window.__carteSelectionGare=null;window.__marqueurSelectionGare=null;}
+  window.__carteSelectionGare=L.map(zone).setView(centre,positionValide?16:11);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(window.__carteSelectionGare);
+  window.__carteSelectionGare.on("click",function(e){placerMarqueurPositionGare(e.latlng.lat,e.latlng.lng);});
+  if(positionValide){
+    window.__marqueurSelectionGare=L.marker(centre,{draggable:true}).addTo(window.__carteSelectionGare);
+    window.__marqueurSelectionGare.on("dragend",function(e){const p=e.target.getLatLng();placerMarqueurPositionGare(p.lat,p.lng);});
+  }
+  setTimeout(()=>window.__carteSelectionGare&&window.__carteSelectionGare.invalidateSize(),250);
+}
+function ouvrirCarteSelectionGare(){
+  afficherCarteSelectionGare(
+    document.getElementById("gareLatitude").value.trim()===""?NaN:Number(document.getElementById("gareLatitude").value),
+    document.getElementById("gareLongitude").value.trim()===""?NaN:Number(document.getElementById("gareLongitude").value)
+  );
+}
+function localiserPositionGare(){
+  const statut=document.getElementById("statutPositionGare");
+  if(!navigator.geolocation){statut.textContent="La géolocalisation n'est pas disponible sur cet appareil.";return;}
+  statut.textContent="Recherche de ta position GPS…";
+  navigator.geolocation.getCurrentPosition(position=>{
+    const lat=position.coords.latitude,lng=position.coords.longitude;
+    afficherCarteSelectionGare(lat,lng);
+    placerMarqueurPositionGare(lat,lng);
+    statut.textContent="Position GPS récupérée. Vérifie le repère sur la carte, puis enregistre la gare.";
+  },erreur=>{
+    statut.textContent=erreur.code===1?"Autorise la localisation pour ce site dans les réglages de ton téléphone.":"Position introuvable. Vérifie que le GPS est activé et réessaie.";
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+}
 function ouvrirItineraireVersGare(idGare){
   const gare=garesFirestore.find(g=>g.firestoreId===idGare);
   if(!gare){alert("Cette gare n’est plus disponible dans le répertoire.");return;}
-  // Sans origine imposée : Google Maps prend automatiquement la position actuelle du téléphone comme départ.
-  const adresse=[gare.nom,gare.quartier,gare.commune,"Abidjan","Côte d’Ivoire"].filter(Boolean).join(", ");
-  const url="https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(adresse)+"&travelmode=driving";
+  const lat=Number(gare.latitude),lng=Number(gare.longitude);
+  if(gare.latitude===null||gare.latitude===undefined||gare.longitude===null||gare.longitude===undefined||!Number.isFinite(lat)||!Number.isFinite(lng)){
+    alert("La position exacte de cette gare n'est pas encore enregistrée. L'administrateur doit d'abord placer son repère sur la carte.");
+    return;
+  }
+  // Aucune origine n'est imposée : Google Maps utilise la position actuelle du téléphone comme départ.
+  const destination=lat+","+lng;
+  const url="https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(destination)+"&travelmode=driving";
   window.open(url,"_blank");
 }
 function afficherResultatsGares(titre,gares,destination,transport){
