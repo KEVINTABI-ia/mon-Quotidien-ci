@@ -3516,7 +3516,7 @@ function afficherResultatsGares(titre,gares,destination,transport){
   const cartes=gares.map(g=>{
     const tarifs=tarifsConfirmesPourGare(g,destination,transport);
     const lignes=tarifs.map(t=>"<p>🚌 "+t.transport+" : <strong>"+Number(t.prix).toLocaleString("fr-FR")+" FCFA</strong></p>").join("");
-    return "<article class='stop'><strong>"+g.nom+"</strong><br>"+(g.commune||"Commune non précisée")+(g.quartier?" — "+g.quartier:"")+"<br>"+lignes+"</article>";
+    return "<article class='stop'><strong>"+g.nom+"</strong><br>Commune : "+(g.commune||"Non précisée")+"<br>Destination : "+destination+"<br>"+lignes+"</article>";
   }).join("");
   zone.innerHTML="<strong>"+titre+"</strong>"+cartes+"<p class='notice'>Seuls les tarifs enregistrés dans la base des gares sont affichés. Confirmez le tarif auprès du transporteur avant le départ.</p>";
 }
