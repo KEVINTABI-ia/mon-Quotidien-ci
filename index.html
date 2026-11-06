@@ -215,6 +215,20 @@ button:active {
   background: #E2F0E8;
 }
 
+/* Sélection bien visible des deux modes de recherche de gare */
+.mode.mode-actif {
+  background: #17663D !important;
+  color: #FFFFFF !important;
+  border: 2px solid #0D4F2C !important;
+  box-shadow: 0 0 0 3px rgba(23,102,61,.20), 0 4px 10px rgba(0,0,0,.14) !important;
+  font-weight: 800 !important;
+  transform: translateY(-1px);
+}
+.mode.mode-actif:hover {
+  background: #125631 !important;
+}
+
+
 .menu-container {
   position: fixed;
   top: 15px;
@@ -3533,8 +3547,12 @@ function choisirModeGare(mode){
   const destination=mode==="destination";
   document.getElementById("rechercheParDestination").style.display=destination?"block":"none";
   document.getElementById("rechercheParGare").style.display=destination?"none":"block";
-  document.getElementById("modeRechercheDestination").style.background=destination?"#DFF1E4":"#F0F6F2";
-  document.getElementById("modeRechercheGare").style.background=destination?"#F0F6F2":"#DFF1E4";
+  const boutonDestination=document.getElementById("modeRechercheDestination");
+  const boutonGare=document.getElementById("modeRechercheGare");
+  boutonDestination.classList.toggle("mode-actif",destination);
+  boutonGare.classList.toggle("mode-actif",!destination);
+  boutonDestination.setAttribute("aria-pressed",destination?"true":"false");
+  boutonGare.setAttribute("aria-pressed",!destination?"true":"false");
   actualiserListesRechercheGares();
 }
 function actualiserListesRechercheGares(){
