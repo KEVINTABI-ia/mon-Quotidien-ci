@@ -3427,7 +3427,7 @@ function rechercher(){
 const depart=normaliser(document.getElementById("depart").value);
 const arrivee=normaliser(document.getElementById("arrivee").value);
 const transport=document.getElementById("transport").value;
-const resultat=document.getElementById("resultat");
+const resultat=document.getElementById("resultatRechercheGares");
 
 resultat.style.display="block";
 
@@ -5379,7 +5379,7 @@ async function ouvrirSectionPleinEcran(id, titre){
 }
 
 function ouvrirResultatPleinEcran(titre){
-  const resultat = document.getElementById("resultat");
+  const resultat = document.getElementById("resultatRechercheGares");
   if(!resultat) return;
   ouvrirElementPleinEcran(resultat, titre);
 }
@@ -6625,7 +6625,7 @@ function signalerProblemeGeneral(){
 
 // COLLE ICI LA NOUVELLE FONCTION
 async function afficherGaresStations(typeTransport){
-  const resultat = document.getElementById("resultat");
+  const resultat = document.getElementById("resultatRechercheGares");
   const typeChoisi = typeTransport || "Gbaka";
   window.garesStationsTypeActuel = typeChoisi;
   resultat.style.display = "block";
@@ -6893,7 +6893,7 @@ const LIGNES_SOTRA_ABIDJAN = `02|Gare Marcory|Terminus Cité Fairmont, Attécoub
 });
 
 async function afficherReseauSotra(){
-  const resultat = document.getElementById("resultat");
+  const resultat = document.getElementById("resultatRechercheGares");
   resultat.style.display = "block";
   resultat.innerHTML = "<p>Chargement du réseau SOTRA...</p>";
   let lignesAdmin = [];
@@ -6990,7 +6990,7 @@ const MARCHES_COMMUNES = [
 ];
 
 function afficherMarchesCommune(){
-  const resultat = document.getElementById("resultat");
+  const resultat = document.getElementById("resultatRechercheGares");
   if (!resultat) return;
   resultat.style.display = "block";
   const communes = [...new Set(MARCHES_COMMUNES.map(m => m.commune))]
@@ -7171,7 +7171,7 @@ async function tracerItineraireMarche(index){
 
 function afficherTarifs(){
   const routes = window.MON_TRANSPORT_CI_ROUTES || [];
-  const resultat = document.getElementById("resultat");
+  const resultat = document.getElementById("resultatRechercheGares");
 
   let html = "<strong>💰 Tarifs des transports référencés</strong>";
 
@@ -7213,7 +7213,7 @@ function afficherTarifs(){
 
 function ouvrirCarteItineraire(){
   const depart = document.getElementById("depart");
-  const resultat = document.getElementById("resultat");
+  const resultat = document.getElementById("resultatRechercheGares");
 
   resultat.style.display = "block";
   resultat.innerHTML =
@@ -7230,7 +7230,7 @@ function ouvrirCarteItineraire(){
 }
 function afficherReseauNational(){
   const routes = window.MON_TRANSPORT_CI_ROUTES || [];
-  const resultat = document.getElementById("resultat");
+  const resultat = document.getElementById("resultatRechercheGares");
 
   const reseaux = {};
 
