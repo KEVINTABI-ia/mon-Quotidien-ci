@@ -1300,6 +1300,7 @@ header{padding:22px 18px 24px!important}
     <strong>📍 Position exacte de la gare</strong>
     <p class="notice">Place-toi à la gare, puis utilise le bouton GPS ou touche son emplacement sur la carte. La position sera enregistrée avec la gare.</p>
     <button type="button" onclick="localiserPositionGare()" style="width:100%;margin:8px 0;">📍 Utiliser ma position actuelle</button>
+    <button type="button" onclick="ouvrirCarteSelectionGare()" style="width:100%;margin:0 0 8px;">🗺️ Choisir manuellement sur la carte</button>
     <div id="carteSelectionGare" style="height:260px;width:100%;border-radius:10px;overflow:hidden;background:#e8eee9;"></div>
     <p class="notice">Tu peux aussi toucher directement la carte pour placer ou déplacer le repère.</p>
     <label>Latitude</label>
@@ -3607,9 +3608,12 @@ function placerMarqueurPositionGare(lat,lng){
   document.getElementById("gareLongitude").value=Number(lng).toFixed(7);
   document.getElementById("statutPositionGare").textContent="Position sélectionnée. Enregistre la gare pour conserver ces coordonnées.";
   if(window.__carteSelectionGare){
-    if(window.__marqueurSelectionGare) window.__marqueurSelectionGare.setLatLng([lat,lng]);
-    else window.__marqueurSelectionGare=L.marker([lat,lng],{draggable:true}).addTo(window.__carteSelectionGare);
-    window.__marqueurSelectionGare.on("dragend",function(e){const p=e.target.getLatLng();placerMarqueurPositionGare(p.lat,p.lng);});
+    if(window.__marqueurSelectionGare){
+      window.__marqueurSelectionGare.setLatLng([lat,lng]);
+    }else{
+      window.__marqueurSelectionGare=L.marker([lat,lng],{draggable:true}).addTo(window.__carteSelectionGare);
+      window.__marqueurSelectionGare.on("dragend",function(e){const p=e.target.getLatLng();placerMarqueurPositionGare(p.lat,p.lng);});
+    }
     window.__carteSelectionGare.setView([lat,lng],16);
   }
 }
