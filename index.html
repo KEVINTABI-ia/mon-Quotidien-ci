@@ -3129,27 +3129,23 @@ function normaliser(texte) {
     .trim();
 }
 function chargerGaresPourRecherche() {
-  const depart = document.getElementById("depart");
-
   db.collection("gares").orderBy("nom").get()
     .then(snapshot => {
       garesFirestore = snapshot.docs.map(doc => ({
         ...doc.data(),
         firestoreId: doc.id
       }));
-
-      depart.innerHTML =
-        '<option value="">Choisir une gare de départ</option>';
-
-      garesFirestore.forEach(gare => {
-        const option = document.createElement("option");
-        option.value = gare.nom;
-        option.textContent = gare.nom;
-        depart.appendChild(option);
-      });
+      if (typeof actualiserListesRechercheGares === "function") {
+        actualiserListesRechercheGares();
+      }
     })
     .catch(error => {
       console.error("Erreur de chargement des gares :", error);
+      const zone = document.getElementById("resultatRechercheGares");
+      if (zone) {
+        zone.style.display = "block";
+        zone.textContent = "Impossible de charger les gares. Vérifiez votre connexion Internet.";
+      }
     });
 }
 
