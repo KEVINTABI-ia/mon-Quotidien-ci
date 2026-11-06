@@ -1196,8 +1196,8 @@ header{padding:22px 18px 24px!important}
   </button>
 
 <div class="menu-dropdown" id="menuDropdown">
-  <button onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur')">🔐 Espace administrateur</button>
-  <button onclick="ouvrirSectionPleinEcran('devenirPartenaire','Devenir partenaire')">🤝 Devenir partenaire</button>
+  <button type="button" data-ouvrir-section="espaceAdmin" data-titre-section="Espace administrateur">🔐 Espace administrateur</button>
+  <button type="button" data-ouvrir-section="devenirPartenaire" data-titre-section="Devenir partenaire">🤝 Devenir partenaire</button>
 </div>
 </div>
 
@@ -8992,5 +8992,33 @@ activerVisibiliteMenusPublique();
 </script>
 
 <script src="./community.js"></script>
+<script>
+/* MENU PRINCIPAL : gestion explicite des clics, notamment sur iPhone */
+(function(){
+  const menu = document.getElementById("menuDropdown");
+  if (!menu || menu.dataset.clicsInitialises === "oui") return;
+  menu.dataset.clicsInitialises = "oui";
+  menu.addEventListener("click", function(event){
+    const bouton = event.target.closest("button[data-ouvrir-section]");
+    if (!bouton || !menu.contains(bouton)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const id = bouton.getAttribute("data-ouvrir-section");
+    const titre = bouton.getAttribute("data-titre-section") || "Mon Transport CI";
+    menu.style.display = "none";
+    if (typeof window.ouvrirSectionPleinEcran !== "function") {
+      alert("Le module de navigation n’a pas terminé son chargement. Actualise la page puis réessaie.");
+      return;
+    }
+    Promise.resolve(window.ouvrirSectionPleinEcran(id, titre)).catch(function(erreur){
+      console.error("Erreur d’ouverture du menu :", erreur);
+      alert("Impossible d’ouvrir cette rubrique. Réessaie après avoir actualisé la page.");
+    });
+  }, true);
+  if (typeof ouvrirSectionPleinEcran === "function") {
+    window.ouvrirSectionPleinEcran = ouvrirSectionPleinEcran;
+  }
+})();
+</script>
 </body>
 </html>
