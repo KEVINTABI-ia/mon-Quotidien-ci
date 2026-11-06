@@ -1845,8 +1845,6 @@ function chargerPublicitesAccueil() {
   <input id="communeDepartGare" list="listeCommunesGares" placeholder="Ex. : Yopougon">
   <datalist id="listeCommunesGares"></datalist>
   <button type="button" onclick="localiserCommuneDepart()" style="width:100%;margin-top:8px;background:#F0F7F1;color:#17663D">📍 Utiliser ma position</button>
-  <label for="quartierDepartGare">Quartier de départ (facultatif)</label>
-  <input id="quartierDepartGare" placeholder="Ex. : Bagnon">
   <label for="destinationGare">Commune ou ville de destination</label>
   <input id="destinationGare" list="listeDestinationsGares" placeholder="Ex. : Bingerville">
   <datalist id="listeDestinationsGares"></datalist>
@@ -3526,13 +3524,11 @@ function rechercherGaresParDestination(){
   const commune=document.getElementById("communeDepartGare").value.trim();
   const destination=document.getElementById("destinationGare").value.trim();
   const transport=document.getElementById("transportRechercheGare").value;
-  const quartier=normaliserRechercheGare(document.getElementById("quartierDepartGare").value);
   const zone=document.getElementById("resultatRechercheGares");
   zone.style.display="block";
   if(!commune||!destination){zone.textContent="Renseignez la commune de départ et la destination.";return;}
   const gares=garesFirestore.filter(g=>
     normaliserRechercheGare(g.commune)===normaliserRechercheGare(commune) &&
-    (!quartier || normaliserRechercheGare(g.quartier).includes(quartier)) &&
     tarifsConfirmesPourGare(g,destination,transport).length>0
   );
   afficherResultatsGares("Gares de "+commune+" desservant "+destination,gares,destination,transport);
@@ -3575,11 +3571,9 @@ function localiserCommuneDepart(){
       const data=await reponse.json();
       const a=data.address||{};
       const commune=a.city||a.town||a.city_district||a.municipality||a.county||"";
-      const quartier=a.suburb||a.neighbourhood||a.quarter||"";
       if(!commune){zone.textContent="Commune non identifiée. Saisissez-la manuellement.";return;}
       document.getElementById("communeDepartGare").value=commune;
-      if(quartier)document.getElementById("quartierDepartGare").value=quartier;
-      zone.textContent="Position détectée : "+commune+(quartier?" — "+quartier:"")+". Vérifiez puis lancez la recherche.";
+      zone.textContent="Position détectée : "+commune+". Vérifiez puis lancez la recherche.";
     }catch(e){zone.textContent="Impossible de déterminer la commune. Saisissez-la manuellement.";}
   },()=>{zone.textContent="Autorisez la localisation ou saisissez la commune manuellement.";},{enableHighAccuracy:false,timeout:10000});
 }
