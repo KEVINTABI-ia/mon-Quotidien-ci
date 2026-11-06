@@ -1329,6 +1329,7 @@ header{padding:22px 18px 24px!important}
 <div id="gestionAbonnementsRamassage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🚌 Validation des compagnies de ramassage</h3><p class="notice">Vérifie les dossiers et les paiements avant d’approuver une compagnie ou d’activer son forfait mensuel.</p><div id="listeCompagniesRamassageAdmin">Chargement...</div></div>
 <div id="gestionAbonnementsAutomobiliste" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🚘 Validation des abonnements automobiles</h3><p class="notice">Vérifie le moyen de paiement et la référence avant d'activer 12 mois d'accès. Ne valide qu'après réception effective des 1 000 FCFA.</p><div id="listeAbonnementsAutomobilisteAdmin">Chargement...</div></div>
 <div id="gestionNouveauxServices" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🧰 Validation des nouveaux services</h3><p class="notice">Vérifie les coordonnées et le contenu avant toute publication.</p><div id="listeNouveauxServicesAdmin">Chargement...</div></div>
+<div id="gestionObjetsPerdus" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🔎 Gestion des objets et documents retrouvés</h3><p class="notice">Les coordonnées des trouveurs et les demandes sont privées et visibles uniquement ici. Vérifie les paiements avant la mise en relation.</p><div id="listeObjetsRetrouvesAdmin">Chargement...</div><h3>Demandes de récupération et paiements</h3><div id="listeReclamationsObjetsAdmin">Chargement...</div></div>
 <div id="gestionGares" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
   <h3>📍 Gestion des gares et terminus</h3>
 
@@ -2259,9 +2260,39 @@ function chargerPublicitesAccueil() {
     <button type="button" onclick="ouvrirSectionPleinEcran('pharmaciesProches','Pharmacie la plus proche')" style="min-height:68px;background:#F0F7F1;color:#17663D;border:1px solid #DCEBDD;text-align:left;">💊 Pharmacie la plus proche</button>
     <button type="button" onclick="ouvrirPortailAnnoncesOffres()" style="min-height:68px;background:#FFF5E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">📢 Consulter ou faire une annonce et une offre</button>
     <button type="button" onclick="ouvrirEspaceCommunautaire()" style="min-height:68px;grid-column:1/-1;background:#F2F0FF;color:#51418A;border:1px solid #DDD6FA;text-align:left;">🗞️ M’informer / Attraper les derniers Gbairai</button>
+    <button type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Signaler et retrouver un objet ou un document perdu')" style="min-height:68px;grid-column:1/-1;background:#F1F7F5;color:#176B52;border:1px solid #CFE2D8;text-align:left;">🔎 Signaler et retrouver un objet ou un document perdu</button>
   </div>
 </section>
-
+<section class="card" id="objetsPerdusRetrouves" style="display:none;margin:14px 0;padding:16px;">
+<h2>🔎 Signaler et retrouver un objet ou un document perdu</h2>
+<p class="notice">Consultez les biens retrouvés ou signalez un bien découvert. Les coordonnées personnelles ne sont jamais publiées.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0;">
+<button type="button" onclick="afficherFormulaireObjetRetrouve()">📦 Signaler un objet retrouvé</button>
+<button type="button" onclick="afficherBiensRetrouves()">🔍 Rechercher un bien perdu</button></div>
+<div id="formulaireObjetRetrouve" style="display:none;border:1px solid #D8E5DD;border-radius:12px;padding:13px;margin:12px 0;">
+<h3>Déclarer un bien retrouvé</h3><p class="notice">Votre nom et votre téléphone seront transmis uniquement à l’administrateur.</p>
+<label>Votre nom et prénoms</label><input id="orTrouveurNom" maxlength="100">
+<label>Votre numéro de téléphone</label><input id="orTrouveurTel" type="tel" maxlength="25">
+<label>Type de bien retrouvé</label><select id="orType"><option>Objet</option><option>Document</option></select>
+<label>Nom figurant sur le document (facultatif)</label><input id="orNomDocument" maxlength="100">
+<label>Description du bien ou informations utiles</label><textarea id="orDescription" rows="3" maxlength="500"></textarea>
+<label>Lieu où le bien a été retrouvé</label><input id="orLieu" maxlength="180">
+<button type="button" class="primary" onclick="envoyerDeclarationObjet()">Envoyer la déclaration</button><p id="orStatutDeclaration" class="notice"></p></div>
+<div id="listeBiensRetrouves" style="display:none;margin:12px 0;"><h3>Biens retrouvés publiés</h3><div id="orResultatsPublics"></div></div>
+<div id="formulaireReclamationObjet" style="display:none;border:1px solid #D8E5DD;border-radius:12px;padding:13px;margin:12px 0;">
+<h3>🔐 Réclamer ce bien</h3><p class="notice">Vos coordonnées et informations de paiement seront transmises uniquement à l’administrateur.</p>
+<input id="orObjetReclameId" type="hidden">
+<label>Votre nom et prénoms</label><input id="orReclamantNom" maxlength="100">
+<label>Votre numéro de téléphone</label><input id="orReclamantTel" type="tel" maxlength="25">
+<label>Votre lieu de résidence</label><input id="orResidence" maxlength="180">
+<div style="margin:14px 0;padding:12px;border-radius:10px;background:#FFF7E8;border:1px solid #EBD6A8;"><strong>Frais de mise en relation : 1 500 FCFA</strong>
+<p>Wave : <strong>0757522319</strong><br>Orange Money : <strong>0757522319</strong><br>Titulaire : <strong>TA BI SERGE KEVIN</strong></p>
+<label>Moyen de paiement</label><select id="orOperateur"><option>Wave</option><option>Orange Money</option></select>
+<label>Numéro de référence de la transaction</label><input id="orReference" maxlength="100">
+<label>Heure et date de la transaction</label><input id="orHeurePaiement" type="datetime-local">
+<p class="notice">La référence et l’heure sont obligatoires. Aucun téléchargement de capture d’écran n’est demandé. L’administrateur vérifiera le paiement.</p></div>
+<button type="button" class="primary" onclick="envoyerReclamationObjet()">Envoyer ma demande de récupération</button>
+<p id="orStatutReclamation" class="notice"></p></div></section>
 <section class="carte-acces-admin" aria-label="Signaler un problème" style="margin-bottom:0;padding-bottom:0;">
   <p>Une difficulté avec l’application ou un trajet ?</p>
   <button type="button" class="bouton-acces-admin" onclick="signalerProblemeGeneral()">
@@ -2655,6 +2686,7 @@ const RUBRIQUES_ADMIN = [
    {id:"gestionCommunautaire",titre:"🗞️ Informations, Gbairai et annonces"},
   {id:"gestionAbonnementsAutomobiliste",titre:"🚘 Abonnements de l’automobiliste"},
   {id:"gestionNouveauxServices",titre:"🧰 Validation dépannages, commerces et annonces"},
+  {id:"gestionObjetsPerdus",titre:"🔎 Objets retrouvés et demandes de récupération"},
   {id:"gestionVisibiliteMenus",titre:"👁️ Affichage et masquage des menus"}
 ];
 function afficherMenuAdmin(){
@@ -2671,6 +2703,7 @@ function ouvrirRubriqueAdmin(id){
   const cible=document.getElementById(id);
   if(!cible)return;
   if(id==="gestionNouveauxServices") chargerNouveauxServicesAdmin();
+  if(id==="gestionObjetsPerdus") chargerObjetsPerdusAdmin();
    if(id==="gestionCommunautaire") chargerGestionCommunautaireAdmin();
   if(id==="gestionVisibiliteMenus") afficherGestionVisibiliteMenus();
   if(id==="gestionAbonnementsAutomobiliste") chargerDemandesAbonnementAutomobilisteAdmin();
