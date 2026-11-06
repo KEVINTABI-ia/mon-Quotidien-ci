@@ -3563,6 +3563,28 @@ function afficherFicheDetailleeGare(id){
     '<p class="notice">Les tarifs affichés sont ceux enregistrés dans Mon Transport CI. Confirmez le prix auprès du transporteur avant le départ.</p></article>';
 }
 
+function ouvrirItineraireVersGare(idGare){
+  const gare=garesFirestore.find(g=>g.firestoreId===idGare);
+  if(!gare){alert("Cette gare n’est plus disponible dans le répertoire.");return;}
+  if(!navigator.geolocation){
+    alert("La localisation n’est pas disponible sur cet appareil. Activez la localisation ou ouvrez la carte pour rechercher la gare manuellement.");
+    return;
+  }
+  // Ouvrir une fenêtre immédiatement pour éviter le blocage des fenêtres surgissantes sur iPhone.
+  const carte=window.open("about:blank","_blank");
+  navigator.geolocation.getCurrentPosition(position=>{
+    const origine=position.coords.latitude+","+position.coords.longitude;
+    const adresse=[gare.nom,gare.quartier,gare.commune,"Abidjan","Côte d’Ivoire"].filter(Boolean).join(", ");
+    const url="https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(origine)+"&destination="+encodeURIComponent(adresse)+"&travelmode=driving";
+    if(carte){carte.location.href=url;}else{window.location.href=url;}
+  },erreur=>{
+    if(carte)carte.close();
+    const message=erreur.code===1
+      ?"Autorisez Mon Transport CI à accéder à votre position pour afficher l’itinéraire."
+      :"Votre position n’a pas pu être déterminée. Vérifiez le GPS et réessayez.";
+    alert(message);
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:30000});
+}
 function afficherResultatsGares(titre,gares,destination,transport){
   const zone=document.getElementById("resultatRechercheGares");
   zone.style.display="block";
@@ -3570,7 +3592,7 @@ function afficherResultatsGares(titre,gares,destination,transport){
   const cartes=gares.map(g=>{
     const tarifs=tarifsConfirmesPourGare(g,destination,transport);
     const lignes=tarifs.map(t=>"<p>🚌 "+echapperTextePublicite(t.transport)+" : <strong>"+Number(t.prix).toLocaleString("fr-FR")+" FCFA</strong></p>").join("");
-    return "<article class='stop'><strong>"+echapperTextePublicite(g.nom)+"</strong><br>Commune : "+echapperTextePublicite(g.commune||"Non précisée")+"<br>Destination : "+echapperTextePublicite(destination)+"<br>"+lignes+"<button type='button' onclick='afficherFicheDetailleeGare("+JSON.stringify(g.firestoreId)+")'>Voir la fiche détaillée</button></article>";
+    return "<article class='stop'><strong>"+echapperTextePublicite(g.nom)+"</strong><br>Commune : "+echapperTextePublicite(g.commune||"Non précisée")+"<br>Destination : "+echapperTextePublicite(destination)+"<br>"+lignes+"<button type='button' onclick='ouvrirItineraireVersGare("+JSON.stringify(g.firestoreId)+")' style='background:#16834A;color:#fff'>📍 Voir sur la carte</button><button type='button' onclick='afficherFicheDetailleeGare("+JSON.stringify(g.firestoreId)+")'>Voir la fiche détaillée</button></article>";
   }).join("");
   dernierResultatGaresHTML="<strong>"+echapperTextePublicite(titre)+"</strong>"+cartes+"<p class='notice'>Seuls les tarifs enregistrés dans la base des gares sont affichés. Confirmez le tarif auprès du transporteur avant le départ.</p>";
   zone.innerHTML=dernierResultatGaresHTML;
@@ -3608,7 +3630,7 @@ function verifierDestinationGare(){
   if(alternatives.length){
     const html=alternatives.map(g=>{
       const lignes=tarifsConfirmesPourGare(g,destination,transport).map(t=>"<p>"+t.transport+" : <strong>"+Number(t.prix).toLocaleString("fr-FR")+" FCFA</strong></p>").join("");
-      return "<article class='stop'><strong>"+echapperTextePublicite(g.nom)+"</strong><br>"+echapperTextePublicite(g.quartier||g.commune||"") + lignes+"<button type='button' onclick='afficherFicheDetailleeGare("+JSON.stringify(g.firestoreId)+")'>Voir la fiche détaillée</button></article>";
+      return "<article class='stop'><strong>"+echapperTextePublicite(g.nom)+"</strong><br>"+echapperTextePublicite(g.quartier||g.commune||"") + lignes+"<button type='button' onclick='ouvrirItineraireVersGare("+JSON.stringify(g.firestoreId)+")' style='background:#16834A;color:#fff'>📍 Voir sur la carte</button><button type='button' onclick='afficherFicheDetailleeGare("+JSON.stringify(g.firestoreId)+")'>Voir la fiche détaillée</button></article>";
     }).join("");
     zone.innerHTML+="<h3>Autres gares de "+(gare.commune||"la commune")+" desservant "+destination+"</h3>"+html;
   }else{
