@@ -3953,6 +3953,7 @@ function afficherEspacePartenaire(dossier, uid) {
     <h3>👋 Mon espace partenaire</h3>
     <p><strong>Nom :</strong> ${echapperTexteCompagnie(dossier.nom || "")}</p>
     <p><strong>Profil :</strong> ${dossier.type === "livreur_independant" ? "Livreur indépendant" : "Responsable de gare"}</p>
+    <button type="button" onclick="activerSonCommandesPartenaire();alert('Son des nouvelles commandes activé sur cet appareil.')" style="background:#16834A;color:#fff;margin:8px 0;">🔔 Activer le son des commandes</button>
     <div class="notice">
       <strong>Mon abonnement :</strong>
       ${actif ? "Actif" : (enEssai ? "Essai gratuit" : "À renouveler")}
