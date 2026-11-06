@@ -60,6 +60,31 @@ header {
   line-height: 1.6;
 }
 
+.tagline-anime {
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  margin-top: 13px;
+  padding: 8px 0;
+  border-top: 1px solid rgba(213,227,222,.24);
+  border-bottom: 1px solid rgba(213,227,222,.24);
+}
+.tagline-anime span {
+  display: inline-block;
+  min-width: max-content;
+  padding-left: 100%;
+  animation: defilementGuideMobilite 28s linear infinite;
+}
+@keyframes defilementGuideMobilite {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tagline-anime { white-space: normal; }
+  .tagline-anime span { min-width: 0; padding-left: 0; animation: none; }
+}
+
+
 main {
   padding: 20px 16px;
   max-width: 680px;
@@ -227,6 +252,24 @@ button:active {
 .mode.mode-actif:hover {
   background: #125631 !important;
 }
+
+.recherche-proximite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 14px 0 8px;
+  text-align: center;
+}
+.bouton-gares-proches {
+  width: min(100%, 390px);
+  margin-top: 0;
+  background: #17663D;
+  border: 2px solid #0D4F2C;
+  box-shadow: 0 4px 12px rgba(23,102,61,.22);
+}
+.bouton-gares-proches:disabled { opacity: .7; cursor: wait; }
+.recherche-proximite .notice { max-width: 390px; margin: 8px 0 0; }
+
 
 
 .menu-container {
@@ -1166,9 +1209,8 @@ header{padding:22px 18px 24px!important}
 
   <div class="header-badge">VOTRE GUIDE DE MOBILITÉ</div>
 
-  <div class="tagline">
-    Trouvez votre trajet. Comparez les transports.
-    Maîtrisez votre budget.
+  <div class="tagline tagline-anime" aria-label="Votre guide de mobilité, toujours avec vous au quotidien : trouvez votre trajet, consultez les tarifs, repérez les gares qui desservent votre destination et laissez-vous guider jusqu’à votre gare.">
+    <span>Votre guide de mobilité, toujours avec vous au quotidien : trouvez votre trajet, consultez les tarifs, repérez les gares qui desservent votre destination et laissez-vous guider jusqu’à votre gare.</span>
   </div>
 </header>
 
@@ -1866,8 +1908,13 @@ function chargerPublicitesAccueil() {
 <p class="notice">Trouvez les gares qui desservent votre destination ou vérifiez une gare que vous connaissez déjà.</p>
 <div class="modes" style="margin:14px 0">
   <button type="button" class="mode" id="modeRechercheDestination" onclick="choisirModeGare('destination')">🔎 Je cherche une gare</button>
-  <button type="button" class="mode" id="modeRechercheGare" onclick="choisirModeGare('gare')">📍 Je connais ma gare</button>
+  <button type="button" class="mode" id="modeRechercheGare" onclick="choisirModeGare('gare')">📍 Je connais une gare</button>
 </div>
+<div class="recherche-proximite">
+  <button type="button" class="primary bouton-gares-proches" id="btnGaresProches" onclick="trouverGaresProchesDeMoi()">📍 Trouver les gares près de moi</button>
+  <p class="notice">Affiche les gares de Gbaka, Woro-woro et taxi communal géolocalisées précisément par l’administrateur sur la carte.</p>
+</div>
+<div class="result" id="resultatGaresProches" aria-live="polite"></div>
 <div id="rechercheParDestination">
   <label for="communeDepartGare">Commune de départ</label>
   <input id="communeDepartGare" list="listeCommunesGares" placeholder="Ex. : Yopougon">
@@ -3734,6 +3781,77 @@ function verifierDestinationGare(){
     zone.innerHTML+="<p class='notice'>Aucune autre gare de cette commune ne possède actuellement un tarif confirmé pour cette destination. Essayez « Tous les transports » ou une autre commune de départ.</p>";
   }
 }
+function distanceEntreCoordonneesKm(lat1,lon1,lat2,lon2){
+  const rayonTerre=6371;
+  const rad=valeur=>valeur*Math.PI/180;
+  const dLat=rad(lat2-lat1),dLon=rad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLon/2)**2;
+  return 2*rayonTerre*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function trouverGaresProchesDeMoi(){
+  const zone=document.getElementById("resultatGaresProches");
+  const bouton=document.getElementById("btnGaresProches");
+  if(!zone||!bouton)return;
+  zone.style.display="block";
+  if(!navigator.geolocation){
+    zone.textContent="La géolocalisation n’est pas disponible sur cet appareil.";
+    return;
+  }
+  bouton.disabled=true;
+  bouton.textContent="📍 Localisation en cours…";
+  zone.textContent="Recherche de votre position et des gares précisément géolocalisées…";
+  navigator.geolocation.getCurrentPosition(async position=>{
+    try{
+      const lat=position.coords.latitude,lng=position.coords.longitude;
+      const url="https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat="+lat+"&lon="+lng;
+      const reponse=await fetch(url,{headers:{Accept:"application/json"}});
+      if(!reponse.ok)throw new Error("Service de localisation indisponible.");
+      const data=await reponse.json();
+      const a=data.address||{};
+      const commune=a.city_district||a.municipality||a.suburb||a.town||a.city||a.village||a.county||"";
+      if(!commune){
+        zone.textContent="Votre commune n’a pas pu être identifiée. Vérifiez la localisation du téléphone et réessayez.";
+        return;
+      }
+      const transportsCibles=["gbaka","woro-woro","taxi communal"];
+      const resultats=garesFirestore.filter(g=>{
+        const memeCommune=normaliserRechercheGare(g.commune)===normaliserRechercheGare(commune);
+        const liste=Array.isArray(g.transports)?g.transports:[];
+        const transportsTrouves=liste.filter(t=>transportsCibles.includes(normaliserRechercheGare(t)));
+        const latGare=g.latitude===null||g.latitude===undefined?NaN:Number(g.latitude);
+        const lngGare=g.longitude===null||g.longitude===undefined?NaN:Number(g.longitude);
+        const positionAdminValide=Number.isFinite(latGare)&&Number.isFinite(lngGare)&&
+          latGare>=-90&&latGare<=90&&lngGare>=-180&&lngGare<=180&&!(latGare===0&&lngGare===0);
+        return memeCommune&&transportsTrouves.length>0&&positionAdminValide;
+      }).map(g=>({
+        gare:g,
+        distance:distanceEntreCoordonneesKm(lat,lng,Number(g.latitude),Number(g.longitude))
+      })).sort((x,y)=>x.distance-y.distance);
+      if(!resultats.length){
+        zone.innerHTML="<strong>Votre commune : "+echapperTextePublicite(commune)+"</strong><p>Aucune gare de Gbaka, Woro-woro ou taxi communal, pointée précisément sur la carte par l’administrateur, n’est encore enregistrée dans cette commune.</p>";
+        return;
+      }
+      const cartes=resultats.slice(0,10).map(item=>{
+        const g=item.gare;
+        const transports=(g.transports||[]).filter(t=>transportsCibles.includes(normaliserRechercheGare(t))).map(echapperTextePublicite).join(", ");
+        const distance=item.distance<1?Math.round(item.distance*1000)+" m":item.distance.toFixed(1).replace(".",",")+" km";
+        return "<article class='stop'><strong>"+echapperTextePublicite(g.nom)+"</strong><br>Commune : "+echapperTextePublicite(g.commune||commune)+"<br>Transports : "+transports+"<br><strong>Distance à vol d’oiseau : "+distance+"</strong><br><button type='button' style='background:#16834A;color:#fff' onclick='ouvrirItineraireVersGare("+JSON.stringify(g.firestoreId)+")'>📍 Itinéraire vers cette gare</button></article>";
+      }).join("");
+      zone.innerHTML="<strong>Gares géolocalisées les plus proches — "+echapperTextePublicite(commune)+"</strong>"+cartes+"<p class='notice'>Seules les gares dont l’administrateur a enregistré un repère GPS précis sont affichées. Classement selon la distance en ligne droite ; le trajet routier peut être plus long.</p>";
+    }catch(erreur){
+      console.error("Recherche des gares proches :",erreur);
+      zone.textContent="Impossible de rechercher les gares pour le moment. Vérifiez votre connexion Internet et réessayez.";
+    }finally{
+      bouton.disabled=false;
+      bouton.textContent="📍 Trouver les gares près de moi";
+    }
+  },erreur=>{
+    bouton.disabled=false;
+    bouton.textContent="📍 Trouver les gares près de moi";
+    zone.textContent=erreur.code===1?"Autorisez l’accès à votre position pour Mon Transport CI dans les réglages de votre téléphone, puis réessayez.":"Votre position n’a pas pu être récupérée. Activez le GPS et réessayez.";
+  },{enableHighAccuracy:true,timeout:18000,maximumAge:60000});
+}
+
 function localiserCommuneDepart(){
   const zone=document.getElementById("resultatRechercheGares");
   if(!navigator.geolocation){zone.style.display="block";zone.textContent="La géolocalisation n’est pas disponible. Saisissez la commune manuellement.";return;}
