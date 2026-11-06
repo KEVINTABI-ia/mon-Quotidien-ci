@@ -6624,7 +6624,7 @@ function signalerProblemeGeneral(){
 }
 
 // COLLE ICI LA NOUVELLE FONCTION
-async function afficherGaresStations(typeTransport){
+async async function afficherGaresStations(typeTransport){
   const resultat = document.getElementById("resultatRechercheGares");
   const typeChoisi = typeTransport || "Gbaka";
   window.garesStationsTypeActuel = typeChoisi;
@@ -6892,7 +6892,7 @@ const LIGNES_SOTRA_ABIDJAN = `02|Gare Marcory|Terminus Cité Fairmont, Attécoub
   return {numero:p[0],depart:p[1],arrivee:p[2],type:p[3],source:"Édition juillet 2024"};
 });
 
-async function afficherReseauSotra(){
+async async function afficherReseauSotra(){
   const resultat = document.getElementById("resultatRechercheGares");
   resultat.style.display = "block";
   resultat.innerHTML = "<p>Chargement du réseau SOTRA...</p>";
