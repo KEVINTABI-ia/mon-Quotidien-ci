@@ -670,6 +670,73 @@ service cloud.firestore {
       allow create, update, delete: if estAdmin();
     }
 
+
+    match /annonceurs/{uid} {
+      allow create: if estConnecte() && request.auth.uid == uid && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly(["uid","nom","telephone","email","createdAt"])
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 2
+        && request.resource.data.telephone is string && request.resource.data.email == request.auth.token.email
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
+      allow update: if estAdmin() || (estConnecte() && request.auth.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nom","telephone"]));
+      allow delete: if estAdmin();
+    }
+    match /annonces_offres/{id} {
+      allow create: if estConnecte() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasAll(["uid","annonceurNom","typeAnnonce","titre","categorie","commune","telephone","description","paiementMoyen","referencePaiement","montantFCFA","paiementStatut","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","annonceurNom","typeAnnonce","titre","categorie","commune","telephone","description","paiementMoyen","referencePaiement","montantFCFA","paiementStatut","statut","createdAt"])
+        && request.resource.data.montantFCFA == 500 && request.resource.data.paiementMoyen in ["Wave","Orange Money"]
+        && request.resource.data.referencePaiement is string && request.resource.data.referencePaiement.size() >= 4
+        && request.resource.data.statut == "paiement_en_attente" && request.resource.data.paiementStatut == "a_verifier"
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || resource.data.statut == "publiee" || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update, delete: if estAdmin();
+    }
+    match /informations_admin/{id} {
+      allow read: if estAdmin() || resource.data.statut == "publiee";
+      allow create: if estAdmin() && request.resource.data.keys().hasOnly(["message","statut","publieLe","createdBy"])
+        && request.resource.data.message is string && request.resource.data.message.size() >= 3 && request.resource.data.message.size() <= 1500
+        && request.resource.data.statut == "publiee" && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if estAdmin();
+    }
+    match /gbairai_profils/{uid} {
+      allow create: if estConnecte() && request.auth.uid == uid && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly(["uid","pseudonyme","gratuitRestant","bonusRestant","resetAt","createdAt"])
+        && request.resource.data.pseudonyme is string && request.resource.data.pseudonyme.size() >= 2 && request.resource.data.pseudonyme.size() <= 24
+        && request.resource.data.gratuitRestant == 15 && request.resource.data.bonusRestant == 0
+        && request.resource.data.resetAt is timestamp && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
+      allow update: if estAdmin() || (estConnecte() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["gratuitRestant","bonusRestant","resetAt","lastMessageId","lastSentAt"])
+        && request.resource.data.lastMessageId is string
+        && getAfter(/databases/$(database)/documents/gbairai_messages/$(request.resource.data.lastMessageId)).data.senderUid == uid
+        && ((request.resource.data.gratuitRestant == resource.data.gratuitRestant - 1 && request.resource.data.bonusRestant == resource.data.bonusRestant)
+          || (request.resource.data.bonusRestant == resource.data.bonusRestant - 1 && request.resource.data.gratuitRestant == resource.data.gratuitRestant)
+          || (resource.data.resetAt <= request.time && request.resource.data.gratuitRestant in [14,15]
+            && request.resource.data.bonusRestant in [resource.data.bonusRestant,resource.data.bonusRestant - 1] && request.resource.data.resetAt > request.time)));
+      allow delete: if estAdmin();
+    }
+    match /gbairai_messages/{id} {
+      allow read: if true;
+      allow create: if estConnecte() && request.resource.data.keys().hasOnly(["senderUid","pseudonyme","texte","createdAt","expiresAt"])
+        && request.resource.data.senderUid == request.auth.uid && request.resource.data.pseudonyme is string
+        && request.resource.data.texte is string && request.resource.data.texte.size() >= 1 && request.resource.data.texte.size() <= 500
+        && request.resource.data.createdAt == request.time && request.resource.data.expiresAt is timestamp && request.resource.data.expiresAt > request.time
+        && existsAfter(/databases/$(database)/documents/gbairai_profils/$(request.auth.uid))
+        && getAfter(/databases/$(database)/documents/gbairai_profils/$(request.auth.uid)).data.lastMessageId == id;
+      allow update: if false;
+      allow delete: if estAdmin();
+    }
+    match /gbairai_recharges/{id} {
+      allow create: if estConnecte() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(["uid","pseudonyme","operateur","referencePaiement","montantFCFA","messages","statut","createdAt"])
+        && request.resource.data.operateur in ["Wave","Orange Money"] && request.resource.data.referencePaiement is string
+        && request.resource.data.referencePaiement.size() >= 4 && request.resource.data.montantFCFA == 100
+        && request.resource.data.messages == 15 && request.resource.data.statut == "en_attente" && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update, delete: if estAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
