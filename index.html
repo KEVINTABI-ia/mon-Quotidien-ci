@@ -2674,6 +2674,129 @@ async function traiterNouveauService(id,statut){
  catch(e){console.error(e);alert("Impossible de modifier ce dossier. Vérifiez les règles Firestore.");}
 }
 
+
+/* OBJETS ET DOCUMENTS PERDUS / RETROUVES */
+function afficherFormulaireObjetRetrouve(){
+  document.getElementById("formulaireObjetRetrouve").style.display="block";
+  document.getElementById("listeBiensRetrouves").style.display="none";
+  document.getElementById("formulaireReclamationObjet").style.display="none";
+}
+async function afficherBiensRetrouves(){
+  const zone=document.getElementById("listeBiensRetrouves");
+  const resultats=document.getElementById("orResultatsPublics");
+  zone.style.display="block";
+  document.getElementById("formulaireObjetRetrouve").style.display="none";
+  document.getElementById("formulaireReclamationObjet").style.display="none";
+  resultats.textContent="Recherche des déclarations publiées...";
+  try{
+    const snap=await db.collection("objets_retrouves").where("statut","==","publie").get();
+    if(snap.empty){resultats.innerHTML="<p class='notice'>Aucun bien retrouvé n’est actuellement publié.</p>";return;}
+    resultats.innerHTML=snap.docs.map(doc=>{
+      const d=doc.data();
+      const date=d.publieLe&&d.publieLe.toDate?d.publieLe.toDate().toLocaleDateString("fr-FR"):"";
+      return '<article class="card" style="padding:12px;margin:10px 0;"><strong>'+echapperTextePublicite(d.type||"Bien retrouvé")+'</strong><p>'+echapperTextePublicite(d.description||"Description non précisée")+'</p><p>📍 Lieu : '+echapperTextePublicite(d.lieu||"Non précisé")+'</p><small>Publié le '+date+'</small><button type="button" class="primary" style="width:100%;margin-top:10px;" onclick="ouvrirReclamationObjet(\''+doc.id+'\')">C’est à moi</button></article>';
+    }).join("");
+  }catch(e){console.error(e);resultats.innerHTML="<p class='notice'>Impossible de charger les déclarations. Vérifiez les règles Firestore et réessayez.</p>";}
+}
+async function envoyerDeclarationObjet(){
+  const nom=document.getElementById("orTrouveurNom").value.trim();
+  const tel=document.getElementById("orTrouveurTel").value.trim();
+  const type=document.getElementById("orType").value;
+  const nomDocument=document.getElementById("orNomDocument").value.trim();
+  const description=document.getElementById("orDescription").value.trim();
+  const lieu=document.getElementById("orLieu").value.trim();
+  const statut=document.getElementById("orStatutDeclaration");
+  if(!nom||!tel||!description||!lieu){statut.textContent="Veuillez remplir votre nom, téléphone, description et lieu.";return;}
+  statut.textContent="Envoi de votre déclaration...";
+  try{
+    const ref=db.collection("objets_retrouves").doc();
+    const batch=db.batch();
+    batch.set(ref,{type,description,lieu,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    batch.set(db.collection("objets_retrouves_prives").doc(ref.id),{
+      objetId:ref.id,trouveurNom:nom,trouveurTelephone:tel,nomDocument:nomDocument,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await batch.commit();
+    statut.textContent="Déclaration reçue. Elle sera vérifiée par l’administrateur avant publication.";
+    ["orTrouveurNom","orTrouveurTel","orNomDocument","orDescription","orLieu"].forEach(id=>document.getElementById(id).value="");
+  }catch(e){console.error(e);statut.textContent="Envoi impossible. Vérifiez la connexion et réessayez.";}
+}
+function ouvrirReclamationObjet(id){
+  document.getElementById("orObjetReclameId").value=id;
+  document.getElementById("formulaireReclamationObjet").style.display="block";
+  document.getElementById("orStatutReclamation").textContent="";
+  document.getElementById("formulaireReclamationObjet").scrollIntoView({behavior:"smooth",block:"start"});
+}
+async function envoyerReclamationObjet(){
+  const objetId=document.getElementById("orObjetReclameId").value;
+  const nom=document.getElementById("orReclamantNom").value.trim();
+  const tel=document.getElementById("orReclamantTel").value.trim();
+  const residence=document.getElementById("orResidence").value.trim();
+  const operateur=document.getElementById("orOperateur").value;
+  const reference=document.getElementById("orReference").value.trim();
+  const heure=document.getElementById("orHeurePaiement").value;
+  const statut=document.getElementById("orStatutReclamation");
+  if(!objetId||!nom||!tel||!residence||!reference||!heure){statut.textContent="Tous les champs sont obligatoires, y compris la référence et l’heure du paiement.";return;}
+  statut.textContent="Envoi de votre demande...";
+  try{
+    const objet=await db.collection("objets_retrouves").doc(objetId).get();
+    if(!objet.exists||objet.data().statut!=="publie"){statut.textContent="Cette déclaration n’est plus disponible.";return;}
+    await db.collection("demandes_recuperation_objets").add({
+      objetId,nomComplet:nom,telephone:tel,residence,
+      operateur,referenceTransaction:reference,heureTransaction:heure,
+      montantFCFA:1500,statut:"a_verifier",
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    statut.textContent="Demande transmise à l’administrateur. Le paiement sera vérifié avant la mise en relation.";
+    ["orReclamantNom","orReclamantTel","orResidence","orReference","orHeurePaiement"].forEach(id=>document.getElementById(id).value="");
+  }catch(e){console.error(e);statut.textContent="Envoi impossible. Vérifiez la connexion et réessayez.";}
+}
+async function chargerObjetsPerdusAdmin(){
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;
+  const zone=document.getElementById("listeObjetsRetrouvesAdmin");
+  const demandes=document.getElementById("listeReclamationsObjetsAdmin");
+  zone.innerHTML="Chargement des déclarations...";
+  demandes.innerHTML="Chargement des demandes...";
+  try{
+    const snap=await db.collection("objets_retrouves").orderBy("createdAt","desc").limit(200).get();
+    if(snap.empty)zone.innerHTML="<p class='notice'>Aucune déclaration reçue.</p>";
+    else{
+      const cartes=await Promise.all(snap.docs.map(async doc=>{
+        const d=doc.data();let prive={};
+        try{const p=await db.collection("objets_retrouves_prives").doc(doc.id).get();if(p.exists)prive=p.data();}catch(e){}
+        const date=d.createdAt&&d.createdAt.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"";
+        const actions=d.statut==="en_attente"
+          ?'<button type="button" onclick="traiterObjetRetrouve(\''+doc.id+'\',\'publie\')">Valider et publier</button><button type="button" onclick="traiterObjetRetrouve(\''+doc.id+'\',\'refuse\')">Refuser</button>'
+          :'<button type="button" onclick="traiterObjetRetrouve(\''+doc.id+'\',\'retire\')">Retirer de la publication</button>';
+        return '<article class="card" style="padding:12px;margin:10px 0;"><strong>'+echapperTextePublicite(d.type||"Bien")+' · '+echapperTextePublicite(d.statut||"")+'</strong><p>'+echapperTextePublicite(d.description||"")+'</p><p>Lieu : '+echapperTextePublicite(d.lieu||"")+'</p><hr><p><strong>Coordonnées privées du trouveur</strong><br>Nom : '+echapperTextePublicite(prive.trouveurNom||"Non disponible")+'<br>Téléphone : '+echapperTextePublicite(prive.trouveurTelephone||"Non disponible")+'<br>Nom sur document : '+echapperTextePublicite(prive.nomDocument||"Non indiqué")+'</p><small>'+date+'</small><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">'+actions+'</div></article>';
+      }));
+      zone.innerHTML=cartes.join("");
+    }
+    const ds=await db.collection("demandes_recuperation_objets").orderBy("createdAt","desc").limit(200).get();
+    if(ds.empty)demandes.innerHTML="<p class='notice'>Aucune demande de récupération reçue.</p>";
+    else demandes.innerHTML=ds.docs.map(doc=>{
+      const d=doc.data(),date=d.createdAt&&d.createdAt.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"";
+      return '<article class="card" style="padding:12px;margin:10px 0;"><strong>Demande · '+echapperTextePublicite(d.statut||"")+'</strong><p>Bien concerné : '+echapperTextePublicite(d.objetId||"")+'</p><p>Demandeur : '+echapperTextePublicite(d.nomComplet||"")+'<br>Téléphone : '+echapperTextePublicite(d.telephone||"")+'<br>Résidence : '+echapperTextePublicite(d.residence||"")+'</p><p>Paiement : '+echapperTextePublicite(d.operateur||"")+' · 1 500 FCFA<br>Référence : <strong>'+echapperTextePublicite(d.referenceTransaction||"")+'</strong><br>Heure : '+echapperTextePublicite(d.heureTransaction||"")+'</p><small>'+date+'</small><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button type="button" onclick="traiterReclamationObjet(\''+doc.id+'\',\'paiement_verifie\')">Paiement vérifié</button><button type="button" onclick="traiterReclamationObjet(\''+doc.id+'\',\'traitee\')">Mise en relation effectuée</button></div></article>';
+    }).join("");
+  }catch(e){console.error(e);zone.innerHTML="<p class='notice'>Erreur de chargement. Vérifiez les règles Firestore.</p>";demandes.innerHTML="<p class='notice'>Demandes indisponibles.</p>";}
+}
+async function traiterObjetRetrouve(id,statut){
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+  try{
+    const maj={statut,modifieLe:firebase.firestore.FieldValue.serverTimestamp(),modifiePar:auth.currentUser.uid};
+    if(statut==="publie")maj.publieLe=firebase.firestore.FieldValue.serverTimestamp();
+    await db.collection("objets_retrouves").doc(id).update(maj);
+    await chargerObjetsPerdusAdmin();
+  }catch(e){console.error(e);alert("Modification impossible. Vérifiez les règles Firestore.");}
+}
+async function traiterReclamationObjet(id,statut){
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+  try{
+    await db.collection("demandes_recuperation_objets").doc(id).update({statut,verifiePar:auth.currentUser.uid,modifieLe:firebase.firestore.FieldValue.serverTimestamp()});
+    await chargerObjetsPerdusAdmin();
+  }catch(e){console.error(e);alert("Mise à jour impossible. Vérifiez les règles Firestore.");}
+}
+
 // MENU ADMINISTRATEUR : une seule rubrique visible à la fois
 const RUBRIQUES_ADMIN = [
   {id:"gestionGares",titre:"📍 Gestion des gares et terminus"},
