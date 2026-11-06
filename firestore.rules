@@ -742,6 +742,76 @@ service cloud.firestore {
       allow update, delete: if estAdmin();
     }
 
+
+    // Déclarations publiques : seuls les champs non sensibles sont stockés ici.
+    match /objets_retrouves/{objetId} {
+      allow read: if estAdmin() || resource.data.statut == "publie";
+      allow create: if request.resource.data.keys().hasOnly(["type","description","lieu","statut","createdAt"])
+        && request.resource.data.keys().hasAll(["type","description","lieu","statut","createdAt"])
+        && request.resource.data.type in ["Objet","Document"]
+        && request.resource.data.description is string
+        && request.resource.data.description.size() >= 1
+        && request.resource.data.description.size() <= 500
+        && request.resource.data.lieu is string
+        && request.resource.data.lieu.size() >= 1
+        && request.resource.data.lieu.size() <= 180
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if estAdmin();
+    }
+
+    // Coordonnées du trouveur et identité du document : administrateur uniquement.
+    match /objets_retrouves_prives/{objetId} {
+      allow create: if request.resource.data.keys().hasOnly(["objetId","trouveurNom","trouveurTelephone","nomDocument","createdAt"])
+        && request.resource.data.keys().hasAll(["objetId","trouveurNom","trouveurTelephone","nomDocument","createdAt"])
+        && request.resource.data.objetId == objetId
+        && request.resource.data.trouveurNom is string
+        && request.resource.data.trouveurNom.size() >= 2
+        && request.resource.data.trouveurNom.size() <= 100
+        && request.resource.data.trouveurTelephone is string
+        && request.resource.data.trouveurTelephone.size() >= 6
+        && request.resource.data.trouveurTelephone.size() <= 25
+        && request.resource.data.nomDocument is string
+        && request.resource.data.nomDocument.size() <= 100
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if estAdmin();
+    }
+
+    // Coordonnées du demandeur et références de paiement : aucun accès public en lecture.
+    match /demandes_recuperation_objets/{demandeId} {
+      allow create: if request.resource.data.keys().hasOnly([
+          "objetId","nomComplet","telephone","residence","operateur",
+          "referenceTransaction","heureTransaction","montantFCFA","statut","createdAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "objetId","nomComplet","telephone","residence","operateur",
+          "referenceTransaction","heureTransaction","montantFCFA","statut","createdAt"
+        ])
+        && request.resource.data.objetId is string
+        && exists(/databases/$(database)/documents/objets_retrouves/$(request.resource.data.objetId))
+        && get(/databases/$(database)/documents/objets_retrouves/$(request.resource.data.objetId)).data.statut == "publie"
+        && request.resource.data.nomComplet is string
+        && request.resource.data.nomComplet.size() >= 2
+        && request.resource.data.nomComplet.size() <= 100
+        && request.resource.data.telephone is string
+        && request.resource.data.telephone.size() >= 6
+        && request.resource.data.telephone.size() <= 25
+        && request.resource.data.residence is string
+        && request.resource.data.residence.size() >= 2
+        && request.resource.data.residence.size() <= 180
+        && request.resource.data.operateur in ["Wave","Orange Money"]
+        && request.resource.data.referenceTransaction is string
+        && request.resource.data.referenceTransaction.size() >= 4
+        && request.resource.data.referenceTransaction.size() <= 100
+        && request.resource.data.heureTransaction is string
+        && request.resource.data.heureTransaction.size() >= 10
+        && request.resource.data.heureTransaction.size() <= 40
+        && request.resource.data.montantFCFA == 1500
+        && request.resource.data.statut == "a_verifier"
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if estAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
