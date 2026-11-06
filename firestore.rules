@@ -713,7 +713,7 @@ service cloud.firestore {
         && ((request.resource.data.gratuitRestant == resource.data.gratuitRestant - 1 && request.resource.data.bonusRestant == resource.data.bonusRestant)
           || (request.resource.data.bonusRestant == resource.data.bonusRestant - 1 && request.resource.data.gratuitRestant == resource.data.gratuitRestant)
           || (resource.data.resetAt is timestamp && resource.data.resetAt <= request.time
-            && request.resource.data.gratuitRestant == 14
+            && request.resource.data.gratuitRestant in [14,15]
             && request.resource.data.resetAt == null
             && request.resource.data.bonusRestant in [resource.data.bonusRestant,resource.data.bonusRestant - 1])
           || (resource.data.gratuitRestant == 1 && request.resource.data.gratuitRestant == 0
