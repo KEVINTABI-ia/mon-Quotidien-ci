@@ -1431,6 +1431,10 @@ header{padding:22px 18px 24px!important}
 
 
 
+
+<div id="gestionCommunautaire" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🗞️ Gestion de la communauté</h3>
+<h4>Publier une information</h4><textarea id="nouvelleInformationCommunautaire" rows="4" maxlength="1500" placeholder="Rédige l’information"></textarea><button class="primary" onclick="publierInformationCommunautaire()">Publier l’information</button><p id="statutInformationCommunautaire" class="notice"></p>
+<h4>Informations publiées</h4><div id="listeInformationsAdmin"></div><h4>Recharges du tchat — 100 FCFA / 15 messages</h4><div id="listeRechargesGbairaiAdmin"></div><h4>Messages du tchat — 24 heures</h4><div id="listeMessagesGbairaiAdmin"></div><h4>Annonces et offres — 500 FCFA par publication</h4><div id="listeAnnoncesAdmin"></div></div>
 </section>
 
 </section>
@@ -2211,8 +2215,8 @@ resultat.style.display = "block";
   <p style="margin:0 0 13px;font-size:13px;color:#68786E;">Les services pratiques, les annonces et les offres près de vous.</p>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
     <button type="button" onclick="ouvrirSectionPleinEcran('pharmaciesProches','Pharmacie la plus proche')" style="min-height:68px;background:#F0F7F1;color:#17663D;border:1px solid #DCEBDD;text-align:left;">💊 Pharmacie la plus proche</button>
-    <button type="button" onclick="ouvrirSectionPleinEcran('nouveauxServices','Petites annonces et offres');choisirNouveauService('annonce')" style="min-height:68px;background:#FFF5E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">📢 Petites annonces et offres</button>
-    <button type="button" onclick="ouvrirFormulairePublicite()" style="min-height:68px;grid-column:1/-1;background:#F2F0FF;color:#51418A;border:1px solid #DDD6FA;text-align:left;">📣 Faire ma pub / proposer une offre</button>
+    <button type="button" onclick="ouvrirPortailAnnoncesOffres()" style="min-height:68px;background:#FFF5E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">📢 Consulter ou faire une annonce et une offre</button>
+    <button type="button" onclick="ouvrirEspaceCommunautaire()" style="min-height:68px;grid-column:1/-1;background:#F2F0FF;color:#51418A;border:1px solid #DDD6FA;text-align:left;">🗞️ M’informer / Attraper les derniers Gbairai</button>
   </div>
 </section>
 
@@ -2261,6 +2265,14 @@ resultat.style.display = "block";
   <h3 id="nouveauxServicesListeTitre">Annonces et offres disponibles</h3>
   <div id="nouveauxServicesPublics"><p class="notice">Chargement...</p></div>
 </section>
+
+<section class="card" id="espaceAnnoncesOffres" style="display:none;"><h2>📢 Consulter ou faire une annonce et une offre</h2><p>Choisissez votre espace.</p>
+<div class="card" style="padding:14px;"><h3>👀 Consulter les annonces et offres</h3><p class="notice">Accès libre pour les clients.</p><button class="primary" onclick="consulterAnnoncesOffres()">Consulter les annonces et offres</button></div>
+<div class="card" style="padding:14px;"><h3>🔐 Espace connexion et création de compte</h3><p class="notice">Pour les annonceurs et les personnes qui proposent une offre.</p><button class="primary" onclick="ouvrirEspaceAnnonceur()">Espace connexion et création de compte</button></div>
+<div id="zoneConsultationAnnonces" style="display:none"></div><div id="zoneConnexionAnnonceur" style="display:none"></div><div id="zoneEspaceAnnonceur" style="display:none"></div></section>
+<section class="card" id="espaceCommunautaire" style="display:none;"><h2>🗞️ M’informer / Attraper les derniers Gbairai</h2><p>Informations utiles et échanges de la communauté.</p>
+<div id="menuCommunautaire" class="modes"><button class="mode" onclick="ouvrirInformationsCommunautaires()">📰 M’informer</button><button class="mode" onclick="ouvrirTchatGbairai()">💬 Faire un gbairai</button></div>
+<div id="zoneInformationsCommunautaires" style="display:none"></div><div id="zoneTchatGbairai" style="display:none"></div></section>
 </main>
 
 <footer>Mon Transport CI · La mobilité en Côte d'Ivoire</footer>
@@ -2598,6 +2610,7 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionPartenaires",titre:"👥 Gestion des partenaires"},
   {id:"gestionCommandesPartenaires",titre:"📦 Attribution des commandes aux partenaires"},
   {id:"gestionPublicites",titre:"📣 Gestion des publicités"},
+   {id:"gestionCommunautaire",titre:"🗞️ Informations, Gbairai et annonces"},
   {id:"gestionAbonnementsAutomobiliste",titre:"🚘 Abonnements de l’automobiliste"},
   {id:"gestionNouveauxServices",titre:"🧰 Validation dépannages, commerces et annonces"},
   {id:"gestionVisibiliteMenus",titre:"👁️ Affichage et masquage des menus"}
@@ -2616,6 +2629,7 @@ function ouvrirRubriqueAdmin(id){
   const cible=document.getElementById(id);
   if(!cible)return;
   if(id==="gestionNouveauxServices") chargerNouveauxServicesAdmin();
+   if(id==="gestionCommunautaire") chargerGestionCommunautaireAdmin();
   if(id==="gestionVisibiliteMenus") afficherGestionVisibiliteMenus();
   if(id==="gestionAbonnementsAutomobiliste") chargerDemandesAbonnementAutomobilisteAdmin();
   let retour=cible.querySelector(":scope > .admin-retour-menu");
@@ -3971,15 +3985,18 @@ function sonnerNouvelleCommandePartenaire() {
   try {
     if (!contexteAudioCommandes || contexteAudioCommandes.state !== "running") return;
     const ctx = contexteAudioCommandes;
-    [0, 0.22].forEach((decalage, index) => {
-      const osc = ctx.createOscillator(), gain = ctx.createGain();
-      osc.type = "sine"; osc.frequency.value = index ? 1046 : 880;
-      gain.gain.setValueAtTime(0.0001, ctx.currentTime + decalage);
-      gain.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + decalage + 0.025);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + decalage + 0.18);
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(ctx.currentTime + decalage); osc.stop(ctx.currentTime + decalage + 0.2);
-    });
+    for (let decalage = 0; decalage < 5; decalage += 0.62) {
+      [0, 0.18].forEach((offset, index) => {
+        const debut = ctx.currentTime + decalage + offset;
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = "sine"; osc.frequency.value = index ? 1046 : 880;
+        gain.gain.setValueAtTime(0.0001, debut);
+        gain.gain.exponentialRampToValueAtTime(0.20, debut + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, debut + 0.15);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(debut); osc.stop(debut + 0.17);
+      });
+    }
   } catch (e) { console.warn("Sonnerie impossible :", e); }
 }
 
@@ -8624,5 +8641,6 @@ activerVisibiliteMenusPublique();
 
 </script>
 
+<script src="./community.js"></script>
 </body>
 </html>
