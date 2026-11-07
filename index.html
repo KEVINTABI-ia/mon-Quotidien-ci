@@ -1186,6 +1186,11 @@ header{padding:22px 18px 24px!important}
 .admin-rubrique-fleche{color:#FFD18A!important}
 .admin-notification-count{display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:23px;padding:0 6px;margin-left:7px;border-radius:99px;background:#D92D20;color:#fff;font-size:12px;font-weight:900;box-shadow:0 2px 7px #0004}
 @media(max-width:560px){.admin-rubrique{min-height:86px!important}}
+
+/* Illustrations partagées entre les tuiles publiques et le tableau de bord. */
+.accueil-service.tuile-solidarite{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/solidarite.svg')!important;background-size:cover;background-position:center;}
+.accueil-service.tuile-commerce{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/commerce.svg')!important;background-size:cover;background-position:center;}
+.accueil-service.tuile-boutique{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/boutique.svg')!important;background-size:cover;background-position:center;}
 </style>
 
 <style>
@@ -1549,7 +1554,10 @@ main{padding:14px 13px 24px!important}
 <div id="gestionAbonnementsRamassage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🚌 Validation des compagnies de ramassage</h3><p class="notice">Vérifie les dossiers et les paiements avant d’approuver une compagnie ou d’activer son forfait mensuel.</p><div id="listeCompagniesRamassageAdmin">Chargement...</div></div>
 <div id="gestionAbonnementsAutomobiliste" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🚘 Validation des abonnements automobiles</h3><p class="notice">Vérifie le moyen de paiement et la référence avant d'activer 12 mois d'accès. Ne valide qu'après réception effective des 1 000 FCFA.</p><div id="listeAbonnementsAutomobilisteAdmin">Chargement...</div></div>
 <div id="gestionValidationDepannage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🔧 Validation des dépannages</h3><p class="notice">Examine séparément les demandes des professionnels du dépannage automobile.</p><div id="listeValidationDepannageAdmin">Chargement...</div></div>
-<div id="gestionValidationCommerce" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🛍️ Validation des commerces et boutiques</h3><p class="notice">Vérifie les inscriptions, les paiements d’abonnement et la visibilité des boutiques.</p><div id="listeValidationCommerceAdmin">Chargement...</div></div>
+<div id="gestionValidationCommerce" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🏪 Validation des commerces</h3><p class="notice">Vérifie les établissements commerciaux hors boutiques.</p><div id="listeValidationCommerceAdmin">Chargement...</div></div>
+<div id="gestionValidationBoutiques" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🛍️ Validation des boutiques</h3><p class="notice">Vérifie les boutiques, les paiements d’abonnement et leur visibilité.</p><div id="listeValidationBoutiquesAdmin">Chargement...</div></div>
+<div id="gestionDonsSolidarite" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🤝 Dons et demandes d’aide</h3><p class="notice">Les coordonnées des personnes sont privées et visibles uniquement ici.</p><div id="listeDonsSolidariteAdmin">Chargement...</div></div>
+<div id="gestionServicesProximite" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📍 Services de proximité</h3><p class="notice">Gère les stations-service, banques, hôtels et supermarchés de la plateforme.</p><button type="button" class="primary" onclick="importerServicesQuotidiensOSM()">⬇️ Importer / actualiser stations, banques et hôtels</button><p id="statutGestionServicesProximite" class="notice"></p><div id="resumeGestionServicesProximite">Chargement...</div></div>
 <div id="gestionValidationAnnonces" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>📢 Validation des annonces</h3><p class="notice">Examine les petites annonces et les offres avant leur publication.</p><div id="listeValidationAnnoncesAdmin">Chargement...</div></div>
 <div id="gestionObjetsPerdus" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🔎 Gestion des objets et documents retrouvés</h3><p class="notice">Les coordonnées des trouveurs et les demandes sont privées et visibles uniquement ici. Vérifie les paiements avant la mise en relation.</p><div id="listeObjetsRetrouvesAdmin">Chargement...</div><h3>Demandes de récupération et paiements</h3><div id="listeReclamationsObjetsAdmin">Chargement...</div></div>
 <div id="gestionGares" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
@@ -2482,11 +2490,15 @@ function chargerPublicitesAccueil() {
     <button type="button" onclick="ouvrirPortailAnnoncesOffres()" style="min-height:68px;background:#FFF5E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">📢 Consulter ou faire une annonce et une offre</button>
     <button type="button" onclick="ouvrirEspaceCommunautaire()" style="min-height:68px;grid-column:1/-1;background:#F2F0FF;color:#51418A;border:1px solid #DDD6FA;text-align:left;">🗞️ M’informer / Attraper les derniers Gbairai</button>
     <button type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Signaler et retrouver un objet ou un document perdu')" style="min-height:68px;grid-column:1/-1;background:#F1F7F5;color:#176B52;border:1px solid #CFE2D8;text-align:left;">🔎 Signaler et retrouver un objet ou un document perdu</button>
+    <button type="button" class="accueil-service tuile-solidarite" onclick="ouvrirEspaceSolidarite()" style="min-height:68px;grid-column:1/-1;text-align:left;">🤝 Dons et solidarité</button>
+    <button type="button" class="accueil-service tuile-commerce" onclick="ouvrirAnnuaireCommerce('commerce')" style="min-height:68px;text-align:left;">🏪 Commerces</button>
+    <button type="button" class="accueil-service tuile-boutique" onclick="ouvrirAnnuaireCommerce('boutique')" style="min-height:68px;text-align:left;">🛍️ Boutiques</button>
   </div>
     <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('station','Stations-service')" style="min-height:68px;background:#FFF4E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">⛽ Stations-service</button>
     <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('banque','Banques')" style="min-height:68px;background:#EEF5FF;color:#244E83;border:1px solid #D2E1F5;text-align:left;">🏦 Banques</button>
     <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('hotel','Hôtels')" style="min-height:68px;background:#F5F0FF;color:#60418A;border:1px solid #E0D5F4;text-align:left;">🏨 Hôtels</button>
 </section>
+<section class="card" id="espaceSolidarite" style="display:none;margin:14px 0;padding:16px;"><h2>🤝 Dons et solidarité</h2><p class="notice">Proposez un don ou demandez de l’aide. Chaque publication est vérifiée par l’administration. Vos coordonnées restent privées et ne sont jamais affichées publiquement.</p><div class="modes"><button type="button" onclick="afficherFormulaireSolidarite('don')">🎁 Proposer un don</button><button type="button" onclick="afficherFormulaireSolidarite('besoin')">🫶 Demander de l’aide</button></div><div id="formulaireSolidarite" style="display:none;margin:12px 0;"></div><h3>Publications validées</h3><div id="listeSolidaritePublique"><p class="notice">Chargement...</p></div></section>
 <section class="card" id="objetsPerdusRetrouves" style="display:none;margin:14px 0;padding:16px;">
 <h2>🔎 Signaler et retrouver un objet ou un document perdu</h2>
 <p class="notice">Consultez les biens retrouvés ou signalez un bien découvert. Les coordonnées personnelles ne sont jamais publiées.</p>
@@ -2912,13 +2924,13 @@ async function chargerAvisBoutique(boutiqueId){
  }catch(e){console.error(e);zone.textContent="Impossible de charger les avis. Vérifiez les règles Firestore de la collection avis_boutiques.";}
 }
 async function chargerNouveauxServicesAdmin(typeFiltre){
- const zones={depannage:"listeValidationDepannageAdmin",commerce:"listeValidationCommerceAdmin",annonce:"listeValidationAnnoncesAdmin"};
+ const zones={depannage:"listeValidationDepannageAdmin",commerce:"listeValidationCommerceAdmin",boutique:"listeValidationBoutiquesAdmin",annonce:"listeValidationAnnoncesAdmin"};
  const zone=document.getElementById(zones[typeFiltre]||"listeNouveauxServicesAdmin");
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){if(zone)zone.textContent="Accès administrateur requis.";return;}
  zone.innerHTML='<p class="notice">Chargement des dossiers...</p>';
  try{
   const snap=await db.collection("demandes_nouveaux_services").orderBy("createdAt","desc").limit(150).get();
-  const dossiers=snap.docs.filter(doc=>doc.data().type===typeFiltre);
+  const dossiers=snap.docs.filter(doc=>{const d=doc.data();return typeFiltre==="boutique"?(d.type==="commerce"&&String(d.categorie||"").toLowerCase()==="boutique"):typeFiltre==="commerce"?(d.type==="commerce"&&String(d.categorie||"").toLowerCase()!=="boutique"):d.type===typeFiltre;});
   if(dossiers.length===0){zone.innerHTML='<p class="notice">Aucun dossier de cette catégorie pour le moment.</p>';return;}
   zone.innerHTML=dossiers.map(doc=>{const d=doc.data();const type=NOUVEAUX_SERVICES[d.type]?.titre||d.type;const date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date en cours";const expire=d.abonnementFin?.toDate?d.abonnementFin.toDate().getTime()<=Date.now():false;const paiement=d.type==="commerce"?'<p><strong>Abonnement boutique : '+Number(d.montantAbonnement||0).toLocaleString("fr-FR")+' FCFA / '+Number(d.dureeAbonnementJours||0)+' jours</strong></p><p>Paiement : '+echapperTextePublicite(d.paiementMoyen||"Non indiqué")+' · Référence : '+echapperTextePublicite(d.paiementReference||"Non fournie")+' · Statut : '+echapperTextePublicite(d.paiementStatut||"à vérifier")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée automatiquement — abonnement expiré":d.visibleManuellement===false?"Masquée manuellement":"Visible si abonnement actif")+'</p>':"";const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'approuve\')">'+(d.type==="commerce"?"Confirmer paiement et activer 30 jours":"Approuver et publier")+'</button><button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'refuse\')">Refuser</button>': '<span class="notice">Dossier '+echapperTextePublicite(d.statut)+(d.abonnementFin&&d.abonnementFin.toDate?" · Fin abonnement : "+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"")+'</span>';const controle=d.type==="commerce"&&d.statut==="approuve"?'<button type="button" class="primary" onclick="basculerVisibiliteBoutiqueAdmin(\''+doc.id+'\','+(d.visibleManuellement===false?'true':'false')+')">'+(d.visibleManuellement===false?"Afficher manuellement la boutique":"Masquer manuellement la boutique")+'</button><button type="button" onclick="chargerAvisBoutiqueAdmin(\''+doc.id+'\')">⭐ Consulter les avis clients</button><div id="avisAdminBoutique_'+doc.id+'"></div>':"";return '<article class="card" style="padding:14px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo proposée" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':"")+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(type)+' · '+echapperTextePublicite(d.categorie)+'</p><p>'+echapperTextePublicite(d.commune)+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+' · '+date+'</p>'+paiement+actions+controle+'</article>';}).join("");
  }catch(e){console.error(e);zone.innerHTML='<p class="notice">Erreur de chargement. Vérifiez les règles Firestore.</p>';}
@@ -3135,7 +3147,10 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionValidationAnnonces",groupe:"Publications et communication",icone:"📢",image:"annonces",titre:"Annonces",description:"Examiner les annonces avant publication.",notification:"annonce"},
   {id:"gestionAbonnementsAutomobiliste",groupe:"Services et abonnements",icone:"🚘",titre:"Abonnements automobilistes",description:"Contrôler les demandes et activations."},
   {id:"gestionValidationDepannage",groupe:"Services et abonnements",icone:"🔧",image:"automobile",titre:"Dépannage automobile",description:"Valider les professionnels du dépannage.",notification:"depannage"},
-  {id:"gestionValidationCommerce",groupe:"Services et abonnements",icone:"🛍️",image:"commerce",titre:"Commerces et boutiques",description:"Valider les commerces et leurs dossiers.",notification:"commerce"},
+  {id:"gestionValidationCommerce",groupe:"Services et abonnements",icone:"🏪",image:"commerce",titre:"Commerces",description:"Valider les commerces hors boutiques.",notification:"commerce"},
+  {id:"gestionValidationBoutiques",groupe:"Services et abonnements",icone:"🛍️",image:"boutique",titre:"Boutiques",description:"Valider les boutiques et leurs abonnements.",notification:"boutique"},
+  {id:"gestionDonsSolidarite",groupe:"Vie communautaire",icone:"🤝",image:"solidarite",titre:"Dons et solidarité",description:"Valider les dons et demandes d’aide.",notification:"solidarite"},
+  {id:"gestionServicesProximite",groupe:"Services et abonnements",icone:"📍",image:"services",titre:"Services de proximité",description:"Gérer stations, banques, hôtels et supermarchés."},
   {id:"gestionObjetsPerdus",groupe:"Contrôle et paramètres",icone:"🔎",image:"solidarite",titre:"Objets retrouvés",description:"Gérer les objets et demandes de récupération."},
   {id:"gestionVisibiliteMenus",groupe:"Contrôle et paramètres",icone:"👁️",titre:"Visibilité des menus",description:"Afficher ou masquer les rubriques publiques."}
 ];
@@ -3144,8 +3159,8 @@ function surveillerNotificationsAdmin(){
  if(arretNotificationsAdmin){arretNotificationsAdmin();arretNotificationsAdmin=null;}
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;
  arretNotificationsAdmin=db.collection("demandes_nouveaux_services").onSnapshot(snap=>{
-  const comptes={depannage:0,commerce:0,annonce:0};
-  snap.forEach(doc=>{const d=doc.data()||{};if(Object.prototype.hasOwnProperty.call(comptes,d.type)&&(d.statut||"en_attente")==="en_attente")comptes[d.type]++;});
+  const comptes={depannage:0,commerce:0,boutique:0,annonce:0};
+  snap.forEach(doc=>{const d=doc.data()||{};if((d.statut||"en_attente")!=="en_attente")return;if(d.type==="commerce"){if(String(d.categorie||"").toLowerCase()==="boutique")comptes.boutique++;else comptes.commerce++;}else if(Object.prototype.hasOwnProperty.call(comptes,d.type))comptes[d.type]++;});
   document.querySelectorAll("[data-notification-type]").forEach(el=>{
    const n=comptes[el.dataset.notificationType]||0;el.textContent=String(n);el.hidden=n===0;
   });
@@ -3172,6 +3187,9 @@ function ouvrirRubriqueAdmin(id){
   if(!cible)return;
   if(id==="gestionValidationDepannage") chargerNouveauxServicesAdmin("depannage");
   if(id==="gestionValidationCommerce") chargerNouveauxServicesAdmin("commerce");
+  if(id==="gestionValidationBoutiques") chargerNouveauxServicesAdmin("boutique");
+  if(id==="gestionDonsSolidarite") chargerDonsSolidariteAdmin();
+  if(id==="gestionServicesProximite") chargerGestionServicesProximiteAdmin();
   if(id==="gestionValidationAnnonces") chargerNouveauxServicesAdmin("annonce");
   if(id==="gestionObjetsPerdus") chargerObjetsPerdusAdmin();
    if(id==="gestionCommunautaire") chargerGestionCommunautaireAdmin();
