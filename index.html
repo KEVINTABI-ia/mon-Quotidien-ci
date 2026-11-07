@@ -1205,8 +1205,10 @@ header{padding:22px 18px 24px!important}
 /* ACCUEIL MIXTE — hiérarchie visuelle allégée, sans retirer de service */
 header{padding:22px 76px 22px 18px!important;border-radius:0 0 24px 24px!important}
 .header-badge{margin-top:13px!important;font-size:9px!important}
-.tagline-anime{white-space:normal!important;overflow:visible!important;margin-top:9px!important;padding:0!important;border:0!important}
-.tagline-anime span{display:block!important;min-width:0!important;padding:0!important;white-space:normal!important;animation:none!important;font-size:12px!important;line-height:1.45!important}
+/* Bandeau défilant horizontal sous le titre de mobilité */
+.tagline-anime{display:block!important;white-space:nowrap!important;overflow:hidden!important;position:relative!important;margin-top:9px!important;padding:8px 0!important;border-top:1px solid rgba(213,227,222,.35)!important;border-bottom:1px solid rgba(213,227,222,.35)!important}
+.tagline-anime span{display:inline-block!important;width:max-content!important;min-width:max-content!important;padding:0 0 0 100%!important;white-space:nowrap!important;animation:defilementGuideMobilite 24s linear infinite!important;font-size:12px!important;line-height:1.45!important;will-change:transform}
+@keyframes defilementGuideMobilite{from{transform:translateX(0)}to{transform:translateX(-100%)}}
 main{padding:14px 13px 24px!important}
 #rechercheGaresV2{margin:0 0 13px!important;padding:17px 15px!important;border-top:4px solid #F28C28!important;border-radius:20px!important;box-shadow:0 7px 20px rgba(28,63,40,.08)!important}
 #rechercheGaresV2 h2{font-size:20px!important;margin-bottom:5px!important}
