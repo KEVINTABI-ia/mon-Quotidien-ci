@@ -3000,17 +3000,30 @@ function chargerRoutesFirestore() {
 
   arretEcouteRoutes = db.collection("routes").onSnapshot(
     (snapshot) => {
-routesFirestore = snapshot.docs.map(doc => {
-  const data = doc.data();
-
-  return {
-    ...data,
-    stops: (data.stops || []).map(stop =>
-      Array.isArray(stop) ? stop : [stop.nom, stop.tarif]
-    ),
-    firestoreId: doc.id
-  };
-});
+// Les anciens itinéraires SOTRA sont exclus de l'application.
+      const anciensItinerairesSotra = snapshot.docs.filter(doc =>
+        /^SOTRA\b/i.test(String(doc.data().transport || ""))
+      );
+      // Si l'administrateur est connecté, supprimer aussi ces anciennes fiches de Firestore.
+      if (auth.currentUser && auth.currentUser.uid === ADMIN_UID && anciensItinerairesSotra.length) {
+        anciensItinerairesSotra.forEach(doc => {
+          doc.ref.delete().catch(erreur =>
+            console.warn("Suppression d'un ancien itinéraire SOTRA impossible :", erreur)
+          );
+        });
+      }
+      routesFirestore = snapshot.docs
+        .filter(doc => !/^SOTRA\b/i.test(String(doc.data().transport || "")))
+        .map(doc => {
+          const data = doc.data();
+          return {
+            ...data,
+            stops: (data.stops || []).map(stop =>
+              Array.isArray(stop) ? stop : [stop.nom, stop.tarif]
+            ),
+            firestoreId: doc.id
+          };
+        });
 
       if (snapshot.size > 0 || firestoreInitialise) {
         window.MON_TRANSPORT_CI_ROUTES = routesFirestore.map(
