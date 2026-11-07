@@ -80,7 +80,47 @@ service cloud.firestore {
 
     match /compagnies/{compagnieId} {
       allow read: if true;
-      allow create, update, delete: if estAdmin();
+      allow create: if estAdmin()
+        || (estConnecte()
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.email == request.auth.token.email
+          && request.resource.data.keys().hasAll([
+            "uid","nom","agence","localisation","telephone","email","destinations",
+            "formule","periodicite","montant","moyenPaiement","referencePaiement",
+            "statutAbonnement","dateCreation","dateDebut","dateExpiration"
+          ])
+          && request.resource.data.keys().hasOnly([
+            "uid","nom","agence","localisation","telephone","email","logo","destinations",
+            "formule","periodicite","montant","moyenPaiement","referencePaiement",
+            "statutAbonnement","dateCreation","dateDebut","dateExpiration"
+          ])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.nom is string && request.resource.data.nom.size() > 0 && request.resource.data.nom.size() <= 100
+          && request.resource.data.agence is string && request.resource.data.agence.size() > 0 && request.resource.data.agence.size() <= 100
+          && request.resource.data.localisation is string && request.resource.data.localisation.size() > 0 && request.resource.data.localisation.size() <= 160
+          && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 20
+          && request.resource.data.email is string && request.resource.data.email.size() <= 120
+          && request.resource.data.destinations is list && request.resource.data.destinations.size() > 0 && request.resource.data.destinations.size() <= 100
+          && request.resource.data.formule in ["Essentielle","Professionnelle"]
+          && request.resource.data.periodicite in ["Mensuel","Annuel"]
+          && (
+            (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Mensuel" && request.resource.data.montant == 5000)
+            || (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Annuel" && request.resource.data.montant == 50000)
+            || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Mensuel" && request.resource.data.montant == 10000)
+            || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Annuel" && request.resource.data.montant == 100000)
+          )
+          && request.resource.data.moyenPaiement in ["Wave","Orange Money"]
+          && request.resource.data.referencePaiement is string
+          && request.resource.data.referencePaiement.size() >= 4
+          && request.resource.data.referencePaiement.size() <= 80
+          && request.resource.data.statutAbonnement == "En attente"
+          && request.resource.data.dateCreation == request.time
+          && request.resource.data.dateDebut == null
+          && request.resource.data.dateExpiration == null
+          && (!request.resource.data.keys().hasAny(["logo"])
+            || (request.resource.data.logo is string && request.resource.data.logo.size() <= 300000 && (request.resource.data.logo == "" || request.resource.data.logo.matches("^data:image/jpeg;base64,.*$"))))
+        );
+      allow update, delete: if estAdmin();
     }
 
     match /gares/{gareId} {
@@ -573,9 +613,12 @@ service cloud.firestore {
       allow create: if estConnecte()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","telephone","description","email","statut","createdAt"])
-        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","telephone","description","email","photoUrl","produits","adresseBoutique","tarifLivraisonBoutique","paiementMoyen","paiementReference","montantAbonnement","dureeAbonnementJours","paiementStatut","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","telephone","description","email","photoUrl","produits","adresseBoutique","tarifLivraisonBoutique","paiementMoyen","paiementReference","montantAbonnement","dureeAbonnementJours","paiementStatut","modePartenaire","statut","createdAt"])
         && request.resource.data.type in ["depannage","commerce","annonce"]
+        && (!request.resource.data.keys().hasAny(["modePartenaire"]) || request.resource.data.get("modePartenaire", false) == true)
         && (request.resource.data.type != "commerce"
+          || (request.resource.data.modePartenaire == true
+            && request.resource.data.categorie in ["Pièces détachées","Autre commerce"])
           || (request.resource.data.produits is list
             && request.resource.data.produits.size() > 0
             && request.resource.data.adresseBoutique is string
