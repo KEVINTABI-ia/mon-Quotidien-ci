@@ -2828,7 +2828,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire){
    :type==="commerce"?"Commerces et boutiques référencés":"Annonces et offres disponibles";
  const zone=document.getElementById("nouveauServiceFormZone");
  zone.innerHTML=`
- <div class="card" style="padding:14px;margin-bottom:14px;">
+ <div class="card" data-mode-partenaire="${modePartenaire?"1":"0"}" style="padding:14px;margin-bottom:14px;">
  <h3>${cfg.icone} ${cfg.titre}</h3>
  <p>Proposez votre service ou votre annonce. La publication sera possible après validation de l'administration.</p>
  <label>Nom / entreprise / titre de l'annonce</label><input id="nsTitre" maxlength="100" placeholder="Nom ou titre" required>
@@ -2847,7 +2847,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire){
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
  ${type==="commerce"&&!modePartenaire?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="15" data-montant="4000">15 jours — 4 000 FCFA</option><option value="30" data-montant="7000">30 jours — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p>Wave : <strong>0757522319</strong><br>Orange Money : <strong>0757522319</strong><br>Titulaire : <strong>TA BI SERGE KEVIN</strong></p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
- <button class="primary" type="button" onclick="envoyerNouveauService()">${type==="commerce"?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
+ <button class="primary" type="button" onclick="envoyerNouveauService()">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
  </div>`;
  chargerNouveauxServicesPublics(type);
@@ -2883,41 +2883,48 @@ function compresserPhotoNouveauService(file){
 async function envoyerNouveauService(){
  const statut=document.getElementById("nsStatut");
  const valeur=id=>document.getElementById(id)?.value.trim()||"";
- const titre=valeur("nsTitre"),commune=valeur("nsCommune"),telephone=valeur("nsTelephone"),description=valeur("nsDescription"),email=valeur("nsEmail"),password=document.getElementById("nsPassword").value;
- const paiementMoyen=nouveauServiceActif==="commerce"?(document.getElementById("nsPaiementMoyen")?.value||""):"";
- const paiementReference=nouveauServiceActif==="commerce"?(document.getElementById("nsPaiementReference")?.value.trim()||""):"";
- const produitsTexte=nouveauServiceActif==="commerce"?(document.getElementById("nsProduits")?.value.trim()||""):"";
+ const titre=valeur("nsTitre"),commune=valeur("nsCommune"),telephone=valeur("nsTelephone"),description=valeur("nsDescription"),email=valeur("nsEmail"),password=document.getElementById("nsPassword")?.value||"";
+ const modePartenaire=!!document.querySelector("#devenirPartenaire [data-mode-partenaire=\"1\"]");
+ const estBoutique=nouveauServiceActif==="commerce"&&!modePartenaire;
+ const paiementMoyen=estBoutique?(document.getElementById("nsPaiementMoyen")?.value||""):"";
+ const paiementReference=estBoutique?(document.getElementById("nsPaiementReference")?.value.trim()||""):"";
+ const produitsTexte=estBoutique?(document.getElementById("nsProduits")?.value.trim()||""):"";
  const produits=produitsTexte.split("\n").map(l=>{const p=l.split("|");return {nom:(p[0]||"").trim(),prix:Number((p[1]||"").trim().replace(/\s/g,""))};}).filter(p=>p.nom);
- const adresseBoutique=nouveauServiceActif==="commerce"?(document.getElementById("nsAdresseBoutique")?.value.trim()||""):"";
- const tarifLivraisonBoutique=nouveauServiceActif==="commerce"?Number(document.getElementById("nsTarifLivraison")?.value||0):0;
- if(nouveauServiceActif==="commerce"&&(!adresseBoutique||![1000,1500,2000,2500].includes(tarifLivraisonBoutique))){statut.textContent="Renseignez l’adresse précise de récupération et choisissez un tarif de livraison autorisé.";return;}
- if(nouveauServiceActif==="commerce"&&(!produits.length||produits.some(p=>!p.nom||!Number.isFinite(p.prix)||p.prix<=0))){statut.textContent="Ajoutez au moins un produit avec un prix valide : Produit | Prix en FCFA.";return;}
- if(!titre||!commune||!telephone||!description||!email||password.length<6||(nouveauServiceActif==="commerce"&&(!paiementMoyen||!paiementReference))){statut.textContent="Remplissez tous les champs obligatoires, y compris les informations de paiement pour une boutique.";return;}
+ const adresseBoutique=estBoutique?(document.getElementById("nsAdresseBoutique")?.value.trim()||""):"";
+ const tarifLivraisonBoutique=estBoutique?Number(document.getElementById("nsTarifLivraison")?.value||0):0;
+ if(estBoutique&&(!adresseBoutique||![1000,1500,2000,2500].includes(tarifLivraisonBoutique))){statut.textContent="Renseignez l’adresse précise de récupération et choisissez un tarif de livraison autorisé.";return;}
+ if(estBoutique&&(!produits.length||produits.some(p=>!p.nom||!Number.isFinite(p.prix)||p.prix<=0))){statut.textContent="Ajoutez au moins un produit avec un prix valide : Produit | Prix en FCFA.";return;}
+ if(!titre||!commune||!telephone||!description||!email||password.length<6||(estBoutique&&(!paiementMoyen||!paiementReference))){statut.textContent="Remplissez tous les champs obligatoires. Le mot de passe doit contenir au moins 6 caractères.";return;}
  statut.textContent="Envoi du dossier...";
  try{
   let user=auth.currentUser;
-  if(user && user.email!==email){await auth.signOut();user=null;}
+  if(user&&user.email!==email){await auth.signOut();user=null;}
   if(!user){
    try{const cred=await auth.createUserWithEmailAndPassword(email,password);user=cred.user;}
    catch(e){if(e.code==="auth/email-already-in-use"){const cred=await auth.signInWithEmailAndPassword(email,password);user=cred.user;}else throw e;}
   }
   let photoUrl=null;
-  const photo=document.getElementById("nsPhoto") && document.getElementById("nsPhoto").files[0];
-  if(photo && (nouveauServiceActif==="depannage"||nouveauServiceActif==="commerce")){
+  const photo=document.getElementById("nsPhoto")?.files?.[0];
+  if(photo&&(nouveauServiceActif==="depannage"||nouveauServiceActif==="commerce")){
    if(!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>3*1024*1024)throw new Error("Photo JPG, PNG ou WEBP de 3 Mo maximum.");
    statut.textContent="Préparation de la photo...";
    photoUrl=await compresserPhotoNouveauService(photo);
   }
   await db.collection("demandes_nouveaux_services").add({
-   uid:user.uid,type:nouveauServiceActif,titre,categorie:valeur("nsCategorie"),commune,telephone,description,email,...(modePartenaire?{modePartenaire:true}:{}),
+   uid:user.uid,type:nouveauServiceActif,titre,categorie:valeur("nsCategorie"),commune,telephone,description,email,
+   ...(modePartenaire?{modePartenaire:true}:{}),
    ...(photoUrl?{photoUrl}:{}),
-   ...(nouveauServiceActif==="commerce"?{produits,adresseBoutique,tarifLivraisonBoutique,paiementMoyen,paiementReference,montantAbonnement:Number(document.getElementById("nsDureeAbonnement").selectedOptions[0].dataset.montant),dureeAbonnementJours:Number(document.getElementById("nsDureeAbonnement").value),paiementStatut:"a_verifier"}:{}),
+   ...(estBoutique?{produits,adresseBoutique,tarifLivraisonBoutique,paiementMoyen,paiementReference,montantAbonnement:Number(document.getElementById("nsDureeAbonnement").selectedOptions[0].dataset.montant),dureeAbonnementJours:Number(document.getElementById("nsDureeAbonnement").value),paiementStatut:"a_verifier"}:{}),
    statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()
   });
-  statut.textContent="Dossier envoyé. Il sera visible après vérification et approbation par Mon Transport CI.";
+  statut.textContent="Dossier envoyé. Il sera vérifié par l’administration avant publication.";
   document.getElementById("nsTitre").value="";
   document.getElementById("nsDescription").value="";
- }catch(e){console.error("Dossier nouveau service",e);statut.textContent="Envoi impossible : "+(e.code==="permission-denied"?"les règles Firestore doivent être mises à jour.":e.message||"réessayez.");}
+ }catch(e){
+  console.error("Dossier nouveau service",e);
+  statut.textContent="Envoi impossible : "+(e.code==="permission-denied"?"les règles Firestore doivent être mises à jour.":e.message||"réessayez.");
+  if(auth.currentUser)try{await auth.signOut();}catch(_){}
+ }
 }
 async function chargerNouveauxServicesPublics(type){
  const zone=document.getElementById("nouveauxServicesPublics");if(!zone)return;
