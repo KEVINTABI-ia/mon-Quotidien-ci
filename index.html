@@ -834,6 +834,11 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 .tuile-gbaka{background-image:url("https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80")!important}
 .tuile-taxi{background-image:url("https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=900&q=80")!important}
 .tuile-ramassage{background-image:url("https://images.unsplash.com/photo-1507514601121-0f3b1c1f6f9a?auto=format&fit=crop&w=900&q=80")!important}
+/* Sous-menu Mes différentes gares */
+.menu-differentes-gares{display:grid;gap:12px;padding:4px 0}
+.menu-differentes-gares h3{margin:0;color:#17663D}
+.menu-differentes-gares p{margin:0 0 4px;color:#66756D}
+.menu-differentes-gares button{width:100%;min-height:48px;text-align:left}
 /* Espace de l'automobiliste : identité visuelle automobile, sobre et premium */
 #boutonAccueilAutomobiliste.tuile-marches{
   background-image:linear-gradient(125deg,#142B3A 0%,#234B63 55%,#39758A 100%)!important;
@@ -2077,11 +2082,8 @@ function chargerPublicitesAccueil() {
     <p>Choisissez directement le service ou le réseau que vous recherchez.</p>
   </div>
   <div class="accueil-services-grid">
-    <button type="button" class="accueil-service tuile-gbaka" onclick="ouvrirResultatPleinEcran('Gares de Gbaka'); afficherGaresStations('Gbaka')">
-      <strong>Gares de Gbaka</strong><small>Points de départ et destinations</small>
-    </button>
-    <button type="button" class="accueil-service tuile-taxi" onclick="ouvrirResultatPleinEcran('Gares de taxi communal'); afficherGaresStations('Taxi communal')">
-      <strong>Gares de taxi communal</strong><small>Repérez les gares proches de votre trajet</small>
+    <button type="button" class="accueil-service tuile-gbaka" onclick="ouvrirResultatPleinEcran('Mes différentes gares'); afficherMenuDifferentesGares()">
+      <strong>Mes différentes gares</strong><small>Gbaka, taxi communal et Woro-woro</small>
     </button>
     <button type="button" class="accueil-service tuile-compagnies" onclick="ouvrirSectionPleinEcran('repertoireCompagnies','Compagnies de voyage')">
       <strong>Compagnies de voyage</strong><small>Agences, destinations et tarifs</small>
@@ -2091,9 +2093,6 @@ function chargerPublicitesAccueil() {
     </button>
     <button id="boutonAccueilAutomobiliste" type="button" class="accueil-service tuile-marches" onclick="ouvrirSectionPleinEcran('espaceAutomobiliste','Espace de l’automobiliste')">
       <strong>🚘 Espace de l’automobiliste</strong><small>Assurance, dépannage, documents et sécurité routière</small>
-    </button>
-    <button type="button" class="accueil-service tuile-woro" onclick="ouvrirResultatPleinEcran('Gares de Woro-woro'); afficherGaresStations('Woro-woro')">
-      <strong>Woro-woro</strong><small>Gares et dessertes disponibles</small>
     </button>
   </div>
 </section>
@@ -7017,6 +7016,20 @@ function signalerProblemeGeneral(){
 }
 
 // COLLE ICI LA NOUVELLE FONCTION
+function afficherMenuDifferentesGares(){
+  const resultat = document.getElementById("resultatRechercheGares");
+  if(!resultat) return;
+  resultat.style.display = "block";
+  resultat.innerHTML = `
+    <div class="menu-differentes-gares">
+      <h3>🚏 Mes différentes gares</h3>
+      <p>Choisissez le type de gare que vous souhaitez consulter.</p>
+      <button type="button" class="primary" onclick="afficherGaresStations('Gbaka')">🚌 Gares de Gbaka</button>
+      <button type="button" class="primary" onclick="afficherGaresStations('Taxi communal')">🚕 Gares de taxi communal</button>
+      <button type="button" class="primary" onclick="afficherGaresStations('Woro-woro')">🚖 Gares de Woro-woro</button>
+    </div>`;
+}
+
 async function afficherGaresStations(typeTransport){
   const resultat = document.getElementById("resultatRechercheGares");
   const typeChoisi = typeTransport || "Gbaka";
@@ -7035,7 +7048,7 @@ async function afficherGaresStations(typeTransport){
         return transports.some(t => normaliser(String(t)) === normaliser(typeChoisi));
       });
 
-    const titre = typeChoisi === "Gbaka" ? "Gares de Gbaka" : "Gares de taxi communal";
+    const titre = typeChoisi === "Gbaka" ? "Gares de Gbaka" : (typeChoisi === "Woro-woro" ? "Gares de Woro-woro" : "Gares de taxi communal");
     if (!garesType.length) {
       resultat.innerHTML = "<strong>📍 " + titre + "</strong><p class='notice'>Aucune gare n'est encore enregistrée pour ce transport.</p>";
       return;
