@@ -7406,30 +7406,51 @@ function distanceEntrePointsKm(lat1,lon1,lat2,lon2){
   const a=Math.sin(dLat/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLon/2)**2;
   return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
-function chargerSupermarchesProches(){
+async function chargerSupermarchesProches(){
   const zone=document.getElementById("listeSupermarchesCommune");if(!zone)return;
   if(!navigator.geolocation){
     zone.innerHTML="<p class='notice'>La géolocalisation n’est pas disponible sur ce téléphone ou ce navigateur.</p>";return;
   }
-  zone.innerHTML="<p class='notice'>📍 Autorisez la localisation dans la fenêtre de votre téléphone pour trouver les supermarchés proches.</p>";
+  zone.innerHTML="<p class='notice'>📍 Autorisez la localisation dans la fenêtre de votre téléphone pour trouver les supermarchés de votre commune.</p>";
   navigator.geolocation.getCurrentPosition(async position=>{
     try{
       const origine={lat:position.coords.latitude,lon:position.coords.longitude};
-      zone.innerHTML="<p class='notice'>🔎 Recherche des supermarchés proches de votre position…</p>";
-      const snapshot=await db.collection("supermarches").limit(1000).get();
-      const fiches=snapshot.docs.map(doc=>({id:doc.id,...doc.data()})).filter(f=>Number.isFinite(Number(f.latitude))&&Number.isFinite(Number(f.longitude))).map(f=>({...f,distance:distanceEntrePointsKm(origine.lat,origine.lon,Number(f.latitude),Number(f.longitude))})).sort((a,b)=>a.distance-b.distance);
-      if(!fiches.length){
-        zone.innerHTML="<p class='notice'>Aucun supermarché avec coordonnées GPS n’est actuellement disponible dans le répertoire.</p>";return;
+      zone.innerHTML="<p class='notice'>📍 Identification de votre commune à partir de votre position GPS…</p>";
+      const urlCommune="https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=10&lat="+encodeURIComponent(origine.lat)+"&lon="+encodeURIComponent(origine.lon);
+      const reponseCommune=await fetch(urlCommune);
+      if(!reponseCommune.ok)throw new Error("Le service de localisation de la commune est momentanément indisponible.");
+      const donneesCommune=await reponseCommune.json();
+      const adresse=donneesCommune.address||{};
+      const communesConnues=[...new Set(MARCHES_COMMUNES.map(m=>m.commune))];
+      const candidats=[adresse.city_district,adresse.municipality,adresse.suburb,adresse.borough,adresse.town,adresse.city,adresse.county,adresse.state_district,adresse.village].filter(Boolean);
+      let communeUtilisateur=null;
+      for(const candidat of candidats){
+        communeUtilisateur=communesConnues.find(c=>normaliserNomCommuneSupermarche(c)===normaliserNomCommuneSupermarche(candidat));
+        if(communeUtilisateur)break;
       }
-      zone.innerHTML="<h3>"+fiches.length+" supermarché(s) classé(s) autour de votre position</h3>"+fiches.map((f,i)=>{
+      if(!communeUtilisateur){
+        zone.innerHTML="<p class='notice'>📍 Votre position GPS est détectée, mais nous n’arrivons pas à identifier avec certitude votre commune. Aucun supermarché d’une autre commune ne sera affiché. Réessayez dans quelques instants.</p><button type='button' class='primary' style='width:100%;' onclick='chargerSupermarchesProches()'>Réessayer</button>";
+        return;
+      }
+      zone.innerHTML="<p class='notice'>🔎 Recherche des supermarchés enregistrés dans la commune de "+echapperTexteCompagnie(communeUtilisateur)+"…</p>";
+      const snapshot=await db.collection("supermarches").limit(1000).get();
+      const fiches=snapshot.docs.map(doc=>({id:doc.id,...doc.data()}))
+        .filter(f=>normaliserNomCommuneSupermarche(f.commune)===normaliserNomCommuneSupermarche(communeUtilisateur))
+        .filter(f=>Number.isFinite(Number(f.latitude))&&Number.isFinite(Number(f.longitude)))
+        .map(f=>({...f,distance:distanceEntrePointsKm(origine.lat,origine.lon,Number(f.latitude),Number(f.longitude))}))
+        .sort((a,b)=>a.distance-b.distance);
+      if(!fiches.length){
+        zone.innerHTML="<p class='notice'>Aucun supermarché avec coordonnées GPS n’est encore enregistré dans la commune de "+echapperTexteCompagnie(communeUtilisateur)+". Les supermarchés des autres communes sont volontairement masqués.</p>";return;
+      }
+      zone.innerHTML="<h3>"+fiches.length+" supermarché(s) trouvé(s) à "+echapperTexteCompagnie(communeUtilisateur)+"</h3><p class='notice'>Résultats limités à votre commune et classés du plus proche au plus éloigné.</p>"+fiches.map((f,i)=>{
         const destination=Number(f.latitude)+","+Number(f.longitude);
         const guide="https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(origine.lat+","+origine.lon)+"&destination="+encodeURIComponent(destination)+"&travelmode=driving";
         const nomAffiche=(f.nom||"Supermarché")+(f.quartier?" — "+f.quartier:"");
-        return "<article class='stop' style='margin:10px 0;padding:15px;border-left:4px solid #F28C28;'><strong style='font-size:16px;'>"+(i+1)+". 🛒 "+echapperTexteCompagnie(nomAffiche)+"</strong><p style='margin:7px 0;'>📏 <strong>"+f.distance.toFixed(2).replace(".",",")+" km</strong> de votre position</p><p style='margin:5px 0;'>🏙️ Commune : "+echapperTexteCompagnie(f.commune||"À vérifier")+"</p>"+(f.quartier?"<p style='margin:5px 0;'>📍 Quartier : "+echapperTexteCompagnie(f.quartier)+"</p>":"")+(f.adresse&&f.adresse!=="Adresse non précisée"?"<p style='margin:5px 0;'>🛣️ Adresse : "+echapperTexteCompagnie(f.adresse)+"</p>":"")+(f.marque?"<p style='margin:5px 0;'>🏷️ Enseigne : "+echapperTexteCompagnie(f.marque)+"</p>":"")+"<a href='"+guide+"' target='_blank' rel='noopener' style='display:block;text-align:center;text-decoration:none;background:#F28C28;color:white;padding:11px;border-radius:10px;font-weight:800;margin-top:10px;'>🧭 Me guider vers ce supermarché</a></article>";
+        return "<article class='stop' style='margin:10px 0;padding:15px;border-left:4px solid #F28C28;'><strong style='font-size:16px;'>"+(i+1)+". 🛒 "+echapperTexteCompagnie(nomAffiche)+"</strong><p style='margin:7px 0;'>📏 <strong>"+f.distance.toFixed(2).replace(".",",")+" km</strong> de votre position</p><p style='margin:5px 0;'>🏙️ Commune : "+echapperTexteCompagnie(f.commune||communeUtilisateur)+"</p>"+(f.quartier?"<p style='margin:5px 0;'>📍 Quartier : "+echapperTexteCompagnie(f.quartier)+"</p>":"")+(f.adresse&&f.adresse!=="Adresse non précisée"?"<p style='margin:5px 0;'>🛣️ Adresse : "+echapperTexteCompagnie(f.adresse)+"</p>":"")+(f.marque?"<p style='margin:5px 0;'>🏷️ Enseigne : "+echapperTexteCompagnie(f.marque)+"</p>":"")+"<a href='"+guide+"' target='_blank' rel='noopener' style='display:block;text-align:center;text-decoration:none;background:#F28C28;color:white;padding:11px;border-radius:10px;font-weight:800;margin-top:10px;'>🧭 Me guider vers ce supermarché</a></article>";
       }).join("");
     }catch(erreur){
-      console.error("Recherche des supermarchés proches :",erreur);
-      zone.innerHTML="<p class='notice'>Impossible de charger les supermarchés depuis Firebase. Vérifie la connexion internet et les règles Firestore.</p>";
+      console.error("Recherche des supermarchés de la commune :",erreur);
+      zone.innerHTML="<p class='notice'>Impossible d’identifier votre commune ou de charger les supermarchés. Vérifiez la connexion internet puis réessayez.</p><button type='button' class='primary' style='width:100%;' onclick='chargerSupermarchesProches()'>Réessayer</button>";
     }
   },erreur=>{
     let message="Impossible de récupérer votre position.";
