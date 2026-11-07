@@ -116,7 +116,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     const db=testEnv.authenticatedContext(PARTNER_UID,{email:"partner@example.test"}).firestore();
     const {collection,addDoc,serverTimestamp}=require("firebase/firestore");
     await assertSucceeds(addDoc(collection(db,"offres_ramassage"),{
-      compagnieId:PARTNER_UID,compagnieNom:"Compagnie test",communeDepart:"Yopougon",
+      compagnieId:PARTNER_UID,compagnieNom:"Compagnie test",telephone:"0100000000",communeDepart:"Yopougon",
       points:"Bagnon",destination:"Plateau",jours:"Lundi-vendredi",heure:"06:00",
       placesDisponibles:12,tarif:25000,statut:"publiee",createdAt:serverTimestamp()
     }));
