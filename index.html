@@ -900,11 +900,25 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 
 
 /* ESPACE ADMINISTRATEUR : MENU PAR RUBRIQUES */
-#adminMenuRubriques{display:grid;grid-template-columns:1fr;gap:11px;margin:18px 0 8px}
-.admin-rubrique{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:64px;padding:16px;text-align:left;background:#F2F8F3!important;color:#17663D!important;border:1px solid #D8E8DC!important;border-left:5px solid #16834A!important;border-radius:15px!important;box-shadow:0 4px 12px rgba(22,75,45,.07)!important;font-size:15px}
-.admin-rubrique span:last-child{font-size:22px;color:#F28C28}
+/* REFONTE DU TABLEAU DE BORD ADMINISTRATEUR */
+#espaceAdmin{max-width:1100px!important;margin:20px auto!important;padding:24px!important}
+#espaceAdmin>#adminMenuRubriques{display:block;grid-template-columns:none;gap:0;margin:22px 0 12px}
+.admin-dashboard-heading{margin:0 0 6px!important;color:#18352A!important;font-size:25px!important;font-weight:900!important;letter-spacing:-.4px}
+.admin-dashboard-subtitle{margin:0 0 24px;color:#68786E;font-size:13px;line-height:1.6}
+.admin-groupe{margin:0 0 26px}
+.admin-groupe-titre{margin:0 0 13px!important;padding:0 0 9px!important;background:transparent!important;border:0!important;border-bottom:1px solid #E3EAE4!important;border-radius:0!important;color:#26352D!important;font-size:16px!important;font-weight:850!important}
+.admin-groupe-grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.admin-rubrique{display:flex;align-items:center;justify-content:flex-start;gap:13px;width:100%;min-height:94px;padding:16px;text-align:left;background:#FFFFFF!important;color:#26352D!important;border:1px solid #E3EAE4!important;border-radius:16px!important;box-shadow:0 4px 14px rgba(25,65,40,.06)!important;font-size:14px}
+.admin-rubrique:hover{border-color:#16834A!important;box-shadow:0 7px 18px rgba(25,65,40,.11)!important}
+.admin-rubrique-icone{display:flex;align-items:center;justify-content:center;flex:0 0 42px;width:42px;height:42px;border-radius:13px;background:#F0F7F1;font-size:22px}
+.admin-rubrique-contenu{display:block;min-width:0;flex:1}
+.admin-rubrique-titre{display:block;color:#18352A;font-size:15px;font-weight:850;line-height:1.3}
+.admin-rubrique-description{display:block;margin-top:5px;color:#68786E;font-size:12px;font-weight:450;line-height:1.4}
+.admin-rubrique-fleche{margin-left:auto;color:#F28C28;font-size:24px;font-weight:800}
 .admin-retour-menu{display:block;width:100%;margin:0 0 16px;background:#FFF4E8!important;color:#17663D!important;border:1px solid #F2C58F!important}
 #espaceAdmin.admin-rubrique-ouverte>h2{margin-bottom:12px}
+@media(max-width:560px){#espaceAdmin{padding:17px 13px!important}.admin-dashboard-heading{font-size:22px!important}.admin-groupe-grille{grid-template-columns:1fr;gap:10px}.admin-rubrique{min-height:82px;padding:13px}.admin-rubrique-titre{font-size:14px}}
+
 
 /* FOND ANIMÉ DE L'ONGLET COMPAGNIES DE VOYAGE */
 .carte-compagnies-voyage{
@@ -3041,28 +3055,32 @@ async function traiterReclamationObjet(id,statut){
   }catch(e){console.error(e);alert("Mise à jour impossible. Vérifiez les règles Firestore.");}
 }
 
-// MENU ADMINISTRATEUR : une seule rubrique visible à la fois
+// MENU ADMINISTRATEUR : tableau de bord par rubriques, une seule page de gestion visible à la fois
 const RUBRIQUES_ADMIN = [
-  {id:"gestionGares",titre:"📍 Gestion des gares et terminus"},
-  {id:"gestionRoutes",titre:"🛣️ Gestion des itinéraires et tarifs"},
-  {id:"gestionCompagnies",titre:"🚍 Gestion des compagnies de voyage"},
-  {id:"gestionAbonnementsRamassage",titre:"🚌 Validation des compagnies de ramassage"},
-  {id:"gestionPartenaires",titre:"👥 Gestion des partenaires"},
-  {id:"gestionCommandesPartenaires",titre:"📦 Attribution des commandes aux partenaires"},
-  {id:"gestionPublicites",titre:"📣 Gestion des publicités"},
-   {id:"gestionCommunautaire",titre:"🗞️ Informations, Gbairai et annonces"},
-  {id:"gestionAbonnementsAutomobiliste",titre:"🚘 Abonnements de l’automobiliste"},
-  {id:"gestionValidationDepannage",titre:"🔧 Validation des dépannages"},
-  {id:"gestionValidationCommerce",titre:"🛍️ Validation des commerces et boutiques"},
-  {id:"gestionValidationAnnonces",titre:"📢 Validation des annonces"},
-  {id:"gestionObjetsPerdus",titre:"🔎 Objets retrouvés et demandes de récupération"},
-  {id:"gestionVisibiliteMenus",titre:"👁️ Affichage et masquage des menus"}
+  {id:"gestionGares",groupe:"Transport",icone:"📍",titre:"Gares et terminus",description:"Créer, positionner et gérer les gares."},
+  {id:"gestionRoutes",groupe:"Transport",icone:"🛣️",titre:"Itinéraires et tarifs",description:"Gérer les lignes, arrêts et prix."},
+  {id:"gestionCompagnies",groupe:"Transport",icone:"🚍",titre:"Compagnies de voyage",description:"Gérer les agences et leurs dessertes."},
+  {id:"gestionAbonnementsRamassage",groupe:"Professionnels",icone:"🚌",titre:"Compagnies de ramassage",description:"Valider les dossiers et abonnements."},
+  {id:"gestionPartenaires",groupe:"Professionnels",icone:"👥",titre:"Partenaires",description:"Gérer les partenaires de services."},
+  {id:"gestionCommandesPartenaires",groupe:"Professionnels",icone:"📦",titre:"Commandes partenaires",description:"Suivre et attribuer les commandes."},
+  {id:"gestionPublicites",groupe:"Publications et communication",icone:"📣",titre:"Publicités",description:"Gérer les campagnes publicitaires."},
+  {id:"gestionCommunautaire",groupe:"Publications et communication",icone:"🗞️",titre:"Informations et Gbairai",description:"Publier les informations communautaires."},
+  {id:"gestionValidationAnnonces",groupe:"Publications et communication",icone:"📢",titre:"Annonces",description:"Examiner les annonces avant publication."},
+  {id:"gestionAbonnementsAutomobiliste",groupe:"Services et abonnements",icone:"🚘",titre:"Abonnements automobilistes",description:"Contrôler les demandes et activations."},
+  {id:"gestionValidationDepannage",groupe:"Services et abonnements",icone:"🔧",titre:"Dépannage automobile",description:"Valider les professionnels du dépannage."},
+  {id:"gestionValidationCommerce",groupe:"Services et abonnements",icone:"🛍️",titre:"Commerces et boutiques",description:"Valider les commerces et leurs dossiers."},
+  {id:"gestionObjetsPerdus",groupe:"Contrôle et paramètres",icone:"🔎",titre:"Objets retrouvés",description:"Gérer les objets et demandes de récupération."},
+  {id:"gestionVisibiliteMenus",groupe:"Contrôle et paramètres",icone:"👁️",titre:"Visibilité des menus",description:"Afficher ou masquer les rubriques publiques."}
 ];
 function afficherMenuAdmin(){
   const menu=document.getElementById("adminMenuRubriques");
   if(!menu)return;
-  menu.innerHTML=RUBRIQUES_ADMIN.map(r=>`<button type="button" class="admin-rubrique" onclick="ouvrirRubriqueAdmin('${r.id}')"><span>${r.titre}</span><span>›</span></button>`).join("");
-  menu.style.display="grid";
+  const groupes=[...new Set(RUBRIQUES_ADMIN.map(r=>r.groupe))];
+  menu.innerHTML=`<h2 class="admin-dashboard-heading">ADMINISTRATION — MON TRANSPORT CI</h2><p class="admin-dashboard-subtitle">Centre de contrôle de la plateforme · Sélectionne une rubrique pour ouvrir son espace de gestion.</p>`+
+    groupes.map(g=>`<section class="admin-groupe"><h3 class="admin-groupe-titre">${g}</h3><div class="admin-groupe-grille">`+
+      RUBRIQUES_ADMIN.filter(r=>r.groupe===g).map(r=>`<button type="button" class="admin-rubrique" onclick="ouvrirRubriqueAdmin('${r.id}')"><span class="admin-rubrique-icone" aria-hidden="true">${r.icone}</span><span class="admin-rubrique-contenu"><span class="admin-rubrique-titre">${r.titre}</span><span class="admin-rubrique-description">${r.description}</span></span><span class="admin-rubrique-fleche" aria-hidden="true">›</span></button>`).join("")+
+      `</div></section>`).join("");
+  menu.style.display="block";
   RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display="none";});
 }
 function ouvrirRubriqueAdmin(id){
