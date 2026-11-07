@@ -82,5 +82,4 @@ window.MON_TRANSPORT_CI_ROUTES = [
       ["Marché Bagnon", 700]
     ]
   }
-    ,
 ];
