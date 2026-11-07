@@ -2909,7 +2909,7 @@ async function envoyerNouveauService(){
    photoUrl=await compresserPhotoNouveauService(photo);
   }
   await db.collection("demandes_nouveaux_services").add({
-   uid:user.uid,type:nouveauServiceActif,titre,categorie:valeur("nsCategorie"),commune,telephone,description,email,
+   uid:user.uid,type:nouveauServiceActif,titre,categorie:valeur("nsCategorie"),commune,telephone,description,email,...(modePartenaire?{modePartenaire:true}:{}),
    ...(photoUrl?{photoUrl}:{}),
    ...(nouveauServiceActif==="commerce"?{produits,adresseBoutique,tarifLivraisonBoutique,paiementMoyen,paiementReference,montantAbonnement:Number(document.getElementById("nsDureeAbonnement").selectedOptions[0].dataset.montant),dureeAbonnementJours:Number(document.getElementById("nsDureeAbonnement").value),paiementStatut:"a_verifier"}:{}),
    statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()
@@ -4787,6 +4787,13 @@ numeroPermis: document.getElementById('livreurNumeroPermis').value.trim(),
     block: "start"
   });
 }
+function retourChoixPartenaire(){
+  const select=document.getElementById("typePartenaireSouhaite");
+  const zone=document.getElementById("partenaireFormulaireChoisi");
+  if(select)select.value="";
+  if(zone)zone.replaceChildren();
+  document.getElementById("devenirPartenaire")?.scrollIntoView({behavior:"smooth",block:"start"});
+}
 function afficherFormulairePartenaire(type){
   const zone=document.getElementById("partenaireFormulaireChoisi");
   if(!zone)return;
@@ -4795,13 +4802,13 @@ function afficherFormulairePartenaire(type){
   if(type==="livreur"){
     ouvrirInscriptionLivreur();
     const f=document.getElementById("formulaireLivreur");
-    if(f)zone.appendChild(f);
+    if(f){zone.appendChild(f);const retour=f.querySelector(".btn-retour-accueil");if(retour){retour.textContent="← Retour au choix du partenaire";retour.onclick=retourChoixPartenaire;}}
     return;
   }
   if(type==="representant_gare"){
     ouvrirInscriptionGare();
     const f=document.getElementById("formulaireGare");
-    if(f)zone.appendChild(f);
+    if(f){zone.appendChild(f);const retour=f.querySelector(".btn-retour-accueil");if(retour){retour.textContent="← Retour au choix du partenaire";retour.onclick=retourChoixPartenaire;}}
     return;
   }
   if(type==="mecanicien"||type==="depannage"||type==="vendeur_pieces"||type==="commercant"){
