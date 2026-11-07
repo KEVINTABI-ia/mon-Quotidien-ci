@@ -2670,6 +2670,8 @@ const NOUVEAUX_SERVICES = {
  annonce:{titre:"Petites annonces et emplois",icone:"📢",categories:["Offre d'emploi","Demande d'emploi","Véhicule à vendre","Véhicule à louer","Autre annonce"]}
 };
 let nouveauServiceActif="depannage";
+let filtrePublicCommerce="tout";
+function ouvrirAnnuaireCommerce(type){if(!["commerce","boutique"].includes(type))return;filtrePublicCommerce=type;ouvrirSectionPleinEcran("nouveauxServices",type==="boutique"?"Boutiques":"Commerces");choisirNouveauService("commerce");const c=document.getElementById("nsCategorie");if(c){if(type==="boutique"){c.value="Boutique";c.disabled=true;}else c.disabled=false;}chargerNouveauxServicesPublics("commerce");}
 function choisirNouveauService(type){
  if(!NOUVEAUX_SERVICES[type])return;
  nouveauServiceActif=type;
@@ -2790,7 +2792,7 @@ async function chargerNouveauxServicesPublics(type){
  try{
   const snap=await db.collection("demandes_nouveaux_services").where("type","==",type).where("statut","==","approuve").limit(100).get();
   const maintenant=Date.now();
-  const documents=snap.docs.filter(doc=>{const d=doc.data();if(type!=="commerce")return true;return d.visibleManuellement!==false&&d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;});
+  const documents=snap.docs.filter(doc=>{const d=doc.data();if(type!=="commerce")return true;if(filtrePublicCommerce==="boutique"&&String(d.categorie||"").toLowerCase()!=="boutique")return false;if(filtrePublicCommerce==="commerce"&&String(d.categorie||"").toLowerCase()==="boutique")return false;return d.visibleManuellement!==false&&d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;});
   if(!documents.length){zone.innerHTML='<p class="notice">'+(type==="commerce"?"Aucune boutique avec un abonnement actif pour le moment.":"Aucun résultat publié dans cette rubrique pour le moment.")+'</p>';return;}
   zone.innerHTML=documents.map(doc=>{
    const d=doc.data();
