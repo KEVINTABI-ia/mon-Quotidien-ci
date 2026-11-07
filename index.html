@@ -757,6 +757,11 @@ footer { color: #718076; }
 }
 
 
+/* STYLE DU BOUTON COMMERCE ET BOUTIQUE (ancien style de l'automobiliste) */
+.bouton-commerce-accueil{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:0 0 13px;padding:16px;background:linear-gradient(120deg,#174B35,#16834A);color:#fff;border:0;border-left:5px solid #F28C28;border-radius:17px;text-align:left;box-shadow:0 5px 15px rgba(28,63,40,.10)}
+.bouton-commerce-accueil strong{display:block;font-size:16px}
+.bouton-commerce-accueil small{display:block;margin-top:4px;color:#E8F5EC;font-size:12px}
+.tuile-compagnies{background-image:url("https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80")!important}
 /* ACCÈS ADMINISTRATEUR DISCRET EN BAS DE L'ACCUEIL */
 .carte-acces-admin {
   margin: 30px 0 8px;
@@ -828,7 +833,6 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 .accueil-service-illustration{filter:drop-shadow(0 3px 4px #0008)}
 .tuile-gbaka{background-image:url("https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80")!important}
 .tuile-taxi{background-image:url("https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=900&q=80")!important}
-.tuile-sotra{background-image:url("https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=900&q=80")!important}
 .tuile-ramassage{background-image:url("https://images.unsplash.com/photo-1507514601121-0f3b1c1f6f9a?auto=format&fit=crop&w=900&q=80")!important}
 .tuile-marches{background-image:url("https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=900&q=80")!important}
 .tuile-woro{background-image:url("https://images.unsplash.com/photo-1504215680853-026ed2a45def?auto=format&fit=crop&w=900&q=80")!important}
@@ -1438,25 +1442,24 @@ main{padding:14px 13px 24px!important}
   <div id="listeGaresAdmin"></div>
 </div>
 <div id="gestionRoutes" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
-  <h3>Gestion des itinéraires et lignes SOTRA</h3>
-  <p class="notice">Pour ajouter une ligne SOTRA : sélectionne SOTRA, indique la gare de départ, la destination principale, le numéro de ligne dans « Précision », puis les arrêts ou destinations et leurs tarifs.</p>
+  <h3>Gestion des itinéraires et tarifs</h3>
+  <p class="notice">Ajoutez les itinéraires, les points de départ, les destinations desservies et les tarifs de chaque moyen de transport disponible.</p>
 
   <label>Moyen de transport</label>
   <select id="routeTransport">
     <option>Gbaka</option>
     <option>Woro-woro</option>
     <option>Taxi communal</option>
-    <option>SOTRA</option>
     <option>Car interurbain</option>
   </select>
 
   <label>Gare / point de départ</label>
-  <input id="routeDepart" placeholder="Ex. Gare SOTRA de Yopougon">
+  <input id="routeDepart" placeholder="Ex. Gare de Gbaka à Yopougon">
 
   <label>Destination principale</label>
   <input id="routeArrivee" placeholder="Ex. Plateau">
 
-  <label>Numéro de ligne (pour SOTRA) / précision</label>
+  <label>Précision / référence du trajet</label>
   <input id="routeStatut" placeholder="Ex. Ligne 39">
 
   <label>Destinations ou arrêts et tarifs</label>
@@ -1996,7 +1999,7 @@ function chargerPublicitesAccueil() {
   <datalist id="listeDestinationsGares"></datalist>
   <label for="transportRechercheGare">Moyen de transport</label>
   <select id="transportRechercheGare">
-    <option value="Tous">Tous les transports</option><option>Gbaka</option><option>Woro-woro</option><option>Taxi communal</option><option>SOTRA</option><option>Car interurbain</option>
+    <option value="Tous">Tous les transports</option><option>Gbaka</option><option>Woro-woro</option><option>Taxi communal</option><option>Car interurbain</option>
   </select>
   <button type="button" class="primary" onclick="rechercherGaresParDestination()">Rechercher les gares</button>
 </div>
@@ -2010,7 +2013,7 @@ function chargerPublicitesAccueil() {
   </select>
   <label for="transportGareConnue">Moyen de transport</label>
   <select id="transportGareConnue">
-    <option value="Tous">Tous les transports</option><option>Gbaka</option><option>Woro-woro</option><option>Taxi communal</option><option>SOTRA</option><option>Car interurbain</option>
+    <option value="Tous">Tous les transports</option><option>Gbaka</option><option>Woro-woro</option><option>Taxi communal</option><option>Car interurbain</option>
   </select>
   <label for="destinationGareConnue">Destination recherchée</label>
   <input id="destinationGareConnue" list="listeDestinationsGares" placeholder="Ex. : Bonoua">
@@ -2063,14 +2066,14 @@ function chargerPublicitesAccueil() {
     <button type="button" class="accueil-service tuile-taxi" onclick="ouvrirResultatPleinEcran('Gares de taxi communal'); afficherGaresStations('Taxi communal')">
       <strong>Gares de taxi communal</strong><small>Repérez les gares proches de votre trajet</small>
     </button>
-    <button type="button" class="accueil-service tuile-sotra" onclick="ouvrirResultatPleinEcran('Réseau SOTRA'); afficherReseauSotra()">
-      <strong>SOTRA</strong><small>Lignes, gares et arrêts</small>
+    <button type="button" class="accueil-service tuile-compagnies" onclick="ouvrirSectionPleinEcran('repertoireCompagnies','Compagnies de voyage')">
+      <strong>Compagnies de voyage</strong><small>Agences, destinations et tarifs</small>
     </button>
     <button type="button" class="accueil-service tuile-ramassage" onclick="ouvrirSectionPleinEcran('serviceRamassage','Cars de ramassage')">
       <strong>Cars de ramassage</strong><small>Déplacements réguliers et places disponibles</small>
     </button>
-    <button type="button" class="accueil-service tuile-marches" onclick="ouvrirResultatPleinEcran('Commerce et boutique'); afficherMarchesCommune()">
-      <strong>Commerce et boutique</strong><small>Découvrez les commerces, boutiques et marchés par commune</small>
+    <button id="boutonAccueilAutomobiliste" type="button" class="accueil-service tuile-marches" onclick="ouvrirSectionPleinEcran('espaceAutomobiliste','Espace de l’automobiliste')">
+      <strong>🚘 Espace de l’automobiliste</strong><small>Assurance, dépannage, documents et sécurité routière</small>
     </button>
     <button type="button" class="accueil-service tuile-woro" onclick="ouvrirResultatPleinEcran('Gares de Woro-woro'); afficherGaresStations('Woro-woro')">
       <strong>Woro-woro</strong><small>Gares et dessertes disponibles</small>
@@ -2082,11 +2085,7 @@ function chargerPublicitesAccueil() {
 
 </p>
 
-<section class="accueil-raccourci carte-compagnies">
-    <div class="raccourci-icone">🚍</div>
-    <div class="raccourci-texte"><strong>Compagnies de voyage</strong><small>Agences, destinations et tarifs</small></div>
-    <button type="button" onclick="ouvrirSectionPleinEcran('repertoireCompagnies','Compagnies de voyage')">Consulter</button>
-  </section>
+
 
 
 
@@ -2244,7 +2243,7 @@ function chargerPublicitesAccueil() {
   <p id="messageVerificationAssurance" class="notice" aria-live="polite" style="margin:10px 0 0;"></p>
 </section>
 
-<button id="boutonAccueilAutomobiliste" type="button" onclick="ouvrirSectionPleinEcran('espaceAutomobiliste','Espace de l’automobiliste')" style="display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:0 0 13px;padding:16px;background:linear-gradient(120deg,#174B35,#16834A);color:#fff;border:0;border-left:5px solid #F28C28;border-radius:17px;text-align:left;box-shadow:0 5px 15px rgba(28,63,40,.10);"><span style="display:flex;align-items:center;gap:12px;"><span style="font-size:29px;">🚘</span><span><strong style="display:block;font-size:16px;">Espace de l’automobiliste</strong><small style="display:block;margin-top:4px;color:#E8F5EC;font-size:12px;">Assurance, dépannage, documents et sécurité routière</small></span></span><span aria-hidden="true" style="font-size:24px;">›</span></button>
+<button type="button" class="bouton-commerce-accueil" onclick="ouvrirResultatPleinEcran('Commerce et boutique'); afficherMarchesCommune()" aria-label="Ouvrir Commerce et boutique"><span style="display:flex;align-items:center;gap:12px;"><span style="font-size:29px;">🛍️</span><span><strong style="display:block;font-size:16px;">Commerce et boutique</strong><small style="display:block;margin-top:4px;color:#E8F5EC;font-size:12px;">Découvrez les commerces, boutiques et marchés par commune</small></span></span><span aria-hidden="true" style="font-size:24px;">›</span></button>
 
 <section id="espaceAutomobiliste" class="card" aria-label="Espace de l’automobiliste" style="display:none;margin:14px 0 12px;padding:16px;border:2px solid #F28C28;background:linear-gradient(145deg,#FFF9F1,#F0F8F1);">
   <h2 style="margin:0 0 6px;color:#17663D;">🚘 L’espace de l’automobiliste</h2>
@@ -2872,7 +2871,7 @@ async function traiterReclamationObjet(id,statut){
 // MENU ADMINISTRATEUR : une seule rubrique visible à la fois
 const RUBRIQUES_ADMIN = [
   {id:"gestionGares",titre:"📍 Gestion des gares et terminus"},
-  {id:"gestionRoutes",titre:"🛣️ Gestion des itinéraires et lignes SOTRA"},
+  {id:"gestionRoutes",titre:"🛣️ Gestion des itinéraires et tarifs"},
   {id:"gestionCompagnies",titre:"🚍 Gestion des compagnies de voyage"},
   {id:"gestionAbonnementsRamassage",titre:"🚌 Validation des compagnies de ramassage"},
   {id:"gestionPartenaires",titre:"👥 Gestion des partenaires"},
@@ -3113,7 +3112,7 @@ function chargerRouteEdition(index) {
   routeEnEdition = route.firestoreId;
 
   document.getElementById("routeTransport").value =
-    route.transport.startsWith("SOTRA") ? "SOTRA" : route.transport;
+    route.transport;
 
   document.getElementById("routeDepart").value = route.depart;
   document.getElementById("routeArrivee").value = route.arrivee;
@@ -3731,7 +3730,7 @@ return;
 }
 
 const lignes=MON_TRANSPORT_CI_ROUTES.filter(route=>{
-return (transport==="Tous" || route.transport===transport || (transport==="SOTRA" && route.transport.startsWith("SOTRA")))
+return (transport==="Tous" || route.transport===transport)
 && normaliser(route.depart)===depart;
 });
 
@@ -3792,7 +3791,7 @@ const stop=route.stops[item.index];
 
 html+=`<h3>🚌 ${route.transport} : ${route.depart} → ${route.arrivee}</h3>`;
 if(route.statut){
-html+=`<p class="notice"><strong>Information :</strong> ${route.statut}. Parcours et tarif à confirmer auprès de la SOTRA.</p>`;
+html+=`<p class="notice"><strong>Information :</strong> ${route.statut}. Parcours et tarif à confirmer auprès du transporteur.</p>`;
 }
 html+=`<p>Destination recherchée : ${stop[0]}</p>`;
 html+=`<p><strong>Tarif indiqué : ${stop[1]} FCFA</strong></p>`;
@@ -7130,193 +7129,6 @@ function afficherPrixDestinationGare(){
     (prixValide ? prix.toLocaleString("fr-FR") + " FCFA" : "Tarif à préciser") +
     "</p></div>";
 }
-// Terminus publiés dans l'édition SOTRA de juillet 2024.
-// Les arrêts intermédiaires ne sont pas inventés lorsqu'ils ne sont pas confirmés.
-const LIGNES_SOTRA_ABIDJAN = `02|Gare Marcory|Terminus Cité Fairmont, Attécoubé|MonBus
-03|Gare Nord, Adjamé|Terminus Aliodan, Koumassi|MonBus
-04|Gare Marcory|Terminus Attécoubé|MonBus
-05|Terminus Koumassi Nord-Est|Gare Cité Administrative, Plateau|MonBus
-06|Terminus Aéroport FHB, Port-Bouët|Gare Sud, Plateau|MonBus
-07|Gare Marcory|Terminus Vridi Cité, Port-Bouët|MonBus
-08|Gare Nord, Adjamé|Terminus Akeikoi, Abobo|MonBus
-09|Terminus Moossou, Grand-Bassam|Terminus ancien corridor, Gonzagueville|MonBus
-10|Gare Nord, Adjamé|Gare Sud, Plateau|MonBus
-11|Terminus Mesano, Koumassi|Terminus Liberté, Adjamé|MonBus
-12|Terminus Phare, Port-Bouët|Gare Nord, Adjamé|MonBus
-13|Gare Koumassi|Terminus Liberté, Adjamé|MonBus
-14|Gare Marcory|Terminus Williamsville, Adjamé|MonBus
-15|Gare Abobo|Gare Sud, Plateau|MonBus
-16|Terminus Biabou, Abobo|Gare Nord, Adjamé|MonBus
-17|Terminus Anani, Port-Bouët|Terminus Port de pêche, Treichville|MonBus
-18|Terminus Marché, Port-Bouët|Gare Sud, Plateau|MonBus
-19|Gare Nord, Adjamé|Terminus Vridi Iran, Port-Bouët|MonBus
-20|Terminus Cité ADO, Yopougon|Gare Sud, Plateau|MonBus
-21|Terminus CHU Treichville|Terminus École de Police, Cocody|MonBus
-22|Terminus Entente, Treichville|Gare Nord, Adjamé|MonBus
-23|Gare Koumassi|Terminus Vridi Canal, Port-Bouët|MonBus
-24|Terminus Koumassi Nord-Est|Terminus CPMA/CTP, Port-Bouët|MonBus
-25|Terminus Koumassi SICOGI|Terminus Hôtel de Ville, Plateau|MonBus
-26|Gare Koumassi|Gare Nord, Adjamé|MonBus
-27|Terminus Niangon Sud à Gauche, Yopougon|Gare Sud, Plateau|MonBus
-28|Terminus Riviera 2 Africaine, Cocody|Gare Sud, Plateau|MonBus
-29|Terminus Derrière Wharf, Port-Bouët|Gare Nord, Adjamé|MonBus
-30|Terminus Kouté, Yopougon|Gare Sud, Plateau|MonBus
-34|Terminus Gesco, Yopougon|Gare Cité Administrative, Plateau|MonBus
-35|Terminus Gobelet Vallon, Cocody|Gare Nord, Adjamé|MonBus
-36|Gare Abobodoumé, Yopougon|Gare Nord, Adjamé|MonBus
-37|Terminus Camp militaire, Yopougon|Gare Sud, Plateau|MonBus
-38|Terminus Mosquée Koweït, Yopougon|Terminus Micao, Yopougon|MonBus
-39|Terminus Niangon Sud à Droite, Yopougon|Gare Sud, Plateau|MonBus
-40|Terminus Kouté, Yopougon|Gare Sud, Plateau|MonBus
-41|Terminus M'Badon, Cocody|Terminus Liberté, Adjamé|MonBus
-42|Terminus Sideci, Yopougon|Gare Abobodoumé, Yopougon|MonBus
-43|Terminus Kouté, Yopougon|Gare Nord, Adjamé|MonBus
-44|Terminus Cité Verte, Yopougon|Gare Abobodoumé, Yopougon|MonBus
-45|Terminus Agripac PK18, Abobo|Gare Nord, Adjamé|MonBus
-46|Terminus Sideci, Yopougon|Gare Cité Administrative, Plateau|MonBus
-47|Terminus Attié Amondji, Yopougon|Terminus Abobodoumé, Yopougon|MonBus
-48|Terminus Mairie Anyama|Terminus Gendarmerie, Abobo|MonBus
-49|Gare SOTRA Abobo|Gare Campus, Cocody|MonBus
-50|Terminus Koumassi SICOGI|Gare Nord, Adjamé|Urbain+
-51|Terminus Sagbé, Abobo|Gare Cité Administrative, Plateau|MonBus
-52|Terminus Sagbé, Abobo|Gare Campus, Cocody|MonBus
-53|Terminus Anani, Port-Bouët|Gare Campus, Cocody|MonBus
-54|Terminus Pharmacie La Mé, Abobo|Pharmacie Santé, Adjamé|Urbain+
-56|Terminus Koumassi Nord-Est|Gare Campus, Cocody|MonBus
-58|Terminus Liberté, Adjamé|Terminus Cité du Port, Treichville|MonBus
-59|Gare Nord, Adjamé|Terminus CHU Treichville|MonBus
-60|Terminus Mairie Anyama|Terminus Gendarmerie, Abobo|Urbain+
-61|Terminus Ebimpé, Anyama|Terminus Gendarmerie, Abobo|Urbain+
-65|Terminus Eloka Palmafrique, Bingerville|Hôpital Mère et Enfant, Bingerville|MonBus
-66|Terminus Anani, Port-Bouët|Grand Carrefour, Marcory|Urbain+
-67|Terminus Gonzagueville, Port-Bouët|Marché Treichville|MonBus
-68|Gare Koumassi|Terminus Anani, Port-Bouët|MonBus
-75|Terminus Abobo-Baoulé|Gare Cité Administrative, Plateau|MonBus
-76|Terminus Agripac PK18, Abobo|Gare Cité Administrative, Plateau|MonBus
-77|Terminus Gendarmerie, Abobo|Terminus Micao, Yopougon|MonBus
-78|Terminus M'Badon, Cocody|Terminus Liberté, Adjamé|MonBus
-79|Terminus Liberté, Adjamé|Terminus Abobo PK18|Urbain+
-80|Terminus CHU Angré, Cocody|Terminus Nouvelle Mairie, Abobo|Urbain+
-81|Terminus Angré 81-82, Cocody|Gare Nord, Adjamé|MonBus
-82|Terminus Angré 81-82, Cocody|Gare Sud, Plateau|MonBus
-83|Terminus Riviera Africaine, Cocody|Gare Nord, Adjamé|MonBus
-84|Terminus Blockhauss, Cocody|Gare Nord, Adjamé|MonBus
-85|Terminus Gandhi, Yopougon|Gare Campus, Cocody|MonBus
-86|Terminus Kouté, Yopougon|Akouedo Village, Cocody|MonBus
-87|Carrefour La Vie, Cocody|Hôpital Mère et Enfant, Bingerville|Urbain+
-88|Terminus Cité Verte, Yopougon|École de Police, Cocody|MonBus
-90|Terminus Djorobité, Cocody|Terminus Blockhauss, Cocody|MonBus
-91|Terminus Liberté, Adjamé|Marché Treichville|Urbain+
-92|Terminus Koumassi Nord-Est|Gare Nord, Adjamé|MonBus
-94|Terminus Blockhauss, Cocody|Gare Marcory|MonBus
-98|Terminus M'Badon, Cocody|Gare Sud, Plateau|MonBus
-201|Terminus Agripac PK18, Abobo|Hôtel de Ville, Plateau|Express
-203|Gare SOTRA Abobo|Gare Sud, Plateau|Express
-206|Terminus Kouté, Yopougon|Hôtel de Ville, Plateau|Express
-209|Terminus Gandhi, Yopougon|Gare Sud, Plateau|Express
-212|EPP Laurier 2, Niangon|Gare Sud, Plateau|Express
-600|Gare Cité Administrative, Plateau|Terminus Koweït, Yopougon|Urbain+
-601|Terminus Williamsville, Adjamé|Gare Sud, Plateau|Urbain+
-610|Hôpital Mère et Enfant, Bingerville|Gare Nord, Adjamé|MonBus
-611|Abobo Gendarmerie|Djorobité, Cocody|Urbain+
-616|Abatta Village, Cocody|Gare Nord, Adjamé|Urbain+
-618|Marché, Port-Bouët|Deux Poteaux, Port-Bouët|Urbain+
-623|Gare de Bassam, Treichville|Vridi Cité, Port-Bouët|Urbain+
-632|Hôpital Koumassi|Akromiabla, Koumassi|Urbain+
-633|Hôpital Koumassi|Akromiabla, Koumassi|Urbain+
-701|Angré 81/82, Cocody|Riviera Orca Déco, Cocody|Wibus
-702|M'Badon, Cocody|Carrefour La Vie, Cocody|Wibus
-704|Dokui 2 Plateaux, Cocody|Saint-Jean, Cocody|Wibus
-705|Angré 81/82, Cocody|Riviera 2 Échangeur, Cocody|Wibus
-708|Carrefour La Vie, Cocody|Gare Sud, Plateau|Wibus
-710|Cité SIR Djorobité, Cocody|Carrefour La Vie, Cocody|Wibus
-713|Grand Carrefour, Koumassi|Gendarmerie, Abobo|Navette
-715|Grand Carrefour, Koumassi|Cocody Aghien|Navette
-716|Grand Carrefour, Koumassi|Pharmacie Palmeraie, Cocody|Navette
-717|Anani, Port-Bouët|Hôtel de Ville, Plateau|Navette
-718|Liberté, Adjamé|Deux Poteaux, Port-Bouët|Navette
-719|Saint-André, Yopougon|Angré 81/82, Cocody|Navette
-720|Saint-André, Yopougon|Pharmacie Palmeraie, Cocody|Navette
-721|Pharmacie Palmeraie, Cocody|CHU Treichville|Navette
-726|Amondji Attié, Yopougon|Gare Sud, Plateau|Navette
-727|Saint-André, Yopougon|Marché Cocody|Navette
-728|Niangon Lubafrique, Yopougon|École de Police, Cocody|Navette
-729|Koweït, Yopougon|Pharmacie Palmeraie, Cocody|Navette
-730|Gare de Bassam, Treichville|Moossou, Grand-Bassam|Navette
-731|Gonzagueville, Port-Bouët|Gare Cité Administrative, Plateau|Navette
-732|Djibi, Cocody|Gare Sud, Plateau|Navette
-733|Rosier, Cocody|Gare Sud, Plateau|Navette
-770|Akeikoi, Abobo|CHU Treichville|Navette
-771|Niangon Sud à Droite, Yopougon|Vridi Iran, Port-Bouët|Navette
-772|Agripac PK18, Abobo|Vridi Iran, Port-Bouët|Navette
-773|Hôpital Mère et Enfant, Bingerville|Gare Sud, Plateau|Navette
-775|Angré Château, Cocody|CHU Treichville|Navette
-776|Agripac PK18, Abobo|Pharmacie Palmeraie, Cocody|Navette`.split("\n").map(l => {
-  const p = l.split("|");
-  return {numero:p[0],depart:p[1],arrivee:p[2],type:p[3],source:"Édition juillet 2024"};
-});
-
-async function afficherReseauSotra(){
-  const resultat = document.getElementById("resultatRechercheGares");
-  resultat.style.display = "block";
-  resultat.innerHTML = "<p>Chargement du réseau SOTRA...</p>";
-  let lignesAdmin = [];
-  try {
-    const snapshot = await db.collection("routes").where("transport", "==", "SOTRA").get();
-    lignesAdmin = snapshot.docs.map(doc => ({...doc.data(),firestoreId:doc.id}));
-  } catch (erreur) {
-    console.warn("Lignes administrateur non chargées :",erreur);
-  }
-  const numerosAdmin = new Set(lignesAdmin.map(l => String(l.statut || "").replace(/^Ligne\\s*/i,"").trim()));
-  const lignes = LIGNES_SOTRA_ABIDJAN.filter(l => !numerosAdmin.has(l.numero))
-    .map(l => ({...l,statut:"Ligne " + l.numero})).concat(lignesAdmin);
-  lignes.sort((a,b) => String(a.statut || "").localeCompare(String(b.statut || ""),"fr",{numeric:true}));
-  let html = "<strong>🚌 Réseau SOTRA — lignes et terminus desservis</strong>";
-  html += "<p class='notice'>Répertoire établi à partir de l'édition de juillet 2024. Les terminus sont indiqués ; les arrêts intermédiaires, horaires et tarifs peuvent évoluer. Vérifie les informations auprès de la SOTRA avant le départ.</p>";
-  html += "<label for='filtreGareSotra'>Filtrer par gare ou terminus :</label>";
-  html += "<select id='filtreGareSotra' onchange='filtrerLignesSotra()'><option value=''>Toutes les gares et terminus</option>";
-  const gares = [...new Set(lignes.flatMap(l => [l.depart,l.arrivee]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"fr"));
-  gares.forEach(g => { html += "<option value='" + echapperTexteCompagnie(g) + "'>" + echapperTexteCompagnie(g) + "</option>"; });
-  html += "</select><label for='rechercheLigneSotra'>Rechercher une ligne ou une commune :</label>";
-  html += "<input id='rechercheLigneSotra' type='search' placeholder='Ex. 39, Yopougon, Adjamé...' oninput='filtrerLignesSotra()'><div id='listeLignesSotra'>";
-  lignes.forEach(ligne => {
-    const depart = echapperTexteCompagnie(ligne.depart || "Terminus non précisé");
-    const arrivee = echapperTexteCompagnie(ligne.arrivee || "Terminus non précisé");
-    const numero = echapperTexteCompagnie(ligne.statut || ("Ligne " + (ligne.numero || "non renseignée")));
-    const type = echapperTexteCompagnie(ligne.type || "SOTRA");
-    const recherche = (numero + " " + depart + " " + arrivee + " " + type).toLocaleLowerCase("fr");
-    html += "<article class='stop carte-ligne-sotra' data-gare='" + depart + "' data-arrivee='" + arrivee + "' data-recherche='" + echapperTexteCompagnie(recherche) + "'>";
-    html += "<h3>🚌 " + numero + " <small>— " + type + "</small></h3><p><strong>Départ :</strong> " + depart + "</p><p><strong>Arrivée :</strong> " + arrivee + "</p>";
-    if (Array.isArray(ligne.stops) && ligne.stops.length) {
-      html += "<details><summary>Voir les arrêts et tarifs renseignés</summary><ul>";
-      ligne.stops.forEach(stop => {
-        const nom = echapperTexteCompagnie(Array.isArray(stop) ? stop[0] : stop.nom);
-        const prix = Number(Array.isArray(stop) ? stop[1] : stop.tarif);
-        html += "<li><strong>" + nom + "</strong> — " + (Number.isFinite(prix) && prix >= 0 ? prix.toLocaleString("fr-FR") + " FCFA" : "Tarif à préciser") + "</li>";
-      });
-      html += "</ul></details>";
-    } else {
-      html += "<p class='notice'>Arrêts intermédiaires et tarif détaillé non confirmés dans cette fiche.</p>";
-    }
-    html += "</article>";
-  });
-  html += "</div><p class='notice'>Les lignes ajoutées par l'administrateur sont également affichées.</p>";
-  resultat.innerHTML = html;
-  resultat.scrollIntoView({behavior:"smooth",block:"start"});
-}
-
-function filtrerLignesSotra(){
-  const filtre = document.getElementById("filtreGareSotra");
-  const recherche = document.getElementById("rechercheLigneSotra");
-  if (!filtre) return;
-  const terme = (recherche ? recherche.value : "").trim().toLocaleLowerCase("fr");
-  document.querySelectorAll("#listeLignesSotra .carte-ligne-sotra").forEach(carte => {
-    const gareOk = !filtre.value || carte.dataset.gare === filtre.value || carte.dataset.arrivee === filtre.value;
-    const rechercheOk = !terme || (carte.dataset.recherche || "").includes(terme);
-    carte.style.display = gareOk && rechercheOk ? "block" : "none";
-  });
-}
-
 // Répertoire initial des marchés connus d'Abidjan.
 // Les destinations sont des recherches cartographiques textuelles, pas des coordonnées GPS inventées.
 const MARCHES_COMMUNES = [
