@@ -2554,8 +2554,12 @@ async function envoyerFichierFirebaseStorage(fichier, categorie) {
     try {
       const dataUrl = estLogo ? await compresserImage(fichier) : await compresserImagePublicite(fichier);
       fichierAEnvoyer = convertirDataUrlEnBlob(dataUrl);
+      if (!fichierAEnvoyer || !fichierAEnvoyer.size || fichierAEnvoyer.size >= fichier.size) {
+        throw new Error("La compression n'a pas réduit le poids de l'image. Choisis une image plus légère.");
+      }
     } catch (compressionErreur) {
-      console.warn("Compression non disponible, envoi du fichier original :", compressionErreur);
+      console.error("Compression obligatoire de l'image :", compressionErreur);
+      throw new Error("L'image n'a pas pu être compressée. Essaie une image JPG, PNG ou WebP différente.");
     }
   }
   const identifiant = db.collection("_fichiers_storage").doc().id;
