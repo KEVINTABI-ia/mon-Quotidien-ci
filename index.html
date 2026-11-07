@@ -4005,7 +4005,7 @@ document.getElementById("arrivee").value
 
 /* RECHERCHE DES GARES — DEUX PARCOURS */
 function normaliserRechercheGare(valeur){
-  return String(valeur||"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+  return String(valeur||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
 }
 function choisirModeGare(mode){
   const destination=mode==="destination";
@@ -4023,7 +4023,7 @@ function actualiserListesRechercheGares(){
   const gares=Array.isArray(garesFirestore)?garesFirestore:[];
   const communes=[...new Set(gares.map(g=>g.commune).filter(Boolean))].sort();
   const destinations=[...new Set(gares.flatMap(g=>destinationsGareNormalisees(g).map(d=>d.nom)).filter(Boolean))].sort();
-  const remplir=(id,valeurs)=>{const el=document.getElementById(id);if(el)el.innerHTML=valeurs.map(v=>"<option value=\\""+String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")+ "\\"></option>").join("");};
+  const remplir=(id,valeurs)=>{const el=document.getElementById(id);if(el)el.innerHTML=valeurs.map(v=>"<option value=\""+String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")+ "\"></option>").join("");};
   remplir("listeCommunesGares",communes);
   remplir("listeDestinationsGares",destinations);
   const nomsGares=gares.map(g=>g.nom).filter(Boolean).sort((a,b)=>a.localeCompare(b,"fr"));
@@ -4048,36 +4048,12 @@ function synchroniserSelectionGare(){
   const option=[...selection.options].find(o=>o.value&&normaliserRechercheGare(o.value)===normaliserRechercheGare(saisie.value));
   selection.value=option?option.value:"";
 }
-function destinationsCorrespondantes(gare,destination,transport){
-  const cible=normaliserRechercheGare(destination);
-  if(!cible)return [];
-  return destinationsGareNormalisees(gare).filter(d=>{
-    const nom=normaliserRechercheGare(d.nom);
-    const nomCorrespond=nom===cible || (nom.length>=4&&cible.length>=4&&(nom.includes(cible)||cible.includes(nom)));
-    const prix=Number(d.prix);
-    const prixValide=Number.isFinite(prix)&&prix>0;
-    const transportValide=transport==="Tous" ||
-      (d.transport&&normaliserRechercheGare(d.transport)===normaliserRechercheGare(transport));
-    return nomCorrespond&&d.transport&&prixValide&&transportValide;
-  });
-}
 function tarifsConfirmesPourGare(gare,destination,transport){
-  return destinationsCorrespondantes(gare,destination,transport);
-}
-async function actualiserGaresDepuisFirebase(){
-  const snapshot=await db.collection("gares").orderBy("nom").get();
-  garesFirestore=snapshot.docs.map(doc=>({...doc.data(),firestoreId:doc.id}));
-  actualiserListesRechercheGares();
-  return garesFirestore;
-}
-async function communeActuelleUtilisateur(){
-  if(!navigator.geolocation)throw new Error("La géolocalisation n’est pas disponible.");
-  const position=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:false,timeout:12000,maximumAge:120000}));
-  const url="https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=10&lat="+encodeURIComponent(position.coords.latitude)+"&lon="+encodeURIComponent(position.coords.longitude);
-  const reponse=await fetch(url,{headers:{Accept:"application/json"}});
-  if(!reponse.ok)throw new Error("La commune actuelle n’a pas pu être déterminée.");
-  const data=await reponse.json(),a=data.address||{};
-  return a.city_district||a.municipality||a.suburb||a.town||a.city||a.county||a.state_district||"";
+  return destinationsGareNormalisees(gare).filter(d=>
+    normaliserRechercheGare(d.nom)===normaliserRechercheGare(destination) &&
+    d.transport && Number.isFinite(Number(d.prix)) && Number(d.prix)>0 &&
+    (transport==="Tous" || normaliserRechercheGare(d.transport)===normaliserRechercheGare(transport))
+  );
 }
 let dernierResultatGaresHTML = "";
 
@@ -4173,81 +4149,53 @@ function ouvrirItineraireVersGare(idGare){
 function afficherResultatsGares(titre,gares,destination,transport){
   const zone=document.getElementById("resultatRechercheGares");
   zone.style.display="block";
-  if(!gares.length){zone.innerHTML="<p class='notice'>Aucune gare de cette commune ne dessert actuellement « "+echapperTextePublicite(destination)+" » avec un tarif confirmé. Vérifiez l’orthographe ou choisissez « Tous les transports ».</p>";return;}
+  if(!gares.length){zone.textContent="Aucune gare avec un tarif confirmé n’a été trouvée pour cette recherche.";return;}
   const cartes=gares.map(g=>{
     const tarifs=tarifsConfirmesPourGare(g,destination,transport);
     const lignes=tarifs.map(t=>"<p>🚌 "+echapperTextePublicite(t.transport)+" : <strong>"+Number(t.prix).toLocaleString("fr-FR")+" FCFA</strong></p>").join("");
     return "<article class='stop'><strong>"+echapperTextePublicite(g.nom)+"</strong><br>Commune : "+echapperTextePublicite(g.commune||"Non précisée")+"<br>Destination : "+echapperTextePublicite(destination)+"<br>"+lignes+"<button type='button' onclick='ouvrirItineraireVersGare("+JSON.stringify(g.firestoreId)+")' style='background:#16834A;color:#fff'>📍 Voir sur la carte</button><button type='button' onclick='afficherFicheDetailleeGare("+JSON.stringify(g.firestoreId)+")'>Voir la fiche détaillée</button></article>";
   }).join("");
-  dernierResultatGaresHTML="<strong>"+echapperTextePublicite(titre)+" — "+gares.length+" gare(s) trouvée(s)</strong>"+cartes+"<p class='notice'>Les tarifs affichés correspondent aux fiches enregistrées dans Mon Transport CI. Confirmez le prix auprès du transporteur avant le départ.</p>";
+  dernierResultatGaresHTML="<strong>"+echapperTextePublicite(titre)+"</strong>"+cartes+"<p class='notice'>Seuls les tarifs enregistrés dans la base des gares sont affichés. Confirmez le tarif auprès du transporteur avant le départ.</p>";
   zone.innerHTML=dernierResultatGaresHTML;
 }
-async function rechercherGaresParDestination(){
+function rechercherGaresParDestination(){
   const commune=document.getElementById("communeDepartGare").value.trim();
   const destination=document.getElementById("destinationGare").value.trim();
   const transport=document.getElementById("transportRechercheGare").value;
   const zone=document.getElementById("resultatRechercheGares");
   zone.style.display="block";
   if(!commune||!destination){zone.textContent="Renseignez la commune de départ et la destination.";return;}
-  zone.textContent="Recherche des gares et vérification des destinations enregistrées…";
-  try{
-    await actualiserGaresDepuisFirebase();
-    const gares=garesFirestore.filter(g=>
-      normaliserRechercheGare(g.commune)===normaliserRechercheGare(commune) &&
-      tarifsConfirmesPourGare(g,destination,transport).length>0
-    );
-    afficherResultatsGares("Gares de "+commune+" desservant "+destination,gares,destination,transport);
-  }catch(erreur){
-    console.error("Recherche des gares impossible :",erreur);
-    zone.textContent="Impossible de charger les gares depuis Firebase. Vérifiez votre connexion puis réessayez.";
-  }
+  const gares=garesFirestore.filter(g=>
+    normaliserRechercheGare(g.commune)===normaliserRechercheGare(commune) &&
+    tarifsConfirmesPourGare(g,destination,transport).length>0
+  );
+  afficherResultatsGares("Gares de "+commune+" desservant "+destination,gares,destination,transport);
 }
-async function verifierDestinationGare(){
+function verifierDestinationGare(){
   const nom=document.getElementById("nomGareRecherche").value.trim();
   const destination=document.getElementById("destinationGareConnue").value.trim();
   const transport=document.getElementById("transportGareConnue").value;
   const zone=document.getElementById("resultatRechercheGares");
   zone.style.display="block";
   if(!nom||!destination){zone.textContent="Renseignez le nom de la gare et la destination recherchée.";return;}
-  zone.textContent="Vérification de la gare et de la destination…";
-  try{
-    await actualiserGaresDepuisFirebase();
-    const saisie=normaliserRechercheGare(nom);
-    const gare=garesFirestore.find(g=>normaliserRechercheGare(g.nom)===saisie) ||
-      garesFirestore.find(g=>normaliserRechercheGare(g.nom).includes(saisie)||saisie.includes(normaliserRechercheGare(g.nom)));
-    if(!gare){zone.textContent="Cette gare n’a pas été trouvée dans le répertoire. Choisissez son nom dans la liste ou vérifiez l’orthographe.";return;}
-    const tarifs=tarifsConfirmesPourGare(gare,destination,transport);
-    if(tarifs.length){afficherResultatsGares("Destination disponible à "+gare.nom,[gare],destination,transport);return;}
-    zone.innerHTML="<p><strong>La gare « "+echapperTextePublicite(gare.nom)+" » ne dessert pas « "+echapperTextePublicite(destination)+" » avec le moyen de transport choisi.</strong></p><p class='notice'>Recherche des autres gares qui desservent cette destination dans votre commune actuelle…</p>";
-    let communeUtilisateur="";
-    try{communeUtilisateur=await communeActuelleUtilisateur();}catch(e){console.warn("Localisation commune impossible :",e);}
-    if(!communeUtilisateur){
-      communeUtilisateur=gare.commune||"";
-      zone.innerHTML="<p class='notice'>Votre commune n’a pas pu être détectée par GPS. Les autres gares de la commune de la gare saisie (« "+echapperTextePublicite(communeUtilisateur||"non précisée")+" ») sont recherchées à la place.</p>";
-    }
-    if(!communeUtilisateur){
-      zone.innerHTML+="<p class='notice'>Autorisez la géolocalisation ou recherchez depuis l’onglet « Je cherche une gare » en indiquant votre commune.</p>";
-      return;
-    }
-    const alternatives=garesFirestore.filter(g=>
-      g.firestoreId!==gare.firestoreId &&
-      normaliserRechercheGare(g.commune)===normaliserRechercheGare(communeUtilisateur) &&
-      tarifsConfirmesPourGare(g,destination,transport).length>0
-    );
-    if(alternatives.length){
-      const titre="Autres gares de "+communeUtilisateur+" desservant "+destination;
-      const html=alternatives.map(g=>{
-        const lignes=tarifsConfirmesPourGare(g,destination,transport).map(t=>"<p>🚌 "+echapperTextePublicite(t.transport)+" : <strong>"+Number(t.prix).toLocaleString("fr-FR")+" FCFA</strong></p>").join("");
-        return "<article class='stop'><strong>"+echapperTextePublicite(g.nom)+"</strong><br>Commune : "+echapperTextePublicite(g.commune||"")+"<br>"+lignes+"<button type='button' onclick='ouvrirItineraireVersGare("+JSON.stringify(g.firestoreId)+")' style='background:#16834A;color:#fff'>📍 Voir sur la carte</button><button type='button' onclick='afficherFicheDetailleeGare("+JSON.stringify(g.firestoreId)+")'>Voir la fiche détaillée</button></article>";
-      }).join("");
-      zone.innerHTML="<p><strong>La gare saisie ne dessert pas cette destination.</strong></p><h3>"+echapperTextePublicite(titre)+"</h3>"+html;
-      dernierResultatGaresHTML=zone.innerHTML;
-    }else{
-      zone.innerHTML+="<p class='notice'>Aucune autre gare de "+echapperTextePublicite(communeUtilisateur)+" ne possède actuellement de tarif confirmé pour cette destination. Essayez « Tous les transports » ou vérifiez l’écriture de la destination.</p>";
-    }
-  }catch(erreur){
-    console.error("Vérification de destination impossible :",erreur);
-    zone.textContent="Impossible de charger les gares depuis Firebase. Vérifiez votre connexion puis réessayez.";
+  const gare=garesFirestore.find(g=>normaliserRechercheGare(g.nom)===normaliserRechercheGare(nom));
+  if(!gare){zone.textContent="Cette gare n’a pas été trouvée dans le répertoire. Vérifiez son nom ou recherchez par commune.";return;}
+  const tarifs=tarifsConfirmesPourGare(gare,destination,transport);
+  if(tarifs.length){afficherResultatsGares("Destination disponible à "+gare.nom, [gare],destination,transport);return;}
+  const alternatives=garesFirestore.filter(g=>
+    g.firestoreId!==gare.firestoreId &&
+    normaliserRechercheGare(g.commune)===normaliserRechercheGare(gare.commune) &&
+    tarifsConfirmesPourGare(g,destination,transport).length>0
+  );
+  zone.innerHTML="<p><strong>Destination non disponible à "+gare.nom+"</strong><br>Cette gare ne dispose pas de tarif confirmé pour "+destination+" avec ce moyen de transport.</p>";
+  if(alternatives.length){
+    const html=alternatives.map(g=>{
+      const lignes=tarifsConfirmesPourGare(g,destination,transport).map(t=>"<p>"+t.transport+" : <strong>"+Number(t.prix).toLocaleString("fr-FR")+" FCFA</strong></p>").join("");
+      return "<article class='stop'><strong>"+echapperTextePublicite(g.nom)+"</strong><br>"+echapperTextePublicite(g.quartier||g.commune||"") + lignes+"<button type='button' onclick='ouvrirItineraireVersGare("+JSON.stringify(g.firestoreId)+")' style='background:#16834A;color:#fff'>📍 Voir sur la carte</button><button type='button' onclick='afficherFicheDetailleeGare("+JSON.stringify(g.firestoreId)+")'>Voir la fiche détaillée</button></article>";
+    }).join("");
+    zone.innerHTML+="<h3>Autres gares de "+(gare.commune||"la commune")+" desservant "+destination+"</h3>"+html;
+  }else{
+    zone.innerHTML+="<p class='notice'>Aucune autre gare de cette commune ne possède actuellement un tarif confirmé pour cette destination. Essayez « Tous les transports » ou une autre commune de départ.</p>";
   }
 }
 function distanceEntreCoordonneesKm(lat1,lon1,lat2,lon2){
