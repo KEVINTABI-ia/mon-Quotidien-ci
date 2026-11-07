@@ -1188,6 +1188,7 @@ header{padding:22px 18px 24px!important}
 @media(max-width:560px){.admin-rubrique{min-height:86px!important}}
 
 /* Illustrations partagées entre les tuiles publiques et le tableau de bord. */
+.tuile-services{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/services.svg')!important;background-size:cover;background-position:center;}
 .accueil-service.tuile-solidarite{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/solidarite.svg')!important;background-size:cover;background-position:center;}
 .accueil-service.tuile-commerce{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/commerce.svg')!important;background-size:cover;background-position:center;}
 .accueil-service.tuile-boutique{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/boutique.svg')!important;background-size:cover;background-position:center;}
@@ -2494,9 +2495,9 @@ function chargerPublicitesAccueil() {
     <button type="button" class="accueil-service tuile-commerce" onclick="ouvrirAnnuaireCommerce('commerce')" style="min-height:68px;text-align:left;">🏪 Commerces</button>
     <button type="button" class="accueil-service tuile-boutique" onclick="ouvrirAnnuaireCommerce('boutique')" style="min-height:68px;text-align:left;">🛍️ Boutiques</button>
   </div>
-    <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('station','Stations-service')" style="min-height:68px;background:#FFF4E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">⛽ Stations-service</button>
-    <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('banque','Banques')" style="min-height:68px;background:#EEF5FF;color:#244E83;border:1px solid #D2E1F5;text-align:left;">🏦 Banques</button>
-    <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('hotel','Hôtels')" style="min-height:68px;background:#F5F0FF;color:#60418A;border:1px solid #E0D5F4;text-align:left;">🏨 Hôtels</button>
+    <button type="button" class="tuile-services" onclick="ouvrirRepertoireServicesQuotidiens('station','Stations-service')" style="min-height:68px;background:#FFF4E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">⛽ Stations-service</button>
+    <button type="button" class="tuile-services" onclick="ouvrirRepertoireServicesQuotidiens('banque','Banques')" style="min-height:68px;background:#EEF5FF;color:#244E83;border:1px solid #D2E1F5;text-align:left;">🏦 Banques</button>
+    <button type="button" class="tuile-services" onclick="ouvrirRepertoireServicesQuotidiens('hotel','Hôtels')" style="min-height:68px;background:#F5F0FF;color:#60418A;border:1px solid #E0D5F4;text-align:left;">🏨 Hôtels</button>
 </section>
 <section class="card" id="espaceSolidarite" style="display:none;margin:14px 0;padding:16px;"><h2>🤝 Dons et solidarité</h2><p class="notice">Proposez un don ou demandez de l’aide. Chaque publication est vérifiée par l’administration. Vos coordonnées restent privées et ne sont jamais affichées publiquement.</p><div class="modes"><button type="button" onclick="afficherFormulaireSolidarite('don')">🎁 Proposer un don</button><button type="button" onclick="afficherFormulaireSolidarite('besoin')">🫶 Demander de l’aide</button></div><div id="formulaireSolidarite" style="display:none;margin:12px 0;"></div><h3>Publications validées</h3><div id="listeSolidaritePublique"><p class="notice">Chargement...</p></div></section>
 <section class="card" id="objetsPerdusRetrouves" style="display:none;margin:14px 0;padding:16px;">
