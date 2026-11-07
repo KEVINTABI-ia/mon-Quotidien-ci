@@ -814,6 +814,13 @@ service cloud.firestore {
       allow read, update, delete: if estAdmin();
     }
 
+    // Répertoire public des supermarchés importés depuis OpenStreetMap.
+    // Seul l'administrateur peut importer, corriger ou supprimer les fiches.
+    match /supermarches/{supermarcheId} {
+      allow read: if true;
+      allow create, update, delete: if estAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
