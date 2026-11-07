@@ -3649,7 +3649,7 @@ function normaliser(texte) {
     .trim();
 }
 function chargerGaresPourRecherche() {
-  db.collection("gares").orderBy("nom").get()
+  db.collection("gares").get()
     .then(snapshot => {
       garesFirestore = snapshot.docs.map(doc => ({
         ...doc.data(),
