@@ -3104,7 +3104,7 @@ function retourMenuAdmin(){
   RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display="none";});
   const menu=document.getElementById("adminMenuRubriques");
   if(menu){
-    menu.style.display="grid";
+    menu.style.display="block";
     menu.scrollIntoView({behavior:"smooth",block:"nearest"});
   }
 }
