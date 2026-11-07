@@ -4005,7 +4005,7 @@ document.getElementById("arrivee").value
 
 /* RECHERCHE DES GARES — DEUX PARCOURS */
 function normaliserRechercheGare(valeur){
-  return String(valeur||"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+  return String(valeur||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
 }
 function choisirModeGare(mode){
   const destination=mode==="destination";
