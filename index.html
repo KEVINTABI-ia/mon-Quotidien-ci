@@ -1420,6 +1420,100 @@ main{padding:14px 13px 24px!important}
 .tuile-auto{background:#F1F5F8!important;color:#183B50!important;border:1px solid #D8E4EA!important}
 @media(max-width:350px){.grille-services-quotidiens{gap:7px}.grille-services-quotidiens button{padding:8px!important;font-size:11px!important}}
 </style>
+
+<style>
+/* REFONTE PREMIUM DES TUILES « LE QUOTIDIEN » */
+#menuQuotidien{
+  position:relative;
+  overflow:hidden;
+  padding:20px 15px!important;
+  border:1px solid #e4e9df!important;
+  border-radius:25px!important;
+  background:linear-gradient(150deg,#fff 0%,#f4f8f2 58%,#fff7ed 100%)!important;
+  box-shadow:0 12px 30px rgba(28,63,40,.09),0 2px 7px rgba(28,63,40,.04)!important;
+}
+#menuQuotidien:before{
+  content:"";
+  position:absolute;
+  top:0;left:0;right:0;height:5px;
+  background:linear-gradient(90deg,#f28c28 0 33.33%,#fff 33.33% 66.66%,#16834a 66.66%);
+}
+#menuQuotidien h2{
+  display:flex;align-items:center;gap:9px;
+  margin:0 0 7px!important;
+  color:#174b35!important;
+  font-size:21px!important;font-weight:900!important;letter-spacing:-.45px;
+}
+#menuQuotidien>p{
+  max-width:440px;
+  margin:0 0 17px!important;
+  color:#68786e!important;font-size:12px!important;line-height:1.55;
+}
+#menuQuotidien .grille-services-quotidiens{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:11px;
+}
+#menuQuotidien .tuile-quotidien{
+  position:relative;isolation:isolate;overflow:hidden;
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+  gap:7px;min-width:0;min-height:112px;
+  padding:15px 12px!important;
+  border:1px solid rgba(255,255,255,.38)!important;
+  border-radius:18px!important;
+  color:#fff!important;text-align:left!important;
+  font-size:13px!important;font-weight:850!important;line-height:1.3!important;
+  text-shadow:0 1px 3px rgba(0,0,0,.18);
+  box-shadow:0 7px 15px rgba(24,53,42,.13),inset 0 1px 0 rgba(255,255,255,.18)!important;
+  transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+#menuQuotidien .tuile-quotidien:before{
+  content:"";position:absolute;z-index:-1;inset:0;
+  background:linear-gradient(115deg,rgba(0,0,0,.02),rgba(0,0,0,.17));
+}
+#menuQuotidien .tuile-quotidien:after{
+  content:"";position:absolute;z-index:-1;
+  width:92px;height:92px;right:-30px;top:-35px;
+  border:1px solid rgba(255,255,255,.22);border-radius:50%;
+  box-shadow:0 0 0 13px rgba(255,255,255,.06),0 0 0 27px rgba(255,255,255,.035);
+}
+#menuQuotidien .tuile-quotidien small{
+  display:block;max-width:100%;
+  color:rgba(255,255,255,.91)!important;
+  font-size:10px!important;font-weight:550!important;line-height:1.4!important;
+  text-shadow:0 1px 3px rgba(0,0,0,.24);
+}
+#menuQuotidien .tuile-quotidien:nth-child(6n+1){background:linear-gradient(135deg,#176b48,#239665)!important}
+#menuQuotidien .tuile-quotidien:nth-child(6n+2){background:linear-gradient(135deg,#b85b19,#ef963b)!important}
+#menuQuotidien .tuile-quotidien:nth-child(6n+3){background:linear-gradient(135deg,#164e70,#287fa1)!important}
+#menuQuotidien .tuile-quotidien:nth-child(6n+4){background:linear-gradient(135deg,#176b68,#2b9b91)!important}
+#menuQuotidien .tuile-quotidien:nth-child(6n+5){background:linear-gradient(135deg,#55417c,#8066ad)!important}
+#menuQuotidien .tuile-quotidien:nth-child(6n){background:linear-gradient(135deg,#76501d,#bd8733)!important}
+#menuQuotidien .tuile-quotidien:active{
+  transform:scale(.975);filter:brightness(.96);
+  box-shadow:0 3px 8px rgba(24,53,42,.15)!important;
+}
+#menuQuotidien .tuile-quotidien:focus-visible{
+  outline:3px solid #f28c28;outline-offset:3px;
+}
+@media(hover:hover){
+  #menuQuotidien .tuile-quotidien:hover{
+    transform:translateY(-3px);
+    box-shadow:0 11px 20px rgba(24,53,42,.19)!important;
+    filter:saturate(1.08);
+  }
+}
+@media(max-width:360px){
+  #menuQuotidien{padding:17px 11px!important}
+  #menuQuotidien .grille-services-quotidiens{gap:8px}
+  #menuQuotidien .tuile-quotidien{min-height:105px;padding:12px 9px!important;font-size:11px!important;border-radius:15px!important}
+  #menuQuotidien .tuile-quotidien small{font-size:9px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  #menuQuotidien .tuile-quotidien{transition:none}
+}
+</style>
+
 </head>
 <body>
 
