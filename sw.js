@@ -1,4 +1,4 @@
-const CACHE_NAME = "mon-transport-ci-shell-v24";
+const CACHE_NAME = "mon-transport-ci-shell-v25";
 const APP_SHELL = "./";
 
 self.addEventListener("install", event => {
