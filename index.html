@@ -1832,13 +1832,13 @@ async function publierDemandePublicite(id) {
       return;
     }
     const d = demandeSnap.data();
-    const cle = await envoyerFichierCloudflare(fichier, "publicite");
-    const mediaUrl = WORKER_URL + "/public/publicite/" + encodeURIComponent(cle);
+    const mediaStocke = await envoyerFichierFirebaseStorage(fichier, "publicite");
+    const mediaUrl = mediaStocke.url;
     const dateFin = new Date(Date.now() + Number(d.dureeJours) * 86400000);
     const publiciteRef = await db.collection("publicites").add({
       titre: d.activite,
       description: d.description,
-      mediaKey: cle,
+      mediaKey: mediaStocke.path,
       mediaUrl,
       mediaType: fichier.type,
       statut: "publiee",
@@ -1950,10 +1950,10 @@ async function creerPubliciteManuelle() {
   if (!typesAcceptes.includes(fichier.type) || fichier.size > 25 * 1024 * 1024) { statut.textContent = "Format non accepté ou fichier supérieur à 25 Mo. Formats acceptés : JPG, PNG, WebP, MP4, WebM ou MOV."; return; }
   try {
     statut.textContent = "Envoi du média vers le stockage sécurisé...";
-    const cle = await envoyerFichierCloudflare(fichier, "publicite");
-    const mediaUrl = WORKER_URL + "/public/publicite/" + encodeURIComponent(cle);
+    const mediaStocke = await envoyerFichierFirebaseStorage(fichier, "publicite");
+    const mediaUrl = mediaStocke.url;
     await db.collection("publicites").add({
-      titre, description, typeAffichage, mediaKey:cle, mediaUrl, mediaType:fichier.type,
+      titre, description, typeAffichage, mediaKey:mediaStocke.path, mediaUrl, mediaType:fichier.type,
       statut:"masquee",
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       dateDebut:firebase.firestore.FieldValue.serverTimestamp()
@@ -2503,6 +2503,7 @@ function chargerPublicitesAccueil() {
 <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-storage-compat.js"></script>
 <script src="routes.js"></script>
 <script>
 // Déclaré dès le début pour éviter toute erreur d'initialisation lors de l'ouverture des rubriques.
@@ -2522,6 +2523,62 @@ firebase.initializeApp(firebaseConfig);
 
 var auth = firebase.auth();
 var db = firebase.firestore();
+var storage = firebase.storage();
+
+// Envoi des logos et médias publicitaires dans Firebase Storage.
+function convertirDataUrlEnBlob(dataUrl) {
+  const morceaux = dataUrl.split(",");
+  const type = (morceaux[0].match(/data:(.*?);base64/) || [])[1] || "image/jpeg";
+  const binaire = atob(morceaux[1]);
+  const octets = new Uint8Array(binaire.length);
+  for (let i = 0; i < binaire.length; i++) octets[i] = binaire.charCodeAt(i);
+  return new Blob([octets], { type });
+}
+
+async function envoyerFichierFirebaseStorage(fichier, categorie) {
+  if (!fichier) throw new Error("Sélectionne un fichier.");
+  const estLogo = categorie === "logo";
+  const estImage = fichier.type.startsWith("image/");
+  const typesAutorises = estLogo
+    ? ["image/jpeg", "image/png", "image/webp"]
+    : ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/quicktime"];
+  if (!typesAutorises.includes(fichier.type)) {
+    throw new Error("Format non accepté. Utilise JPG, PNG, WebP ou une vidéo MP4, WebM ou MOV.");
+  }
+  const limite = estLogo ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
+  if (fichier.size > limite) {
+    throw new Error("Fichier trop volumineux. Taille maximale : " + (estLogo ? "10 Mo" : "25 Mo") + ".");
+  }
+  let fichierAEnvoyer = fichier;
+  if (estImage) {
+    try {
+      const dataUrl = estLogo ? await compresserImage(fichier) : await compresserImagePublicite(fichier);
+      fichierAEnvoyer = convertirDataUrlEnBlob(dataUrl);
+    } catch (compressionErreur) {
+      console.warn("Compression non disponible, envoi du fichier original :", compressionErreur);
+    }
+  }
+  const identifiant = db.collection("_fichiers_storage").doc().id;
+  const extension = fichierAEnvoyer.type === "image/jpeg" ? "jpg"
+    : fichierAEnvoyer.type === "image/png" ? "png"
+    : fichierAEnvoyer.type === "image/webp" ? "webp"
+    : fichier.type === "video/quicktime" ? "mov"
+    : fichier.type === "video/webm" ? "webm" : "mp4";
+  const chemin = estLogo ? "compagnies/logos/" + identifiant + "." + extension
+    : "publicites/" + identifiant + "." + extension;
+  try {
+    const reference = storage.ref().child(chemin);
+    await reference.put(fichierAEnvoyer, {
+      contentType: fichierAEnvoyer.type || fichier.type,
+      cacheControl: "public,max-age=31536000"
+    });
+    const url = await reference.getDownloadURL();
+    return { path: chemin, url };
+  } catch (erreur) {
+    console.error("Envoi Firebase Storage :", erreur);
+    throw new Error("Envoi vers Firebase Storage impossible : " + (erreur.message || "vérifie les règles Storage et ta connexion."));
+  }
+}
 // Initialisation déplacée après la déclaration du module de visibilité des menus.
 chargerPublicitesAccueil();
 
@@ -7693,8 +7750,8 @@ async function enregistrerCompagnie() {
     let logo = "";
 
     if (fichierLogo) {
-      const cleLogo = await envoyerFichierCloudflare(fichierLogo, "logo");
-      logo = `${WORKER_URL}/public/logo/${encodeURIComponent(cleLogo)}`;
+      const logoStocke = await envoyerFichierFirebaseStorage(fichierLogo, "logo");
+      logo = logoStocke.url;
     }
 
     await db.collection("compagnies").add({
@@ -7904,8 +7961,8 @@ if (remplacerLogo) {
   }
 
   try {
-    const cleLogo = await envoyerFichierCloudflare(fichier, "logo");
-nouveauLogo = `${WORKER_URL}/public/logo/${encodeURIComponent(cleLogo)}`;
+    const logoStocke = await envoyerFichierFirebaseStorage(fichier, "logo");
+nouveauLogo = logoStocke.url;
   } catch (erreur) {
     alert(erreur.message);
     return;
