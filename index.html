@@ -3010,8 +3010,36 @@ async function traiterDemandeSolidarite(id,statut){
  try{await db.collection("dons_solidarite").doc(id).update({statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});await chargerDonsSolidariteAdmin();}catch(e){alert("Modification impossible : "+e.message);}
 }
 async function chargerGestionServicesProximiteAdmin(){
- const z=document.getElementById("resumeGestionServicesProximite");if(!z)return;if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){z.textContent="Accès administrateur requis.";return;}z.textContent="Comptage des répertoires...";
- try{const [ss,ms]=await Promise.all([db.collection("services_proximite").limit(3000).get(),db.collection("supermarches").limit(1500).get()]);const c={station:0,banque:0,hotel:0};ss.forEach(d=>{const k=d.data().categorie;if(Object.prototype.hasOwnProperty.call(c,k))c[k]++;});z.innerHTML='<div class="card" style="padding:12px;"><strong>Répertoires enregistrés</strong><p>⛽ Stations-service : '+c.station+'</p><p>🏦 Banques : '+c.banque+'</p><p>🏨 Hôtels : '+c.hotel+'</p><p>🛒 Supermarchés : '+ms.size+'</p><small>Les fiches et coordonnées GPS sont conservées dans Firebase.</small></div>';}catch(e){console.error(e);z.innerHTML='<p class="notice">Lecture impossible. Les règles Firestore de services_proximite doivent être activées.</p>';}
+ const z=document.getElementById("resumeGestionServicesProximite");if(!z)return;
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){z.textContent="Accès administrateur requis.";return;}
+ z.innerHTML='<p class="notice">Chargement des répertoires...</p>';
+ try{
+  const [ss,ms]=await Promise.all([db.collection("services_proximite").limit(3000).get(),db.collection("supermarches").limit(1500).get()]);
+  const c={station:0,banque:0,hotel:0};ss.forEach(d=>{const k=d.data().categorie;if(Object.prototype.hasOwnProperty.call(c,k))c[k]++;});
+  const cartes=(collection,snapshot)=>snapshot.docs.slice(0,60).map(doc=>{const d=doc.data();return '<article style="padding:10px;margin:8px 0;border:1px solid #DCE7DE;border-radius:10px;"><strong>'+echapperTextePublicite(d.nom||"Établissement sans nom")+'</strong><p>'+echapperTextePublicite(d.categorie||"Supermarché")+' · '+echapperTextePublicite(d.commune||"Commune non renseignée")+(d.quartier?" · "+echapperTextePublicite(d.quartier):"")+'</p><small>'+echapperTextePublicite(d.adresse||"Adresse non renseignée")+'</small><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button type="button" onclick="modifierFicheServiceProximiteAdmin(\''+collection+'\',\''+doc.id+'\')">Modifier</button><button type="button" onclick="supprimerFicheServiceProximiteAdmin(\''+collection+'\',\''+doc.id+'\')">Supprimer</button></div></article>';}).join("");
+  z.innerHTML='<div class="card" style="padding:12px;"><strong>Répertoires enregistrés</strong><p>⛽ Stations-service : '+c.station+'</p><p>🏦 Banques : '+c.banque+'</p><p>🏨 Hôtels : '+c.hotel+'</p><p>🛒 Supermarchés : '+ms.size+'</p><small>Affichage limité aux 60 premières fiches de chaque répertoire. Les modifications sont réservées à l’administrateur.</small></div><h4>Stations, banques et hôtels</h4>'+cartes("services_proximite",ss)+'<h4>Supermarchés</h4>'+cartes("supermarches",ms);
+ }catch(e){console.error(e);z.innerHTML='<p class="notice">Lecture impossible : '+echapperTextePublicite(e.message||"règles Firestore à vérifier")+'</p>';}
+}
+async function modifierFicheServiceProximiteAdmin(collection,id){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ if(!["services_proximite","supermarches"].includes(collection))return;
+ try{
+  const ref=db.collection(collection).doc(id),snap=await ref.get();if(!snap.exists)return alert("Fiche introuvable.");
+  const d=snap.data(),nom=prompt("Nom de l’établissement :",d.nom||"");if(nom===null)return;
+  const commune=prompt("Commune :",d.commune||"");if(commune===null)return;
+  const quartier=prompt("Quartier (facultatif) :",d.quartier||"");if(quartier===null)return;
+  const adresse=prompt("Adresse ou repère (facultatif) :",d.adresse||"");if(adresse===null)return;
+  if(!nom.trim()||!commune.trim())return alert("Le nom et la commune sont obligatoires.");
+  await ref.update({nom:nom.trim(),commune:commune.trim(),quartier:quartier.trim(),adresse:adresse.trim(),modifieLe:firebase.firestore.FieldValue.serverTimestamp(),modifiePar:auth.currentUser.uid});
+  await chargerGestionServicesProximiteAdmin();
+ }catch(e){console.error(e);alert("Modification impossible : "+e.message);}
+}
+async function supprimerFicheServiceProximiteAdmin(collection,id){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ if(!["services_proximite","supermarches"].includes(collection))return;
+ if(!confirm("Supprimer définitivement cette fiche du répertoire ?"))return;
+ try{await db.collection(collection).doc(id).delete();await chargerGestionServicesProximiteAdmin();}
+ catch(e){console.error(e);alert("Suppression impossible : "+e.message);}
 }
 
 /* OBJETS ET DOCUMENTS PERDUS / RETROUVES */
@@ -3189,9 +3217,6 @@ function ouvrirRubriqueAdmin(id){
   if(!cible)return;
   if(id==="gestionValidationDepannage") chargerNouveauxServicesAdmin("depannage");
   if(id==="gestionValidationCommerce") chargerNouveauxServicesAdmin("commerce");
-  if(id==="gestionValidationBoutiques") chargerNouveauxServicesAdmin("boutique");
-  if(id==="gestionDonsSolidarite") chargerDonsSolidariteAdmin();
-  if(id==="gestionServicesProximite") chargerGestionServicesProximiteAdmin();
   if(id==="gestionValidationBoutiques") chargerNouveauxServicesAdmin("boutique");
   if(id==="gestionDonsSolidarite") chargerDonsSolidariteAdmin();
   if(id==="gestionServicesProximite") chargerGestionServicesProximiteAdmin();
