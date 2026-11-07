@@ -2955,6 +2955,51 @@ async function traiterNouveauService(id,statut){
 }
 
 
+
+/* DONS ET SOLIDARITE — CONTACTS PRIVES */
+let arretNotificationsSolidariteAdmin=null;
+function ouvrirEspaceSolidarite(){if(typeof ouvrirSectionPleinEcran==="function")ouvrirSectionPleinEcran("espaceSolidarite","Dons et solidarité");chargerSolidaritePublique();}
+function afficherFormulaireSolidarite(type){
+ if(!["don","besoin"].includes(type))return;
+ const z=document.getElementById("formulaireSolidarite");if(!z)return;z.style.display="block";
+ z.innerHTML='<div class="card" style="padding:14px;"><h3>'+(type==="don"?"🎁 Proposer un don":"🫶 Demander de l’aide")+'</h3><label>'+(type==="don"?"Nom du don proposé":"Nature du besoin")+'</label><input id="solTitre" maxlength="100"><label>Catégorie</label><select id="solCategorie"><option>Vêtements</option><option>Alimentation</option><option>Fournitures scolaires</option><option>Matériel et équipements</option><option>Mobilier</option><option>Autre</option></select><label>Commune</label><input id="solCommune" maxlength="60"><label>Description</label><textarea id="solDescription" rows="4" maxlength="1000"></textarea><hr><h4>Coordonnées privées — visibles uniquement par l’administration</h4><label>Nom complet</label><input id="solNom" maxlength="100"><label>Téléphone</label><input id="solTelephone" type="tel" maxlength="20"><label>E-mail</label><input id="solEmail" type="email" maxlength="120"><label>Mot de passe (6 caractères minimum)</label><input id="solPassword" type="password" minlength="6"><button type="button" class="primary" onclick="envoyerDemandeSolidarite(\''+type+'\')">Envoyer pour validation</button><p id="solStatut" class="notice" aria-live="polite"></p></div>';
+}
+async function envoyerDemandeSolidarite(type){
+ const v=id=>document.getElementById(id)?.value.trim()||"",titre=v("solTitre"),categorie=v("solCategorie"),commune=v("solCommune"),description=v("solDescription"),nom=v("solNom"),telephone=v("solTelephone"),email=v("solEmail"),password=document.getElementById("solPassword")?.value||"",status=document.getElementById("solStatut");
+ if(!["don","besoin"].includes(type)||![titre,categorie,commune,description,nom,telephone,email].every(Boolean)||password.length<6){status.textContent="Remplissez tous les champs. Le mot de passe doit contenir au moins 6 caractères.";return;}
+ status.textContent="Envoi de votre dossier...";
+ try{
+  let user=auth.currentUser;if(user&&user.email!==email){await auth.signOut();user=null;}
+  if(!user){try{user=(await auth.createUserWithEmailAndPassword(email,password)).user;}catch(e){if(e.code==="auth/email-already-in-use")user=(await auth.signInWithEmailAndPassword(email,password)).user;else throw e;}}
+  const ref=db.collection("dons_solidarite").doc(),batch=db.batch();
+  batch.set(ref,{uid:user.uid,type,titre,categorie,commune,description,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  batch.set(ref.collection("informations_privees").doc("contact"),{uid:user.uid,nom,telephone,email,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  await batch.commit();status.textContent="Dossier transmis. Il sera publié après validation. Vos coordonnées restent privées.";
+ }catch(e){console.error(e);status.textContent="Envoi impossible : "+(e.code==="permission-denied"?"les règles Firestore dédiées doivent être publiées.":e.message||"réessayez.");}
+}
+async function chargerSolidaritePublique(){
+ const z=document.getElementById("listeSolidaritePublique");if(!z)return;z.innerHTML='<p class="notice">Chargement...</p>';
+ try{const snap=await db.collection("dons_solidarite").where("statut","==","approuve").orderBy("createdAt","desc").limit(100).get();if(snap.empty){z.innerHTML='<p class="notice">Aucun don ou besoin publié pour le moment.</p>';return;}
+ z.innerHTML=snap.docs.map(doc=>{const d=doc.data();return '<article class="card" style="padding:13px;margin:10px 0;"><strong>'+(d.type==="don"?"🎁 Don proposé":"🫶 Demande d’aide")+' — '+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.description)+'</p><small>Publication validée</small></article>';}).join("");
+ }catch(e){console.error(e);z.innerHTML='<p class="notice">Le répertoire sera disponible après activation des règles Firestore dédiées.</p>';}
+}
+async function chargerDonsSolidariteAdmin(){
+ const z=document.getElementById("listeDonsSolidariteAdmin");if(!z)return;if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){z.textContent="Accès administrateur requis.";return;}z.textContent="Chargement des dossiers...";
+ try{const snap=await db.collection("dons_solidarite").orderBy("createdAt","desc").limit(200).get();if(snap.empty){z.innerHTML='<p class="notice">Aucun dossier reçu.</p>';return;}
+ const cards=await Promise.all(snap.docs.map(async doc=>{const d=doc.data();let c={};try{const p=await doc.ref.collection("informations_privees").doc("contact").get();if(p.exists)c=p.data();}catch(e){}
+ const action=d.statut==="en_attente"?'<button onclick="traiterDemandeSolidarite(\''+doc.id+'\',\'approuve\')">Approuver et publier</button><button onclick="traiterDemandeSolidarite(\''+doc.id+'\',\'refuse\')">Refuser</button>':'<span class="notice">Statut : '+echapperTextePublicite(d.statut)+'</span>';
+ return '<article class="card" style="padding:13px;margin:10px 0;"><strong>'+(d.type==="don"?"🎁 Don":"🫶 Besoin")+' : '+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p><strong>Contact privé :</strong> '+echapperTextePublicite(c.nom||"Indisponible")+' · '+echapperTextePublicite(c.telephone||"Indisponible")+' · '+echapperTextePublicite(c.email||"Indisponible")+'</p>'+action+'</article>'; }));z.innerHTML=cards.join("");
+ }catch(e){console.error(e);z.innerHTML='<p class="notice">Erreur de lecture. Vérifiez les règles Firestore.</p>';}
+}
+async function traiterDemandeSolidarite(id,statut){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");if(!["approuve","refuse"].includes(statut))return;
+ try{await db.collection("dons_solidarite").doc(id).update({statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});await chargerDonsSolidariteAdmin();}catch(e){alert("Modification impossible : "+e.message);}
+}
+async function chargerGestionServicesProximiteAdmin(){
+ const z=document.getElementById("resumeGestionServicesProximite");if(!z)return;if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){z.textContent="Accès administrateur requis.";return;}z.textContent="Comptage des répertoires...";
+ try{const [ss,ms]=await Promise.all([db.collection("services_proximite").limit(3000).get(),db.collection("supermarches").limit(1500).get()]);const c={station:0,banque:0,hotel:0};ss.forEach(d=>{const k=d.data().categorie;if(Object.prototype.hasOwnProperty.call(c,k))c[k]++;});z.innerHTML='<div class="card" style="padding:12px;"><strong>Répertoires enregistrés</strong><p>⛽ Stations-service : '+c.station+'</p><p>🏦 Banques : '+c.banque+'</p><p>🏨 Hôtels : '+c.hotel+'</p><p>🛒 Supermarchés : '+ms.size+'</p><small>Les fiches et coordonnées GPS sont conservées dans Firebase.</small></div>';}catch(e){console.error(e);z.innerHTML='<p class="notice">Lecture impossible. Les règles Firestore de services_proximite doivent être activées.</p>';}
+}
+
 /* OBJETS ET DOCUMENTS PERDUS / RETROUVES */
 function afficherFormulaireObjetRetrouve(){
   document.getElementById("formulaireObjetRetrouve").style.display="block";
@@ -3105,6 +3150,8 @@ function surveillerNotificationsAdmin(){
    const n=comptes[el.dataset.notificationType]||0;el.textContent=String(n);el.hidden=n===0;
   });
  },erreur=>console.error("Compteurs des demandes administrateur :",erreur));
+ if(arretNotificationsSolidariteAdmin){arretNotificationsSolidariteAdmin();arretNotificationsSolidariteAdmin=null;}
+ arretNotificationsSolidariteAdmin=db.collection("dons_solidarite").where("statut","==","en_attente").onSnapshot(snap=>{document.querySelectorAll('[data-notification-type="solidarite"]').forEach(el=>{el.textContent=String(snap.size);el.hidden=snap.size===0;});},e=>console.error("Compteur solidarité :",e));
 }
 function afficherMenuAdmin(){
   const menu=document.getElementById("adminMenuRubriques");
@@ -3146,7 +3193,7 @@ function actualiserInterfaceAdmin(autorise){
   const connexion=document.getElementById("adminConnexion"),menu=document.getElementById("adminMenuRubriques"),deconnexion=document.getElementById("adminDeconnexion");
   if(connexion)connexion.style.display=autorise?"none":"block";
   if(deconnexion)deconnexion.style.display=autorise?"block":"none";
-  if(menu){if(autorise){afficherMenuAdmin();surveillerNotificationsAdmin();}else{menu.style.display="none";if(arretNotificationsAdmin){arretNotificationsAdmin();arretNotificationsAdmin=null;}}}
+  if(menu){if(autorise){afficherMenuAdmin();surveillerNotificationsAdmin();}else{menu.style.display="none";if(arretNotificationsAdmin){arretNotificationsAdmin();arretNotificationsAdmin=null;}if(arretNotificationsSolidariteAdmin){arretNotificationsSolidariteAdmin();arretNotificationsSolidariteAdmin=null;}}}
   RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display="none";});
 }
 // CONNEXION ADMINISTRATEUR
