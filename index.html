@@ -1568,9 +1568,19 @@ main{padding:14px 13px 24px!important}
 
 <section class="card" id="devenirPartenaire" style="display:none;">
   <h2>🤝 Devenir partenaire de Mon Transport CI</h2>
-  <p>Rejoignez notre réseau en tant que livreur indépendant ou représentant de gare. Votre dossier sera soumis à validation.</p>
-  <button class="primary" onclick="ouvrirInscriptionLivreur()">🚚 Devenir livreur indépendant</button>
-  <button class="primary" onclick="ouvrirInscriptionGare()">🏢 Devenir représentant de gare</button>
+  <p>Rejoignez notre réseau professionnel. Choisissez votre activité pour afficher le formulaire correspondant. Chaque dossier est soumis à vérification avant activation ou publication.</p>
+  <label for="typePartenaireSouhaite"><strong>Quel type de partenaire souhaitez-vous être ?</strong></label>
+  <select id="typePartenaireSouhaite" onchange="afficherFormulairePartenaire(this.value)" style="width:100%;padding:14px;border:1px solid #D5E2D9;border-radius:12px;margin:8px 0 14px;">
+    <option value="">— Sélectionnez votre activité —</option>
+    <option value="mecanicien">🔧 Mécanicien</option>
+    <option value="depannage">🚗 Service de dépannage</option>
+    <option value="vendeur_pieces">🧰 Vendeur de pièces détachées</option>
+    <option value="livreur">📦 Livreur indépendant</option>
+    <option value="representant_gare">🏢 Représentant de gare</option>
+    <option value="commercant">🏪 Commerçant(e)</option>
+    <option value="compagnie">🚌 Compagnie de voyage</option>
+  </select>
+  <div id="partenaireFormulaireChoisi" aria-live="polite"></div>
 </section>
 
 
@@ -2791,14 +2801,14 @@ async function envoyerFichierFirebaseStorage(fichier, categorie) {
 chargerPublicitesAccueil();
 
 const NOUVEAUX_SERVICES = {
- depannage:{titre:"Dépannage automobile",icone:"🚗",categories:["Mécanicien","Remorquage","Panne de batterie","Crevaison","Dépannage carburant"]},
- commerce:{titre:"Annuaire des commerces",icone:"🏪",categories:["Alimentation","Restaurant","Boutique","Électronique","Autre commerce"]},
+ depannage:{titre:"Dépannage automobile",icone:"🚗",categories:["Mécanicien","Dépannage général","Remorquage","Panne de batterie","Crevaison","Dépannage carburant"]},
+ commerce:{titre:"Annuaire des commerces",icone:"🏪",categories:["Alimentation","Restaurant","Boutique","Pièces détachées","Électronique","Autre commerce"]},
  annonce:{titre:"Petites annonces et emplois",icone:"📢",categories:["Offre d'emploi","Demande d'emploi","Véhicule à vendre","Véhicule à louer","Autre annonce"]}
 };
 let nouveauServiceActif="depannage";
 let filtrePublicCommerce="tout";
 function ouvrirAnnuaireCommerce(type){if(!["commerce","boutique"].includes(type))return;filtrePublicCommerce=type;ouvrirSectionPleinEcran("nouveauxServices",type==="boutique"?"Boutiques":"Commerces");choisirNouveauService("commerce");const c=document.getElementById("nsCategorie");if(c){if(type==="boutique"){c.value="Boutique";c.disabled=true;}else c.disabled=false;}chargerNouveauxServicesPublics("commerce");}
-function choisirNouveauService(type){
+function choisirNouveauService(type,categorieInitiale,modePartenaire){
  if(!NOUVEAUX_SERVICES[type])return;
  nouveauServiceActif=type;
  const cfg=NOUVEAUX_SERVICES[type];
@@ -2828,15 +2838,15 @@ function choisirNouveauService(type){
  <small>Formats JPG, PNG ou WEBP · 3 Mo maximum.</small>
  <img id="nsPhotoPreview" alt="Aperçu de la photo sélectionnée" style="display:none;width:120px;height:120px;object-fit:cover;border-radius:12px;margin-top:8px;">
  </div>
- <label>Catégorie</label><select id="nsCategorie">${cfg.categories.map(c=>'<option>'+c+'</option>').join("")}</select>
+ <label>Catégorie</label><select id="nsCategorie">${cfg.categories.map(c=>'<option'+(c===categorieInitiale?" selected":"")+' >'+c+'</option>').join("")}</select>
  <label>Commune</label><input id="nsCommune" maxlength="60" placeholder="Ex. Yopougon" required>
- ${type==="commerce"?'<label>Adresse précise de récupération de la boutique</label><input id="nsAdresseBoutique" maxlength="220" placeholder="Quartier, rue, repère, commune" required>':''}
+ ${type==="commerce"&&!modePartenaire?'<label>Adresse précise de récupération de la boutique</label><input id="nsAdresseBoutique" maxlength="220" placeholder="Quartier, rue, repère, commune" required>':''}
  <label>Téléphone</label><input id="nsTelephone" type="tel" maxlength="20" placeholder="Ex. 07 00 00 00 00" required>
  <label>Description et détails</label><textarea id="nsDescription" rows="4" maxlength="1200" placeholder="Décrivez le service, le commerce ou l'annonce" required></textarea>
- ${type==="commerce"?'<label>Produits proposés et prix (un produit par ligne)</label><textarea id="nsProduits" rows="5" maxlength="3000" placeholder="Riz 25 kg | 15 000\nHuile 1 L | 1 200\nSucre 1 kg | 800"></textarea><small>Indiquez le nom du produit et son prix en FCFA, séparés par |.</small><label>Tarif de livraison fixé par la boutique</label><select id="nsTarifLivraison" required><option value="">Choisir le tarif</option><option value="1000">1 000 FCFA</option><option value="1500">1 500 FCFA</option><option value="2000">2 000 FCFA</option><option value="2500">2 500 FCFA</option></select>':''}
+ ${type==="commerce"&&!modePartenaire?'<label>Produits proposés et prix (un produit par ligne)</label><textarea id="nsProduits" rows="5" maxlength="3000" placeholder="Riz 25 kg | 15 000\nHuile 1 L | 1 200\nSucre 1 kg | 800"></textarea><small>Indiquez le nom du produit et son prix en FCFA, séparés par |.</small><label>Tarif de livraison fixé par la boutique</label><select id="nsTarifLivraison" required><option value="">Choisir le tarif</option><option value="1000">1 000 FCFA</option><option value="1500">1 500 FCFA</option><option value="2000">2 000 FCFA</option><option value="2500">2 500 FCFA</option></select>':''}
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
- ${type==="commerce"?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="15" data-montant="4000">15 jours — 4 000 FCFA</option><option value="30" data-montant="7000">30 jours — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p>Wave : <strong>0757522319</strong><br>Orange Money : <strong>0757522319</strong><br>Titulaire : <strong>TA BI SERGE KEVIN</strong></p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
+ ${type==="commerce"&&!modePartenaire?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="15" data-montant="4000">15 jours — 4 000 FCFA</option><option value="30" data-montant="7000">30 jours — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p>Wave : <strong>0757522319</strong><br>Orange Money : <strong>0757522319</strong><br>Titulaire : <strong>TA BI SERGE KEVIN</strong></p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
  <button class="primary" type="button" onclick="envoyerNouveauService()">${type==="commerce"?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
  </div>`;
@@ -4777,6 +4787,115 @@ numeroPermis: document.getElementById('livreurNumeroPermis').value.trim(),
     block: "start"
   });
 }
+function afficherFormulairePartenaire(type){
+  const zone=document.getElementById("partenaireFormulaireChoisi");
+  if(!zone)return;
+  zone.replaceChildren();
+  if(!type)return;
+  if(type==="livreur"){
+    ouvrirInscriptionLivreur();
+    const f=document.getElementById("formulaireLivreur");
+    if(f)zone.appendChild(f);
+    return;
+  }
+  if(type==="representant_gare"){
+    ouvrirInscriptionGare();
+    const f=document.getElementById("formulaireGare");
+    if(f)zone.appendChild(f);
+    return;
+  }
+  if(type==="mecanicien"||type==="depannage"||type==="vendeur_pieces"||type==="commercant"){
+    const depannage=type==="mecanicien"||type==="depannage";
+    const service=depannage?"depannage":"commerce";
+    const categorie=type==="mecanicien"?"Mécanicien":type==="depannage"?"Dépannage général":type==="vendeur_pieces"?"Pièces détachées":"Autre commerce";
+    choisirNouveauService(service,categorie,true);
+    const formulaire=document.getElementById("nouveauServiceFormZone");
+    if(formulaire){
+      zone.appendChild(formulaire);
+      const select=document.getElementById("nsCategorie");
+      if(select){select.value=categorie;select.disabled=true;}
+      const titre=document.getElementById("nsTitre");
+      if(titre) titre.placeholder=type==="vendeur_pieces"?"Nom du magasin ou vendeur de pièces détachées":"Nom de votre activité ou établissement";
+      const description=document.getElementById("nsDescription");
+      if(description)description.placeholder=type==="mecanicien"?"Décrivez vos spécialités, votre expérience et les quartiers desservis.":type==="depannage"?"Décrivez les dépannages proposés, les équipements et les zones couvertes.":type==="vendeur_pieces"?"Décrivez les pièces détachées vendues, les marques et les catégories disponibles.":"Décrivez votre commerce et les produits ou services proposés.";
+      const titreForm=formulaire.querySelector("h3");
+      if(titreForm) titreForm.textContent=(type==="mecanicien"?"🔧 Inscription – Mécanicien":type==="depannage"?"🚗 Inscription – Service de dépannage":type==="vendeur_pieces"?"🧰 Inscription – Vendeur de pièces détachées":"🏪 Inscription – Commerçant(e)");
+    }
+    return;
+  }
+  if(type==="compagnie"){
+    afficherFormulaireInscriptionCompagnie(zone);
+  }
+}
+function afficherFormulaireInscriptionCompagnie(zone){
+  zone.innerHTML=`
+    <div class="card" style="padding:14px;margin-top:12px;">
+      <h3>🚌 Inscription – Compagnie de voyage</h3>
+      <p>Renseignez les informations de votre compagnie et ses principales destinations. Le dossier sera vérifié par l’administration avant activation de l’abonnement.</p>
+      <label>Nom de la compagnie</label><input id="partCompagnieNom" maxlength="100" required>
+      <label>Nom de l’agence</label><input id="partCompagnieAgence" maxlength="100" required>
+      <label>Commune et quartier</label><input id="partCompagnieLocalisation" maxlength="160" required>
+      <label>Téléphone</label><input id="partCompagnieTelephone" type="tel" maxlength="20" required>
+      <label>Adresse e-mail professionnelle</label><input id="partCompagnieEmail" type="email" maxlength="120" required>
+      <label>Mot de passe (6 caractères minimum)</label><input id="partCompagniePassword" type="password" minlength="6" required>
+      <label>Logo de la compagnie (facultatif)</label><input id="partCompagnieLogo" type="file" accept="image/*">
+      <label>Destinations, prix des tickets et service</label>
+      <textarea id="partCompagnieDestinations" rows="5" placeholder="Bouaké | 5000 | Premium&#10;Yamoussoukro | 4000 | Express&#10;Daloa | 7000 | Standard" required></textarea>
+      <small>Une destination par ligne : Destination | Prix en FCFA | Premium, Express ou Standard.</small>
+      <label>Formule d’abonnement</label><select id="partCompagnieFormule"><option value="Essentielle">Essentielle</option><option value="Professionnelle">Professionnelle</option></select>
+      <label>Périodicité</label><select id="partCompagniePeriodicite" onchange="actualiserPrixInscriptionCompagnie()"><option value="Mensuel">Mensuel</option><option value="Annuel">Annuel</option></select>
+      <p id="partCompagniePrix" class="notice">Tarif : 5 000 FCFA / mois</p>
+      <label>Moyen de paiement</label><select id="partCompagniePaiement"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select>
+      <label>Référence de paiement</label><input id="partCompagnieReference" maxlength="80" placeholder="Référence de la transaction" required>
+      <p class="notice">Tarifs existants : Essentielle 5 000 FCFA/mois ou 50 000 FCFA/an ; Professionnelle 10 000 FCFA/mois ou 100 000 FCFA/an. Paiement Wave ou Orange Money au 0757522319. L’activation intervient après vérification par l’administration.</p>
+      <button type="button" class="primary" onclick="envoyerInscriptionCompagnie()">Envoyer mon dossier</button>
+      <p id="partCompagnieStatut" class="notice" aria-live="polite"></p>
+    </div>`;
+}
+function actualiserPrixInscriptionCompagnie(){
+  const formule=document.getElementById("partCompagnieFormule")?.value||"Essentielle";
+  const periodicite=document.getElementById("partCompagniePeriodicite")?.value||"Mensuel";
+  const prix=tarifsAbonnements[formule]?.[periodicite];
+  const zone=document.getElementById("partCompagniePrix");
+  if(zone&&prix)zone.textContent="Tarif : "+prix.toLocaleString("fr-FR")+" FCFA / "+periodicite.toLowerCase();
+}
+async function envoyerInscriptionCompagnie(){
+  const val=id=>document.getElementById(id)?.value.trim()||"";
+  const statut=document.getElementById("partCompagnieStatut");
+  const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),email=val("partCompagnieEmail"),password=document.getElementById("partCompagniePassword")?.value||"",texte=val("partCompagnieDestinations"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite"),paiement=val("partCompagniePaiement"),reference=val("partCompagnieReference");
+  if(!nom||!agence||!localisation||!telephone||!email||password.length<6||!texte||!paiement||reference.length<4){statut.textContent="Complétez tous les champs obligatoires. Le mot de passe doit contenir au moins 6 caractères.";return;}
+  let destinations;
+  try{
+    destinations=texte.split("\n").map(ligne=>{
+      const p=ligne.split("|"),ville=(p[0]||"").trim(),prix=Number((p[1]||"").trim()),s=(p[2]||"").trim().toLowerCase(),services={premium:"Premium",express:"Express",standard:"Standard"};
+      if(!ville||p.length<3||!Number.isFinite(prix)||prix<=0||!services[s])throw new Error("Format incorrect : Destination | Prix | Premium, Express ou Standard.");
+      return {ville,prix,service:services[s]};
+    });
+  }catch(e){statut.textContent=e.message;return;}
+  const montant=tarifsAbonnements[formule]?.[periodicite];
+  if(!montant){statut.textContent="Formule d’abonnement invalide.";return;}
+  statut.textContent="Création du compte et envoi du dossier...";
+  try{
+    let credential;
+    try{credential=await auth.createUserWithEmailAndPassword(email,password);}
+    catch(e){if(e.code!=="auth/email-already-in-use")throw e;credential=await auth.signInWithEmailAndPassword(email,password);}
+    let logo="";
+    const fichier=document.getElementById("partCompagnieLogo")?.files?.[0];
+    if(fichier)logo=await compresserImage(fichier);
+    await db.collection("compagnies").add({
+      uid:credential.user.uid,nom,agence,localisation,telephone,email,logo,destinations,formule,periodicite,montant,
+      moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",
+      dateCreation:firebase.firestore.FieldValue.serverTimestamp(),dateDebut:null,dateExpiration:null
+    });
+    await auth.signOut();
+    statut.textContent="Dossier envoyé. La compagnie sera activée après vérification du paiement par l’administration.";
+  }catch(e){
+    if(auth.currentUser)await auth.signOut();
+    console.error("Inscription compagnie :",e);
+    statut.textContent="Envoi impossible : "+(e.message||"réessayez.");
+  }
+}
+
 function validerMotDePasse(champ, idErreur) {
   const motDePasse = champ.value;
   const message = document.getElementById(idErreur);
@@ -8502,6 +8621,7 @@ if (
           Périodicité : ${echapperTexteCompagnie(compagnie.periodicite)}<br>
           Montant : ${Number(compagnie.montant).toLocaleString("fr-FR")} FCFA<br>
           Statut : <strong>${echapperTexteCompagnie(compagnie.statutAbonnement)}</strong><br>
+          ${compagnie.moyenPaiement? "Paiement déclaré : "+echapperTexteCompagnie(compagnie.moyenPaiement)+" · Référence : "+echapperTexteCompagnie(compagnie.referencePaiement||"Non fournie")+"<br>":""}
           Début : ${afficherDate(compagnie.dateDebut)}<br>
           Expiration : ${afficherDate(compagnie.dateExpiration)}
           <ul>${destinations}</ul>
