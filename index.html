@@ -7359,33 +7359,58 @@ const MARCHES_COMMUNES = [
 ];
 
 function afficherMarchesCommune(){
-  const resultat = document.getElementById("resultatRechercheGares");
-  if (!resultat) return;
-  resultat.style.display = "block";
-  const communes = [...new Set(MARCHES_COMMUNES.map(m => m.commune))]
-    .sort((a,b) => a.localeCompare(b,"fr"));
-  let html = "<strong>🏪 Commerce et boutique</strong>";
-  html += "<p>Recherchez ou choisissez une commune pour afficher les marchés disponibles.</p>";
-
-  html += "<label for='rechercheCommuneMarche'>Commune :</label>";
-  html += "<input id='rechercheCommuneMarche' type='search' list='listeCommunesMarches' ";
-  html += "placeholder='Ex. : Yopougon, Abobo, Cocody...' oninput='filtrerMarchesCommune()' autocomplete='off'>";
-  html += "<datalist id='listeCommunesMarches'>";
-  communes.forEach(c => html += "<option value='" + echapperTexteCompagnie(c) + "'></option>");
-  html += "</datalist><div id='listeMarchesCommune' aria-live='polite'>";
-  html += "<p class='notice'>Saisissez le nom d'une commune pour voir ses marchés.</p></div>";
-  html += "<hr style='margin:18px 0;border:0;border-top:1px solid #DCE7E0;'>";
-  html += "<h3>🛍️ Découvrez les commerces</h3>";
-  html += "<button type='button' class='primary' style='width:100%;margin:7px 0;' onclick='ouvrirTourBoutiques()'>🛍️ Faire un tour en boutique</button>";
-  html += "<button type='button' style='width:100%;margin:7px 0;' onclick='ouvrirEspaceProprietaireBoutique()'>🔐 Espace propriétaire : connexion / inscription</button>";
-  resultat.innerHTML = html;
-  if(vuePleinEcranActive && vuePleinEcranActive.element === resultat){
-    document.getElementById("vuePleinEcranContenu").scrollTop = 0;
-  } else {
-    resultat.scrollIntoView({behavior:"smooth",block:"start"});
-  }
+  const resultat=document.getElementById("resultatRechercheGares");
+  if(!resultat)return;
+  resultat.style.display="block";
+  resultat.innerHTML="<strong>🛍️ Commerce et boutique</strong><p>Choisissez le service que vous souhaitez consulter dans votre commune.</p>"+
+    "<button type='button' class='primary' style='width:100%;margin:8px 0;' onclick='ouvrirMarchesCommune()'>🏪 1. Le marché de ma commune</button>"+
+    "<button type='button' style='width:100%;margin:8px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirSupermarchesCommune()'>🛒 2. Supermarché de ma commune</button>"+
+    "<h3 style='margin:22px 0 8px;'>🛍️ 3. Découvrez les commerces</h3>"+
+    "<button type='button' class='primary' style='width:100%;margin:7px 0;' onclick='ouvrirMenuTourBoutique()'>🛍️ Faire un tour en boutique</button>"+
+    "<button type='button' style='width:100%;margin:7px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirMenuProprietaireBoutique()'>🔐 Espace propriétaire boutique</button>";
+  if(vuePleinEcranActive&&vuePleinEcranActive.element===resultat)document.getElementById("vuePleinEcranContenu").scrollTop=0;
+  else resultat.scrollIntoView({behavior:"smooth",block:"start"});
 }
-
+function ouvrirMarchesCommune(){
+  const resultat=document.getElementById("resultatRechercheGares");if(!resultat)return;
+  const communes=[...new Set(MARCHES_COMMUNES.map(m=>m.commune))].sort((a,b)=>a.localeCompare(b,"fr"));
+  let html="<strong>🏪 Le marché de ma commune</strong><p>Recherchez ou choisissez une commune pour afficher les marchés disponibles.</p>";
+  html+="<label for='rechercheCommuneMarche'>Commune :</label><input id='rechercheCommuneMarche' type='search' list='listeCommunesMarches' placeholder='Ex. : Yopougon, Abobo, Cocody...' oninput='filtrerMarchesCommune()' autocomplete='off'>";
+  html+="<datalist id='listeCommunesMarches'>";communes.forEach(c=>html+="<option value='"+echapperTexteCompagnie(c)+"'></option>");
+  html+="</datalist><div id='listeMarchesCommune' aria-live='polite'><p class='notice'>Saisissez le nom d'une commune pour voir ses marchés.</p></div>";
+  html+="<button type='button' style='width:100%;margin-top:14px;background:#F0F7F1;color:#17663D;' onclick='afficherMarchesCommune()'>← Retour à Commerce et boutique</button>";
+  resultat.innerHTML=html;
+}
+function ouvrirSupermarchesCommune(){
+  const resultat=document.getElementById("resultatRechercheGares");if(!resultat)return;
+  const communes=[...new Set(MARCHES_COMMUNES.map(m=>m.commune))].sort((a,b)=>a.localeCompare(b,"fr"));
+  let html="<strong>🛒 Supermarchés de ma commune</strong><p>Choisissez votre commune pour rechercher les supermarchés et les afficher sur la carte.</p>";
+  html+="<label for='rechercheCommuneSupermarche'>Commune :</label><input id='rechercheCommuneSupermarche' type='search' list='listeCommunesSupermarches' placeholder='Ex. : Yopougon, Abobo, Cocody...' autocomplete='off' oninput='rechercherSupermarchesCommune()'>";
+  html+="<datalist id='listeCommunesSupermarches'>";communes.forEach(c=>html+="<option value='"+echapperTexteCompagnie(c)+"'></option>");
+  html+="</datalist><div id='listeSupermarchesCommune' aria-live='polite'><p class='notice'>Saisissez votre commune pour afficher les supermarchés.</p></div>";
+  html+="<button type='button' style='width:100%;margin-top:14px;background:#F0F7F1;color:#17663D;' onclick='afficherMarchesCommune()'>← Retour à Commerce et boutique</button>";
+  resultat.innerHTML=html;
+}
+function rechercherSupermarchesCommune(){
+  const champ=document.getElementById("rechercheCommuneSupermarche"),zone=document.getElementById("listeSupermarchesCommune");
+  if(!champ||!zone)return;
+  const saisie=normaliser(champ.value);
+  if(!saisie){zone.innerHTML="<p class='notice'>Saisissez votre commune.</p>";return;}
+  const communes=[...new Set(MARCHES_COMMUNES.map(m=>m.commune))];
+  const commune=communes.find(c=>normaliser(c)===saisie)||communes.find(c=>normaliser(c).startsWith(saisie));
+  if(!commune){zone.innerHTML="<p class='notice'>Commune non reconnue. Choisissez une commune proposée dans la liste.</p>";return;}
+  const recherche="supermarchés à "+commune+", Abidjan, Côte d'Ivoire";
+  const carteUrl="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(recherche);
+  zone.innerHTML="<article class='stop'><strong>🛒 Supermarchés à "+echapperTexteCompagnie(commune)+"</strong><p>Consultez les établissements localisés dans cette commune, puis choisissez celui que vous souhaitez rejoindre.</p><a href='"+carteUrl+"' target='_blank' rel='noopener' style='display:block;text-align:center;text-decoration:none;background:#16834A;color:white;padding:13px;border-radius:12px;font-weight:800;margin:10px 0;'>📍 Voir les supermarchés sur la carte</a><p class='notice'>Après avoir choisi un supermarché sur la carte, utilisez l’option « Itinéraire » de Google Maps pour être guidé jusqu’à son adresse exacte.</p></article>";
+}
+function ouvrirMenuTourBoutique(){
+  const resultat=document.getElementById("resultatRechercheGares");if(!resultat)return;
+  resultat.innerHTML="<strong>🛍️ Découvrez les commerces</strong><p>Explorez les boutiques en ligne et leurs articles.</p><button type='button' class='primary' style='width:100%;' onclick='ouvrirTourBoutiques()'>🛍️ Faire un tour en boutique</button><button type='button' style='width:100%;margin-top:9px;background:#F0F7F1;color:#17663D;' onclick='afficherMarchesCommune()'>← Retour</button>";
+}
+function ouvrirMenuProprietaireBoutique(){
+  const resultat=document.getElementById("resultatRechercheGares");if(!resultat)return;
+  resultat.innerHTML="<strong>🔐 Espace propriétaire boutique</strong><p>Accédez à votre compte ou inscrivez une nouvelle boutique.</p><button type='button' class='primary' style='width:100%;' onclick='ouvrirEspaceProprietaireBoutique()'>Connexion / Inscription boutique</button><button type='button' style='width:100%;margin-top:9px;background:#F0F7F1;color:#17663D;' onclick='afficherMarchesCommune()'>← Retour</button>";
+}
 function ouvrirTourBoutiques(){
   ouvrirSectionPleinEcran("nouveauxServices","Un tour en boutique");
   choisirNouveauService("commerce");
