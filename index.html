@@ -1115,6 +1115,15 @@ header{padding:22px 18px 24px!important}
 .menu-dropdown{top:58px!important;right:10px!important}
 @media(max-width:380px){header{padding:19px 14px 21px!important}.brand-title{font-size:19px}.brand-icon{width:37px!important;height:37px!important;flex-basis:37px!important}}
 
+
+/* ACCES COMPACT A LA RECHERCHE DE TRAJET DEPUIS L'ACCUEIL */
+.carte-acces-recherche{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:10px;padding:15px!important;border:1px solid #DCE8E0!important;border-left:5px solid #F28C28!important;border-radius:18px!important;background:#fff!important;box-shadow:0 6px 18px rgba(28,63,40,.08)!important}
+.acces-recherche-icone{width:48px;height:48px;display:grid;place-items:center;border-radius:15px;background:#FFF2E5;font-size:27px}
+.acces-recherche-texte{min-width:0}
+.carte-acces-recherche .acces-recherche-texte h2{margin:0 0 4px!important;color:#17663D!important;font-size:17px!important;line-height:1.25}
+.carte-acces-recherche .acces-recherche-texte p{margin:0;color:#68786E;font-size:12px;line-height:1.4}
+.carte-acces-recherche>button{grid-column:1/-1;width:100%;min-height:46px;margin:2px 0 0!important;padding:10px 12px!important;font-size:14px}
+
 </style>
 
 <style>
@@ -1955,7 +1964,17 @@ function chargerPublicitesAccueil() {
 }
 </script>
 
-<section class="card recherche-trajet" id="rechercheGaresV2">
+<section class="card carte-acces-recherche" aria-label="Accès à la recherche de trajet et de gares">
+  <div class="acces-recherche-icone" aria-hidden="true">🧭</div>
+  <div class="acces-recherche-texte">
+    <h2>Où souhaitez-vous aller ?</h2>
+    <p>Recherchez une gare, trouvez les gares près de vous, vérifiez les destinations et consultez les moyens de transport disponibles.</p>
+  </div>
+  <button type="button" class="primary" onclick="ouvrirSectionPleinEcran('rechercheGaresV2','Où souhaitez-vous aller ?')">
+    Ouvrir la recherche de trajet →
+  </button>
+</section>
+<section class="card recherche-trajet" id="rechercheGaresV2" style="display:none;">
 <h2>Où souhaitez-vous aller ?</h2>
 <p class="notice">Trouvez les gares qui desservent votre destination ou vérifiez une gare que vous connaissez déjà.</p>
 <div class="modes" style="margin:14px 0">
