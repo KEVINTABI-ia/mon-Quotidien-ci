@@ -7384,24 +7384,90 @@ function ouvrirMarchesCommune(){
 function ouvrirSupermarchesCommune(){
   const resultat=document.getElementById("resultatRechercheGares");if(!resultat)return;
   const communes=[...new Set(MARCHES_COMMUNES.map(m=>m.commune))].sort((a,b)=>a.localeCompare(b,"fr"));
-  let html="<strong>🛒 Supermarchés de ma commune</strong><p>Choisissez votre commune pour rechercher les supermarchés et les afficher sur la carte.</p>";
+  let html="<strong>🛒 Supermarchés de ma commune</strong><p>Consultez les supermarchés enregistrés individuellement dans notre répertoire.</p>";
   html+="<label for='rechercheCommuneSupermarche'>Commune :</label><input id='rechercheCommuneSupermarche' type='search' list='listeCommunesSupermarches' placeholder='Ex. : Yopougon, Abobo, Cocody...' autocomplete='off' oninput='rechercherSupermarchesCommune()'>";
   html+="<datalist id='listeCommunesSupermarches'>";communes.forEach(c=>html+="<option value='"+echapperTexteCompagnie(c)+"'></option>");
-  html+="</datalist><div id='listeSupermarchesCommune' aria-live='polite'><p class='notice'>Saisissez votre commune pour afficher les supermarchés.</p></div>";
+  html+="</datalist><div id='listeSupermarchesCommune' aria-live='polite'><p class='notice'>Saisissez votre commune pour afficher les établissements déjà enregistrés.</p></div>";
+  html+="<div id='importSupermarchesAdmin' style='display:none;margin-top:18px;padding:12px;border:1px dashed #16834A;border-radius:12px;background:#F0F7F1;'><strong>🔧 Gestion du répertoire</strong><p style='font-size:13px;'>Importer les supermarchés recensés dans OpenStreetMap en fiches individuelles dans Firebase.</p><button type='button' class='primary' style='width:100%;' onclick='importerSupermarchesOSM()'>⬇️ Importer / actualiser la base</button><p id='statutImportSupermarches' class='notice' aria-live='polite'></p></div>";
   html+="<button type='button' style='width:100%;margin-top:14px;background:#F0F7F1;color:#17663D;' onclick='afficherMarchesCommune()'>← Retour à Commerce et boutique</button>";
   resultat.innerHTML=html;
+  const admin=document.getElementById("importSupermarchesAdmin");
+  if(admin&&auth.currentUser&&auth.currentUser.uid===ADMIN_UID)admin.style.display="block";
 }
-function rechercherSupermarchesCommune(){
+function normaliserNomCommuneSupermarche(valeur){
+  return normaliser(String(valeur||"").replace(/^commune\s+/i,"").replace(/^district autonome d'?/i,""));
+}
+function communeDepuisTagsSupermarche(tags){
+  const valeurs=[tags["addr:suburb"],tags["addr:city"],tags["addr:district"],tags["addr:place"],tags["is_in:city"],tags["is_in"]];
+  const communes=[...new Set(MARCHES_COMMUNES.map(m=>m.commune))];
+  for(const valeur of valeurs){
+    if(!valeur)continue;
+    const cle=normaliserNomCommuneSupermarche(valeur);
+    const trouvee=communes.find(c=>normaliserNomCommuneSupermarche(c)===cle);
+    if(trouvee)return trouvee;
+  }
+  return valeurs.find(Boolean)||"À vérifier";
+}
+function coordonneesSupermarcheOSM(element){
+  if(typeof element.lat==="number"&&typeof element.lon==="number")return {lat:element.lat,lon:element.lon};
+  if(element.center&&typeof element.center.lat==="number"&&typeof element.center.lon==="number")return {lat:element.center.lat,lon:element.center.lon};
+  return null;
+}
+async function importerSupermarchesOSM(){
+  const statut=document.getElementById("statutImportSupermarches");
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){alert("Accès administrateur requis.");return;}
+  if(statut)statut.textContent="Connexion à OpenStreetMap…";
+  try{
+    const requete='[out:json][timeout:90];area["ISO3166-1"="CI"]["admin_level"="2"]->.ci;(nwr["shop"~"^(supermarket|hypermarket)$"](area.ci););out center tags;';
+    const reponse=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},body:"data="+encodeURIComponent(requete)});
+    if(!reponse.ok)throw new Error("OpenStreetMap a répondu HTTP "+reponse.status+". Réessaie plus tard.");
+    const donnees=await reponse.json();
+    if(!Array.isArray(donnees.elements)||!donnees.elements.length)throw new Error("Aucun supermarché n'a été renvoyé par OpenStreetMap.");
+    const fiches=donnees.elements.map(el=>{
+      const tags=el.tags||{},coord=coordonneesSupermarcheOSM(el);
+      if(!coord||!tags.name)return null;
+      const adresse=[tags["addr:street"],tags["addr:housenumber"],tags["addr:neighbourhood"],tags["addr:suburb"]].filter(Boolean).join(", ");
+      return {idOSM:String(el.id),typeOSM:el.type,nom:tags.name,commune:communeDepuisTagsSupermarche(tags),adresse:adresse||tags["addr:full"]||"Adresse non précisée",latitude:coord.lat,longitude:coord.lon,telephone:tags.phone||tags["contact:phone"]||"",siteWeb:tags.website||tags["contact:website"]||"",horaires:tags.opening_hours||"",marque:tags.brand||"",categorie:tags.shop||"supermarket",source:"OpenStreetMap",urlOSM:"https://www.openstreetmap.org/"+el.type+"/"+el.id,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+    }).filter(Boolean);
+    if(!fiches.length)throw new Error("Les données reçues ne contiennent aucun établissement nommé avec coordonnées GPS.");
+    let enregistres=0;
+    for(let i=0;i<fiches.length;i+=400){
+      const lot=db.batch();
+      fiches.slice(i,i+400).forEach(f=>{const id=f.typeOSM+"_"+f.idOSM;lot.set(db.collection("supermarches").doc(id),f,{merge:true});});
+      await lot.commit();enregistres+=Math.min(400,fiches.length-i);
+      if(statut)statut.textContent="Enregistrement dans Firebase : "+enregistres+" / "+fiches.length+" fiches…";
+    }
+    if(statut)statut.textContent="Import terminé : "+enregistres+" fiches individuelles importées ou actualisées. Les communes sans adresse OSM sont marquées « À vérifier » ou conservent leur indication disponible.";
+    const champ=document.getElementById("rechercheCommuneSupermarche");
+    if(champ&&champ.value.trim())rechercherSupermarchesCommune();
+  }catch(erreur){
+    console.error("Import supermarchés OpenStreetMap :",erreur);
+    if(statut)statut.textContent="Import non terminé : "+(erreur.message||"Erreur inconnue")+". Aucune fiche ne sera annoncée comme importée si l'enregistrement Firebase échoue.";
+  }
+}
+async function rechercherSupermarchesCommune(){
   const champ=document.getElementById("rechercheCommuneSupermarche"),zone=document.getElementById("listeSupermarchesCommune");
   if(!champ||!zone)return;
-  const saisie=normaliser(champ.value);
+  const saisie=champ.value.trim();
   if(!saisie){zone.innerHTML="<p class='notice'>Saisissez votre commune.</p>";return;}
   const communes=[...new Set(MARCHES_COMMUNES.map(m=>m.commune))];
-  const commune=communes.find(c=>normaliser(c)===saisie)||communes.find(c=>normaliser(c).startsWith(saisie));
-  if(!commune){zone.innerHTML="<p class='notice'>Commune non reconnue. Choisissez une commune proposée dans la liste.</p>";return;}
-  const recherche="supermarchés à "+commune+", Abidjan, Côte d'Ivoire";
-  const carteUrl="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(recherche);
-  zone.innerHTML="<article class='stop'><strong>🛒 Supermarchés à "+echapperTexteCompagnie(commune)+"</strong><p>Consultez les établissements localisés dans cette commune, puis choisissez celui que vous souhaitez rejoindre.</p><a href='"+carteUrl+"' target='_blank' rel='noopener' style='display:block;text-align:center;text-decoration:none;background:#16834A;color:white;padding:13px;border-radius:12px;font-weight:800;margin:10px 0;'>📍 Voir les supermarchés sur la carte</a><p class='notice'>Après avoir choisi un supermarché sur la carte, utilisez l’option « Itinéraire » de Google Maps pour être guidé jusqu’à son adresse exacte.</p></article>";
+  const commune=communes.find(c=>normaliser(c)===normaliser(saisie))||saisie;
+  zone.innerHTML="<p class='notice'>🔎 Recherche des supermarchés enregistrés pour "+echapperTexteCompagnie(commune)+"…</p>";
+  try{
+    const snapshot=await db.collection("supermarches").where("commune","==",commune).limit(100).get();
+    if(snapshot.empty){zone.innerHTML="<p class='notice'>Aucun supermarché n'est encore enregistré pour "+echapperTexteCompagnie(commune)+". Le répertoire sera enrichi au fur et à mesure des imports et vérifications.</p>";return;}
+    const fiches=snapshot.docs.map(doc=>({id:doc.id,...doc.data()})).sort((a,b)=>(a.nom||"").localeCompare(b.nom||"","fr"));
+    zone.innerHTML="<h3>"+fiches.length+" supermarché(s) enregistré(s) à "+echapperTexteCompagnie(commune)+"</h3>"+fiches.map(f=>{
+      const coord=Number.isFinite(f.latitude)&&Number.isFinite(f.longitude);
+      const destination=coord?f.latitude+","+f.longitude:[f.nom,f.adresse,commune,"Côte d'Ivoire"].filter(Boolean).join(", ");
+      const carte="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(destination);
+      const guide="https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(destination)+"&travelmode=driving";
+      return "<article class='stop' style='margin:10px 0;padding:13px;'><strong>🛒 "+echapperTexteCompagnie(f.nom||"Supermarché")+"</strong><p>📍 "+echapperTexteCompagnie(f.adresse||"Adresse non précisée")+"</p>"+(f.marque?"<p>Enseigne : "+echapperTexteCompagnie(f.marque)+"</p>":"")+(f.telephone?"<p>☎️ "+echapperTexteCompagnie(f.telephone)+"</p>":"")+(f.horaires?"<p>🕒 "+echapperTexteCompagnie(f.horaires)+"</p>":"")+(coord?"<p class='notice'>Coordonnées GPS : "+f.latitude+", "+f.longitude+"</p>":"<p class='notice'>Coordonnées GPS non disponibles.</p>")+"<a href='"+carte+"' target='_blank' rel='noopener' style='display:block;text-align:center;text-decoration:none;background:#16834A;color:white;padding:11px;border-radius:10px;font-weight:800;margin:8px 0;'>📍 Voir sur la carte</a><a href='"+guide+"' target='_blank' rel='noopener' style='display:block;text-align:center;text-decoration:none;background:#F28C28;color:white;padding:11px;border-radius:10px;font-weight:800;'>🧭 Me guider vers ce supermarché</a><p class='notice' style='font-size:11px;'>Source : OpenStreetMap · <a href='"+f.urlOSM+"' target='_blank' rel='noopener'>Consulter la fiche source</a></p></article>";
+    }).join("");
+  }catch(erreur){
+    console.error("Chargement des supermarchés :",erreur);
+    zone.innerHTML="<p class='notice'>Impossible de charger le répertoire depuis Firebase. Vérifie la connexion et les règles Firestore.</p>";
+  }
 }
 function ouvrirMenuTourBoutique(){
   const resultat=document.getElementById("resultatRechercheGares");if(!resultat)return;
