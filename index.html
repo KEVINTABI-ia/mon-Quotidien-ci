@@ -1283,8 +1283,9 @@ main{padding:14px 13px 24px!important}
   </button>
 
 <div class="menu-dropdown" id="menuDropdown">
-  <button type="button" data-ouvrir-section="espaceAdmin" data-titre-section="Espace administrateur">🔐 Espace administrateur</button>
   <button type="button" data-ouvrir-section="devenirPartenaire" data-titre-section="Devenir partenaire">🤝 Devenir partenaire</button>
+  <button type="button" data-ouvrir-section="espaceAdmin" data-titre-section="Espace administrateur">🔐 Espace administrateur</button>
+  <button type="button" onclick="signalerProblemeGeneral()">⚠️ Signaler un problème</button>
 </div>
 </div>
 
@@ -2380,13 +2381,6 @@ function chargerPublicitesAccueil() {
 <p class="notice">La référence et l’heure sont obligatoires. Aucun téléchargement de capture d’écran n’est demandé. L’administrateur vérifiera le paiement.</p></div>
 <button type="button" class="primary" onclick="envoyerReclamationObjet()">Envoyer ma demande de récupération</button>
 <p id="orStatutReclamation" class="notice"></p></div></section>
-<section class="carte-acces-admin" aria-label="Signaler un problème" style="margin-bottom:0;padding-bottom:0;">
-  <p>Une difficulté avec l’application ou un trajet ?</p>
-  <button type="button" class="bouton-acces-admin" onclick="signalerProblemeGeneral()">
-    ⚠️ Signaler un problème
-  </button>
-</section>
-
 <section class="carte-acces-admin" aria-label="Trouver le commissariat le plus proche" style="margin:0;padding:0 16px;border:0;">
   <a href="https://www.google.com/maps/search/?api=1&query=commissariat+de+police+près+de+moi" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;background:#087C62;color:#fff;padding:13px 16px;border-radius:12px;font-weight:700;margin:0;">📍 Trouver le commissariat le plus proche</a>
 </section>
