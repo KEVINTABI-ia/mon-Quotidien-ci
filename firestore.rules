@@ -821,6 +821,61 @@ service cloud.firestore {
       allow create, update, delete: if estAdmin();
     }
 
+
+    // Dons et solidarité : seules les publications approuvées sont visibles publiquement.
+    // Les coordonnées personnelles sont conservées dans une sous-collection privée.
+    match /dons_solidarite/{dossierId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","description","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","description","statut","createdAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.type in ["don","besoin"]
+        && request.resource.data.titre is string
+        && request.resource.data.titre.size() >= 2
+        && request.resource.data.titre.size() <= 100
+        && request.resource.data.categorie is string
+        && request.resource.data.categorie.size() <= 80
+        && request.resource.data.commune is string
+        && request.resource.data.commune.size() >= 2
+        && request.resource.data.commune.size() <= 60
+        && request.resource.data.description is string
+        && request.resource.data.description.size() >= 2
+        && request.resource.data.description.size() <= 1000
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/dons_solidarite/$(dossierId)/informations_privees/contact)
+        && getAfter(/databases/$(database)/documents/dons_solidarite/$(dossierId)/informations_privees/contact).data.uid == request.auth.uid;
+      allow read: if estAdmin() || resource.data.statut == "approuve";
+      allow update, delete: if estAdmin();
+
+      match /informations_privees/{contactId} {
+        allow create: if estConnecte()
+          && contactId == "contact"
+          && request.resource.data.keys().hasAll(["uid","nom","telephone","email","createdAt"])
+          && request.resource.data.keys().hasOnly(["uid","nom","telephone","email","createdAt"])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.nom is string
+          && request.resource.data.nom.size() >= 2
+          && request.resource.data.nom.size() <= 100
+          && request.resource.data.telephone is string
+          && request.resource.data.telephone.size() >= 6
+          && request.resource.data.telephone.size() <= 20
+          && request.resource.data.email is string
+          && request.resource.data.email.size() <= 120
+          && request.resource.data.createdAt == request.time
+          && existsAfter(/databases/$(database)/documents/dons_solidarite/$(dossierId))
+          && getAfter(/databases/$(database)/documents/dons_solidarite/$(dossierId)).data.uid == request.auth.uid;
+        allow read: if estAdmin();
+        allow update, delete: if estAdmin();
+      }
+    }
+
+    // Répertoire de proximité : lecture publique, gestion réservée à l'administrateur.
+    match /services_proximite/{serviceId} {
+      allow read: if true;
+      allow create, update, delete: if estAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

@@ -604,5 +604,41 @@ describe("Mon Transport CI — règles Firestore", function () {
     if (result.empty) throw new Error("La commande de compagnie n'a pas été retournée au représentant de gare.");
   });
 
+  it("autorise la création d'un don avec ses coordonnées privées dans le même lot", async () => {
+    const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+    const {doc,writeBatch,serverTimestamp}=require("firebase/firestore");
+    const batch=writeBatch(db),ref=doc(db,"dons_solidarite","don-test");
+    batch.set(ref,{uid:CLIENT_UID,type:"don",titre:"Vêtements enfants",categorie:"Vêtements",commune:"Yopougon",description:"Lot de vêtements propres",statut:"en_attente",createdAt:serverTimestamp()});
+    batch.set(doc(db,"dons_solidarite","don-test","informations_privees","contact"),{uid:CLIENT_UID,nom:"Client test",telephone:"0100000000",email:"client@example.test",createdAt:serverTimestamp()});
+    await assertSucceeds(batch.commit());
+  });
+
+  it("refuse la lecture publique des coordonnées privées d'un dossier de solidarité", async () => {
+    await testEnv.withSecurityRulesDisabled(async context=>{
+      const db=context.firestore();
+      await db.doc("dons_solidarite/don-test").set({uid:CLIENT_UID,type:"don",titre:"Vêtements",categorie:"Vêtements",commune:"Yopougon",description:"Don test",statut:"approuve"});
+      await db.doc("dons_solidarite/don-test/informations_privees/contact").set({uid:CLIENT_UID,nom:"Client test",telephone:"0100000000",email:"client@example.test"});
+    });
+    const publicDb=testEnv.unauthenticatedContext().firestore();
+    const {doc,getDoc}=require("firebase/firestore");
+    await assertFails(getDoc(doc(publicDb,"dons_solidarite","don-test","informations_privees","contact")));
+    const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+    await assertSucceeds(getDoc(doc(adminDb,"dons_solidarite","don-test","informations_privees","contact")));
+  });
+
+  it("refuse la création d'une demande de solidarité sans fiche privée associée", async () => {
+    const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+    const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
+    await assertFails(setDoc(doc(db,"dons_solidarite","don-sans-contact"),{uid:CLIENT_UID,type:"besoin",titre:"Aide alimentaire",categorie:"Alimentation",commune:"Yopougon",description:"Besoin de nourriture",statut:"en_attente",createdAt:serverTimestamp()}));
+  });
+
+  it("autorise la lecture publique du répertoire de proximité mais pas son écriture", async () => {
+    const publicDb=testEnv.unauthenticatedContext().firestore();
+    const {doc,getDoc,setDoc,serverTimestamp}=require("firebase/firestore");
+    await testEnv.withSecurityRulesDisabled(async context=>{await context.firestore().doc("services_proximite/service-test").set({nom:"Station test",categorie:"station",commune:"Yopougon"});});
+    await assertSucceeds(getDoc(doc(publicDb,"services_proximite","service-test")));
+    await assertFails(setDoc(doc(publicDb,"services_proximite","nouvelle-station"),{nom:"Station interdite",categorie:"station",commune:"Yopougon",createdAt:serverTimestamp()}));
+  });
+
 
 });

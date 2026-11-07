@@ -1164,6 +1164,34 @@ header{padding:22px 18px 24px!important}
 .carte-acces-recherche .acces-recherche-texte p{margin:0;color:#68786E;font-size:12px;line-height:1.4}
 .carte-acces-recherche>button{grid-column:1/-1;width:100%;min-height:46px;margin:2px 0 0!important;padding:10px 12px!important;font-size:14px}
 
+
+/* IDENTITE VISUELLE IVOIRIENNE PARTAGEE — accueil et administration */
+.accueil-service,.carte-acces-colis{
+  background-size:cover!important;background-position:center!important;
+  background-repeat:no-repeat!important;color:#fff!important;
+  border:1px solid rgba(255,255,255,.22)!important;
+  box-shadow:0 7px 18px rgba(12,35,25,.20)!important;
+}
+.accueil-service::before{background:linear-gradient(0deg,rgba(7,28,23,.82),rgba(7,28,23,.18))!important}
+.accueil-service strong,.accueil-service small{position:relative;z-index:1;color:#fff!important;text-shadow:0 2px 5px rgba(0,0,0,.55)}
+.accueil-service.tuile-gbaka{background-image:linear-gradient(0deg,rgba(7,28,23,.72),rgba(7,28,23,.18)),url("./assets/illustrations/gare.svg")!important}
+.accueil-service.tuile-compagnies{background-image:linear-gradient(0deg,rgba(7,28,23,.72),rgba(7,28,23,.18)),url("./assets/illustrations/compagnies.svg")!important}
+.accueil-service.tuile-ramassage{background-image:linear-gradient(0deg,rgba(7,28,23,.72),rgba(7,28,23,.18)),url("./assets/illustrations/compagnies.svg")!important}
+#boutonAccueilAutomobiliste.tuile-marches{background-image:linear-gradient(0deg,rgba(7,28,23,.72),rgba(7,28,23,.18)),url("./assets/illustrations/automobile.svg")!important}
+.carte-acces-colis{background-image:linear-gradient(0deg,rgba(7,28,23,.80),rgba(7,28,23,.20)),url("./assets/illustrations/services.svg")!important}
+.admin-rubrique{position:relative;overflow:hidden;background-size:cover!important;background-position:center!important;color:#fff!important;isolation:isolate}
+.admin-rubrique::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,30,24,.88),rgba(7,30,24,.48));z-index:-1}
+.admin-rubrique .admin-rubrique-titre,.admin-rubrique .admin-rubrique-description{color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,.35)}
+.admin-rubrique .admin-rubrique-icone{background:rgba(255,255,255,.20)!important;color:#fff}
+.admin-rubrique-fleche{color:#FFD18A!important}
+.admin-notification-count{display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:23px;padding:0 6px;margin-left:7px;border-radius:99px;background:#D92D20;color:#fff;font-size:12px;font-weight:900;box-shadow:0 2px 7px #0004}
+@media(max-width:560px){.admin-rubrique{min-height:86px!important}}
+
+/* Illustrations partagées entre les tuiles publiques et le tableau de bord. */
+.tuile-services{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/services.svg')!important;background-size:cover;background-position:center;}
+.accueil-service.tuile-solidarite{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/solidarite.svg')!important;background-size:cover;background-position:center;}
+.accueil-service.tuile-commerce{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/commerce.svg')!important;background-size:cover;background-position:center;}
+.accueil-service.tuile-boutique{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/boutique.svg')!important;background-size:cover;background-position:center;}
 </style>
 
 <style>
@@ -1527,7 +1555,10 @@ main{padding:14px 13px 24px!important}
 <div id="gestionAbonnementsRamassage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🚌 Validation des compagnies de ramassage</h3><p class="notice">Vérifie les dossiers et les paiements avant d’approuver une compagnie ou d’activer son forfait mensuel.</p><div id="listeCompagniesRamassageAdmin">Chargement...</div></div>
 <div id="gestionAbonnementsAutomobiliste" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🚘 Validation des abonnements automobiles</h3><p class="notice">Vérifie le moyen de paiement et la référence avant d'activer 12 mois d'accès. Ne valide qu'après réception effective des 1 000 FCFA.</p><div id="listeAbonnementsAutomobilisteAdmin">Chargement...</div></div>
 <div id="gestionValidationDepannage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🔧 Validation des dépannages</h3><p class="notice">Examine séparément les demandes des professionnels du dépannage automobile.</p><div id="listeValidationDepannageAdmin">Chargement...</div></div>
-<div id="gestionValidationCommerce" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🛍️ Validation des commerces et boutiques</h3><p class="notice">Vérifie les inscriptions, les paiements d’abonnement et la visibilité des boutiques.</p><div id="listeValidationCommerceAdmin">Chargement...</div></div>
+<div id="gestionValidationCommerce" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🏪 Validation des commerces</h3><p class="notice">Vérifie les établissements commerciaux hors boutiques.</p><div id="listeValidationCommerceAdmin">Chargement...</div></div>
+<div id="gestionValidationBoutiques" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🛍️ Validation des boutiques</h3><p class="notice">Vérifie les boutiques, les paiements d’abonnement et leur visibilité.</p><div id="listeValidationBoutiquesAdmin">Chargement...</div></div>
+<div id="gestionDonsSolidarite" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🤝 Dons et demandes d’aide</h3><p class="notice">Les coordonnées des personnes sont privées et visibles uniquement ici.</p><div id="listeDonsSolidariteAdmin">Chargement...</div></div>
+<div id="gestionServicesProximite" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📍 Services de proximité</h3><p class="notice">Gère les stations-service, banques, hôtels et supermarchés de la plateforme.</p><button type="button" class="primary" onclick="importerServicesQuotidiensOSM()">⬇️ Importer / actualiser stations, banques et hôtels</button><p id="statutGestionServicesProximite" class="notice"></p><div id="resumeGestionServicesProximite">Chargement...</div></div>
 <div id="gestionValidationAnnonces" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>📢 Validation des annonces</h3><p class="notice">Examine les petites annonces et les offres avant leur publication.</p><div id="listeValidationAnnoncesAdmin">Chargement...</div></div>
 <div id="gestionObjetsPerdus" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🔎 Gestion des objets et documents retrouvés</h3><p class="notice">Les coordonnées des trouveurs et les demandes sont privées et visibles uniquement ici. Vérifie les paiements avant la mise en relation.</p><div id="listeObjetsRetrouvesAdmin">Chargement...</div><h3>Demandes de récupération et paiements</h3><div id="listeReclamationsObjetsAdmin">Chargement...</div></div>
 <div id="gestionGares" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
@@ -2460,11 +2491,15 @@ function chargerPublicitesAccueil() {
     <button type="button" onclick="ouvrirPortailAnnoncesOffres()" style="min-height:68px;background:#FFF5E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">📢 Consulter ou faire une annonce et une offre</button>
     <button type="button" onclick="ouvrirEspaceCommunautaire()" style="min-height:68px;grid-column:1/-1;background:#F2F0FF;color:#51418A;border:1px solid #DDD6FA;text-align:left;">🗞️ M’informer / Attraper les derniers Gbairai</button>
     <button type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Signaler et retrouver un objet ou un document perdu')" style="min-height:68px;grid-column:1/-1;background:#F1F7F5;color:#176B52;border:1px solid #CFE2D8;text-align:left;">🔎 Signaler et retrouver un objet ou un document perdu</button>
+    <button type="button" class="accueil-service tuile-solidarite" onclick="ouvrirEspaceSolidarite()" style="min-height:68px;grid-column:1/-1;text-align:left;">🤝 Dons et solidarité</button>
+    <button type="button" class="accueil-service tuile-commerce" onclick="ouvrirAnnuaireCommerce('commerce')" style="min-height:68px;text-align:left;">🏪 Commerces</button>
+    <button type="button" class="accueil-service tuile-boutique" onclick="ouvrirAnnuaireCommerce('boutique')" style="min-height:68px;text-align:left;">🛍️ Boutiques</button>
   </div>
-    <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('station','Stations-service')" style="min-height:68px;background:#FFF4E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">⛽ Stations-service</button>
-    <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('banque','Banques')" style="min-height:68px;background:#EEF5FF;color:#244E83;border:1px solid #D2E1F5;text-align:left;">🏦 Banques</button>
-    <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('hotel','Hôtels')" style="min-height:68px;background:#F5F0FF;color:#60418A;border:1px solid #E0D5F4;text-align:left;">🏨 Hôtels</button>
+    <button type="button" class="tuile-services" onclick="ouvrirRepertoireServicesQuotidiens('station','Stations-service')" style="min-height:68px;background:#FFF4E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">⛽ Stations-service</button>
+    <button type="button" class="tuile-services" onclick="ouvrirRepertoireServicesQuotidiens('banque','Banques')" style="min-height:68px;background:#EEF5FF;color:#244E83;border:1px solid #D2E1F5;text-align:left;">🏦 Banques</button>
+    <button type="button" class="tuile-services" onclick="ouvrirRepertoireServicesQuotidiens('hotel','Hôtels')" style="min-height:68px;background:#F5F0FF;color:#60418A;border:1px solid #E0D5F4;text-align:left;">🏨 Hôtels</button>
 </section>
+<section class="card" id="espaceSolidarite" style="display:none;margin:14px 0;padding:16px;"><h2>🤝 Dons et solidarité</h2><p class="notice">Proposez un don ou demandez de l’aide. Chaque publication est vérifiée par l’administration. Vos coordonnées restent privées et ne sont jamais affichées publiquement.</p><div class="modes"><button type="button" onclick="afficherFormulaireSolidarite('don')">🎁 Proposer un don</button><button type="button" onclick="afficherFormulaireSolidarite('besoin')">🫶 Demander de l’aide</button></div><div id="formulaireSolidarite" style="display:none;margin:12px 0;"></div><h3>Publications validées</h3><div id="listeSolidaritePublique"><p class="notice">Chargement...</p></div></section>
 <section class="card" id="objetsPerdusRetrouves" style="display:none;margin:14px 0;padding:16px;">
 <h2>🔎 Signaler et retrouver un objet ou un document perdu</h2>
 <p class="notice">Consultez les biens retrouvés ou signalez un bien découvert. Les coordonnées personnelles ne sont jamais publiées.</p>
@@ -2636,6 +2671,8 @@ const NOUVEAUX_SERVICES = {
  annonce:{titre:"Petites annonces et emplois",icone:"📢",categories:["Offre d'emploi","Demande d'emploi","Véhicule à vendre","Véhicule à louer","Autre annonce"]}
 };
 let nouveauServiceActif="depannage";
+let filtrePublicCommerce="tout";
+function ouvrirAnnuaireCommerce(type){if(!["commerce","boutique"].includes(type))return;filtrePublicCommerce=type;ouvrirSectionPleinEcran("nouveauxServices",type==="boutique"?"Boutiques":"Commerces");choisirNouveauService("commerce");const c=document.getElementById("nsCategorie");if(c){if(type==="boutique"){c.value="Boutique";c.disabled=true;}else c.disabled=false;}chargerNouveauxServicesPublics("commerce");}
 function choisirNouveauService(type){
  if(!NOUVEAUX_SERVICES[type])return;
  nouveauServiceActif=type;
@@ -2756,7 +2793,7 @@ async function chargerNouveauxServicesPublics(type){
  try{
   const snap=await db.collection("demandes_nouveaux_services").where("type","==",type).where("statut","==","approuve").limit(100).get();
   const maintenant=Date.now();
-  const documents=snap.docs.filter(doc=>{const d=doc.data();if(type!=="commerce")return true;return d.visibleManuellement!==false&&d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;});
+  const documents=snap.docs.filter(doc=>{const d=doc.data();if(type!=="commerce")return true;if(filtrePublicCommerce==="boutique"&&String(d.categorie||"").toLowerCase()!=="boutique")return false;if(filtrePublicCommerce==="commerce"&&String(d.categorie||"").toLowerCase()==="boutique")return false;return d.visibleManuellement!==false&&d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;});
   if(!documents.length){zone.innerHTML='<p class="notice">'+(type==="commerce"?"Aucune boutique avec un abonnement actif pour le moment.":"Aucun résultat publié dans cette rubrique pour le moment.")+'</p>';return;}
   zone.innerHTML=documents.map(doc=>{
    const d=doc.data();
@@ -2890,13 +2927,13 @@ async function chargerAvisBoutique(boutiqueId){
  }catch(e){console.error(e);zone.textContent="Impossible de charger les avis. Vérifiez les règles Firestore de la collection avis_boutiques.";}
 }
 async function chargerNouveauxServicesAdmin(typeFiltre){
- const zones={depannage:"listeValidationDepannageAdmin",commerce:"listeValidationCommerceAdmin",annonce:"listeValidationAnnoncesAdmin"};
+ const zones={depannage:"listeValidationDepannageAdmin",commerce:"listeValidationCommerceAdmin",boutique:"listeValidationBoutiquesAdmin",annonce:"listeValidationAnnoncesAdmin"};
  const zone=document.getElementById(zones[typeFiltre]||"listeNouveauxServicesAdmin");
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){if(zone)zone.textContent="Accès administrateur requis.";return;}
  zone.innerHTML='<p class="notice">Chargement des dossiers...</p>';
  try{
   const snap=await db.collection("demandes_nouveaux_services").orderBy("createdAt","desc").limit(150).get();
-  const dossiers=snap.docs.filter(doc=>doc.data().type===typeFiltre);
+  const dossiers=snap.docs.filter(doc=>{const d=doc.data();return typeFiltre==="boutique"?(d.type==="commerce"&&String(d.categorie||"").toLowerCase()==="boutique"):typeFiltre==="commerce"?(d.type==="commerce"&&String(d.categorie||"").toLowerCase()!=="boutique"):d.type===typeFiltre;});
   if(dossiers.length===0){zone.innerHTML='<p class="notice">Aucun dossier de cette catégorie pour le moment.</p>';return;}
   zone.innerHTML=dossiers.map(doc=>{const d=doc.data();const type=NOUVEAUX_SERVICES[d.type]?.titre||d.type;const date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date en cours";const expire=d.abonnementFin?.toDate?d.abonnementFin.toDate().getTime()<=Date.now():false;const paiement=d.type==="commerce"?'<p><strong>Abonnement boutique : '+Number(d.montantAbonnement||0).toLocaleString("fr-FR")+' FCFA / '+Number(d.dureeAbonnementJours||0)+' jours</strong></p><p>Paiement : '+echapperTextePublicite(d.paiementMoyen||"Non indiqué")+' · Référence : '+echapperTextePublicite(d.paiementReference||"Non fournie")+' · Statut : '+echapperTextePublicite(d.paiementStatut||"à vérifier")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée automatiquement — abonnement expiré":d.visibleManuellement===false?"Masquée manuellement":"Visible si abonnement actif")+'</p>':"";const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'approuve\')">'+(d.type==="commerce"?"Confirmer paiement et activer 30 jours":"Approuver et publier")+'</button><button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'refuse\')">Refuser</button>': '<span class="notice">Dossier '+echapperTextePublicite(d.statut)+(d.abonnementFin&&d.abonnementFin.toDate?" · Fin abonnement : "+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"")+'</span>';const controle=d.type==="commerce"&&d.statut==="approuve"?'<button type="button" class="primary" onclick="basculerVisibiliteBoutiqueAdmin(\''+doc.id+'\','+(d.visibleManuellement===false?'true':'false')+')">'+(d.visibleManuellement===false?"Afficher manuellement la boutique":"Masquer manuellement la boutique")+'</button><button type="button" onclick="chargerAvisBoutiqueAdmin(\''+doc.id+'\')">⭐ Consulter les avis clients</button><div id="avisAdminBoutique_'+doc.id+'"></div>':"";return '<article class="card" style="padding:14px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo proposée" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':"")+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(type)+' · '+echapperTextePublicite(d.categorie)+'</p><p>'+echapperTextePublicite(d.commune)+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+' · '+date+'</p>'+paiement+actions+controle+'</article>';}).join("");
  }catch(e){console.error(e);zone.innerHTML='<p class="notice">Erreur de chargement. Vérifiez les règles Firestore.</p>';}
@@ -2928,10 +2965,83 @@ async function chargerAvisBoutiqueAdmin(boutiqueId){
 async function traiterNouveauService(id,statut){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
  if(!["approuve","refuse"].includes(statut))return;
- try{const ref=db.collection("demandes_nouveaux_services").doc(id);const doc=await ref.get();if(!doc.exists)return alert("Dossier introuvable.");const data=doc.data();const maj={statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()};if(statut==="approuve"&&data.type==="commerce"){if(!data.paiementMoyen||!data.paiementReference)return alert("Impossible d’activer : informations de paiement manquantes.");const montantAttendu=Number(data.montantAbonnement||0),dureeJours=Number(data.dureeAbonnementJours||0);if(![4000,7000].includes(montantAttendu)||!([15,30].includes(dureeJours))||((dureeJours===15&&montantAttendu!==4000)||(dureeJours===30&&montantAttendu!==7000)))return alert("Forfait boutique invalide. Vérifiez le montant et la durée.");if(!confirm("Confirmer la réception de "+montantAttendu.toLocaleString("fr-FR")+" FCFA ? L’abonnement sera activé pour "+dureeJours+" jours."))return;const debut=new Date();const fin=new Date(debut.getTime()+dureeJours*24*60*60*1000);maj.paiementStatut="confirme";maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);}await ref.update(maj);await chargerNouveauxServicesAdmin();}
+ try{const ref=db.collection("demandes_nouveaux_services").doc(id);const doc=await ref.get();if(!doc.exists)return alert("Dossier introuvable.");const data=doc.data();const maj={statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()};if(statut==="approuve"&&data.type==="commerce"){if(!data.paiementMoyen||!data.paiementReference)return alert("Impossible d’activer : informations de paiement manquantes.");const montantAttendu=Number(data.montantAbonnement||0),dureeJours=Number(data.dureeAbonnementJours||0);if(![4000,7000].includes(montantAttendu)||!([15,30].includes(dureeJours))||((dureeJours===15&&montantAttendu!==4000)||(dureeJours===30&&montantAttendu!==7000)))return alert("Forfait boutique invalide. Vérifiez le montant et la durée.");if(!confirm("Confirmer la réception de "+montantAttendu.toLocaleString("fr-FR")+" FCFA ? L’abonnement sera activé pour "+dureeJours+" jours."))return;const debut=new Date();const fin=new Date(debut.getTime()+dureeJours*24*60*60*1000);maj.paiementStatut="confirme";maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);}await ref.update(maj);await chargerNouveauxServicesAdmin(data.type==="commerce"?(String(data.categorie||"").toLowerCase()==="boutique"?"boutique":"commerce"):data.type);}
  catch(e){console.error(e);alert("Impossible de modifier ce dossier. Vérifiez les règles Firestore.");}
 }
 
+
+
+/* DONS ET SOLIDARITE — CONTACTS PRIVES */
+let arretNotificationsSolidariteAdmin=null;
+function ouvrirEspaceSolidarite(){if(typeof ouvrirSectionPleinEcran==="function")ouvrirSectionPleinEcran("espaceSolidarite","Dons et solidarité");chargerSolidaritePublique();}
+function afficherFormulaireSolidarite(type){
+ if(!["don","besoin"].includes(type))return;
+ const z=document.getElementById("formulaireSolidarite");if(!z)return;z.style.display="block";
+ z.innerHTML='<div class="card" style="padding:14px;"><h3>'+(type==="don"?"🎁 Proposer un don":"🫶 Demander de l’aide")+'</h3><label>'+(type==="don"?"Nom du don proposé":"Nature du besoin")+'</label><input id="solTitre" maxlength="100"><label>Catégorie</label><select id="solCategorie"><option>Vêtements</option><option>Alimentation</option><option>Fournitures scolaires</option><option>Matériel et équipements</option><option>Mobilier</option><option>Autre</option></select><label>Commune</label><input id="solCommune" maxlength="60"><label>Description</label><textarea id="solDescription" rows="4" maxlength="1000"></textarea><hr><h4>Coordonnées privées — visibles uniquement par l’administration</h4><label>Nom complet</label><input id="solNom" maxlength="100"><label>Téléphone</label><input id="solTelephone" type="tel" maxlength="20"><label>E-mail</label><input id="solEmail" type="email" maxlength="120"><label>Mot de passe (6 caractères minimum)</label><input id="solPassword" type="password" minlength="6"><button type="button" class="primary" onclick="envoyerDemandeSolidarite(\''+type+'\')">Envoyer pour validation</button><p id="solStatut" class="notice" aria-live="polite"></p></div>';
+}
+async function envoyerDemandeSolidarite(type){
+ const v=id=>document.getElementById(id)?.value.trim()||"",titre=v("solTitre"),categorie=v("solCategorie"),commune=v("solCommune"),description=v("solDescription"),nom=v("solNom"),telephone=v("solTelephone"),email=v("solEmail"),password=document.getElementById("solPassword")?.value||"",status=document.getElementById("solStatut");
+ if(!["don","besoin"].includes(type)||![titre,categorie,commune,description,nom,telephone,email].every(Boolean)||password.length<6){status.textContent="Remplissez tous les champs. Le mot de passe doit contenir au moins 6 caractères.";return;}
+ status.textContent="Envoi de votre dossier...";
+ try{
+  let user=auth.currentUser;if(user&&user.email!==email){await auth.signOut();user=null;}
+  if(!user){try{user=(await auth.createUserWithEmailAndPassword(email,password)).user;}catch(e){if(e.code==="auth/email-already-in-use")user=(await auth.signInWithEmailAndPassword(email,password)).user;else throw e;}}
+  const ref=db.collection("dons_solidarite").doc(),batch=db.batch();
+  batch.set(ref,{uid:user.uid,type,titre,categorie,commune,description,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  batch.set(ref.collection("informations_privees").doc("contact"),{uid:user.uid,nom,telephone,email,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  await batch.commit();status.textContent="Dossier transmis. Il sera publié après validation. Vos coordonnées restent privées.";
+ }catch(e){console.error(e);status.textContent="Envoi impossible : "+(e.code==="permission-denied"?"les règles Firestore dédiées doivent être publiées.":e.message||"réessayez.");}
+}
+async function chargerSolidaritePublique(){
+ const z=document.getElementById("listeSolidaritePublique");if(!z)return;z.innerHTML='<p class="notice">Chargement...</p>';
+ try{const snap=await db.collection("dons_solidarite").where("statut","==","approuve").orderBy("createdAt","desc").limit(100).get();if(snap.empty){z.innerHTML='<p class="notice">Aucun don ou besoin publié pour le moment.</p>';return;}
+ z.innerHTML=snap.docs.map(doc=>{const d=doc.data();return '<article class="card" style="padding:13px;margin:10px 0;"><strong>'+(d.type==="don"?"🎁 Don proposé":"🫶 Demande d’aide")+' — '+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.description)+'</p><small>Publication validée</small></article>';}).join("");
+ }catch(e){console.error(e);z.innerHTML='<p class="notice">Le répertoire sera disponible après activation des règles Firestore dédiées.</p>';}
+}
+async function chargerDonsSolidariteAdmin(){
+ const z=document.getElementById("listeDonsSolidariteAdmin");if(!z)return;if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){z.textContent="Accès administrateur requis.";return;}z.textContent="Chargement des dossiers...";
+ try{const snap=await db.collection("dons_solidarite").orderBy("createdAt","desc").limit(200).get();if(snap.empty){z.innerHTML='<p class="notice">Aucun dossier reçu.</p>';return;}
+ const cards=await Promise.all(snap.docs.map(async doc=>{const d=doc.data();let c={};try{const p=await doc.ref.collection("informations_privees").doc("contact").get();if(p.exists)c=p.data();}catch(e){}
+ const action=d.statut==="en_attente"?'<button onclick="traiterDemandeSolidarite(\''+doc.id+'\',\'approuve\')">Approuver et publier</button><button onclick="traiterDemandeSolidarite(\''+doc.id+'\',\'refuse\')">Refuser</button>':'<span class="notice">Statut : '+echapperTextePublicite(d.statut)+'</span>';
+ return '<article class="card" style="padding:13px;margin:10px 0;"><strong>'+(d.type==="don"?"🎁 Don":"🫶 Besoin")+' : '+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p><strong>Contact privé :</strong> '+echapperTextePublicite(c.nom||"Indisponible")+' · '+echapperTextePublicite(c.telephone||"Indisponible")+' · '+echapperTextePublicite(c.email||"Indisponible")+'</p>'+action+'</article>'; }));z.innerHTML=cards.join("");
+ }catch(e){console.error(e);z.innerHTML='<p class="notice">Erreur de lecture. Vérifiez les règles Firestore.</p>';}
+}
+async function traiterDemandeSolidarite(id,statut){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");if(!["approuve","refuse"].includes(statut))return;
+ try{await db.collection("dons_solidarite").doc(id).update({statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});await chargerDonsSolidariteAdmin();}catch(e){alert("Modification impossible : "+e.message);}
+}
+async function chargerGestionServicesProximiteAdmin(){
+ const z=document.getElementById("resumeGestionServicesProximite");if(!z)return;
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){z.textContent="Accès administrateur requis.";return;}
+ z.innerHTML='<p class="notice">Chargement des répertoires...</p>';
+ try{
+  const [ss,ms]=await Promise.all([db.collection("services_proximite").limit(3000).get(),db.collection("supermarches").limit(1500).get()]);
+  const c={station:0,banque:0,hotel:0};ss.forEach(d=>{const k=d.data().categorie;if(Object.prototype.hasOwnProperty.call(c,k))c[k]++;});
+  const cartes=(collection,snapshot)=>snapshot.docs.slice(0,60).map(doc=>{const d=doc.data();return '<article style="padding:10px;margin:8px 0;border:1px solid #DCE7DE;border-radius:10px;"><strong>'+echapperTextePublicite(d.nom||"Établissement sans nom")+'</strong><p>'+echapperTextePublicite(d.categorie||"Supermarché")+' · '+echapperTextePublicite(d.commune||"Commune non renseignée")+(d.quartier?" · "+echapperTextePublicite(d.quartier):"")+'</p><small>'+echapperTextePublicite(d.adresse||"Adresse non renseignée")+'</small><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button type="button" onclick="modifierFicheServiceProximiteAdmin(\''+collection+'\',\''+doc.id+'\')">Modifier</button><button type="button" onclick="supprimerFicheServiceProximiteAdmin(\''+collection+'\',\''+doc.id+'\')">Supprimer</button></div></article>';}).join("");
+  z.innerHTML='<div class="card" style="padding:12px;"><strong>Répertoires enregistrés</strong><p>⛽ Stations-service : '+c.station+'</p><p>🏦 Banques : '+c.banque+'</p><p>🏨 Hôtels : '+c.hotel+'</p><p>🛒 Supermarchés : '+ms.size+'</p><small>Affichage limité aux 60 premières fiches de chaque répertoire. Les modifications sont réservées à l’administrateur.</small></div><h4>Stations, banques et hôtels</h4>'+cartes("services_proximite",ss)+'<h4>Supermarchés</h4>'+cartes("supermarches",ms);
+ }catch(e){console.error(e);z.innerHTML='<p class="notice">Lecture impossible : '+echapperTextePublicite(e.message||"règles Firestore à vérifier")+'</p>';}
+}
+async function modifierFicheServiceProximiteAdmin(collection,id){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ if(!["services_proximite","supermarches"].includes(collection))return;
+ try{
+  const ref=db.collection(collection).doc(id),snap=await ref.get();if(!snap.exists)return alert("Fiche introuvable.");
+  const d=snap.data(),nom=prompt("Nom de l’établissement :",d.nom||"");if(nom===null)return;
+  const commune=prompt("Commune :",d.commune||"");if(commune===null)return;
+  const quartier=prompt("Quartier (facultatif) :",d.quartier||"");if(quartier===null)return;
+  const adresse=prompt("Adresse ou repère (facultatif) :",d.adresse||"");if(adresse===null)return;
+  if(!nom.trim()||!commune.trim())return alert("Le nom et la commune sont obligatoires.");
+  await ref.update({nom:nom.trim(),commune:commune.trim(),quartier:quartier.trim(),adresse:adresse.trim(),modifieLe:firebase.firestore.FieldValue.serverTimestamp(),modifiePar:auth.currentUser.uid});
+  await chargerGestionServicesProximiteAdmin();
+ }catch(e){console.error(e);alert("Modification impossible : "+e.message);}
+}
+async function supprimerFicheServiceProximiteAdmin(collection,id){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ if(!["services_proximite","supermarches"].includes(collection))return;
+ if(!confirm("Supprimer définitivement cette fiche du répertoire ?"))return;
+ try{await db.collection(collection).doc(id).delete();await chargerGestionServicesProximiteAdmin();}
+ catch(e){console.error(e);alert("Suppression impossible : "+e.message);}
+}
 
 /* OBJETS ET DOCUMENTS PERDUS / RETROUVES */
 function afficherFormulaireObjetRetrouve(){
@@ -3057,28 +3167,45 @@ async function traiterReclamationObjet(id,statut){
 
 // MENU ADMINISTRATEUR : tableau de bord par rubriques, une seule page de gestion visible à la fois
 const RUBRIQUES_ADMIN = [
-  {id:"gestionGares",groupe:"Transport",icone:"📍",titre:"Gares et terminus",description:"Créer, positionner et gérer les gares."},
+  {id:"gestionGares",groupe:"Transport",icone:"📍",image:"gare",titre:"Gares et terminus",description:"Créer, positionner et gérer les gares."},
   {id:"gestionRoutes",groupe:"Transport",icone:"🛣️",titre:"Itinéraires et tarifs",description:"Gérer les lignes, arrêts et prix."},
-  {id:"gestionCompagnies",groupe:"Transport",icone:"🚍",titre:"Compagnies de voyage",description:"Gérer les agences et leurs dessertes."},
+  {id:"gestionCompagnies",groupe:"Transport",icone:"🚍",image:"compagnies",titre:"Compagnies de voyage",description:"Gérer les agences et leurs dessertes."},
   {id:"gestionAbonnementsRamassage",groupe:"Professionnels",icone:"🚌",titre:"Compagnies de ramassage",description:"Valider les dossiers et abonnements."},
   {id:"gestionPartenaires",groupe:"Professionnels",icone:"👥",titre:"Partenaires",description:"Gérer les partenaires de services."},
   {id:"gestionCommandesPartenaires",groupe:"Professionnels",icone:"📦",titre:"Commandes partenaires",description:"Suivre et attribuer les commandes."},
   {id:"gestionPublicites",groupe:"Publications et communication",icone:"📣",titre:"Publicités",description:"Gérer les campagnes publicitaires."},
   {id:"gestionCommunautaire",groupe:"Publications et communication",icone:"🗞️",titre:"Informations et Gbairai",description:"Publier les informations communautaires."},
-  {id:"gestionValidationAnnonces",groupe:"Publications et communication",icone:"📢",titre:"Annonces",description:"Examiner les annonces avant publication."},
+  {id:"gestionValidationAnnonces",groupe:"Publications et communication",icone:"📢",image:"annonces",titre:"Annonces",description:"Examiner les annonces avant publication.",notification:"annonce"},
   {id:"gestionAbonnementsAutomobiliste",groupe:"Services et abonnements",icone:"🚘",titre:"Abonnements automobilistes",description:"Contrôler les demandes et activations."},
-  {id:"gestionValidationDepannage",groupe:"Services et abonnements",icone:"🔧",titre:"Dépannage automobile",description:"Valider les professionnels du dépannage."},
-  {id:"gestionValidationCommerce",groupe:"Services et abonnements",icone:"🛍️",titre:"Commerces et boutiques",description:"Valider les commerces et leurs dossiers."},
-  {id:"gestionObjetsPerdus",groupe:"Contrôle et paramètres",icone:"🔎",titre:"Objets retrouvés",description:"Gérer les objets et demandes de récupération."},
+  {id:"gestionValidationDepannage",groupe:"Services et abonnements",icone:"🔧",image:"automobile",titre:"Dépannage automobile",description:"Valider les professionnels du dépannage.",notification:"depannage"},
+  {id:"gestionValidationCommerce",groupe:"Services et abonnements",icone:"🏪",image:"commerce",titre:"Commerces",description:"Valider les commerces hors boutiques.",notification:"commerce"},
+  {id:"gestionValidationBoutiques",groupe:"Services et abonnements",icone:"🛍️",image:"boutique",titre:"Boutiques",description:"Valider les boutiques et leurs abonnements.",notification:"boutique"},
+  {id:"gestionDonsSolidarite",groupe:"Vie communautaire",icone:"🤝",image:"solidarite",titre:"Dons et solidarité",description:"Valider les dons et demandes d’aide.",notification:"solidarite"},
+  {id:"gestionServicesProximite",groupe:"Services et abonnements",icone:"📍",image:"services",titre:"Services de proximité",description:"Gérer stations, banques, hôtels et supermarchés."},
+  {id:"gestionObjetsPerdus",groupe:"Contrôle et paramètres",icone:"🔎",image:"solidarite",titre:"Objets retrouvés",description:"Gérer les objets et demandes de récupération."},
   {id:"gestionVisibiliteMenus",groupe:"Contrôle et paramètres",icone:"👁️",titre:"Visibilité des menus",description:"Afficher ou masquer les rubriques publiques."}
 ];
+let arretNotificationsAdmin=null;
+function surveillerNotificationsAdmin(){
+ if(arretNotificationsAdmin){arretNotificationsAdmin();arretNotificationsAdmin=null;}
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;
+ arretNotificationsAdmin=db.collection("demandes_nouveaux_services").onSnapshot(snap=>{
+  const comptes={depannage:0,commerce:0,boutique:0,annonce:0};
+  snap.forEach(doc=>{const d=doc.data()||{};if((d.statut||"en_attente")!=="en_attente")return;if(d.type==="commerce"){if(String(d.categorie||"").toLowerCase()==="boutique")comptes.boutique++;else comptes.commerce++;}else if(Object.prototype.hasOwnProperty.call(comptes,d.type))comptes[d.type]++;});
+  document.querySelectorAll("[data-notification-type]").forEach(el=>{
+   const n=comptes[el.dataset.notificationType]||0;el.textContent=String(n);el.hidden=n===0;
+  });
+ },erreur=>console.error("Compteurs des demandes administrateur :",erreur));
+ if(arretNotificationsSolidariteAdmin){arretNotificationsSolidariteAdmin();arretNotificationsSolidariteAdmin=null;}
+ arretNotificationsSolidariteAdmin=db.collection("dons_solidarite").where("statut","==","en_attente").onSnapshot(snap=>{document.querySelectorAll('[data-notification-type="solidarite"]').forEach(el=>{el.textContent=String(snap.size);el.hidden=snap.size===0;});},e=>console.error("Compteur solidarité :",e));
+}
 function afficherMenuAdmin(){
   const menu=document.getElementById("adminMenuRubriques");
   if(!menu)return;
   const groupes=[...new Set(RUBRIQUES_ADMIN.map(r=>r.groupe))];
   menu.innerHTML=`<h2 class="admin-dashboard-heading">ADMINISTRATION — MON TRANSPORT CI</h2><p class="admin-dashboard-subtitle">Centre de contrôle de la plateforme · Sélectionne une rubrique pour ouvrir son espace de gestion.</p>`+
     groupes.map(g=>`<section class="admin-groupe"><h3 class="admin-groupe-titre">${g}</h3><div class="admin-groupe-grille">`+
-      RUBRIQUES_ADMIN.filter(r=>r.groupe===g).map(r=>`<button type="button" class="admin-rubrique" onclick="ouvrirRubriqueAdmin('${r.id}')"><span class="admin-rubrique-icone" aria-hidden="true">${r.icone}</span><span class="admin-rubrique-contenu"><span class="admin-rubrique-titre">${r.titre}</span><span class="admin-rubrique-description">${r.description}</span></span><span class="admin-rubrique-fleche" aria-hidden="true">›</span></button>`).join("")+
+      RUBRIQUES_ADMIN.filter(r=>r.groupe===g).map(r=>`<button type="button" class="admin-rubrique" style="background-image:url('./assets/illustrations/${r.image||'services'}.svg')" onclick="ouvrirRubriqueAdmin('${r.id}')"><span class="admin-rubrique-icone" aria-hidden="true">${r.icone}</span><span class="admin-rubrique-contenu"><span class="admin-rubrique-titre">${r.titre}${r.notification?'<span class="admin-notification-count" data-notification-type="'+r.notification+'" hidden>0</span>':''}</span><span class="admin-rubrique-description">${r.description}</span></span><span class="admin-rubrique-fleche" aria-hidden="true">›</span></button>`).join("")+
       `</div></section>`).join("");
   menu.style.display="block";
   RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display="none";});
@@ -3091,6 +3218,9 @@ function ouvrirRubriqueAdmin(id){
   if(!cible)return;
   if(id==="gestionValidationDepannage") chargerNouveauxServicesAdmin("depannage");
   if(id==="gestionValidationCommerce") chargerNouveauxServicesAdmin("commerce");
+  if(id==="gestionValidationBoutiques") chargerNouveauxServicesAdmin("boutique");
+  if(id==="gestionDonsSolidarite") chargerDonsSolidariteAdmin();
+  if(id==="gestionServicesProximite") chargerGestionServicesProximiteAdmin();
   if(id==="gestionValidationAnnonces") chargerNouveauxServicesAdmin("annonce");
   if(id==="gestionObjetsPerdus") chargerObjetsPerdusAdmin();
    if(id==="gestionCommunautaire") chargerGestionCommunautaireAdmin();
@@ -3112,7 +3242,7 @@ function actualiserInterfaceAdmin(autorise){
   const connexion=document.getElementById("adminConnexion"),menu=document.getElementById("adminMenuRubriques"),deconnexion=document.getElementById("adminDeconnexion");
   if(connexion)connexion.style.display=autorise?"none":"block";
   if(deconnexion)deconnexion.style.display=autorise?"block":"none";
-  if(menu){if(autorise)afficherMenuAdmin();else menu.style.display="none";}
+  if(menu){if(autorise){afficherMenuAdmin();surveillerNotificationsAdmin();}else{menu.style.display="none";if(arretNotificationsAdmin){arretNotificationsAdmin();arretNotificationsAdmin=null;}if(arretNotificationsSolidariteAdmin){arretNotificationsSolidariteAdmin();arretNotificationsSolidariteAdmin=null;}}}
   RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display="none";});
 }
 // CONNEXION ADMINISTRATEUR
@@ -7450,7 +7580,7 @@ function afficherMarchesCommune(){
   resultat.style.display="block";
   resultat.innerHTML="<strong>🛍️ Commerce et boutique</strong><p>Choisissez le service que vous souhaitez consulter dans votre commune.</p>"+
     "<button type='button' class='primary' style='width:100%;margin:8px 0;' onclick='ouvrirMarchesCommune()'>🏪 1. Le marché de ma commune</button>"+
-    "<button type='button' style='width:100%;margin:8px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirSupermarchesCommune()'>🧭 2. Supermarchés les plus proches</button>"+
+    "<button type='button' class='tuile-services' style='width:100%;margin:8px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirSupermarchesCommune()'>🧭 2. Supermarchés les plus proches</button>"+
     "<h3 style='margin:22px 0 8px;'>🛍️ 3. Découvrez les commerces</h3>"+
     "<button type='button' class='primary' style='width:100%;margin:7px 0;' onclick='ouvrirMenuTourBoutique()'>🛍️ Faire un tour en boutique</button>"+
     "<button type='button' style='width:100%;margin:7px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirMenuProprietaireBoutique()'>🔐 Espace propriétaire boutique</button>";
