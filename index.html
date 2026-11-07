@@ -1512,7 +1512,9 @@ main{padding:14px 13px 24px!important}
   <button id="adminDeconnexion" type="button" onclick="deconnexionAdmin()" style="display:none;width:100%;margin:12px 0;">Se déconnecter</button>
 <div id="gestionAbonnementsRamassage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🚌 Validation des compagnies de ramassage</h3><p class="notice">Vérifie les dossiers et les paiements avant d’approuver une compagnie ou d’activer son forfait mensuel.</p><div id="listeCompagniesRamassageAdmin">Chargement...</div></div>
 <div id="gestionAbonnementsAutomobiliste" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🚘 Validation des abonnements automobiles</h3><p class="notice">Vérifie le moyen de paiement et la référence avant d'activer 12 mois d'accès. Ne valide qu'après réception effective des 1 000 FCFA.</p><div id="listeAbonnementsAutomobilisteAdmin">Chargement...</div></div>
-<div id="gestionNouveauxServices" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🧰 Validation des nouveaux services</h3><p class="notice">Vérifie les coordonnées et le contenu avant toute publication.</p><div id="listeNouveauxServicesAdmin">Chargement...</div></div>
+<div id="gestionValidationDepannage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🔧 Validation des dépannages</h3><p class="notice">Examine séparément les demandes des professionnels du dépannage automobile.</p><div id="listeValidationDepannageAdmin">Chargement...</div></div>
+<div id="gestionValidationCommerce" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🛍️ Validation des commerces et boutiques</h3><p class="notice">Vérifie les inscriptions, les paiements d’abonnement et la visibilité des boutiques.</p><div id="listeValidationCommerceAdmin">Chargement...</div></div>
+<div id="gestionValidationAnnonces" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>📢 Validation des annonces</h3><p class="notice">Examine les petites annonces et les offres avant leur publication.</p><div id="listeValidationAnnoncesAdmin">Chargement...</div></div>
 <div id="gestionObjetsPerdus" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🔎 Gestion des objets et documents retrouvés</h3><p class="notice">Les coordonnées des trouveurs et les demandes sont privées et visibles uniquement ici. Vérifie les paiements avant la mise en relation.</p><div id="listeObjetsRetrouvesAdmin">Chargement...</div><h3>Demandes de récupération et paiements</h3><div id="listeReclamationsObjetsAdmin">Chargement...</div></div>
 <div id="gestionGares" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
   <h3>📍 Gestion des gares et terminus</h3>
@@ -2870,14 +2872,16 @@ async function chargerAvisBoutique(boutiqueId){
   zone.innerHTML=snap.docs.map(doc=>{const a=doc.data();const date=a.createdAt?.toDate?a.createdAt.toDate().toLocaleDateString("fr-FR"):"";return '<article style="padding:10px;margin:8px 0;background:#F7FAF8;border-radius:10px;"><strong>'+echapperTextePublicite(a.satisfaction)+' · '+echapperTextePublicite(a.produit)+'</strong><p>'+echapperTextePublicite(a.commentaire)+'</p><small>'+echapperTextePublicite(a.nom)+' · '+date+'</small></article>';}).join("");
  }catch(e){console.error(e);zone.textContent="Impossible de charger les avis. Vérifiez les règles Firestore de la collection avis_boutiques.";}
 }
-async function chargerNouveauxServicesAdmin(){
- const zone=document.getElementById("listeNouveauxServicesAdmin");
+async function chargerNouveauxServicesAdmin(typeFiltre){
+ const zones={depannage:"listeValidationDepannageAdmin",commerce:"listeValidationCommerceAdmin",annonce:"listeValidationAnnoncesAdmin"};
+ const zone=document.getElementById(zones[typeFiltre]||"listeNouveauxServicesAdmin");
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){if(zone)zone.textContent="Accès administrateur requis.";return;}
  zone.innerHTML='<p class="notice">Chargement des dossiers...</p>';
  try{
   const snap=await db.collection("demandes_nouveaux_services").orderBy("createdAt","desc").limit(150).get();
-  if(snap.empty){zone.innerHTML='<p class="notice">Aucun dossier reçu.</p>';return;}
-  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();const type=NOUVEAUX_SERVICES[d.type]?.titre||d.type;const date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date en cours";const expire=d.abonnementFin?.toDate?d.abonnementFin.toDate().getTime()<=Date.now():false;const paiement=d.type==="commerce"?'<p><strong>Abonnement boutique : '+Number(d.montantAbonnement||0).toLocaleString("fr-FR")+' FCFA / '+Number(d.dureeAbonnementJours||0)+' jours</strong></p><p>Paiement : '+echapperTextePublicite(d.paiementMoyen||"Non indiqué")+' · Référence : '+echapperTextePublicite(d.paiementReference||"Non fournie")+' · Statut : '+echapperTextePublicite(d.paiementStatut||"à vérifier")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée automatiquement — abonnement expiré":d.visibleManuellement===false?"Masquée manuellement":"Visible si abonnement actif")+'</p>':"";const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'approuve\')">'+(d.type==="commerce"?"Confirmer paiement et activer 30 jours":"Approuver et publier")+'</button><button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'refuse\')">Refuser</button>': '<span class="notice">Dossier '+echapperTextePublicite(d.statut)+(d.abonnementFin&&d.abonnementFin.toDate?" · Fin abonnement : "+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"")+'</span>';const controle=d.type==="commerce"&&d.statut==="approuve"?'<button type="button" class="primary" onclick="basculerVisibiliteBoutiqueAdmin(\''+doc.id+'\','+(d.visibleManuellement===false?'true':'false')+')">'+(d.visibleManuellement===false?"Afficher manuellement la boutique":"Masquer manuellement la boutique")+'</button><button type="button" onclick="chargerAvisBoutiqueAdmin(\''+doc.id+'\')">⭐ Consulter les avis clients</button><div id="avisAdminBoutique_'+doc.id+'"></div>':"";return '<article class="card" style="padding:14px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo proposée" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':"")+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(type)+' · '+echapperTextePublicite(d.categorie)+'</p><p>'+echapperTextePublicite(d.commune)+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+' · '+date+'</p>'+paiement+actions+controle+'</article>';}).join("");
+  const dossiers=snap.docs.filter(doc=>doc.data().type===typeFiltre);
+  if(dossiers.length===0){zone.innerHTML='<p class="notice">Aucun dossier de cette catégorie pour le moment.</p>';return;}
+  zone.innerHTML=dossiers.map(doc=>{const d=doc.data();const type=NOUVEAUX_SERVICES[d.type]?.titre||d.type;const date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date en cours";const expire=d.abonnementFin?.toDate?d.abonnementFin.toDate().getTime()<=Date.now():false;const paiement=d.type==="commerce"?'<p><strong>Abonnement boutique : '+Number(d.montantAbonnement||0).toLocaleString("fr-FR")+' FCFA / '+Number(d.dureeAbonnementJours||0)+' jours</strong></p><p>Paiement : '+echapperTextePublicite(d.paiementMoyen||"Non indiqué")+' · Référence : '+echapperTextePublicite(d.paiementReference||"Non fournie")+' · Statut : '+echapperTextePublicite(d.paiementStatut||"à vérifier")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée automatiquement — abonnement expiré":d.visibleManuellement===false?"Masquée manuellement":"Visible si abonnement actif")+'</p>':"";const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'approuve\')">'+(d.type==="commerce"?"Confirmer paiement et activer 30 jours":"Approuver et publier")+'</button><button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'refuse\')">Refuser</button>': '<span class="notice">Dossier '+echapperTextePublicite(d.statut)+(d.abonnementFin&&d.abonnementFin.toDate?" · Fin abonnement : "+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"")+'</span>';const controle=d.type==="commerce"&&d.statut==="approuve"?'<button type="button" class="primary" onclick="basculerVisibiliteBoutiqueAdmin(\''+doc.id+'\','+(d.visibleManuellement===false?'true':'false')+')">'+(d.visibleManuellement===false?"Afficher manuellement la boutique":"Masquer manuellement la boutique")+'</button><button type="button" onclick="chargerAvisBoutiqueAdmin(\''+doc.id+'\')">⭐ Consulter les avis clients</button><div id="avisAdminBoutique_'+doc.id+'"></div>':"";return '<article class="card" style="padding:14px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo proposée" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':"")+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(type)+' · '+echapperTextePublicite(d.categorie)+'</p><p>'+echapperTextePublicite(d.commune)+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+' · '+date+'</p>'+paiement+actions+controle+'</article>';}).join("");
  }catch(e){console.error(e);zone.innerHTML='<p class="notice">Erreur de chargement. Vérifiez les règles Firestore.</p>';}
 }
 async function basculerVisibiliteBoutiqueAdmin(id,afficher){
@@ -2890,7 +2894,7 @@ async function basculerVisibiliteBoutiqueAdmin(id,afficher){
   const motif=afficher?"":(prompt("Motif du masquage manuel (obligatoire) :")||"").trim();
   if(!afficher&&!motif)return alert("Le motif du masquage est obligatoire.");
   await ref.update({visibleManuellement:!!afficher,motifVisibilite:afficher?firebase.firestore.FieldValue.delete():motif,visibiliteModifieeLe:firebase.firestore.FieldValue.serverTimestamp(),visibiliteModifieePar:auth.currentUser.uid});
-  await chargerNouveauxServicesAdmin();
+  await chargerNouveauxServicesAdmin("commerce");
  }catch(e){console.error(e);alert("Modification de visibilité impossible : "+e.message);}
 }
 async function chargerAvisBoutiqueAdmin(boutiqueId){
@@ -3045,7 +3049,9 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionPublicites",titre:"📣 Gestion des publicités"},
    {id:"gestionCommunautaire",titre:"🗞️ Informations, Gbairai et annonces"},
   {id:"gestionAbonnementsAutomobiliste",titre:"🚘 Abonnements de l’automobiliste"},
-  {id:"gestionNouveauxServices",titre:"🧰 Validation dépannages, commerces et annonces"},
+  {id:"gestionValidationDepannage",titre:"🔧 Validation des dépannages"},
+  {id:"gestionValidationCommerce",titre:"🛍️ Validation des commerces et boutiques"},
+  {id:"gestionValidationAnnonces",titre:"📢 Validation des annonces"},
   {id:"gestionObjetsPerdus",titre:"🔎 Objets retrouvés et demandes de récupération"},
   {id:"gestionVisibiliteMenus",titre:"👁️ Affichage et masquage des menus"}
 ];
@@ -3062,7 +3068,9 @@ function ouvrirRubriqueAdmin(id){
   RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display=r.id===id?"block":"none";});
   const cible=document.getElementById(id);
   if(!cible)return;
-  if(id==="gestionNouveauxServices") chargerNouveauxServicesAdmin();
+  if(id==="gestionValidationDepannage") chargerNouveauxServicesAdmin("depannage");
+  if(id==="gestionValidationCommerce") chargerNouveauxServicesAdmin("commerce");
+  if(id==="gestionValidationAnnonces") chargerNouveauxServicesAdmin("annonce");
   if(id==="gestionObjetsPerdus") chargerObjetsPerdusAdmin();
    if(id==="gestionCommunautaire") chargerGestionCommunautaireAdmin();
   if(id==="gestionVisibiliteMenus") afficherGestionVisibiliteMenus();
