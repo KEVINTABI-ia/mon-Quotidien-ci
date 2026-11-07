@@ -7372,7 +7372,7 @@ function afficherMarchesCommune(){
   resultat.style.display="block";
   resultat.innerHTML="<strong>🛍️ Commerce et boutique</strong><p>Choisissez le service que vous souhaitez consulter dans votre commune.</p>"+
     "<button type='button' class='primary' style='width:100%;margin:8px 0;' onclick='ouvrirMarchesCommune()'>🏪 1. Le marché de ma commune</button>"+
-    "<button type='button' style='width:100%;margin:8px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirSupermarchesCommune()'>🛒 2. Supermarché de ma commune</button>"+
+    "<button type='button' style='width:100%;margin:8px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirSupermarchesCommune()'>🧭 2. Supermarchés les plus proches</button>"+
     "<h3 style='margin:22px 0 8px;'>🛍️ 3. Découvrez les commerces</h3>"+
     "<button type='button' class='primary' style='width:100%;margin:7px 0;' onclick='ouvrirMenuTourBoutique()'>🛍️ Faire un tour en boutique</button>"+
     "<button type='button' style='width:100%;margin:7px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirMenuProprietaireBoutique()'>🔐 Espace propriétaire boutique</button>";
@@ -7391,16 +7391,53 @@ function ouvrirMarchesCommune(){
 }
 function ouvrirSupermarchesCommune(){
   const resultat=document.getElementById("resultatRechercheGares");if(!resultat)return;
-  const communes=[...new Set(MARCHES_COMMUNES.map(m=>m.commune))].sort((a,b)=>a.localeCompare(b,"fr"));
-  let html="<strong>🛒 Supermarchés de ma commune</strong><p>Consultez les supermarchés enregistrés individuellement dans notre répertoire.</p>";
-  html+="<label for='rechercheCommuneSupermarche'>Commune :</label><input id='rechercheCommuneSupermarche' type='search' list='listeCommunesSupermarches' placeholder='Ex. : Yopougon, Abobo, Cocody...' autocomplete='off' oninput='rechercherSupermarchesCommune()'>";
-  html+="<datalist id='listeCommunesSupermarches'>";communes.forEach(c=>html+="<option value='"+echapperTexteCompagnie(c)+"'></option>");
-  html+="</datalist><div id='listeSupermarchesCommune' aria-live='polite'><p class='notice'>Saisissez votre commune pour afficher les établissements déjà enregistrés.</p></div>";
+  let html="<strong>🧭 Supermarchés les plus proches</strong><p>Autorisez l’accès à votre position GPS pour afficher les supermarchés autour de vous, du plus proche au plus éloigné.</p>";
+  html+="<div id='listeSupermarchesCommune' aria-live='polite'><p class='notice'>📍 Recherche de votre position… Votre téléphone peut demander une autorisation.</p></div>";
   html+="<div id='importSupermarchesAdmin' style='display:none;margin-top:18px;padding:12px;border:1px dashed #16834A;border-radius:12px;background:#F0F7F1;'><strong>🔧 Gestion du répertoire</strong><p style='font-size:13px;'>Importer les supermarchés recensés dans OpenStreetMap en fiches individuelles dans Firebase.</p><button type='button' class='primary' style='width:100%;' onclick='importerSupermarchesOSM()'>⬇️ Importer / actualiser la base</button><p id='statutImportSupermarches' class='notice' aria-live='polite'></p></div>";
   html+="<button type='button' style='width:100%;margin-top:14px;background:#F0F7F1;color:#17663D;' onclick='afficherMarchesCommune()'>← Retour à Commerce et boutique</button>";
   resultat.innerHTML=html;
   const admin=document.getElementById("importSupermarchesAdmin");
   if(admin&&auth.currentUser&&auth.currentUser.uid===ADMIN_UID)admin.style.display="block";
+  chargerSupermarchesProches();
+}
+function distanceEntrePointsKm(lat1,lon1,lat2,lon2){
+  const rad=x=>x*Math.PI/180;
+  const dLat=rad(lat2-lat1),dLon=rad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLon/2)**2;
+  return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function chargerSupermarchesProches(){
+  const zone=document.getElementById("listeSupermarchesCommune");if(!zone)return;
+  if(!navigator.geolocation){
+    zone.innerHTML="<p class='notice'>La géolocalisation n’est pas disponible sur ce téléphone ou ce navigateur.</p>";return;
+  }
+  zone.innerHTML="<p class='notice'>📍 Autorisez la localisation dans la fenêtre de votre téléphone pour trouver les supermarchés proches.</p>";
+  navigator.geolocation.getCurrentPosition(async position=>{
+    try{
+      const origine={lat:position.coords.latitude,lon:position.coords.longitude};
+      zone.innerHTML="<p class='notice'>🔎 Recherche des supermarchés proches de votre position…</p>";
+      const snapshot=await db.collection("supermarches").limit(1000).get();
+      const fiches=snapshot.docs.map(doc=>({id:doc.id,...doc.data()})).filter(f=>Number.isFinite(Number(f.latitude))&&Number.isFinite(Number(f.longitude))).map(f=>({...f,distance:distanceEntrePointsKm(origine.lat,origine.lon,Number(f.latitude),Number(f.longitude))})).sort((a,b)=>a.distance-b.distance);
+      if(!fiches.length){
+        zone.innerHTML="<p class='notice'>Aucun supermarché avec coordonnées GPS n’est actuellement disponible dans le répertoire.</p>";return;
+      }
+      zone.innerHTML="<h3>"+fiches.length+" supermarché(s) classé(s) autour de votre position</h3>"+fiches.map((f,i)=>{
+        const destination=Number(f.latitude)+","+Number(f.longitude);
+        const guide="https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(origine.lat+","+origine.lon)+"&destination="+encodeURIComponent(destination)+"&travelmode=driving";
+        const nomAffiche=(f.nom||"Supermarché")+(f.quartier?" — "+f.quartier:"");
+        return "<article class='stop' style='margin:10px 0;padding:15px;border-left:4px solid #F28C28;'><strong style='font-size:16px;'>"+(i+1)+". 🛒 "+echapperTexteCompagnie(nomAffiche)+"</strong><p style='margin:7px 0;'>📏 <strong>"+f.distance.toFixed(2).replace(".",",")+" km</strong> de votre position</p><p style='margin:5px 0;'>🏙️ Commune : "+echapperTexteCompagnie(f.commune||"À vérifier")+"</p>"+(f.quartier?"<p style='margin:5px 0;'>📍 Quartier : "+echapperTexteCompagnie(f.quartier)+"</p>":"")+(f.adresse&&f.adresse!=="Adresse non précisée"?"<p style='margin:5px 0;'>🛣️ Adresse : "+echapperTexteCompagnie(f.adresse)+"</p>":"")+(f.marque?"<p style='margin:5px 0;'>🏷️ Enseigne : "+echapperTexteCompagnie(f.marque)+"</p>":"")+"<a href='"+guide+"' target='_blank' rel='noopener' style='display:block;text-align:center;text-decoration:none;background:#F28C28;color:white;padding:11px;border-radius:10px;font-weight:800;margin-top:10px;'>🧭 Me guider vers ce supermarché</a></article>";
+      }).join("");
+    }catch(erreur){
+      console.error("Recherche des supermarchés proches :",erreur);
+      zone.innerHTML="<p class='notice'>Impossible de charger les supermarchés depuis Firebase. Vérifie la connexion internet et les règles Firestore.</p>";
+    }
+  },erreur=>{
+    let message="Impossible de récupérer votre position.";
+    if(erreur.code===1)message="L’accès à votre position a été refusé. Autorisez la localisation pour Safari dans les réglages de votre iPhone, puis réessayez.";
+    else if(erreur.code===2)message="Votre position est momentanément indisponible. Vérifiez que le GPS est activé et réessayez.";
+    else if(erreur.code===3)message="La recherche de votre position a pris trop de temps. Réessayez dans un endroit avec une meilleure réception GPS.";
+    zone.innerHTML="<p class='notice'>📍 "+message+"</p><button type='button' class='primary' style='width:100%;' onclick='chargerSupermarchesProches()'>Réessayer</button>";
+  },{enableHighAccuracy:true,timeout:20000,maximumAge:60000});
 }
 function normaliserNomCommuneSupermarche(valeur){
   return normaliser(String(valeur||"").replace(/^commune\s+/i,"").replace(/^district autonome d'?/i,""));
