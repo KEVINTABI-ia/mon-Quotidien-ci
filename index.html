@@ -7755,8 +7755,9 @@ async function enregistrerCompagnie() {
     let logo = "";
 
     if (fichierLogo) {
-      const logoStocke = await envoyerFichierFirebaseStorage(fichierLogo, "logo");
-      logo = logoStocke.url;
+      // Logo compressé puis stocké directement dans le document Firestore.
+      // Cela évite de bloquer l'inscription si Firebase Storage est indisponible.
+      logo = await compresserImage(fichierLogo);
     }
 
     await db.collection("compagnies").add({
