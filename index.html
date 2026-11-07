@@ -3532,8 +3532,8 @@ function annulerEditionGare() {
   gareEnEdition = null;
 
   [
-    "gareNom",
-    "gareCommune",
+    "gareNomAdmin",
+    "gareCommuneAdmin",
     "gareQuartier",
     "gareTransports",
     "gareDestinations",
@@ -3541,7 +3541,8 @@ function annulerEditionGare() {
     "gareLatitude",
     "gareLongitude"
   ].forEach(id => {
-    document.getElementById(id).value = "";
+    const champ = document.getElementById(id);
+    if (champ) champ.value = "";
   });
   document.getElementById("statutPositionGare").textContent="Aucune position enregistrée pour le moment.";
   if(window.__carteSelectionGare){window.__carteSelectionGare.remove();window.__carteSelectionGare=null;window.__marqueurSelectionGare=null;}
