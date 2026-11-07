@@ -2808,7 +2808,7 @@ const NOUVEAUX_SERVICES = {
 let nouveauServiceActif="depannage";
 let filtrePublicCommerce="tout";
 function ouvrirAnnuaireCommerce(type){if(!["commerce","boutique"].includes(type))return;filtrePublicCommerce=type;ouvrirSectionPleinEcran("nouveauxServices",type==="boutique"?"Boutiques":"Commerces");choisirNouveauService("commerce");const c=document.getElementById("nsCategorie");if(c){if(type==="boutique"){c.value="Boutique";c.disabled=true;}else c.disabled=false;}chargerNouveauxServicesPublics("commerce");}
-function choisirNouveauService(type,categorieInitiale,modePartenaire){
+function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId){
  if(!NOUVEAUX_SERVICES[type])return;
  nouveauServiceActif=type;
  const cfg=NOUVEAUX_SERVICES[type];
@@ -2826,9 +2826,11 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire){
  if(titreListe) titreListe.textContent=type==="depannage"
    ?"Professionnels du dépannage disponibles"
    :type==="commerce"?"Commerces et boutiques référencés":"Annonces et offres disponibles";
- const zone=document.getElementById("nouveauServiceFormZone");
+ const zone=document.getElementById(cibleZoneId||"nouveauServiceFormZone");
+ if(!zone)return;
  zone.innerHTML=`
  <div class="card" data-mode-partenaire="${modePartenaire?"1":"0"}" style="padding:14px;margin-bottom:14px;">
+ ${modePartenaire?'<button type="button" class="btn-retour-accueil" onclick="retourChoixPartenaire()">← Retour au choix du partenaire</button>':""}
  <h3>${cfg.icone} ${cfg.titre}</h3>
  <p>Proposez votre service ou votre annonce. La publication sera possible après validation de l'administration.</p>
  <label>Nom / entreprise / titre de l'annonce</label><input id="nsTitre" maxlength="100" placeholder="Nom ou titre" required>
@@ -4822,19 +4824,15 @@ function afficherFormulairePartenaire(type){
     const depannage=type==="mecanicien"||type==="depannage";
     const service=depannage?"depannage":"commerce";
     const categorie=type==="mecanicien"?"Mécanicien":type==="depannage"?"Dépannage général":type==="vendeur_pieces"?"Pièces détachées":"Autre commerce";
-    choisirNouveauService(service,categorie,true);
-    const formulaire=document.getElementById("nouveauServiceFormZone");
-    if(formulaire){
-      zone.appendChild(formulaire);
-      const select=document.getElementById("nsCategorie");
-      if(select){select.value=categorie;select.disabled=true;}
-      const titre=document.getElementById("nsTitre");
-      if(titre) titre.placeholder=type==="vendeur_pieces"?"Nom du magasin ou vendeur de pièces détachées":"Nom de votre activité ou établissement";
-      const description=document.getElementById("nsDescription");
-      if(description)description.placeholder=type==="mecanicien"?"Décrivez vos spécialités, votre expérience et les quartiers desservis.":type==="depannage"?"Décrivez les dépannages proposés, les équipements et les zones couvertes.":type==="vendeur_pieces"?"Décrivez les pièces détachées vendues, les marques et les catégories disponibles.":"Décrivez votre commerce et les produits ou services proposés.";
-      const titreForm=formulaire.querySelector("h3");
-      if(titreForm) titreForm.textContent=(type==="mecanicien"?"🔧 Inscription – Mécanicien":type==="depannage"?"🚗 Inscription – Service de dépannage":type==="vendeur_pieces"?"🧰 Inscription – Vendeur de pièces détachées":"🏪 Inscription – Commerçant(e)");
-    }
+    choisirNouveauService(service,categorie,true,"partenaireFormulaireChoisi");
+    const select=document.getElementById("nsCategorie");
+    if(select){select.value=categorie;select.disabled=true;}
+    const titre=document.getElementById("nsTitre");
+    if(titre) titre.placeholder=type==="vendeur_pieces"?"Nom du magasin ou vendeur de pièces détachées":"Nom de votre activité ou établissement";
+    const description=document.getElementById("nsDescription");
+    if(description)description.placeholder=type==="mecanicien"?"Décrivez vos spécialités, votre expérience et les quartiers desservis.":type==="depannage"?"Décrivez les dépannages proposés, les équipements et les zones couvertes.":type==="vendeur_pieces"?"Décrivez les pièces détachées vendues, les marques et les catégories disponibles.":"Décrivez votre commerce et les produits ou services proposés.";
+    const titreForm=document.querySelector("#partenaireFormulaireChoisi h3");
+    if(titreForm) titreForm.textContent=(type==="mecanicien"?"🔧 Inscription – Mécanicien":type==="depannage"?"🚗 Inscription – Service de dépannage":type==="vendeur_pieces"?"🧰 Inscription – Vendeur de pièces détachées":"🏪 Inscription – Commerçant(e)");
     return;
   }
   if(type==="compagnie"){
@@ -4895,7 +4893,7 @@ async function envoyerInscriptionCompagnie(){
     catch(e){if(e.code!=="auth/email-already-in-use")throw e;credential=await auth.signInWithEmailAndPassword(email,password);}
     let logo="";
     const fichier=document.getElementById("partCompagnieLogo")?.files?.[0];
-    if(fichier)logo=await compresserImage(fichier);
+    if(fichier){logo=await compresserImage(fichier);if(logo.length>300000)throw new Error("Le logo est trop volumineux après compression. Choisissez une image plus légère.");}
     await db.collection("compagnies").add({
       uid:credential.user.uid,nom,agence,localisation,telephone,email,logo,destinations,formule,periodicite,montant,
       moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",
