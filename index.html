@@ -4061,7 +4061,7 @@ function tarifsConfirmesPourGare(gare,destination,transport){
   });
 }
 async function actualiserGaresAvantRecherche(){
-  const snapshot=await db.collection("gares").orderBy("nom").get();
+  const snapshot=await db.collection("gares").get();
   garesFirestore=snapshot.docs.map(doc=>({...doc.data(),firestoreId:doc.id}));
   if(typeof actualiserListesRechercheGares==="function")actualiserListesRechercheGares();
 }
