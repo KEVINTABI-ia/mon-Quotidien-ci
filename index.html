@@ -2447,6 +2447,9 @@ function chargerPublicitesAccueil() {
     <button type="button" onclick="ouvrirEspaceCommunautaire()" style="min-height:68px;grid-column:1/-1;background:#F2F0FF;color:#51418A;border:1px solid #DDD6FA;text-align:left;">🗞️ M’informer / Attraper les derniers Gbairai</button>
     <button type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Signaler et retrouver un objet ou un document perdu')" style="min-height:68px;grid-column:1/-1;background:#F1F7F5;color:#176B52;border:1px solid #CFE2D8;text-align:left;">🔎 Signaler et retrouver un objet ou un document perdu</button>
   </div>
+    <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('station','Stations-service')" style="min-height:68px;background:#FFF4E8;color:#8A4B12;border:1px solid #F1D7B5;text-align:left;">⛽ Stations-service</button>
+    <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('banque','Banques')" style="min-height:68px;background:#EEF5FF;color:#244E83;border:1px solid #D2E1F5;text-align:left;">🏦 Banques</button>
+    <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('hotel','Hôtels')" style="min-height:68px;background:#F5F0FF;color:#60418A;border:1px solid #E0D5F4;text-align:left;">🏨 Hôtels</button>
 </section>
 <section class="card" id="objetsPerdusRetrouves" style="display:none;margin:14px 0;padding:16px;">
 <h2>🔎 Signaler et retrouver un objet ou un document perdu</h2>
@@ -7460,6 +7463,115 @@ async function chargerSupermarchesProches(){
     zone.innerHTML="<p class='notice'>📍 "+message+"</p><button type='button' class='primary' style='width:100%;' onclick='chargerSupermarchesProches()'>Réessayer</button>";
   },{enableHighAccuracy:true,timeout:20000,maximumAge:60000});
 }
+
+/* ANNUAIRE DES SERVICES DU QUOTIDIEN : stations-service, banques et hôtels */
+const SERVICES_QUOTIDIENS = {
+  station:{label:"Stations-service",singulier:"station-service",icone:"⛽",osm:'["amenity"="fuel"]'},
+  banque:{label:"Banques",singulier:"banque",icone:"🏦",osm:'["amenity"="bank"]'},
+  hotel:{label:"Hôtels",singulier:"hôtel",icone:"🏨",osm:'["tourism"="hotel"]'}
+};
+let categorieServiceQuotidienActive="station";
+function ouvrirRepertoireServicesQuotidiens(categorie,label){
+  if(!SERVICES_QUOTIDIENS[categorie])return;
+  categorieServiceQuotidienActive=categorie;
+  const existant=document.getElementById("repertoireServicesQuotidiens");
+  if(!existant){
+    const section=document.createElement("section");
+    section.id="repertoireServicesQuotidiens";
+    section.className="card";
+    section.style.display="none";
+    section.innerHTML="<h2 id='titreRepertoireServicesQuotidiens'>Services à proximité</h2><p class='notice'>Les établissements affichés sont ceux de votre commune, classés du plus proche au plus éloigné. Autorisez la géolocalisation pour lancer la recherche.</p><div id='choixCategorieServices' style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin:12px 0;'><button type='button' onclick=\"ouvrirRepertoireServicesQuotidiens('station','Stations-service')\">⛽ Stations</button><button type='button' onclick=\"ouvrirRepertoireServicesQuotidiens('banque','Banques')\">🏦 Banques</button><button type='button' onclick=\"ouvrirRepertoireServicesQuotidiens('hotel','Hôtels')\">🏨 Hôtels</button></div><div id='resultatsServicesQuotidiens' aria-live='polite'></div><div id='gestionImportServicesQuotidiens' style='display:none;margin-top:16px;padding:12px;border:1px dashed #16834A;border-radius:12px;background:#F0F7F1;'><strong>🔧 Gestion du répertoire</strong><p class='notice'>Importer ou actualiser les stations-service, banques et hôtels cartographiés en Côte d’Ivoire dans Firebase.</p><button type='button' class='primary' style='width:100%;' onclick='importerServicesQuotidiensOSM()'>⬇️ Importer / actualiser les trois répertoires</button><p id='statutImportServicesQuotidiens' class='notice' aria-live='polite'></p></div><button type='button' style='width:100%;margin-top:14px;background:#F0F7F1;color:#17663D;' onclick='retourAccueil()'>← Retour à l’accueil</button>";
+    document.querySelector("main")?.appendChild(section);
+  }
+  const titre=document.getElementById("titreRepertoireServicesQuotidiens");
+  if(titre)titre.textContent=SERVICES_QUOTIDIENS[categorie].icone+" "+SERVICES_QUOTIDIENS[categorie].label+" de ma commune";
+  const section=document.getElementById("repertoireServicesQuotidiens");
+  if(section)section.dataset.categorie=categorie;
+  const admin=document.getElementById("gestionImportServicesQuotidiens");
+  if(admin&&auth.currentUser&&auth.currentUser.uid===ADMIN_UID)admin.style.display="block";
+  const lancer=()=>chargerServicesQuotidiensProches(categorie);
+  if(typeof ouvrirSectionPleinEcran==="function")ouvrirSectionPleinEcran("repertoireServicesQuotidiens",SERVICES_QUOTIDIENS[categorie].label);
+  lancer();
+}
+async function chargerServicesQuotidiensProches(categorie){
+  const zone=document.getElementById("resultatsServicesQuotidiens"),config=SERVICES_QUOTIDIENS[categorie];
+  if(!zone||!config)return;
+  if(!navigator.geolocation){zone.innerHTML="<p class='notice'>La géolocalisation n’est pas disponible sur ce téléphone.</p>";return;}
+  zone.innerHTML="<p class='notice'>📍 Recherche de votre position et identification de votre commune…</p>";
+  navigator.geolocation.getCurrentPosition(async position=>{
+    try{
+      const origine={lat:position.coords.latitude,lon:position.coords.longitude};
+      const url="https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=10&lat="+encodeURIComponent(origine.lat)+"&lon="+encodeURIComponent(origine.lon);
+      const rep=await fetch(url);
+      if(!rep.ok)throw new Error("Le service d’identification de la commune est indisponible.");
+      const geo=await rep.json(),a=geo.address||{};
+      const candidats=[a.city_district,a.municipality,a.suburb,a.borough,a.town,a.city,a.county,a.state_district,a.village].filter(Boolean);
+      const snapshot=await db.collection("services_proximite").where("categorie","==",categorie).limit(3000).get();
+      const fiches=snapshot.docs.map(d=>({id:d.id,...d.data()}));
+      const communes=[...new Set(fiches.map(f=>f.commune).filter(c=>c&&c!=="À vérifier"))];
+      let commune=null;
+      for(const candidat of candidats){commune=communes.find(c=>normaliserNomCommuneSupermarche(c)===normaliserNomCommuneSupermarche(candidat));if(commune)break;}
+      if(!commune){
+        zone.innerHTML="<p class='notice'>📍 Votre position est détectée, mais la commune n’a pas pu être identifiée avec certitude dans le répertoire. Pour éviter d’afficher des établissements d’une autre commune, aucun résultat n’est présenté. Les fiches « À vérifier » doivent être complétées par l’administrateur.</p><button type='button' class='primary' style='width:100%;' onclick=\"chargerServicesQuotidiensProches('"+categorie+"')\">Réessayer</button>";
+        return;
+      }
+      const resultats=fiches.filter(f=>normaliserNomCommuneSupermarche(f.commune)===normaliserNomCommuneSupermarche(commune))
+        .filter(f=>Number.isFinite(Number(f.latitude))&&Number.isFinite(Number(f.longitude)))
+        .map(f=>({...f,distance:distanceEntrePointsKm(origine.lat,origine.lon,Number(f.latitude),Number(f.longitude))}))
+        .sort((x,y)=>x.distance-y.distance);
+      if(!resultats.length){zone.innerHTML="<p class='notice'>Aucun(e) "+config.singulier+" avec coordonnées GPS n’est encore enregistré(e) à "+echapperTexteCompagnie(commune)+". Les autres communes sont volontairement masquées.</p>";return;}
+      zone.innerHTML="<h3>"+resultats.length+" résultat(s) à "+echapperTexteCompagnie(commune)+"</h3><p class='notice'>Commune détectée : "+echapperTexteCompagnie(commune)+". Classement par proximité. Distance à vol d’oiseau.</p>"+resultats.map((f,i)=>{
+        const destination=Number(f.latitude)+","+Number(f.longitude);
+        const guide="https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(origine.lat+","+origine.lon)+"&destination="+encodeURIComponent(destination)+"&travelmode=driving";
+        return "<article class='stop' style='margin:10px 0;padding:15px;border-left:4px solid #F28C28;'><strong style='font-size:16px;'>"+(i+1)+". "+config.icone+" "+echapperTexteCompagnie(f.nom||config.singulier)+"</strong><p style='margin:7px 0;'>📏 <strong>"+f.distance.toFixed(2).replace(".",",")+" km</strong> de votre position</p><p style='margin:5px 0;'>🏙️ Commune : "+echapperTexteCompagnie(f.commune)+"</p>"+(f.quartier?"<p style='margin:5px 0;'>📍 Quartier : "+echapperTexteCompagnie(f.quartier)+"</p>":"")+(f.adresse&&f.adresse!=="Adresse non précisée"?"<p style='margin:5px 0;'>🛣️ Adresse : "+echapperTexteCompagnie(f.adresse)+"</p>":"")+(f.telephone?"<p>☎️ "+echapperTexteCompagnie(f.telephone)+"</p>":"")+(f.horaires?"<p>🕒 "+echapperTexteCompagnie(f.horaires)+"</p>":"")+"<a href='"+guide+"' target='_blank' rel='noopener' style='display:block;text-align:center;text-decoration:none;background:#F28C28;color:white;padding:11px;border-radius:10px;font-weight:800;margin-top:10px;'>🧭 Me guider vers</a><p class='notice' style='font-size:11px;'>Fiche individuelle · Source : OpenStreetMap · <a href='"+echapperTexteCompagnie(f.urlOSM||"#")+"' target='_blank' rel='noopener'>Fiche source</a></p></article>";
+      }).join("");
+    }catch(e){
+      console.error("Répertoire des services du quotidien :",e);
+      zone.innerHTML="<p class='notice'>Impossible de charger ce répertoire depuis Firebase ou d’identifier votre commune. Vérifiez la connexion puis réessayez.</p><button type='button' class='primary' style='width:100%;' onclick=\"chargerServicesQuotidiensProches('"+categorie+"')\">Réessayer</button>";
+    }
+  },e=>{
+    const msg=e.code===1?"Autorisez la localisation pour Safari dans les réglages de votre iPhone.":e.code===2?"Votre position GPS est indisponible.":e.code===3?"La recherche GPS a pris trop de temps.":"Impossible de récupérer votre position.";
+    zone.innerHTML="<p class='notice'>📍 "+msg+"</p><button type='button' class='primary' style='width:100%;' onclick=\"chargerServicesQuotidiensProches('"+categorie+"')\">Réessayer</button>";
+  },{enableHighAccuracy:true,timeout:20000,maximumAge:60000});
+}
+async function importerServicesQuotidiensOSM(){
+  const statut=document.getElementById("statutImportServicesQuotidiens");
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){alert("Accès administrateur requis.");return;}
+  if(statut)statut.textContent="Récupération des données OpenStreetMap pour toute la Côte d’Ivoire…";
+  try{
+    const requete='[out:json][timeout:180];area["ISO3166-1"="CI"]["admin_level"="2"]->.ci;(nwr["amenity"="fuel"](area.ci);nwr["amenity"="bank"](area.ci);nwr["tourism"="hotel"](area.ci););out center tags;';
+    let reponse=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},body:"data="+encodeURIComponent(requete)});
+    if(!reponse.ok)throw new Error("OpenStreetMap a répondu HTTP "+reponse.status+". Réessaie plus tard.");
+    const donnees=await reponse.json();
+    if(!Array.isArray(donnees.elements)||!donnees.elements.length)throw new Error("Aucun établissement n’a été renvoyé par OpenStreetMap.");
+    const fiches=donnees.elements.map(el=>{
+      const t=el.tags||{},coord=coordonneesSupermarcheOSM(el);
+      if(!coord||!t.name)return null;
+      const categorie=t.amenity==="fuel"?"station":t.amenity==="bank"?"banque":t.tourism==="hotel"?"hotel":null;
+      if(!categorie)return null;
+      const quartier=t["addr:neighbourhood"]||t["addr:suburb"]||t["addr:quarter"]||"";
+      const valeursCommune=[t["addr:suburb"],t["addr:district"],t["addr:city_district"],t["addr:city"],t["is_in:city"],t["is_in"]];
+      const commune=valeursCommune.find(v=>v&&normaliserNomCommuneSupermarche(v)!=="abidjan")||"À vérifier";
+      const adresse=[t["addr:housenumber"],t["addr:street"]].filter(Boolean).join(" ");
+      return {idOSM:String(el.id),typeOSM:el.type,categorie,nom:t.name,commune,quartier,adresse:adresse||t["addr:full"]||"Adresse non précisée",latitude:coord.lat,longitude:coord.lon,telephone:t.phone||t["contact:phone"]||"",siteWeb:t.website||t["contact:website"]||"",horaires:t.opening_hours||"",source:"OpenStreetMap",urlOSM:"https://www.openstreetmap.org/"+el.type+"/"+el.id,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+    }).filter(Boolean);
+    if(!fiches.length)throw new Error("Aucun établissement nommé avec coordonnées GPS n’a été trouvé.");
+    let total=0;
+    for(let i=0;i<fiches.length;i+=400){
+      const lot=db.batch();
+      fiches.slice(i,i+400).forEach(f=>lot.set(db.collection("services_proximite").doc(f.categorie+"_"+f.typeOSM+"_"+f.idOSM),f,{merge:true}));
+      await lot.commit();total+=Math.min(400,fiches.length-i);
+      if(statut)statut.textContent="Enregistrement Firebase : "+total+" / "+fiches.length+" fiches…";
+    }
+    const compte={station:fiches.filter(f=>f.categorie==="station").length,banque:fiches.filter(f=>f.categorie==="banque").length,hotel:fiches.filter(f=>f.categorie==="hotel").length};
+    if(statut)statut.textContent="Import terminé : "+total+" fiches individuelles actualisées — "+compte.station+" stations-service, "+compte.banque+" banques et "+compte.hotel+" hôtels. Les fiches sans commune fiable portent la mention « À vérifier » et ne seront pas affichées dans les recherches par commune.";
+    chargerServicesQuotidiensProches(categorieServiceQuotidienActive);
+  }catch(e){
+    console.error("Import des services du quotidien :",e);
+    if(statut)statut.textContent="Import non terminé : "+(e.message||"Erreur inconnue")+". Vérifie la connexion puis réessaie.";
+  }
+}
+
 function normaliserNomCommuneSupermarche(valeur){
   return normaliser(String(valeur||"").replace(/^commune\s+/i,"").replace(/^district autonome d'?/i,""));
 }
