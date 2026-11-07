@@ -1595,12 +1595,12 @@ main{padding:14px 13px 24px!important}
   Sélectionne une image depuis la galerie de ton téléphone.
   Le logo sera automatiquement redimensionné pour limiter son poids.
 </p>
-  <label>Destinations et prix des tickets</label>
+  <label>Destination, prix des tickets et service</label>
   <textarea id="compagnieDestinations" rows="5"
-    placeholder="Bouaké | 5000&#10;Yamoussoukro | 4000&#10;Daloa | 7000"
+    placeholder="Bouaké | 5000 | Premium&#10;Yamoussoukro | 4000 | Express&#10;Daloa | 7000 | Standard"
     style="width:100%;padding:12px;"></textarea>
 
-  <p class="notice">Une destination par ligne, au format : Ville | Prix en FCFA.</p>
+  <p class="notice">Une destination par ligne, au format : Destination | Prix en FCFA | Service (Premium, Express ou Standard).</p>
 
   <label>Formule d'abonnement</label>
   <select id="compagnieFormule" onchange="actualiserPrixCompagnie()">
@@ -7739,15 +7739,16 @@ async function enregistrerCompagnie() {
 
     const destinations = texteDestinations.split("\n").map(ligne => {
       const morceaux = ligne.split("|");
-      const ville = morceaux[0].trim();
-      const prix = Number(morceaux[1]);
+      const ville = (morceaux[0] || "").trim();
+      const prix = Number((morceaux[1] || "").trim());
+      const serviceSaisi = (morceaux[2] || "").trim().toLowerCase();
+      const servicesAutorises = { premium: "Premium", express: "Express", standard: "Standard" };
+      const service = servicesAutorises[serviceSaisi];
 
-      if (!ville || morceaux.length < 2 ||
-          !Number.isFinite(prix) || prix <= 0) {
-        throw new Error("Format incorrect. Utilise : Ville | Prix");
+      if (!ville || morceaux.length < 3 || !Number.isFinite(prix) || prix <= 0 || !service) {
+        throw new Error("Format incorrect. Utilise : Destination | Prix | Premium, Express ou Standard.");
       }
-
-      return { ville, prix };
+      return { ville, prix, service };
     });
 
     const montant = tarifsAbonnements[formule][periodicite];
@@ -7844,7 +7845,7 @@ async function chargerCompagniesAdmin() {
       const destinations = (compagnie.destinations || []).map(destination =>
         "<li>" + echapperTexteCompagnie(destination.ville) +
         " : " + Number(destination.prix).toLocaleString("fr-FR") +
-        " FCFA</li>"
+        " FCFA — Service : " + echapperTexteCompagnie(destination.service || "Non précisé") + "</li>"
       ).join("");
 
       let bouton = "";
@@ -7975,11 +7976,11 @@ nouveauLogo = logoStocke.url;
   }
 }
     const texteDestinations = (compagnie.destinations || [])
-      .map(d => d.ville + " | " + d.prix)
+      .map(d => d.ville + " | " + d.prix + " | " + (d.service || "Standard"))
       .join("\n");
 
     const destinationsTexte = prompt(
-      "Destinations et prix (une ligne par destination : Ville | Prix) :",
+      "Destinations, prix et service (une ligne : Destination | Prix | Premium, Express ou Standard) :",
       texteDestinations
     );
     if (destinationsTexte === null) return;
@@ -8008,14 +8009,16 @@ nouveauLogo = logoStocke.url;
 
     const destinations = destinationsTexte.split("\n").map(ligne => {
       const morceaux = ligne.split("|");
-      const ville = morceaux[0].trim();
-      const prix = Number(morceaux[1]);
+      const ville = (morceaux[0] || "").trim();
+      const prix = Number((morceaux[1] || "").trim());
+      const serviceSaisi = (morceaux[2] || "").trim().toLowerCase();
+      const servicesAutorises = { premium: "Premium", express: "Express", standard: "Standard" };
+      const service = servicesAutorises[serviceSaisi];
 
-      if (!ville || morceaux.length < 2 || !Number.isFinite(prix) || prix <= 0) {
-        throw new Error("Format incorrect. Utilise : Ville | Prix");
+      if (!ville || morceaux.length < 3 || !Number.isFinite(prix) || prix <= 0 || !service) {
+        throw new Error("Format incorrect. Utilise : Destination | Prix | Premium, Express ou Standard.");
       }
-
-      return { ville, prix };
+      return { ville, prix, service };
     });
 
     const changementForfait =
@@ -8275,7 +8278,7 @@ const boutonWhatsApp = numeroWhatsApp
       const destinations = (compagnie.destinations || []).map(d =>
         "<li>" + echapperTexteCompagnie(d.ville) +
         " : " + Number(d.prix).toLocaleString("fr-FR") +
-        " FCFA</li>"
+        " FCFA — Service : " + echapperTexteCompagnie(d.service || "Non précisé") + "</li>"
       ).join("");
 
      html += `
@@ -8913,7 +8916,7 @@ async function afficherCompagniesPubliques() {
  const prixHTML=TARIFS_INTERURBAINS_INDICATIFS.filter(t=>!villeChoisie||villeChoisie==="Toutes les villes"||t.ville===villeChoisie).map(t=>'<li><strong>'+echapperTexteCompagnie(t.depart)+' → '+echapperTexteCompagnie(t.ville)+'</strong> : dès '+t.prix.toLocaleString("fr-FR")+' FCFA <small>(indicatif, non attribué à une compagnie précise)</small></li>').join("");
  const listeHTML=filtrees.map(c=>{
   const fiche=c.fiche||{};
-  const destinations=(fiche.destinations||[]).map(d=>'<li>'+echapperTexteCompagnie(d.ville)+' : '+(Number(d.prix)>0?Number(d.prix).toLocaleString("fr-FR")+' FCFA':'Tarif à confirmer')+'</li>').join("");
+  const destinations=(fiche.destinations||[]).map(d=>'<li>'+echapperTexteCompagnie(d.ville)+' : '+(Number(d.prix)>0?Number(d.prix).toLocaleString("fr-FR")+' FCFA':'Tarif à confirmer')+' — Service : '+echapperTexteCompagnie(d.service||"Non précisé")+'</li>').join("");
   return '<article class="stop" style="margin:10px 0;padding:14px"><strong>'+echapperTexteCompagnie(c.nom)+'</strong><p class="notice">'+(c.actif?'Partenaire actif sur Mon Transport CI':'Référencée dans les sources publiques — lignes et agence à confirmer')+'</p>'+(fiche.agence?'<p>Agence : '+echapperTexteCompagnie(fiche.agence)+'</p>':'')+(fiche.localisation?'<p>Localisation : '+echapperTexteCompagnie(fiche.localisation)+'</p>':'')+(fiche.telephone?'<p>Téléphone : '+echapperTexteCompagnie(fiche.telephone)+'</p>':'')+(destinations?'<p><strong>Destinations et tarifs saisis par la compagnie :</strong></p><ul>'+destinations+'</ul>':'<p class="notice">Aucun tarif ou itinéraire confirmé pour cette fiche. Contactez la compagnie avant le départ.</p>')+'</article>';
  }).join("");
  zone.innerHTML=
