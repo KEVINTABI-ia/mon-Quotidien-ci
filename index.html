@@ -2116,20 +2116,6 @@ function chargerPublicitesAccueil() {
 <div id="carte" style="width:100%;height:350px;margin-top:15px;border-radius:12px;display:none;"></div>
 <div id="infoRoute" style="margin-top:10px;font-weight:bold;"></div>
 </section>
-<div class="accueil-raccourcis">
-<section class="card carte-acces-colis" aria-label="Accès au service Transport Colis">
-  <div class="acces-colis-contenu">
-    <div class="acces-colis-texte">
-      <h2>Transport Colis</h2>
-      <p>Envoyez et récupérez vos colis facilement grâce à notre réseau de partenaires.</p>
-    </div>
-  </div>
-  <button type="button" class="primary bouton-acces-colis"
-    onclick="ouvrirSectionPleinEcran('transportColis','')">
-    Accéder au service Transport Colis →
-  </button>
-</section>
-</div>
 <section class="card carte-compagnies-voyage" id="repertoireCompagnies" style="display:none;">
   <h2>🚍 Compagnies de voyage</h2>
   <p class="notice">
@@ -2153,6 +2139,19 @@ function chargerPublicitesAccueil() {
     <p>Choisissez directement le service ou le réseau que vous recherchez.</p>
   </div>
   <div class="accueil-services-grid">
+    <section class="card carte-acces-colis" aria-label="Accès au service Transport Colis">
+  <div class="acces-colis-contenu">
+    <div class="acces-colis-texte">
+      <h2>Transport Colis</h2>
+      <p>Envoyez et récupérez vos colis facilement grâce à notre réseau de partenaires.</p>
+    </div>
+  </div>
+  <button type="button" class="primary bouton-acces-colis"
+    onclick="ouvrirSectionPleinEcran('transportColis','')">
+    Accéder au service Transport Colis →
+  </button>
+</section>
+
     <button type="button" class="accueil-service tuile-gbaka" onclick="ouvrirResultatPleinEcran('Mes différentes gares'); afficherMenuDifferentesGares()">
       <strong>Mes différentes gares</strong><small>Gbaka, taxi communal et Woro-woro</small>
     </button>
