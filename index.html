@@ -8150,11 +8150,15 @@ function ouvrirEspaceProprietaireBoutique(){
     bouton.className="primary";
     bouton.style.marginTop="12px";
     bouton.textContent="📝 Inscrire une boutique ou un commerce";
+    bouton.textContent="📝 Inscrire une boutique ou un commerce";
     bouton.onclick=()=>{
-      const visible=formulaire && formulaire.style.display!=="none";
-      if(formulaire)formulaire.style.display=visible?"none":"block";
-      bouton.textContent=visible?"📝 Inscrire une boutique ou un commerce":"✖ Fermer le formulaire d’inscription";
-      if(!visible && formulaire)formulaire.scrollIntoView({behavior:"smooth",block:"start"});
+      ouvrirSectionPleinEcran("devenirPartenaire","Devenir partenaire");
+      const choix=document.getElementById("typePartenaireSouhaite");
+      if(choix){
+        choix.value="commercant";
+        afficherFormulairePartenaire("commercant");
+      }
+      document.getElementById("devenirPartenaire")?.scrollIntoView({behavior:"smooth",block:"start"});
     };
     connexion.appendChild(bouton);
   }
