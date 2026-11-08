@@ -128,6 +128,23 @@ service cloud.firestore {
       allow create, update, delete: if estAdmin();
     }
 
+    match /etablissements_repos/{etablissementId} {
+      allow read: if resource.data.statut == "publie";
+      allow create, delete: if estAdmin();
+      allow update: if estAdmin()
+        || (estConnecte()
+          && request.auth.uid == etablissementId
+          && resource.data.ownerId == request.auth.uid
+          && resource.data.categorie == "residence"
+          && resource.data.statut == "publie"
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["disponibilite", "updatedAt"])
+          && request.resource.data.disponibilite in ["Libre", "Occupée"]
+          && request.resource.data.updatedAt == request.time
+          && get(/databases/$(database)/documents/partenaires/$(request.auth.uid)).data.statut == "approuve"
+          && get(/databases/$(database)/documents/partenaires/$(request.auth.uid)).data.type == "hotel_residence");
+    }
+
     match /partenaires/{partenaireId} {
       allow read: if estAdmin()
         || (estConnecte() && request.auth.uid == partenaireId);
@@ -144,17 +161,31 @@ service cloud.firestore {
           "email", "dateNaissance", "lieuNaissance",
           "numeroIdentite", "quartiers", "numeroPermis",
           "nomGare", "posteOccupe", "photoProfil",
+          "categorieEtablissement", "nomEtablissement", "quartier",
+          "tarifNuit", "description", "disponibilite",
           "statut", "createdAt"
         ])
         && request.resource.data.uid == request.auth.uid
         && (request.resource.data.type == "livreur_independant"
-          || request.resource.data.type == "representant_gare")
+          || request.resource.data.type == "representant_gare"
+          || request.resource.data.type == "hotel_residence")
         && (
           (request.resource.data.type == "livreur_independant"
             && request.resource.data.keys().hasAll(["quartiers", "numeroPermis"]))
           ||
           (request.resource.data.type == "representant_gare"
             && request.resource.data.keys().hasAll(["nomGare", "posteOccupe"]))
+          ||
+          (request.resource.data.type == "hotel_residence"
+            && request.resource.data.keys().hasAll(["categorieEtablissement", "nomEtablissement", "quartier", "tarifNuit", "description", "disponibilite"])
+            && request.resource.data.categorieEtablissement in ["hotel", "residence"]
+            && request.resource.data.nomEtablissement is string
+            && request.resource.data.nomEtablissement.size() > 1
+            && request.resource.data.tarifNuit is int
+            && request.resource.data.tarifNuit > 0
+            && request.resource.data.description is string
+            && request.resource.data.description.size() <= 500
+            && request.resource.data.disponibilite in ["Libre", "Occupée", null])
         )
         && request.resource.data.statut == "en_attente"
         && request.resource.data.email == request.auth.token.email
