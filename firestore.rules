@@ -950,6 +950,23 @@ service cloud.firestore {
       allow create, update, delete: if estAdmin();
     }
 
+    match /demandes_foncieres_privees/{demandeId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["uid","email","nom","telephone","typeDemande","question","refs","statut","reponseAdmin","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["uid","email","nom","telephone","typeDemande","question","refs","statut","reponseAdmin","createdAt","updatedAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 2 && request.resource.data.nom.size() <= 100
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 6 && request.resource.data.telephone.size() <= 25
+        && request.resource.data.typeDemande in ["verification_lotissement","verification_parcelle","comprendre_document","suivi_demande"]
+        && request.resource.data.question is string && request.resource.data.question.size() >= 5 && request.resource.data.question.size() <= 1200
+        && request.resource.data.refs is map && request.resource.data.refs.keys().hasOnly(["localite","lotissement","ilot","lot","idufci"])
+        && request.resource.data.statut == "reçue" && request.resource.data.reponseAdmin == ""
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update, delete: if estAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
