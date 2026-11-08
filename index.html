@@ -3112,7 +3112,8 @@ function chargerPublicitesAccueil() {
 <h2>⚙️ Paramètres de l’application</h2>
 <p class="notice">Personnalisez l’affichage et gérez les autorisations de Mon Quotidien CI sur cet appareil.</p>
 <div class="setting-row"><h3>🔠 Taille du texte</h3><p>Adaptez la lecture à votre confort.</p><button type="button" onclick="changerTailleTexteApplication('normal')">Standard</button><button type="button" onclick="changerTailleTexteApplication('grand')">Grand</button><button type="button" onclick="changerTailleTexteApplication('tres-grand')">Très grand</button></div>
-<div class="setting-row"><h3>🔔 Notifications</h3><p id="etatNotificationsApplication">Vérification de l’autorisation de notification…</p><button type="button" class="primary" onclick="activerNotificationsApplication()">Activer les notifications</button></div>
+<div class="setting-row"><h3>🔔 Notifications</h3><p>Recevoir, uniquement si vous l’autorisez, les alertes concernant les informations de l’administrateur, les offres d’emploi et annonces, les objets trouvés validés, les messages Gbairai et le suivi des livraisons (acceptation du livreur et livraison terminée).</p><p id="etatNotificationsApplication">Vérification de l’autorisation de notification…</p><button type="button" class="primary" id="boutonNotificationsApplication" onclick="activerNotificationsApplication()">Autoriser les notifications</button><small>Votre choix peut être modifié dans les réglages de votre appareil. Aucune demande d’autorisation n’est affichée sans votre action.</small></div>
+<div class="setting-row"><h3>🌙 Mode sombre</h3><p>Choisissez votre confort d’affichage. Le mode sombre ne s’active qu’après votre choix.</p><p id="etatModeSombreApplication">Mode clair activé.</p><button type="button" id="boutonModeSombreApplication" onclick="basculerModeSombreApplication()" aria-pressed="false">Activer le mode sombre</button></div>
 <div class="setting-row"><h3>🔒 Confidentialité</h3><p>Les informations personnelles transmises dans les formulaires sont utilisées pour traiter les demandes correspondantes. Les espaces privés restent soumis à leurs contrôles d’accès.</p></div>
 <div class="setting-row"><h3>ℹ️ À propos</h3><p><strong>Mon Quotidien CI</strong><br>Tous les services utiles, au même endroit.<br>Version de l’application : 1.0</p></div>
 <div class="setting-row"><button type="button" onclick="signalerProblemeGeneral()">⚠️ Signaler un problème</button></div>
@@ -3122,8 +3123,10 @@ function basculerMenuBasDroite(){const m=document.getElementById('menuBasDroite'
 function fermerMenuBasDroite(){const m=document.getElementById('menuBasDroite');if(m)m.hidden=true;const b=document.querySelector('#accueilBottomNav [data-nav="menu"]');if(b)b.setAttribute('aria-expanded','false');}
 function changerTailleTexteApplication(taille){const valeurs={'normal':'16px','grand':'18px','tres-grand':'20px'};if(!valeurs[taille])return;document.documentElement.style.setProperty('--taille-texte-app',valeurs[taille]);document.body.style.fontSize=valeurs[taille];try{localStorage.setItem('mqci_taille_texte',taille);}catch(e){}}
 function actualiserEtatNotificationsApplication(){const z=document.getElementById('etatNotificationsApplication');if(!z)return;if(!('Notification'in window)){z.textContent='Les notifications ne sont pas prises en charge par ce navigateur.';return;}z.textContent=Notification.permission==='granted'?'Les notifications sont autorisées sur cet appareil.':Notification.permission==='denied'?'Les notifications sont bloquées dans les réglages du navigateur.':'Les notifications ne sont pas encore autorisées.';}
-async function activerNotificationsApplication(){if(!('Notification'in window)){alert('Ce navigateur ne prend pas en charge les notifications.');return;}try{const p=await Notification.requestPermission();actualiserEtatNotificationsApplication();if(p==='granted')alert('Autorisation accordée. Les notifications pourront être utilisées par les services compatibles.');}catch(e){alert('Impossible de demander l’autorisation : '+e.message);}}
-document.addEventListener('DOMContentLoaded',function(){try{const t=localStorage.getItem('mqci_taille_texte');if(t)changerTailleTexteApplication(t);}catch(e){}actualiserEtatNotificationsApplication();});
+async function activerNotificationsApplication(){if(!('Notification'in window)){alert('Ce navigateur ne prend pas en charge les notifications.');return;}if(!window.isSecureContext){alert('Les notifications nécessitent une connexion sécurisée HTTPS.');return;}try{const p=await Notification.requestPermission();actualiserEtatNotificationsApplication();if(p==='granted'){alert('Autorisation accordée sur cet appareil. Les notifications système seront disponibles lorsque les événements seront reliés au service de notification.');}else if(p==='denied'){alert('Autorisation refusée. Vous pourrez la modifier dans les réglages du navigateur ou de votre appareil.');}}catch(e){alert('Impossible de demander l’autorisation : '+e.message);}}
+function appliquerModeSombreApplication(actif){document.documentElement.classList.toggle('mqci-dark-mode',!!actif);const etat=document.getElementById('etatModeSombreApplication'),bouton=document.getElementById('boutonModeSombreApplication');if(etat)etat.textContent=actif?'Mode sombre activé.':'Mode clair activé.';if(bouton){bouton.textContent=actif?'Désactiver le mode sombre':'Activer le mode sombre';bouton.setAttribute('aria-pressed',String(!!actif));}try{localStorage.setItem('mqci_mode_sombre',actif?'oui':'non');}catch(e){}}
+function basculerModeSombreApplication(){appliquerModeSombreApplication(!document.documentElement.classList.contains('mqci-dark-mode'));}
+document.addEventListener('DOMContentLoaded',function(){try{const t=localStorage.getItem('mqci_taille_texte');if(t)changerTailleTexteApplication(t);appliquerModeSombreApplication(localStorage.getItem('mqci_mode_sombre')==='oui');}catch(e){appliquerModeSombreApplication(false);}actualiserEtatNotificationsApplication();});
 </script>
 </main>
 
@@ -10834,6 +10837,21 @@ header.mqci-header-premium{
  .mqci-header-caption{font-size:7px;letter-spacing:1px}
 }
 @media(prefers-reduced-motion:reduce){.mqci-header-orbit{display:none}}
+</style>
+
+<style id="mqci-mode-sombre">
+:root.mqci-dark-mode{color-scheme:dark;--blanc:#17231f;--ivoire:#101a16;--texte:#edf4ef;--secondaire:#a7b8ad;--bordure:#34483d}
+html.mqci-dark-mode body{background:#101a16!important;color:#edf4ef!important}
+html.mqci-dark-mode main,html.mqci-dark-mode #accueilHomeShell{color:#edf4ef}
+html.mqci-dark-mode .card,html.mqci-dark-mode .home-discovery-card,html.mqci-dark-mode .home-quick,html.mqci-dark-mode .setting-row,html.mqci-dark-mode .stop,html.mqci-dark-mode .result,html.mqci-dark-mode .home-panel{background:#192820!important;color:#edf4ef!important;border-color:#34483d!important}
+html.mqci-dark-mode h1,html.mqci-dark-mode h2,html.mqci-dark-mode h3,html.mqci-dark-mode h4,html.mqci-dark-mode strong,html.mqci-dark-mode label,html.mqci-dark-mode p,html.mqci-dark-mode small{color:inherit}
+html.mqci-dark-mode input,html.mqci-dark-mode select,html.mqci-dark-mode textarea{background:#101a16!important;color:#edf4ef!important;border-color:#405649!important}
+html.mqci-dark-mode .home-section-heading h2{color:#c9ead5!important}
+html.mqci-dark-mode .home-section-heading p,html.mqci-dark-mode .notice{color:#b1c1b7!important}
+html.mqci-dark-mode .menu-dropdown{background:#192820!important;color:#edf4ef!important;border-color:#34483d!important}
+html.mqci-dark-mode .menu-dropdown button{background:#192820!important;color:#edf4ef!important}
+html.mqci-dark-mode footer{color:#a7b8ad!important}
+html.mqci-dark-mode .home-welcome{filter:brightness(.88)}
 </style>
 
 </body>
