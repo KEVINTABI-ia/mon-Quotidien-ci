@@ -1588,7 +1588,6 @@ main{padding:14px 13px 24px!important}
     <option value="representant_gare">🏢 Représentant de gare</option>
     <option value="commercant">🏪 Commerçant(e)</option>
     <option value="compagnie">🚌 Compagnie de voyage</option>
-    <option value="hotel_residence">🏨 Hôtel / résidence</option>
   </select>
   <div id="partenaireFormulaireChoisi" aria-live="polite"></div>
 </section>
@@ -2633,13 +2632,11 @@ function chargerPublicitesAccueil() {
     <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('banque','Banques')" class="tuile-quotidien">🏦 Banques</button>
   </div>
 </section>
- 
-<section class="card" id="leRepos" style="display:none;"><h2>🛏️ Le repos</h2><p class="notice">Hôtels et résidences partenaires inscrits et validés.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><button class="primary" type="button" onclick="chargerEtablissementsRepos('hotel')">🏨 Hôtels</button><button class="primary" type="button" onclick="chargerEtablissementsRepos('residence')">🏡 Résidences</button></div><div id="resultatsLeRepos"><p class="notice">Choisissez une catégorie.</p></div><button type="button" onclick="retourAccueil()">← Retour à l’accueil</button></section>
 <section class="card" id="carnetEntretienAuto" style="display:none;"><h2>🧰 Carnet d’entretien numérique</h2><p class="notice">Ajoutez les opérations réalisées sur votre véhicule. Les entrées sont conservées sur cet appareil.</p><label>Véhicule / immatriculation</label><input id="entretienVehicule" placeholder="Ex. AB 1234 CI"><label>Opération</label><select id="entretienType"><option>Vidange</option><option>Pneus</option><option>Freins</option><option>Batterie</option><option>Réparation</option><option>Autre entretien</option></select><label>Date</label><input id="entretienDate" type="date"><label>Kilométrage (km)</label><input id="entretienKm" type="number" min="0" placeholder="Ex. 85000"><label>Notes / garage</label><textarea id="entretienNotes" rows="3" placeholder="Détails de l’intervention"></textarea><button class="primary" type="button" onclick="enregistrerEntretienAuto()">Enregistrer l’entretien</button><p id="statutEntretienAuto" class="notice" aria-live="polite"></p><h3>Historique des réparations et entretiens</h3><div id="listeEntretienAuto"></div></section>
 <section class="card" id="rappelsDocumentsAuto" style="display:none;"><h2>📅 Rappels de renouvellement</h2><p class="notice">Enregistrez les dates d’expiration de vos documents. Les rappels sont visibles dans cette application sur cet appareil.</p><label>Document</label><select id="expirationType"><option>Assurance</option><option>Visite technique</option><option>Permis de conduire</option><option>Carte grise</option><option>Autre document</option></select><label>Numéro / référence (facultatif)</label><input id="expirationReference" maxlength="80"><label>Date d’expiration</label><input id="expirationDate" type="date"><button class="primary" type="button" onclick="enregistrerExpirationAuto()">Enregistrer la date</button><p id="statutExpirationAuto" class="notice"></p><div id="listeExpirationsAuto"></div></section>
 <section class="card" id="recherchePiecesAuto" style="display:none;"><h2>⚙️ Recherche de pièces automobiles</h2><p>Recherchez des vendeurs de pièces détachées autour de votre commune ou de votre position.</p><label>Pièce recherchée</label><input id="pieceRecherchee" placeholder="Ex. plaquettes de frein, batterie, pneu"><label>Commune ou quartier</label><input id="pieceCommune" placeholder="Ex. Yopougon, Siporex"><button class="primary" type="button" onclick="rechercherPiecesAuto()">Rechercher les vendeurs</button><p class="notice">La recherche s’ouvre sur une carte externe. Vérifiez la disponibilité et le prix auprès du vendeur.</p></section>
 <section class="card" id="estimationTrajetAuto" style="display:none;"><h2>🧮 Estimation du coût d’un trajet</h2><p class="notice">Estimation indicative basée sur la distance, la consommation et le prix du carburant que vous saisissez.</p><label>Distance aller (km)</label><input id="coutDistance" type="number" min="0" step="0.1" placeholder="Ex. 25"><label>Consommation du véhicule (L / 100 km)</label><input id="coutConsommation" type="number" min="0" step="0.1" placeholder="Ex. 7.5"><label>Prix du carburant (FCFA / litre)</label><input id="coutCarburant" type="number" min="0" step="1" placeholder="Saisir le prix affiché"><label>Péages (FCFA, facultatif)</label><input id="coutPeages" type="number" min="0" step="1" value="0"><button class="primary" type="button" onclick="calculerCoutTrajetAuto()">Calculer l’estimation aller-retour</button><div id="resultatCoutTrajet" class="result" aria-live="polite"></div></section>
-<section class="card" id="meteoQuotidien" style="display:none;"><h2>🌦️ Météo près de vous</h2><p class="notice">Autorisez la localisation pour obtenir les conditions météo et les prévisions de votre secteur.</p><button class="primary" type="button" onclick="chargerMeteoLocale()">📍 Voir la météo autour de moi</button><div id="resultatMeteoLocale" class="result" aria-live="polite"></div></section>
+
 <section class="card" id="toilettesPubliques" style="display:none;"><h2>🚻 Toilettes publiques</h2><p>Trouvez les toilettes publiques ou accessibles autour de votre position.</p><a class="primary" style="display:block;text-align:center;text-decoration:none;padding:14px;" href="https://www.google.com/maps/search/toilettes+publiques+près+de+moi" target="_blank" rel="noopener noreferrer">📍 Rechercher sur la carte</a><p class="notice">La disponibilité et les horaires doivent être confirmés auprès de l’établissement.</p></section>
 <section class="card" id="rappelsPaiement" style="display:none;"><h2>🔔 Rappels de paiement</h2><p class="notice">Ajoutez vos échéances personnelles. Elles sont enregistrées localement sur cet appareil et ne déclenchent pas encore de notification automatique.</p><label>Motif du paiement</label><input id="paiementMotif" maxlength="100" placeholder="Ex. loyer, facture CIE, abonnement"><label>Montant (FCFA, facultatif)</label><input id="paiementMontant" type="number" min="0"><label>Date d’échéance</label><input id="paiementDate" type="date"><button class="primary" type="button" onclick="enregistrerRappelPaiement()">Enregistrer le rappel</button><p id="statutRappelPaiement" class="notice"></p><div id="listeRappelsPaiement"></div></section>
 <section class="card" id="espaceSolidarite" style="display:none;margin:14px 0;padding:16px;"><h2>🤝 Dons et solidarité</h2><p class="notice">Proposez un don ou demandez de l’aide. Chaque publication est vérifiée par l’administration. Vos coordonnées restent privées et ne sont jamais affichées publiquement.</p><div class="modes"><button type="button" onclick="afficherFormulaireSolidarite('don')">🎁 Proposer un don</button><button type="button" onclick="afficherFormulaireSolidarite('besoin')">🫶 Demander de l’aide</button></div><div id="formulaireSolidarite" style="display:none;margin:12px 0;"></div><h3>Publications validées</h3><div id="listeSolidaritePublique"><p class="notice">Chargement...</p></div></section>
@@ -4861,31 +4858,6 @@ function retourChoixPartenaire(){
   if(zone)zone.replaceChildren();
   document.getElementById("devenirPartenaire")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
-async function envoyerInscriptionRepos(){
- const v=id=>document.getElementById(id)?.value.trim()||"";
- const statut=document.getElementById("reposStatutInscription");
- const categorie=v("reposCategorie"),nomEtablissement=v("reposNomEtablissement"),nom=v("reposNomGerant"),telephone=v("reposTelephone"),email=v("reposEmail"),password=document.getElementById("reposPassword")?.value||"",commune=v("reposCommune"),quartier=v("reposQuartier"),tarifNuit=Number(v("reposTarif")),description=v("reposDescription"),dateNaissance=v("reposDateNaissance"),lieuNaissance=v("reposLieuNaissance"),numeroIdentite=v("reposIdentite");
- if(!nomEtablissement||!nom||!telephone||!email||password.length<6||!commune||!quartier||!Number.isInteger(tarifNuit)||tarifNuit<=0||!description||!dateNaissance||!lieuNaissance||!numeroIdentite){statut.textContent="Complétez tous les champs. Le mot de passe doit avoir 6 caractères minimum et le tarif doit être positif.";return;}
- statut.textContent="Création du compte et envoi du dossier...";
- try{
-  let credential;
-  try{credential=await auth.createUserWithEmailAndPassword(email,password);}catch(e){if(e.code!=="auth/email-already-in-use")throw e;credential=await auth.signInWithEmailAndPassword(email,password);}
-  const uid=credential.user.uid;
-  await db.collection("partenaires").doc(uid).set({uid,type:"hotel_residence",nom,nomGerant:nom,telephone,commune,email,dateNaissance,lieuNaissance,numeroIdentite,categorieEtablissement:categorie,nomEtablissement,quartier,tarifNuit,description,disponibilite:categorie==="residence"?"Libre":null,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-  await auth.signOut();statut.textContent="Dossier envoyé. Votre établissement sera visible après validation par l’administration.";
- }catch(e){if(auth.currentUser)await auth.signOut();statut.textContent="Envoi impossible : "+e.message;}
-}
-async function chargerEtablissementsRepos(categorie){
- const zone=document.getElementById("resultatsLeRepos");zone.innerHTML="<p>Chargement...</p>";
- try{const snap=await db.collection("etablissements_repos").where("statut","==","publie").get();const items=snap.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.categorie===categorie);zone.innerHTML="";
-  if(!items.length){zone.textContent="Aucun établissement partenaire validé dans cette catégorie pour le moment.";return;}
-  items.forEach(e=>{const c=document.createElement("article");c.className="stop";const titre=document.createElement("h3");titre.textContent=e.nomEtablissement||"Établissement";const lieu=document.createElement("p");lieu.textContent=(e.quartier||"")+", "+(e.commune||"");const prix=document.createElement("p");prix.textContent="Tarif par nuit : "+Number(e.tarifNuit||0).toLocaleString("fr-FR")+" FCFA";const desc=document.createElement("p");desc.textContent=e.description||"";c.append(titre,lieu,prix,desc);const gerant=document.createElement("p");gerant.textContent="👤 Gérant : "+(e.nomGerant||"Non renseigné");c.appendChild(gerant);if(categorie==="residence"){const d=document.createElement("p");d.textContent=e.disponibilite==="Occupée"?"🔴 Occupée":"🟢 Libre";c.appendChild(d);}const tel=document.createElement("p");tel.textContent="📞 Téléphone du gérant : "+(e.telephone||"Non renseigné");c.appendChild(tel);const numeroTel=String(e.telephone||"").replace(/[^+0-9]/g,"");if(numeroTel){const a=document.createElement("a");a.href="tel:"+numeroTel;a.textContent="📞 Appeler le gérant";a.className="primary";a.style.cssText="display:inline-block;padding:10px;text-decoration:none;";c.appendChild(a);}zone.appendChild(c);});
- }catch(e){zone.textContent="Impossible de charger les établissements : "+e.message;}
-}
-async function modifierDisponibiliteResidence(valeur){
- if(!auth.currentUser||!["Libre","Occupée"].includes(valeur))return;
- try{await db.collection("etablissements_repos").doc(auth.currentUser.uid).update({disponibilite:valeur,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});const z=document.getElementById("statutDisponibiliteResidence");if(z)z.textContent=valeur==="Libre"?"🟢 Libre":"🔴 Occupée";}catch(e){alert("Mise à jour impossible : "+e.message);}
-}
 function afficherFormulairePartenaire(type){
   const zone=document.getElementById("partenaireFormulaireChoisi");
   if(!zone)return;
@@ -4921,26 +4893,7 @@ function afficherFormulairePartenaire(type){
   if(type==="compagnie"){
     afficherFormulaireInscriptionCompagnie(zone);
     return;
-  }
-  if(type==="hotel_residence"){
-    zone.innerHTML = `<div class="card" style="padding:14px;margin-top:12px;"><h3>🏨 Inscription – Hôtel / résidence</h3><p>Votre établissement sera publié après validation administrative. Une résidence correspond à une seule fiche globale, sans gestion de chambres individuelles.</p>
-<label>Type</label><select id="reposCategorie"><option value="hotel">Hôtel</option><option value="residence">Résidence</option></select>
-<label>Nom de l’établissement</label><input id="reposNomEtablissement" maxlength="100">
-<label>Nom et prénoms du gérant</label><input id="reposNomGerant">
-<label>Téléphone du gérant</label><input id="reposTelephone" type="tel">
-<label>E-mail</label><input id="reposEmail" type="email">
-<label>Mot de passe (6 caractères minimum)</label><input id="reposPassword" type="password">
-<label>Commune</label><input id="reposCommune">
-<label>Quartier</label><input id="reposQuartier">
-<label>Tarif par nuit (FCFA)</label><input id="reposTarif" type="number" min="1">
-<label>Courte description</label><textarea id="reposDescription" maxlength="500"></textarea>
-<label>Date de naissance du gérant</label><input id="reposDateNaissance" type="date">
-<label>Lieu de naissance</label><input id="reposLieuNaissance">
-<label>Numéro de carte d’identité / NNI</label><input id="reposIdentite">
-<p class="notice">Pour une résidence, le statut initial sera Libre. Le gérant pourra ensuite choisir Libre ou Occupée.</p><button class="primary" type="button" onclick="envoyerInscriptionRepos()">Envoyer mon dossier</button><p id="reposStatutInscription" class="notice"></p></div>`;
-    return;
-  }
-}
+  }}
 function afficherFormulaireInscriptionCompagnie(zone){
   zone.innerHTML=`
     <div class="card" style="padding:14px;margin-top:12px;">
@@ -5212,13 +5165,7 @@ async function connecterPartenaire(){
         : new Date(dossier.suspensionFin);
       statut.textContent = "Votre compte est temporairement suspendu jusqu'au " + fin.toLocaleString("fr-FR") + ". Motif : " + (dossier.motifModeration || "non précisé") + ".";
       return;
-    }
-
-    if(dossier.type==="hotel_residence"){
-      statut.textContent="Connexion réussie. Votre espace établissement est ouvert.";
-      const c=document.getElementById("champsConnexionPartenaire"),b=document.getElementById("boutonConnexionPartenaire");if(c)c.style.display="none";if(b){b.textContent="Me déconnecter";b.onclick=deconnecterPartenaire;}afficherEspacePartenaire(dossier,uid);return;
-    }
-    const maintenant = new Date();
+    }const maintenant = new Date();
     const dateFinEssai = dossier.dateFinEssai && dossier.dateFinEssai.toDate
       ? dossier.dateFinEssai.toDate()
       : (dossier.dateFinEssai ? new Date(dossier.dateFinEssai) : null);
@@ -5700,7 +5647,7 @@ async function chargerPartenairesAdmin() {
     snapshot.forEach(doc => {
       const partenaire = doc.data();
       
-      const type = partenaire.type === "livreur_independant" ? "Livreur indépendant" : partenaire.type === "representant_gare" ? "Représentant de gare" : partenaire.type === "hotel_residence" ? "Hôtel / résidence — " + (partenaire.categorieEtablissement==="residence"?"Résidence":"Hôtel") : partenaire.type;
+      
 
       html += `
         <div class="stop">
@@ -5713,7 +5660,6 @@ async function chargerPartenairesAdmin() {
             : "<p><em>Aucune photo de profil enregistrée.</em></p>"}
           <h3>${echapperTexteCompagnie(partenaire.nom)}</h3>
           <p><strong>Profil :</strong> ${type}</p>
-          ${partenaire.type === "hotel_residence" ? `<p><strong>Établissement :</strong> ${echapperTexteCompagnie(partenaire.nomEtablissement || "")}</p><p><strong>Quartier :</strong> ${echapperTexteCompagnie(partenaire.quartier || "")}</p><p><strong>Tarif par nuit :</strong> ${Number(partenaire.tarifNuit || 0).toLocaleString("fr-FR")} FCFA</p><p><strong>Description :</strong> ${echapperTexteCompagnie(partenaire.description || "")}</p>` : ""}
           <p><strong>Téléphone :</strong> ${echapperTexteCompagnie(partenaire.telephone)}</p>
           <p><strong>E-mail :</strong> ${echapperTexteCompagnie(partenaire.email)}</p>
           <p><strong>Commune :</strong> ${echapperTexteCompagnie(partenaire.commune)}</p>
@@ -5796,8 +5742,6 @@ async function validerPartenaire(id) {
       dateDebutEssai: firebase.firestore.Timestamp.fromDate(debutEssai),
       dateFinEssai: firebase.firestore.Timestamp.fromDate(finEssai)
     });
-    if(p.type==="hotel_residence")await db.collection("etablissements_repos").doc(id).set({ownerId:id,categorie:p.categorieEtablissement,nomEtablissement:p.nomEtablissement,nomGerant:p.nomGerant||p.nom,telephone:p.telephone,tarifNuit:p.tarifNuit,description:p.description,commune:p.commune,quartier:p.quartier,disponibilite:p.categorieEtablissement==="residence"?(p.disponibilite||"Libre"):null,statut:"publie",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-
     alert("Partenaire approuvé. Son essai gratuit de 21 jours commence maintenant et se termine le " + finEssai.toLocaleDateString("fr-FR") + ".");
     chargerPartenairesAdmin();
 
@@ -9217,10 +9161,6 @@ function afficherEspacePartenaire(dossier, uid) {
     const connexion = document.getElementById("connexionPartenaire");
     if (connexion) connexion.appendChild(zone); else document.body.appendChild(zone);
   }
-  if(dossier.type==="hotel_residence"){
-    const res=dossier.categorieEtablissement==="residence";
-    zone.innerHTML="<hr><h3>🏨 Gestion de mon établissement</h3><p><strong>Nom :</strong> "+echapperTexteCompagnie(dossier.nomEtablissement||"")+"</p><p><strong>Localisation :</strong> "+echapperTexteCompagnie(dossier.quartier||"")+", "+echapperTexteCompagnie(dossier.commune||"")+"</p><p><strong>Tarif par nuit :</strong> "+Number(dossier.tarifNuit||0).toLocaleString("fr-FR")+" FCFA</p>"+(res?"<div class=\"stop\"><strong>Disponibilité de toute la résidence</strong><p id=\"statutDisponibiliteResidence\">"+(dossier.disponibilite==="Occupée"?"🔴 Occupée":"🟢 Libre")+"</p><button class=\"primary\" onclick=\"modifierDisponibiliteResidence(\'Libre\')\">🟢 Marquer Libre</button> <button onclick=\"modifierDisponibiliteResidence(\'Occupée\')\">🔴 Marquer Occupée</button></div>":"")+"<p class=\"notice\">La fiche publique est visible après validation administrative.</p>";return;
-  }
   const dateFin = dossier.statutAbonnementPartenaire === "Actif" ? dossier.dateExpirationAbonnement : dossier.dateFinEssai;
   const dateAffichee = dateFin && dateFin.toDate ? dateFin.toDate().toLocaleDateString("fr-FR") : (dateFin ? new Date(dateFin).toLocaleDateString("fr-FR") : "");
   const eligible = partenaireAbonnementValide(dossier);
@@ -10113,7 +10053,6 @@ function enregistrerExpirationAuto(){const x={type:document.getElementById('expi
 function enregistrerRappelPaiement(){const x={motif:document.getElementById('paiementMotif').value.trim(),montant:document.getElementById('paiementMontant').value,date:document.getElementById('paiementDate').value};if(!x.motif||!x.date){document.getElementById('statutRappelPaiement').textContent='Indique le motif et la date d’échéance.';return}const a=lireListeLocale('mtci_paiements');a.push(x);a.sort((u,v)=>u.date.localeCompare(v.date));sauverListeLocale('mtci_paiements',a);document.getElementById('statutRappelPaiement').textContent='Rappel enregistré sur cet appareil. Aucune notification automatique n’est encore envoyée.';afficherListeLocale('mtci_paiements','listeRappelsPaiement',v=>'<strong>'+echapperTextePublicite(v.motif)+'</strong><br>'+echapperTextePublicite(v.date)+' · '+echapperTextePublicite(v.montant||'Montant non précisé')+' FCFA')}
 function calculerCoutTrajetAuto(){const d=Number(document.getElementById('coutDistance').value),c=Number(document.getElementById('coutConsommation').value),p=Number(document.getElementById('coutCarburant').value),t=Number(document.getElementById('coutPeages').value||0),z=document.getElementById('resultatCoutTrajet');if(!(d>0&&c>0&&p>0&&t>=0)){z.style.display='block';z.textContent='Renseigne une distance, une consommation et un prix du carburant valides.';return}const litres=(d*2*c)/100,carburant=litres*p,total=carburant+t;z.style.display='block';z.innerHTML='<strong>Estimation aller-retour</strong><br>Carburant : '+Math.round(carburant).toLocaleString('fr-FR')+' FCFA ('+litres.toFixed(1)+' L)<br>Péages saisis : '+t.toLocaleString('fr-FR')+' FCFA<br><strong>Total estimé : '+Math.round(total).toLocaleString('fr-FR')+' FCFA</strong><br><small>Hors stationnement, embouteillages et autres frais.</small>'}
 function rechercherPiecesAuto(){const q=document.getElementById('pieceRecherchee').value.trim(),v=document.getElementById('pieceCommune').value.trim();if(!q){alert('Indique la pièce recherchée.');return}const url='https://www.google.com/maps/search/'+encodeURIComponent(q+' vendeur pièces automobiles '+(v||'près de moi'));window.open(url,'_blank','noopener')}
-async function chargerMeteoLocale(){const z=document.getElementById('resultatMeteoLocale');z.style.display='block';z.textContent='Recherche de votre position…';if(!navigator.geolocation){z.textContent='La géolocalisation n’est pas disponible sur cet appareil.';return}navigator.geolocation.getCurrentPosition(async pos=>{try{const u='https://api.open-meteo.com/v1/forecast?latitude='+pos.coords.latitude+'&longitude='+pos.coords.longitude+'&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=3';const r=await fetch(u);if(!r.ok)throw new Error('Service météo indisponible');const d=await r.json();const c=d.current,jours=d.daily;z.innerHTML='<strong>Maintenant : '+Math.round(c.temperature_2m)+' °C</strong><br>Ressenti : '+Math.round(c.apparent_temperature)+' °C · Humidité : '+c.relative_humidity_2m+' %<br>Vent : '+Math.round(c.wind_speed_10m)+' km/h · Précipitations : '+c.precipitation+' mm<hr>'+jours.time.map((j,i)=>'<p><strong>'+new Date(j+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})+'</strong> : '+Math.round(jours.temperature_2m_min[i])+'–'+Math.round(jours.temperature_2m_max[i])+' °C · pluie '+jours.precipitation_probability_max[i]+' %</p>').join('')}catch(e){z.textContent='Impossible de charger la météo : '+e.message}},()=>{z.textContent='Autorise la localisation dans les réglages de ton navigateur puis réessaie.'},{enableHighAccuracy:false,timeout:12000,maximumAge:300000})}
 async function enregistrerDeclarationAccident(){const f=document.getElementById('accidentPhotos').files; if(f.length>2||Array.from(f).some(x=>x.size>1.5*1024*1024)){document.getElementById('statutDeclarationAccident').textContent='Choisis au maximum deux photos de 1,5 Mo chacune.';return}const photos=await Promise.all(Array.from(f).map(file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})));const x={date:document.getElementById('accidentDate').value,lieu:document.getElementById('accidentLieu').value.trim(),details:document.getElementById('accidentDetails').value.trim(),photos,createdAt:new Date().toISOString()};if(!x.lieu||!x.details){document.getElementById('statutDeclarationAccident').textContent='Indique le lieu et les circonstances.';return}try{const a=lireListeLocale('mtci_accidents');a.unshift(x);sauverListeLocale('mtci_accidents',a);document.getElementById('statutDeclarationAccident').textContent='Brouillon enregistré sur cet appareil. Il n’a pas été transmis.'}catch(e){document.getElementById('statutDeclarationAccident').textContent='Enregistrement impossible. Les photos sont peut-être trop volumineuses.'}}
 document.addEventListener('DOMContentLoaded',()=>{afficherListeLocale('mtci_entretien','listeEntretienAuto',v=>'<strong>'+echapperTextePublicite(v.type)+'</strong><br>'+echapperTextePublicite(v.date)+' · '+echapperTextePublicite(v.vehicule)+' · '+echapperTextePublicite(v.km||'Km non précisé')+' km<br>'+echapperTextePublicite(v.notes));afficherListeLocale('mtci_expirations','listeExpirationsAuto',v=>'<strong>'+echapperTextePublicite(v.type)+'</strong><br>Expire le '+echapperTextePublicite(v.date));afficherListeLocale('mtci_paiements','listeRappelsPaiement',v=>'<strong>'+echapperTextePublicite(v.motif)+'</strong><br>'+echapperTextePublicite(v.date)+' · '+echapperTextePublicite(v.montant||'Montant non précisé')+' FCFA')});
 </script>
