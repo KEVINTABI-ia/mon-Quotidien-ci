@@ -45,6 +45,24 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "demandes_nouveaux_services",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "statut",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "abonnementFin",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
