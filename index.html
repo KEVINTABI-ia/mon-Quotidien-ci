@@ -1686,7 +1686,6 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 <div class="menu-dropdown" id="menuDropdown">
   <button type="button" onclick="ouvrirEspaceSolidarite()">🤝 Dons et solidarité</button>
   <button type="button" data-ouvrir-section="devenirPartenaire" data-titre-section="Devenir partenaire">🤝 Devenir partenaire</button>
-  <button type="button" data-ouvrir-section="espaceAdmin" data-titre-section="Espace administrateur">🔐 Espace administrateur</button>
   <button type="button" onclick="signalerProblemeGeneral()">⚠️ Signaler un problème</button>
 </div>
 </div>
@@ -3110,6 +3109,23 @@ function chargerPublicitesAccueil() {
 <div id="emploisFormZone" style="display:none;"><label>Intitulé du poste / opportunité</label><input id="emploiTitre" maxlength="120" placeholder="Ex. Assistant comptable"><label>Entreprise / organisme</label><input id="emploiEntreprise" maxlength="120" placeholder="Nom de l'entreprise"><label>Type d’opportunité</label><select id="emploiCategorie"><option>Emploi</option><option>Stage</option><option>Formation</option><option>Appel à candidatures</option><option>Autre opportunité</option></select><label>Commune / localité</label><input id="emploiCommune" maxlength="80" placeholder="Ex. Cocody, Abidjan"><label>Contact de candidature</label><input id="emploiTelephone" type="tel" maxlength="25" placeholder="Téléphone ou WhatsApp"><label>Description et conditions</label><textarea id="emploiDescription" rows="5" maxlength="1800" placeholder="Décrivez le poste, les compétences demandées et les modalités de candidature"></textarea><button class="primary" type="button" onclick="soumettreOffreEmploi()">Envoyer pour validation</button><p id="emploiStatutEnvoi" class="notice" aria-live="polite"></p></div>
 <div id="emploisZoneAdmin" style="display:none;margin-top:18px;border-top:2px solid #D5A84B;padding-top:14px;"><h3>🔐 Administration des offres d’emploi</h3><p>Les offres proposées par les utilisateurs apparaissent ici en attente. Leur publication nécessite une validation.</p><button type="button" class="primary" onclick="chargerOffresEmploiAdmin()">Actualiser les demandes</button><div id="emploisListeAdmin"></div><h4>Publication directe par l’administrateur</h4><p class="notice">L’administrateur peut publier directement une offre en remplissant le formulaire ci-dessus.</p><button type="button" onclick="publierOffreEmploiAdmin()">Publier directement</button></div>
 </section>
+<section class="card" id="parametresApplication" style="display:none;">
+<h2>⚙️ Paramètres de l’application</h2>
+<p class="notice">Personnalisez l’affichage et gérez les autorisations de Mon Quotidien CI sur cet appareil.</p>
+<div class="setting-row"><h3>🔠 Taille du texte</h3><p>Adaptez la lecture à votre confort.</p><button type="button" onclick="changerTailleTexteApplication('normal')">Standard</button><button type="button" onclick="changerTailleTexteApplication('grand')">Grand</button><button type="button" onclick="changerTailleTexteApplication('tres-grand')">Très grand</button></div>
+<div class="setting-row"><h3>🔔 Notifications</h3><p id="etatNotificationsApplication">Vérification de l’autorisation de notification…</p><button type="button" class="primary" onclick="activerNotificationsApplication()">Activer les notifications</button></div>
+<div class="setting-row"><h3>🔒 Confidentialité</h3><p>Les informations personnelles transmises dans les formulaires sont utilisées pour traiter les demandes correspondantes. Les espaces privés restent soumis à leurs contrôles d’accès.</p></div>
+<div class="setting-row"><h3>ℹ️ À propos</h3><p><strong>Mon Quotidien CI</strong><br>Tous les services utiles, au même endroit.<br>Version de l’application : 1.0</p></div>
+<div class="setting-row"><button type="button" onclick="signalerProblemeGeneral()">⚠️ Signaler un problème</button></div>
+</section>
+<script id="fonctions-parametres-application">
+function basculerMenuBasDroite(){const m=document.getElementById('menuBasDroite'),b=document.querySelector('#accueilBottomNav [data-nav="menu"]');if(!m)return;const ouvert=!m.hidden;m.hidden=ouvert;if(b)b.setAttribute('aria-expanded',String(!ouvert));}
+function fermerMenuBasDroite(){const m=document.getElementById('menuBasDroite');if(m)m.hidden=true;const b=document.querySelector('#accueilBottomNav [data-nav="menu"]');if(b)b.setAttribute('aria-expanded','false');}
+function changerTailleTexteApplication(taille){const valeurs={'normal':'16px','grand':'18px','tres-grand':'20px'};if(!valeurs[taille])return;document.documentElement.style.setProperty('--taille-texte-app',valeurs[taille]);document.body.style.fontSize=valeurs[taille];try{localStorage.setItem('mqci_taille_texte',taille);}catch(e){}}
+function actualiserEtatNotificationsApplication(){const z=document.getElementById('etatNotificationsApplication');if(!z)return;if(!('Notification'in window)){z.textContent='Les notifications ne sont pas prises en charge par ce navigateur.';return;}z.textContent=Notification.permission==='granted'?'Les notifications sont autorisées sur cet appareil.':Notification.permission==='denied'?'Les notifications sont bloquées dans les réglages du navigateur.':'Les notifications ne sont pas encore autorisées.';}
+async function activerNotificationsApplication(){if(!('Notification'in window)){alert('Ce navigateur ne prend pas en charge les notifications.');return;}try{const p=await Notification.requestPermission();actualiserEtatNotificationsApplication();if(p==='granted')alert('Autorisation accordée. Les notifications pourront être utilisées par les services compatibles.');}catch(e){alert('Impossible de demander l’autorisation : '+e.message);}}
+document.addEventListener('DOMContentLoaded',function(){try{const t=localStorage.getItem('mqci_taille_texte');if(t)changerTailleTexteApplication(t);}catch(e){}actualiserEtatNotificationsApplication();});
+</script>
 </main>
 
 <footer>Mon Quotidien CI · Tous les services utiles en Côte d’Ivoire</footer>
@@ -10649,8 +10665,18 @@ window.mtcAfficherActeJudiciaire = function(type){
       <button type="button" data-nav="transport"><span>🚍</span>Transport</button>
       <button type="button" data-nav="services"><span>▦</span>Explorer</button>
       <button type="button" data-nav="communaute"><span>🗞️</span>Communauté</button>
-      <button type="button" data-nav="menu"><span>☰</span>Menu</button>`;
+      <button type="button" data-nav="menu" aria-expanded="false" aria-controls="menuBasDroite"><span>☰</span>Menu</button>`;
     document.body.appendChild(nav);
+    const menuBas=document.createElement('div');
+    menuBas.id='menuBasDroite';
+    menuBas.hidden=true;
+    menuBas.innerHTML=`
+      <button type="button" onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur'); fermerMenuBasDroite()">🔐 Espace administrateur</button>
+      <button type="button" onclick="ouvrirSectionPleinEcran('parametresApplication','Paramètres de l’application'); fermerMenuBasDroite()">⚙️ Paramètres</button>
+      <button type="button" onclick="ouvrirEspaceSolidarite(); fermerMenuBasDroite()">🤝 Dons et solidarité</button>
+      <button type="button" onclick="ouvrirSectionPleinEcran('devenirPartenaire','Devenir partenaire'); fermerMenuBasDroite()">🤝 Devenir partenaire</button>
+      <button type="button" onclick="signalerProblemeGeneral(); fermerMenuBasDroite()">⚠️ Signaler un problème</button>`;
+    document.body.appendChild(menuBas);
 
     function aller(id){
       const cible=document.getElementById(id);
@@ -10664,7 +10690,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       else if(action==='transport') {aller('homeMobilite');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
       else if(action==='services') {aller('homeQuotidien');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
       else if(action==='communaute') {if(typeof ouvrirEspaceCommunautaire==='function')ouvrirEspaceCommunautaire();}
-      else if(action==='menu'){const m=document.getElementById('menuDropdown');if(m)m.style.display=m.style.display==='block'?'none':'block';}
+      else if(action==='menu'){basculerMenuBasDroite();}
     });
     shell.querySelectorAll('[data-home-action]').forEach(b=>b.addEventListener('click',function(){
       const a=b.dataset.homeAction;
@@ -10756,5 +10782,14 @@ auth.onAuthStateChanged(function(){actualiserEspaceEmplois();});
 function basculerServicesQuotidiens(){const b=document.querySelector('#menuQuotidien .daily-toggle'),p=document.getElementById('dailyServicesPanel');if(!b||!p)return;const ouvert=b.getAttribute('aria-expanded')==='true';b.setAttribute('aria-expanded',String(!ouvert));p.hidden=ouvert;}
 </script>
 
+<style id="menu-bas-droite-parametres">
+#menuBasDroite{position:fixed;z-index:5600;right:10px;bottom:calc(72px + env(safe-area-inset-bottom));width:min(290px,calc(100vw - 20px));padding:9px;background:#fff;border:1px solid #dce8df;border-radius:16px;box-shadow:0 12px 34px rgba(20,55,32,.22)}
+#menuBasDroite[hidden]{display:none!important}
+#menuBasDroite button{display:block;width:100%;padding:13px 12px;margin:2px 0;text-align:left;border:0;border-radius:10px;background:#fff;color:#174b35;font-size:14px;font-weight:700}
+#menuBasDroite button:active{background:#edf6ef}
+#parametresApplication .setting-row{padding:13px 0;border-bottom:1px solid #e4ece6}
+#parametresApplication .setting-row:last-child{border-bottom:0}
+#parametresApplication button{margin:5px 5px 5px 0}
+</style>
 </body>
 </html>
