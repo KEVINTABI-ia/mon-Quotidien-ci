@@ -723,7 +723,8 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
     it("réserve l'approbation à l'administrateur et limite la lecture publique aux fiches approuvées", async () => {
       await testEnv.withSecurityRulesDisabled(async context=>{
-        await context.firestore().doc("demandes_nouveaux_services/annuaire-approved").set({...fiche(),statut:"approuve"});
+        await context.firestore().doc("demandes_nouveaux_services/annuaire-approved").set({...fiche(),statut:"approuve",abonnementFin:require("firebase/firestore").Timestamp.fromDate(new Date(Date.now()+30*24*60*60*1000))});
+        await context.firestore().doc("demandes_nouveaux_services/annuaire-expired").set({...fiche(),statut:"approuve",abonnementFin:require("firebase/firestore").Timestamp.fromDate(new Date(Date.now()-1000))});
         await context.firestore().doc("demandes_nouveaux_services/annuaire-pending").set(fiche());
       });
       const publicDb=testEnv.unauthenticatedContext().firestore();
@@ -731,6 +732,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
       const {doc,getDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
       await assertSucceeds(getDoc(doc(publicDb,"demandes_nouveaux_services","annuaire-approved")));
+      await assertFails(getDoc(doc(publicDb,"demandes_nouveaux_services","annuaire-expired")));
       await assertFails(getDoc(doc(publicDb,"demandes_nouveaux_services","annuaire-pending")));
       await assertFails(updateDoc(doc(clientDb,"demandes_nouveaux_services","annuaire-pending"),{statut:"approuve"}));
       await assertSucceeds(updateDoc(doc(adminDb,"demandes_nouveaux_services","annuaire-pending"),{statut:"approuve",traiteLe:serverTimestamp()}));

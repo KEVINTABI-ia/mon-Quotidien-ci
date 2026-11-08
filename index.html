@@ -3160,7 +3160,7 @@ function ouvrirAnnuaireInterne(rubrique,categorie){
 }
 function afficherInscriptionAnnuaire(){
  const z=document.getElementById("annuaireInscriptionZone");z.style.display="block";
- z.innerHTML='<div class="card" style="padding:14px"><h3>Inscrire gratuitement mon activité</h3><p class="notice">Inscription gratuite. Publication après validation administrative.</p><label>Nom de l’établissement / professionnel</label><input id="annTitre" maxlength="100"><label>Catégorie</label><select id="annCategorie">'+CATEGORIES_ANNUAIRE[annuaireRubriqueActive].map(c=>'<option>'+c+'</option>').join("")+'</select><label>Commune</label><input id="annCommune" maxlength="60"><label>Quartier / adresse</label><input id="annQuartier" maxlength="120"><label>Téléphone / WhatsApp</label><input id="annTelephone" type="tel" maxlength="20"><label>Description</label><textarea id="annDescription" rows="4" maxlength="1000"></textarea><label>E-mail</label><input id="annEmail" type="email" maxlength="120"><label>Mot de passe (6 caractères minimum)</label><input id="annPassword" type="password" minlength="6"><button type="button" class="primary" onclick="envoyerInscriptionAnnuaire()">Envoyer mon inscription gratuite</button><p id="annStatut" class="notice"></p></div>';
+ z.innerHTML='<div class="card" style="padding:14px"><h3>Inscrire gratuitement mon activité</h3><p class="notice">Premier mois gratuit à compter de l’approbation administrative. Ensuite, abonnement obligatoire de 1 000 FCFA par mois pour rester visible dans l’annuaire.</p><label>Nom de l’établissement / professionnel</label><input id="annTitre" maxlength="100"><label>Catégorie</label><select id="annCategorie">'+CATEGORIES_ANNUAIRE[annuaireRubriqueActive].map(c=>'<option>'+c+'</option>').join("")+'</select><label>Commune</label><input id="annCommune" maxlength="60"><label>Quartier / adresse</label><input id="annQuartier" maxlength="120"><label>Téléphone / WhatsApp</label><input id="annTelephone" type="tel" maxlength="20"><label>Description</label><textarea id="annDescription" rows="4" maxlength="1000"></textarea><label>E-mail</label><input id="annEmail" type="email" maxlength="120"><label>Mot de passe (6 caractères minimum)</label><input id="annPassword" type="password" minlength="6"><button type="button" class="primary" onclick="envoyerInscriptionAnnuaire()">Envoyer mon inscription gratuite</button><p id="annStatut" class="notice"></p></div>';
 }
 async function envoyerInscriptionAnnuaire(){
  const v=id=>document.getElementById(id)?.value.trim()||"",titre=v("annTitre"),categorie=v("annCategorie"),commune=v("annCommune"),quartier=v("annQuartier"),telephone=v("annTelephone"),description=v("annDescription"),email=v("annEmail"),password=document.getElementById("annPassword")?.value||"",statut=document.getElementById("annStatut");
@@ -3176,7 +3176,7 @@ async function envoyerInscriptionAnnuaire(){
 async function chargerAnnuaireInterne(){
  const z=document.getElementById("annuaireResultats");if(!z)return;z.innerHTML='<p class="notice">Chargement...</p>';
  try{
-  const snap=await db.collection("demandes_nouveaux_services").where("type","==","annuaire").where("statut","==","approuve").limit(250).get();
+  const snap=await db.collection("demandes_nouveaux_services").where("type","==","annuaire").where("statut","==","approuve").where("abonnementFin",">",firebase.firestore.Timestamp.now()).limit(250).get();
   const q=(document.getElementById("annuaireRecherche")?.value||"").toLocaleLowerCase("fr"),c=(document.getElementById("annuaireFiltreCommune")?.value||"").toLocaleLowerCase("fr"),cat=document.getElementById("annuaireFiltreCategorie")?.value||"";
   const docs=snap.docs.filter(doc=>{const d=doc.data();return d.rubrique===annuaireRubriqueActive&&(!cat||d.categorie===cat)&&(!c||String(d.commune||"").toLocaleLowerCase("fr").includes(c))&&(!q||[d.titre,d.description,d.categorie,d.commune,d.quartier].join(" ").toLocaleLowerCase("fr").includes(q));});
   if(!docs.length){z.innerHTML='<p class="notice">Aucun professionnel validé pour le moment. Vous pouvez proposer une inscription gratuite.</p>';return;}
@@ -3187,16 +3187,43 @@ async function chargerAnnuairesAdmin(){
  const z=document.getElementById("listeValidationAnnuairesAdmin");if(!z)return;
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){z.textContent="Accès administrateur requis.";return;}
  z.innerHTML='<p class="notice">Chargement des inscriptions...</p>';
- try{const snap=await db.collection("demandes_nouveaux_services").where("type","==","annuaire").orderBy("createdAt","desc").limit(200).get();
- if(snap.empty){z.innerHTML='<p class="notice">Aucune inscription.</p>';return;}
- z.innerHTML=snap.docs.map(doc=>{const d=doc.data(),actions=d.statut==="en_attente"?'<button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'approuve\')">Approuver et publier</button><button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'refuse\')">Refuser</button>':'<span class="notice">Statut : '+echapperTextePublicite(d.statut)+'</span>';return '<article class="card" style="padding:12px;margin:10px 0"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.rubrique)+' · '+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.quartier||"")+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+'</p>'+actions+'</article>';}).join("");
+ try{
+  const snap=await db.collection("demandes_nouveaux_services").where("type","==","annuaire").orderBy("createdAt","desc").limit(200).get();
+  if(snap.empty){z.innerHTML='<p class="notice">Aucune inscription.</p>';return;}
+  z.innerHTML=snap.docs.map(doc=>{
+   const d=doc.data(),fin=d.abonnementFin&&d.abonnementFin.toDate?d.abonnementFin.toDate():null,expire=!fin||fin.getTime()<=Date.now();
+   const infos=d.statut==="approuve"?'<p><strong>Abonnement :</strong> '+(d.abonnementStatut==="essai_gratuit"?"Premier mois gratuit":d.abonnementStatut==="actif"?"Payé":"À activer")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée — période expirée":"Visible jusqu’au "+fin.toLocaleDateString("fr-FR"))+'</p><p>Après l’essai : 1 000 FCFA / mois.</p><button type="button" onclick="renouvelerAbonnementAnnuaire(\''+doc.id+'\')">Confirmer paiement et activer 30 jours (1 000 FCFA)</button>':"";
+   const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'approuve\')">Approuver et démarrer 30 jours gratuits</button><button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'refuse\')">Refuser</button>':'<span class="notice">Statut : '+echapperTextePublicite(d.statut)+'</span>';
+   return '<article class="card" style="padding:12px;margin:10px 0"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.rubrique)+' · '+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.quartier||"")+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+'</p>'+infos+actions+'</article>';
+  }).join("");
  }catch(e){console.error(e);z.textContent="Erreur de chargement : "+e.message;}
 }
 async function traiterInscriptionAnnuaire(id,statut){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
  if(!["approuve","refuse"].includes(statut))return;
- try{await db.collection("demandes_nouveaux_services").doc(id).update({statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()});await chargerAnnuairesAdmin();}
- catch(e){console.error(e);alert("Modification impossible : "+e.message);}
+ try{
+  const maj={statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()};
+  if(statut==="approuve"){
+   const debut=new Date(),fin=new Date(debut.getTime()+30*24*60*60*1000);
+   maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);
+   maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);
+   maj.abonnementStatut="essai_gratuit";
+  }
+  await db.collection("demandes_nouveaux_services").doc(id).update(maj);
+  await chargerAnnuairesAdmin();
+ }catch(e){console.error(e);alert("Modification impossible : "+e.message);}
+}
+async function renouvelerAbonnementAnnuaire(id){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ if(!confirm("Confirmer que le paiement de 1 000 FCFA a été reçu et activer 30 jours supplémentaires ?"))return;
+ try{
+  const ref=db.collection("demandes_nouveaux_services").doc(id),snap=await ref.get();
+  if(!snap.exists||snap.data().type!=="annuaire"||snap.data().statut!=="approuve")return alert("Inscription introuvable ou non approuvée.");
+  const d=snap.data(),maintenant=new Date(),ancienneFin=d.abonnementFin?.toDate?d.abonnementFin.toDate():maintenant;
+  const debut=ancienneFin>maintenant?ancienneFin:maintenant,fin=new Date(debut.getTime()+30*24*60*60*1000);
+  await ref.update({abonnementDebut:firebase.firestore.Timestamp.fromDate(debut),abonnementFin:firebase.firestore.Timestamp.fromDate(fin),abonnementStatut:"actif",dernierPaiementFCFA:1000,dernierPaiementConfirmeLe:firebase.firestore.FieldValue.serverTimestamp()});
+  await chargerAnnuairesAdmin();
+ }catch(e){console.error(e);alert("Renouvellement impossible : "+e.message);}
 }
 
 function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId){
