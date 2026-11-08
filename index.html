@@ -10625,7 +10625,6 @@ window.mtcAfficherActeJudiciaire = function(type){
         <div class="home-section-heading"><div><h2>Démarches et services officiels</h2><p>Accédez directement aux portails et parcours utiles</p></div></div>
       </section>
       <section class="home-panel" id="homeQuotidien">
-        <div class="home-section-heading"><div><h2>Explorer les services</h2><p>Découvrez les professionnels et les services de la vie quotidienne</p></div></div>
       </section>
       <section class="home-panel" id="homeActualites">
         <div class="home-section-heading"><div><h2>La vie de votre communauté</h2><p>Informations, emplois et opportunités</p></div></div>
@@ -10760,6 +10759,20 @@ auth.onAuthStateChanged(function(){actualiserEspaceEmplois();});
 @media(max-width:480px){
   #menuQuotidien .grille-services-quotidiens{max-height:52vh}
 }
+</style>
+
+
+<style id="accueil-ajustements-compacts">
+/* Accueil plus compact : conserver le contenu et la recherche */
+.home-welcome{padding:13px 15px 11px!important;margin-bottom:11px!important;border-radius:18px!important}
+.home-welcome-kicker{font-size:9px!important;letter-spacing:1.2px!important}
+.home-welcome h1{font-size:19px!important;line-height:1.15!important;margin:5px 0 4px!important}
+.home-welcome p{font-size:10.5px!important;line-height:1.35!important;max-width:310px!important}
+.home-search{margin-top:10px!important}
+.home-search input{min-height:42px!important;padding-top:10px!important;padding-bottom:10px!important}
+.home-search-icon{top:9px!important}
+.home-search-status{min-height:12px!important;margin-top:3px!important;font-size:9px!important}
+@media(max-width:370px){.home-welcome{padding:11px 12px 9px!important}.home-welcome h1{font-size:18px!important}}
 </style>
 
 </body>
