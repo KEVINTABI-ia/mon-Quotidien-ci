@@ -3353,7 +3353,9 @@ async function chargerNouveauxServicesPublics(type){
  }
  zone.innerHTML='<p class="notice">Chargement...</p>';
  try{
-  const snap=await db.collection("demandes_nouveaux_services").where("type","==",type).where("statut","==","approuve").limit(100).get();
+  let requete=db.collection("demandes_nouveaux_services").where("type","==",type).where("statut","==","approuve");
+  if(type==="annuaire")requete=requete.where("abonnementFin",">",firebase.firestore.Timestamp.now());
+  const snap=await requete.limit(100).get();
   const maintenant=Date.now();
   const documents=snap.docs.filter(doc=>{const d=doc.data();if(type!=="commerce")return true;const estBoutique=String(d.categorie||"").toLowerCase()==="boutique"&&!d.modePartenaire;if(filtrePublicCommerce==="boutique"&&!estBoutique)return false;if(filtrePublicCommerce==="commerce"&&estBoutique)return false;if(d.modePartenaire===true)return d.visibleManuellement!==false;return d.visibleManuellement!==false&&d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;});
   if(!documents.length){zone.innerHTML='<p class="notice">'+(type==="commerce"?"Aucune boutique avec un abonnement actif pour le moment.":"Aucun résultat publié dans cette rubrique pour le moment.")+'</p>';return;}
