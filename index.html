@@ -2826,7 +2826,6 @@ function chargerPublicitesAccueil() {
   <div class="grille-services-quotidiens">
 <button type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacie et santé')" class="tuile-quotidien">💊 Pharmacie et santé<small>Pharmacies de garde, centres de santé, urgences et laboratoires</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('educationFormation','Éducation et formation')" class="tuile-quotidien">🎓 Éducation et formation<small>Écoles, universités et formations</small></button>
-    <button type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier')" class="tuile-quotidien">🏠 Logement et immobilier<small>Maisons, chambres et agences</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('depannageDomicile','Dépannage à domicile')" class="tuile-quotidien">🛠️ Dépannage à domicile<small>Plomberie, électricité et réparations</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('agricultureElevage','Agriculture et élevage')" class="tuile-quotidien">🌱 Agriculture et élevage<small>Producteurs, fournisseurs et matériel</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('facturesServicesPratiques','Factures et services pratiques')" class="tuile-quotidien">🧾 Factures et services pratiques<small>CIE, SODECI et rappels de paiement</small></button>
@@ -2834,7 +2833,6 @@ function chargerPublicitesAccueil() {
     <button type="button" onclick="ouvrirSectionPleinEcran('artisansProfessionnels','Artisans et professionnels')" class="tuile-quotidien">🔧 Artisans et professionnels<small>Artisans et prestataires près de vous</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('servicesPublicsDemarches','Services publics et démarches')" class="tuile-quotidien">🏛️ Services publics et démarches<small>Accès aux portails officiels</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('toilettesPubliques','Toilettes publiques')" class="tuile-quotidien">🚻 Toilettes publiques<small>Rechercher les toilettes autour de vous</small></button>
-    <button type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Signaler et retrouver un objet ou un document perdu')" class="tuile-quotidien">🔎 Objets et documents perdus</button>
   </div>
 </section>
 
@@ -10634,6 +10632,8 @@ window.mtcAfficherActeJudiciaire = function(type){
         <div class="home-discovery-grid">
           <button class="home-discovery-card" type="button" onclick="ouvrirEspaceCommunautaire()"><span>📰</span><strong>M'informer / Gbairai</strong><small>Actualités et échanges de la communauté</small></button>
           <button class="home-discovery-card" type="button" onclick="ouvrirEmploisOpportunites()"><span>💼</span><strong>Emplois et opportunités</strong><small>Offres d’emploi, stages et opportunités vérifiées</small></button>
+          <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier')"><span>🏠</span><strong>Logement et immobilier</strong><small>Maisons, chambres et agences dans votre commune</small></button>
+          <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Signaler et retrouver un objet ou un document perdu')"><span>🔎</span><strong>Objets et documents perdus</strong><small>Signalez un objet perdu ou consultez les biens retrouvés</small></button>
         </div>
       </section>`;
     main.insertBefore(shell,recherche);
