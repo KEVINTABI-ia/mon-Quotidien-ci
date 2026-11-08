@@ -10606,18 +10606,8 @@ window.mtcAfficherActeJudiciaire = function(type){
         <div class="home-welcome-kicker">Votre quotidien, simplifié</div>
         <h1>Tous vos services, au même endroit.</h1>
         <p>Déplacez-vous, trouvez un professionnel, effectuez vos démarches et découvrez les nouveautés près de vous.</p>
-        <div class="home-search">
-          <input id="rechercheUniverselleAccueil" type="search" autocomplete="off" placeholder="Que recherchez-vous aujourd'hui ?" aria-label="Rechercher un service">
-          <span class="home-search-icon" aria-hidden="true">⌕</span>
-          <div id="statutRechercheUniverselle" class="home-search-status" aria-live="polite">Recherchez un service ou une activité.</div>
-        </div>
       </section>
-      <div class="home-section-heading"><div><h2>Accès rapides</h2><p>Les services les plus utiles, à portée de main</p></div></div>
-      <section class="home-quick-grid" aria-label="Accès rapides">
-        <button class="home-quick" type="button" data-home-action="transport"><span class="home-quick-icon">🚍</span><strong>Me déplacer</strong></button>
-        <button class="home-quick" type="button" data-home-action="demarches"><span class="home-quick-icon">🏛️</span><strong>Mes démarches</strong></button>
-        <button class="home-quick" type="button" data-home-action="sante"><span class="home-quick-icon">💊</span><strong>Santé</strong></button>
-        <button class="home-quick" type="button" data-home-action="communaute"><span class="home-quick-icon">🗞️</span><strong>M'informer</strong></button>
+      <section class="home-panel" id="homeQuotidien">
       </section>
       <section class="home-panel" id="homeMobilite">
         <div class="home-section-heading"><div><h2>Transport et mobilité</h2><p>Gares, trajets, compagnies et livraison</p></div></div>
@@ -10625,8 +10615,6 @@ window.mtcAfficherActeJudiciaire = function(type){
       <section class="home-panel" id="homeDemarches">
         <button type="button" class="bouton-commerce-accueil" onclick="ouvrirResultatPleinEcran('Commerce et boutique'); afficherMarchesCommune()" aria-label="Ouvrir Commerce et boutique"><span style="display:flex;align-items:center;gap:12px;"><span style="font-size:29px;">🛍️</span><span><strong>Commerce et boutique</strong><small>Découvrez les commerces, boutiques et marchés par commune</small></span></span><span aria-hidden="true" style="font-size:24px;">›</span></button>
         <div class="home-section-heading"><div><h2>Démarches et services officiels</h2><p>Accédez directement aux portails et parcours utiles</p></div></div>
-      </section>
-      <section class="home-panel" id="homeQuotidien">
       </section>
       <section class="home-panel" id="homeActualites">
         <div class="home-section-heading"><div><h2>La vie de votre communauté</h2><p>Informations, emplois et opportunités</p></div></div>
@@ -10686,27 +10674,6 @@ window.mtcAfficherActeJudiciaire = function(type){
       if(a==='communaute') {if(typeof ouvrirEspaceCommunautaire==='function')ouvrirEspaceCommunautaire();}
     }));
 
-    const champ=document.getElementById('rechercheUniverselleAccueil');
-    const statut=document.getElementById('statutRechercheUniverselle');
-    const selecteurs='.accueil-service, #menuQuotidien .tuile-quotidien, .bouton-commerce-accueil, .acces-prioritaire';
-    function filtrer(){
-      const q=(champ.value||'').trim().toLocaleLowerCase('fr');
-      const items=Array.from(shell.querySelectorAll(selecteurs));
-      let n=0;
-      items.forEach(el=>{
-        const ok=!q||el.textContent.toLocaleLowerCase('fr').includes(q);
-        el.style.display=ok?'':'none';
-        if(ok)n++;
-      });
-      statut.textContent=q?(n+' service(s) correspondant(s). Effacez la recherche pour tout afficher.'):'Recherchez un service ou une activité.';
-      ['homeMobilite','homeDemarches','homeQuotidien'].forEach(id=>{
-        const panel=document.getElementById(id);
-        if(!panel)return;
-        const has=Array.from(panel.querySelectorAll(selecteurs)).some(el=>el.style.display!=='none');
-        panel.style.display=q&&!has?'none':'';
-      });
-    }
-    champ.addEventListener('input',filtrer);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initAccueilProfessionnel,{once:true});
   else initAccueilProfessionnel();
