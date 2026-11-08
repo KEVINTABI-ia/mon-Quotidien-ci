@@ -1573,6 +1573,7 @@ main{padding:14px 13px 24px!important}
   </button>
 
 <div class="menu-dropdown" id="menuDropdown">
+  <button type="button" onclick="ouvrirEspaceSolidarite()">🤝 Dons et solidarité</button>
   <button type="button" data-ouvrir-section="devenirPartenaire" data-titre-section="Devenir partenaire">🤝 Devenir partenaire</button>
   <button type="button" data-ouvrir-section="espaceAdmin" data-titre-section="Espace administrateur">🔐 Espace administrateur</button>
   <button type="button" onclick="signalerProblemeGeneral()">⚠️ Signaler un problème</button>
@@ -2663,8 +2664,6 @@ function chargerPublicitesAccueil() {
     <button type="button" onclick="ouvrirSectionPleinEcran('toilettesPubliques','Toilettes publiques')" class="tuile-quotidien">🚻 Toilettes publiques<small>Rechercher les toilettes autour de vous</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('rappelsPaiement','Rappels de paiement')" class="tuile-quotidien">🔔 Rappels de paiement<small>Enregistrer vos prochaines échéances</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Signaler et retrouver un objet ou un document perdu')" class="tuile-quotidien">🔎 Objets et documents perdus</button>
-    <button type="button" onclick="ouvrirEspaceSolidarite()" class="tuile-quotidien">🤝 Dons et solidarité</button>
-    <button type="button" onclick="ouvrirRepertoireServicesQuotidiens('banque','Banques')" class="tuile-quotidien">🏦 Banques</button>
   </div>
 </section>
 <section class="card" id="carnetEntretienAuto" style="display:none;"><h2>🧰 Carnet d’entretien numérique</h2><p class="notice">Ajoutez les opérations réalisées sur votre véhicule. Les entrées sont conservées sur cet appareil.</p><label>Véhicule / immatriculation</label><input id="entretienVehicule" placeholder="Ex. AB 1234 CI"><label>Opération</label><select id="entretienType"><option>Vidange</option><option>Pneus</option><option>Freins</option><option>Batterie</option><option>Réparation</option><option>Autre entretien</option></select><label>Date</label><input id="entretienDate" type="date"><label>Kilométrage (km)</label><input id="entretienKm" type="number" min="0" placeholder="Ex. 85000"><label>Notes / garage</label><textarea id="entretienNotes" rows="3" placeholder="Détails de l’intervention"></textarea><button class="primary" type="button" onclick="enregistrerEntretienAuto()">Enregistrer l’entretien</button><p id="statutEntretienAuto" class="notice" aria-live="polite"></p><h3>Historique des réparations et entretiens</h3><div id="listeEntretienAuto"></div></section>
