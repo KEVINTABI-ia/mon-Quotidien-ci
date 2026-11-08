@@ -4865,7 +4865,7 @@ function afficherFormulairePartenaire(type){
     return;
   }
   if(type==="hotel_residence"){
-    zone.innerHTML = '<div class="card" style="padding:14px;margin-top:12px;"><h3>🏨 Inscription – Hôtel / résidence</h3><p>Votre établissement sera publié après validation administrative. Une résidence correspond à une seule fiche globale, sans gestion de chambres individuelles.</p>
+    zone.innerHTML = `<div class="card" style="padding:14px;margin-top:12px;"><h3>🏨 Inscription – Hôtel / résidence</h3><p>Votre établissement sera publié après validation administrative. Une résidence correspond à une seule fiche globale, sans gestion de chambres individuelles.</p>
 <label>Type</label><select id="reposCategorie"><option value="hotel">Hôtel</option><option value="residence">Résidence</option></select>
 <label>Nom de l’établissement</label><input id="reposNomEtablissement" maxlength="100">
 <label>Nom et prénoms du gérant</label><input id="reposNomGerant">
@@ -4879,7 +4879,7 @@ function afficherFormulairePartenaire(type){
 <label>Date de naissance du gérant</label><input id="reposDateNaissance" type="date">
 <label>Lieu de naissance</label><input id="reposLieuNaissance">
 <label>Numéro de carte d’identité / NNI</label><input id="reposIdentite">
-<p class="notice">Pour une résidence, le statut initial sera Libre. Le gérant pourra ensuite choisir Libre ou Occupée.</p><button class="primary" type="button" onclick="envoyerInscriptionRepos()">Envoyer mon dossier</button><p id="reposStatutInscription" class="notice"></p></div>';
+<p class="notice">Pour une résidence, le statut initial sera Libre. Le gérant pourra ensuite choisir Libre ou Occupée.</p><button class="primary" type="button" onclick="envoyerInscriptionRepos()">Envoyer mon dossier</button><p id="reposStatutInscription" class="notice"></p></div>`;
     return;
   }
 }
