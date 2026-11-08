@@ -620,7 +620,7 @@ service cloud.firestore {
           || (request.resource.data.rubrique in ["educationFormation","logementImmobilier","depannageDomicile","agricultureElevage","evenementsPrestations","artisansProfessionnels"]
             && request.resource.data.quartier is string
             && request.resource.data.quartier.size() <= 120
-            && request.resource.data.categorie in ["École","Université","Centre de formation","Cours particuliers","Agence immobilière","Location de logement","Promoteur immobilier","Gestion locative","Plomberie","Électricité","Climatisation","Réparation électroménager","Nettoyage","Producteur agricole","Fournisseur agricole","Élevage","Matériel agricole","Traiteur","Salle de réception","Photographe","Décoration","Location de matériel","Couturier","Menuisier","Soudeur","Mécanicien","Coiffeur","Autre artisan"))
+            && request.resource.data.categorie in ["École","Université","Centre de formation","Cours particuliers","Agence immobilière","Location de logement","Promoteur immobilier","Gestion locative","Plomberie","Électricité","Climatisation","Réparation électroménager","Nettoyage","Producteur agricole","Fournisseur agricole","Élevage","Matériel agricole","Traiteur","Salle de réception","Photographe","Décoration","Location de matériel","Couturier","Menuisier","Soudeur","Mécanicien","Coiffeur","Autre artisan"]))
         && (!request.resource.data.keys().hasAny(["modePartenaire"]) || request.resource.data.get("modePartenaire", false) == true)
         && (request.resource.data.type != "commerce"
           || (request.resource.data.modePartenaire == true
