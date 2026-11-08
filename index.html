@@ -1192,6 +1192,14 @@ header{padding:22px 18px 24px!important}
 .accueil-service.tuile-solidarite{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/solidarite.svg')!important;background-size:cover;background-position:center;}
 .accueil-service.tuile-commerce{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/commerce.svg')!important;background-size:cover;background-position:center;}
 .accueil-service.tuile-boutique{background-image:linear-gradient(90deg,rgba(255,255,255,.94),rgba(255,255,255,.70)),url('./assets/illustrations/boutique.svg')!important;background-size:cover;background-position:center;}
+
+/* SERVICE FONCIER : recherche et lecture locale des QR codes IDUFCI */
+#securiserTerrain .terrain-action{background:#F2F7F3;border:1px solid #DCE9DF;border-radius:14px;padding:13px;margin:10px 0}
+#securiserTerrain .terrain-note{font-size:12px;color:#68786E;line-height:1.6}
+#securiserTerrain .terrain-result{display:none;background:#F2F7F3;border:1px solid #CFE2D4;border-radius:14px;padding:14px;margin-top:12px;overflow-wrap:anywhere}
+#securiserTerrain .terrain-buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+#securiserTerrain .terrain-buttons button{width:100%;min-height:48px}
+#securiserTerrain #lecteurQrTerrain{width:100%;margin-top:12px}
 </style>
 
 <style>
@@ -1532,6 +1540,7 @@ main{padding:14px 13px 24px!important}
 
 <div class="menu-dropdown" id="menuDropdown">
   <button type="button" data-ouvrir-section="devenirPartenaire" data-titre-section="Devenir partenaire">🤝 Devenir partenaire</button>
+  <button type="button" data-ouvrir-section="securiserTerrain" data-titre-section="Sécuriser mon terrain">🛡️ Sécuriser mon terrain</button>
   <button type="button" data-ouvrir-section="espaceAdmin" data-titre-section="Espace administrateur">🔐 Espace administrateur</button>
   <button type="button" onclick="signalerProblemeGeneral()">⚠️ Signaler un problème</button>
 </div>
@@ -2711,6 +2720,35 @@ function chargerPublicitesAccueil() {
 <section class="card" id="espaceCommunautaire" style="display:none;"><h2>🗞️ M’informer / Attraper les derniers Gbairai</h2><p>Informations utiles et échanges de la communauté.</p>
 <div id="menuCommunautaire" class="modes"><button class="mode" onclick="ouvrirInformationsCommunautaires()">📰 M’informer</button><button class="mode" onclick="ouvrirTchatGbairai()">💬 Faire un gbairai</button></div>
 <div id="zoneInformationsCommunautaires" style="display:none"></div><div id="zoneTchatGbairai" style="display:none"></div></section>
+
+<section class="card" id="securiserTerrain" style="display:none;">
+  <h2>🛡️ Sécuriser mon terrain</h2>
+  <p>Préparez une recherche foncière à partir des références de votre parcelle. Vous pouvez aussi lire le QR code IDUFCI présent sur un document, lorsqu'il est disponible.</p>
+  <div class="terrain-action">
+    <strong>📷 Lire un QR code IDUFCI</strong>
+    <p class="terrain-note">La lecture se fait sur cet appareil. L'image du document n'est pas envoyée à Mon Transport CI. Le contenu du QR code sera affiché pour vérification avant utilisation.</p>
+    <div class="terrain-buttons">
+      <button type="button" class="primary" onclick="demarrerLectureQrTerrain()">Ouvrir la caméra</button>
+      <button type="button" onclick="document.getElementById('fichierQrTerrain').click()">Choisir une image</button>
+    </div>
+    <input id="fichierQrTerrain" type="file" accept="image/*" capture="environment" style="display:none" onchange="lireQrDepuisImageTerrain(this.files&&this.files[0])">
+    <div id="lecteurQrTerrain"></div>
+    <button type="button" id="arreterQrTerrain" style="display:none;margin-top:8px" onclick="arreterLectureQrTerrain()">Arrêter la caméra</button>
+    <div id="resultatQrTerrain" class="terrain-result" aria-live="polite"></div>
+  </div>
+  <h3>Ou saisir les références manuellement</h3>
+  <label for="terrainLocalite">Localité / commune</label><input id="terrainLocalite" type="text" placeholder="Ex. Yopougon">
+  <label for="terrainLotissement">Désignation du lotissement</label><input id="terrainLotissement" type="text" placeholder="Nom du lotissement">
+  <div class="terrain-buttons">
+    <div><label for="terrainIlot">Numéro de l'îlot</label><input id="terrainIlot" type="text" placeholder="Îlot"></div>
+    <div><label for="terrainLot">Numéro du lot / parcelle</label><input id="terrainLot" type="text" placeholder="Lot"></div>
+  </div>
+  <label for="terrainIdufci">IDUFCI (si connu)</label><input id="terrainIdufci" type="text" placeholder="Identifiant unique indiqué sur le document" autocomplete="off">
+  <button type="button" class="primary" onclick="preparerRechercheTerrainOfficielle()">Préparer ma recherche officielle</button>
+  <div id="resultatRechercheTerrain" class="terrain-result" aria-live="polite"></div>
+  <p class="terrain-note"><strong>Important :</strong> cette première version lit le QR code et prépare les références. Elle n'interroge pas directement les bases du ministère et ne certifie ni l'authenticité du document ni l'absence de litige. Ne transmettez jamais votre mot de passe SIGFU.</p>
+  <p><a href="https://sigfu.gouv.ci/parcelles" target="_blank" rel="noopener noreferrer">Consulter le portail officiel SIGFU – Parcelles</a></p>
+</section>
 </main>
 
 <footer>Mon Transport CI · La mobilité en Côte d'Ivoire</footer>
@@ -10058,6 +10096,17 @@ function rechercherPiecesAuto(){const q=document.getElementById('pieceRecherchee
 async function chargerMeteoLocale(){const z=document.getElementById('resultatMeteoLocale');z.style.display='block';z.textContent='Recherche de votre position…';if(!navigator.geolocation){z.textContent='La géolocalisation n’est pas disponible sur cet appareil.';return}navigator.geolocation.getCurrentPosition(async pos=>{try{const u='https://api.open-meteo.com/v1/forecast?latitude='+pos.coords.latitude+'&longitude='+pos.coords.longitude+'&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=3';const r=await fetch(u);if(!r.ok)throw new Error('Service météo indisponible');const d=await r.json();const c=d.current,jours=d.daily;z.innerHTML='<strong>Maintenant : '+Math.round(c.temperature_2m)+' °C</strong><br>Ressenti : '+Math.round(c.apparent_temperature)+' °C · Humidité : '+c.relative_humidity_2m+' %<br>Vent : '+Math.round(c.wind_speed_10m)+' km/h · Précipitations : '+c.precipitation+' mm<hr>'+jours.time.map((j,i)=>'<p><strong>'+new Date(j+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})+'</strong> : '+Math.round(jours.temperature_2m_min[i])+'–'+Math.round(jours.temperature_2m_max[i])+' °C · pluie '+jours.precipitation_probability_max[i]+' %</p>').join('')}catch(e){z.textContent='Impossible de charger la météo : '+e.message}},()=>{z.textContent='Autorise la localisation dans les réglages de ton navigateur puis réessaie.'},{enableHighAccuracy:false,timeout:12000,maximumAge:300000})}
 async function enregistrerDeclarationAccident(){const f=document.getElementById('accidentPhotos').files; if(f.length>2||Array.from(f).some(x=>x.size>1.5*1024*1024)){document.getElementById('statutDeclarationAccident').textContent='Choisis au maximum deux photos de 1,5 Mo chacune.';return}const photos=await Promise.all(Array.from(f).map(file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})));const x={date:document.getElementById('accidentDate').value,lieu:document.getElementById('accidentLieu').value.trim(),details:document.getElementById('accidentDetails').value.trim(),photos,createdAt:new Date().toISOString()};if(!x.lieu||!x.details){document.getElementById('statutDeclarationAccident').textContent='Indique le lieu et les circonstances.';return}try{const a=lireListeLocale('mtci_accidents');a.unshift(x);sauverListeLocale('mtci_accidents',a);document.getElementById('statutDeclarationAccident').textContent='Brouillon enregistré sur cet appareil. Il n’a pas été transmis.'}catch(e){document.getElementById('statutDeclarationAccident').textContent='Enregistrement impossible. Les photos sont peut-être trop volumineuses.'}}
 document.addEventListener('DOMContentLoaded',()=>{afficherListeLocale('mtci_entretien','listeEntretienAuto',v=>'<strong>'+echapperTextePublicite(v.type)+'</strong><br>'+echapperTextePublicite(v.date)+' · '+echapperTextePublicite(v.vehicule)+' · '+echapperTextePublicite(v.km||'Km non précisé')+' km<br>'+echapperTextePublicite(v.notes));afficherListeLocale('mtci_expirations','listeExpirationsAuto',v=>'<strong>'+echapperTextePublicite(v.type)+'</strong><br>Expire le '+echapperTextePublicite(v.date));afficherListeLocale('mtci_paiements','listeRappelsPaiement',v=>'<strong>'+echapperTextePublicite(v.motif)+'</strong><br>'+echapperTextePublicite(v.date)+' · '+echapperTextePublicite(v.montant||'Montant non précisé')+' FCFA')});
+</script>
+
+<script>
+/* Lecture locale QR IDUFCI : aucune image ni donnée n'est transmise automatiquement. */
+var lecteurQrTerrainInstance=null;
+function chargerBibliothequeQrTerrain(){return new Promise(function(resolve,reject){if(window.Html5Qrcode){resolve();return;}var ancien=document.querySelector('script[data-qr-terrain]');if(ancien){ancien.addEventListener('load',resolve,{once:true});ancien.addEventListener('error',reject,{once:true});return;}var sc=document.createElement('script');sc.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';sc.async=true;sc.dataset.qrTerrain='oui';sc.onload=resolve;sc.onerror=function(){reject(new Error('La bibliothèque de lecture QR n’a pas pu être chargée.'));};document.head.appendChild(sc);});}
+function afficherContenuQrTerrain(texte){var zone=document.getElementById('resultatQrTerrain');if(!zone)return;zone.style.display='block';zone.textContent='Contenu lu : '+texte;var candidat=String(texte).match(/[A-Z0-9]{20}/i);if(candidat){var champ=document.getElementById('terrainIdufci');if(champ)champ.value=candidat[0].toUpperCase();var aide=document.createElement('p');aide.className='terrain-note';aide.textContent='Un identifiant de 20 caractères a été détecté et recopié dans le champ IDUFCI. Vérifiez-le sur votre document : le contenu du QR code n’est pas authentifié.';zone.appendChild(aide);}else{var aide2=document.createElement('p');aide2.className='terrain-note';aide2.textContent='Aucun identifiant de 20 caractères n’a été reconnu automatiquement. Vérifiez le contenu et saisissez l’IDUFCI manuellement si nécessaire.';zone.appendChild(aide2);}}
+async function demarrerLectureQrTerrain(){try{await chargerBibliothequeQrTerrain();var cible=document.getElementById('lecteurQrTerrain');if(!cible)throw new Error('Lecteur indisponible.');cible.innerHTML='';lecteurQrTerrainInstance=new Html5Qrcode('lecteurQrTerrain');await lecteurQrTerrainInstance.start({facingMode:'environment'},{fps:10,qrbox:{width:230,height:230}},function(txt){afficherContenuQrTerrain(txt);arreterLectureQrTerrain();},function(){});document.getElementById('arreterQrTerrain').style.display='inline-block';}catch(e){alert('Impossible d’ouvrir la caméra : '+(e.message||e)+'. Autorisez l’accès à la caméra ou choisissez une image du QR code.');}}
+async function arreterLectureQrTerrain(){if(!lecteurQrTerrainInstance)return;try{if(lecteurQrTerrainInstance.isScanning)await lecteurQrTerrainInstance.stop();await lecteurQrTerrainInstance.clear();}catch(e){console.warn('Arrêt du lecteur QR :',e);}lecteurQrTerrainInstance=null;var b=document.getElementById('arreterQrTerrain');if(b)b.style.display='none';}
+async function lireQrDepuisImageTerrain(fichier){if(!fichier)return;try{await chargerBibliothequeQrTerrain();var temporaire=new Html5Qrcode('lecteurQrTerrain');var texte=await temporaire.scanFile(fichier,true);afficherContenuQrTerrain(texte);await temporaire.clear();}catch(e){alert('Aucun QR code lisible trouvé dans cette image. Essaie une photo plus nette et bien cadrée.');}}
+function preparerRechercheTerrainOfficielle(){var v=function(id){return(document.getElementById(id)?.value||'').trim();};var donnees={localite:v('terrainLocalite'),lotissement:v('terrainLotissement'),ilot:v('terrainIlot'),lot:v('terrainLot'),idufci:v('terrainIdufci')};if(!donnees.localite&&!donnees.idufci){alert('Renseigne au minimum la localité ou l’IDUFCI.');return;}var zone=document.getElementById('resultatRechercheTerrain');zone.style.display='block';zone.replaceChildren();var titre=document.createElement('strong');titre.textContent='Références préparées pour vérification';zone.appendChild(titre);Object.entries(donnees).forEach(function(pair){if(pair[1]){var p=document.createElement('p');p.textContent=pair[0].toUpperCase()+' : '+pair[1];zone.appendChild(p);}});var note=document.createElement('p');note.className='terrain-note';note.textContent='La recherche officielle doit encore être effectuée sur le portail SIGFU. Mon Transport CI n’a pas encore de connexion autorisée aux bases du ministère.';zone.appendChild(note);var lien=document.createElement('a');lien.href='https://sigfu.gouv.ci/parcelles';lien.target='_blank';lien.rel='noopener noreferrer';lien.textContent='Ouvrir le SIGFU pour effectuer la recherche';zone.appendChild(lien);}
 </script>
 </body>
 </html>
