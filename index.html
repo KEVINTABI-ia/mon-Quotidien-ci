@@ -2821,7 +2821,8 @@ function chargerPublicitesAccueil() {
 
 
 <section id="menuQuotidien" class="card" aria-label="Le quotidien" style="margin:14px 0 12px;padding:16px;border:2px solid #D5A84B;background:linear-gradient(145deg,#FFFDF5,#F0F8F4);">
-  <h2 style="margin:0 0 6px;color:#174B40;">🌞 Le quotidien</h2>
+  <button type="button" class="daily-toggle" aria-expanded="false" aria-controls="dailyServicesPanel" onclick="basculerServicesQuotidiens()" style="width:100%;text-align:left;">🌞 Tous les services du quotidien <span class="daily-toggle-chevron" aria-hidden="true">⌄</span></button>
+  <div id="dailyServicesPanel" hidden>
   <p style="margin:0 0 13px;font-size:13px;color:#68786E;">Les services pratiques, la santé et les services près de vous.</p>
   <div class="grille-services-quotidiens">
 <button type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacie et santé')" class="tuile-quotidien">💊 Pharmacie et santé<small>Pharmacies de garde, centres de santé, urgences et laboratoires</small></button>
@@ -2833,6 +2834,7 @@ function chargerPublicitesAccueil() {
     <button type="button" onclick="ouvrirSectionPleinEcran('artisansProfessionnels','Artisans et professionnels')" class="tuile-quotidien">🔧 Artisans et professionnels<small>Artisans et prestataires près de vous</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('servicesPublicsDemarches','Services publics et démarches')" class="tuile-quotidien">🏛️ Services publics et démarches<small>Accès aux portails officiels</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('toilettesPubliques','Toilettes publiques')" class="tuile-quotidien">🚻 Toilettes publiques<small>Rechercher les toilettes autour de vous</small></button>
+  </div>
   </div>
 </section>
 
@@ -10648,8 +10650,8 @@ window.mtcAfficherActeJudiciaire = function(type){
     if(transportTitle) transportTitle.textContent='Voyager et envoyer un colis';
     const transportIntro=mobilite.querySelector('.accueil-services-entete p');
     if(transportIntro) transportIntro.textContent='Trouvez votre moyen de transport, une compagnie ou un service de livraison.';
-    const dailyTitle=quotidien.querySelector('h2');
-    if(dailyTitle) dailyTitle.textContent='🌞 Tous les services du quotidien';
+    const dailyTitle=quotidien.querySelector('.daily-toggle');
+    if(dailyTitle) dailyTitle.innerHTML='🌞 Tous les services du quotidien <span class="daily-toggle-chevron" aria-hidden="true">⌄</span>';
 
     const nav=document.createElement('nav');
     nav.id='accueilBottomNav';
@@ -10774,6 +10776,18 @@ auth.onAuthStateChanged(function(){actualiserEspaceEmplois();});
 .home-search-status{min-height:12px!important;margin-top:3px!important;font-size:9px!important}
 @media(max-width:370px){.home-welcome{padding:11px 12px 9px!important}.home-welcome h1{font-size:18px!important}}
 </style>
+
+<style id="menu-quotidien-accordeon">
+#menuQuotidien .daily-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;box-sizing:border-box;padding:10px 12px!important;margin:0!important;border:3px solid transparent!important;border-radius:15px!important;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(90deg,#F28C28 0 33.33%,#fff 33.33% 66.66%,#16834A 66.66% 100%) border-box!important;color:#174b35!important;font-size:17px!important;font-weight:900!important;cursor:pointer;min-height:52px;-webkit-tap-highlight-color:transparent}
+#menuQuotidien .daily-toggle-chevron{font-size:24px;line-height:1;transition:transform .2s ease}
+#menuQuotidien .daily-toggle[aria-expanded="true"] .daily-toggle-chevron{transform:rotate(180deg)}
+#menuQuotidien #dailyServicesPanel[hidden]{display:none!important}
+#menuQuotidien #dailyServicesPanel:not([hidden]){display:block!important;margin-top:12px}
+#menuQuotidien .grille-services-quotidiens{max-height:none!important;overflow:visible!important;overscroll-behavior:auto!important}
+</style>
+<script>
+function basculerServicesQuotidiens(){const b=document.querySelector('#menuQuotidien .daily-toggle'),p=document.getElementById('dailyServicesPanel');if(!b||!p)return;const ouvert=b.getAttribute('aria-expanded')==='true';b.setAttribute('aria-expanded',String(!ouvert));p.hidden=ouvert;}
+</script>
 
 </body>
 </html>
