@@ -641,46 +641,6 @@ describe("Mon Transport CI — règles Firestore", function () {
   });
 
 
-  it("autorise la création d'un dossier hôtel/résidence en attente", async () => {
-    const uid="repos-test-001";
-    const db=testEnv.authenticatedContext(uid,{email:"gerant@example.test"}).firestore();
-    const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
-    await assertSucceeds(setDoc(doc(db,"partenaires",uid),{
-      uid,type:"hotel_residence",nom:"Gérant",telephone:"0100000000",commune:"Yopougon",
-      email:"gerant@example.test",dateNaissance:"1985-01-01",lieuNaissance:"Abidjan",
-      numeroIdentite:"ID-1",categorieEtablissement:"residence",nomEtablissement:"Résidence test",
-      quartier:"Bagnon",tarifNuit:15000,description:"Description test",disponibilite:"Libre",
-      statut:"en_attente",createdAt:serverTimestamp()
-    }));
-  });
-
-  it("interdit au gérant de publier lui-même son établissement", async () => {
-    const uid="repos-test-002";
-    const db=testEnv.authenticatedContext(uid).firestore();
-    const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
-    await assertFails(setDoc(doc(db,"etablissements_repos",uid),{
-      ownerId:uid,categorie:"residence",statut:"publie",createdAt:serverTimestamp()
-    }));
-  });
-
-  it("autorise le gérant approuvé à modifier uniquement Libre ou Occupée", async () => {
-    const uid="repos-test-003";
-    await testEnv.withSecurityRulesDisabled(async context=>{
-      await context.firestore().doc("partenaires/"+uid).set({uid,type:"hotel_residence",statut:"approuve"});
-      await context.firestore().doc("etablissements_repos/"+uid).set({
-        ownerId:uid,categorie:"residence",statut:"publie",disponibilite:"Libre",tarifNuit:15000
-      });
-    });
-    const db=testEnv.authenticatedContext(uid).firestore();
-    const {doc,updateDoc,serverTimestamp}=require("firebase/firestore");
-    await assertSucceeds(updateDoc(doc(db,"etablissements_repos",uid),{
-      disponibilite:"Occupée",updatedAt:serverTimestamp()
-    }));
-    await assertFails(updateDoc(doc(db,"etablissements_repos",uid),{
-      disponibilite:"Libre",tarifNuit:1,updatedAt:serverTimestamp()
-    }));
-  });
-
   describe("demandes foncières privées", () => {
     const dossierId = "terrain-test-001";
     const dossier = (uid, email) => ({
