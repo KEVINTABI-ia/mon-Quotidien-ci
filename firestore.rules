@@ -128,23 +128,6 @@ service cloud.firestore {
       allow create, update, delete: if estAdmin();
     }
 
-    match /etablissements_repos/{etablissementId} {
-      allow read: if resource.data.statut == "publie";
-      allow create, delete: if estAdmin();
-      allow update: if estAdmin()
-        || (estConnecte()
-          && request.auth.uid == etablissementId
-          && resource.data.ownerId == request.auth.uid
-          && resource.data.categorie == "residence"
-          && resource.data.statut == "publie"
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["disponibilite", "updatedAt"])
-          && request.resource.data.disponibilite in ["Libre", "Occupée"]
-          && request.resource.data.updatedAt == request.time
-          && get(/databases/$(database)/documents/partenaires/$(request.auth.uid)).data.statut == "approuve"
-          && get(/databases/$(database)/documents/partenaires/$(request.auth.uid)).data.type == "hotel_residence");
-    }
-
     match /partenaires/{partenaireId} {
       allow read: if estAdmin()
         || (estConnecte() && request.auth.uid == partenaireId);
@@ -161,31 +144,18 @@ service cloud.firestore {
           "email", "dateNaissance", "lieuNaissance",
           "numeroIdentite", "quartiers", "numeroPermis",
           "nomGare", "posteOccupe", "photoProfil",
-          "categorieEtablissement", "nomEtablissement", "quartier",
-          "tarifNuit", "description", "disponibilite",
           "statut", "createdAt"
         ])
         && request.resource.data.uid == request.auth.uid
         && (request.resource.data.type == "livreur_independant"
-          || request.resource.data.type == "representant_gare"
-          || request.resource.data.type == "hotel_residence")
+          || request.resource.data.type == "representant_gare")
         && (
           (request.resource.data.type == "livreur_independant"
             && request.resource.data.keys().hasAll(["quartiers", "numeroPermis"]))
           ||
           (request.resource.data.type == "representant_gare"
             && request.resource.data.keys().hasAll(["nomGare", "posteOccupe"]))
-          ||
-          (request.resource.data.type == "hotel_residence"
-            && request.resource.data.keys().hasAll(["categorieEtablissement", "nomEtablissement", "quartier", "tarifNuit", "description", "disponibilite"])
-            && request.resource.data.categorieEtablissement in ["hotel", "residence"]
-            && request.resource.data.nomEtablissement is string
-            && request.resource.data.nomEtablissement.size() > 1
-            && request.resource.data.tarifNuit is int
-            && request.resource.data.tarifNuit > 0
-            && request.resource.data.description is string
-            && request.resource.data.description.size() <= 500
-            && request.resource.data.disponibilite in ["Libre", "Occupée", null])
+
         )
         && request.resource.data.statut == "en_attente"
         && request.resource.data.email == request.auth.token.email
@@ -949,6 +919,24 @@ service cloud.firestore {
       allow read: if true;
       allow create, update, delete: if estAdmin();
     }
+
+    match /demandes_foncieres_privees/{demandeId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["uid","email","nom","telephone","typeDemande","question","refs","statut","reponseAdmin","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["uid","email","nom","telephone","typeDemande","question","refs","statut","reponseAdmin","createdAt","updatedAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 2 && request.resource.data.nom.size() <= 100
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 6 && request.resource.data.telephone.size() <= 25
+        && request.resource.data.typeDemande in ["verification_lotissement","verification_parcelle","comprendre_document","suivi_demande"]
+        && request.resource.data.question is string && request.resource.data.question.size() >= 5 && request.resource.data.question.size() <= 1200
+        && request.resource.data.refs is map && request.resource.data.refs.keys().hasOnly(["localite","lotissement","ilot","lot","idufci"])
+        && request.resource.data.statut == "reçue" && request.resource.data.reponseAdmin == ""
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update, delete: if estAdmin();
+    }
+
 
     match /{document=**} {
       allow read, write: if false;

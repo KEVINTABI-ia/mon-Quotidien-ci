@@ -641,44 +641,65 @@ describe("Mon Transport CI — règles Firestore", function () {
   });
 
 
-  it("autorise la création d'un dossier hôtel/résidence en attente", async () => {
-    const uid="repos-test-001";
-    const db=testEnv.authenticatedContext(uid,{email:"gerant@example.test"}).firestore();
-    const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
-    await assertSucceeds(setDoc(doc(db,"partenaires",uid),{
-      uid,type:"hotel_residence",nom:"Gérant",telephone:"0100000000",commune:"Yopougon",
-      email:"gerant@example.test",dateNaissance:"1985-01-01",lieuNaissance:"Abidjan",
-      numeroIdentite:"ID-1",categorieEtablissement:"residence",nomEtablissement:"Résidence test",
-      quartier:"Bagnon",tarifNuit:15000,description:"Description test",disponibilite:"Libre",
-      statut:"en_attente",createdAt:serverTimestamp()
-    }));
-  });
-
-  it("interdit au gérant de publier lui-même son établissement", async () => {
-    const uid="repos-test-002";
-    const db=testEnv.authenticatedContext(uid).firestore();
-    const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
-    await assertFails(setDoc(doc(db,"etablissements_repos",uid),{
-      ownerId:uid,categorie:"residence",statut:"publie",createdAt:serverTimestamp()
-    }));
-  });
-
-  it("autorise le gérant approuvé à modifier uniquement Libre ou Occupée", async () => {
-    const uid="repos-test-003";
-    await testEnv.withSecurityRulesDisabled(async context=>{
-      await context.firestore().doc("partenaires/"+uid).set({uid,type:"hotel_residence",statut:"approuve"});
-      await context.firestore().doc("etablissements_repos/"+uid).set({
-        ownerId:uid,categorie:"residence",statut:"publie",disponibilite:"Libre",tarifNuit:15000
-      });
+  describe("demandes foncières privées", () => {
+    const dossierId = "terrain-test-001";
+    const dossier = (uid, email) => ({
+      uid, email, nom: "Demandeur test", telephone: "0102030405",
+      typeDemande: "verification_parcelle",
+      question: "Je souhaite vérifier cette parcelle.",
+      refs: { localite: "Yopougon", lotissement: "Test", ilot: "A", lot: "12", idufci: "ABCDEFGHIJKLMNOPQRST" },
+      statut: "reçue", reponseAdmin: "",
+      createdAt: require("firebase/firestore").serverTimestamp(),
+      updatedAt: require("firebase/firestore").serverTimestamp()
     });
-    const db=testEnv.authenticatedContext(uid).firestore();
-    const {doc,updateDoc,serverTimestamp}=require("firebase/firestore");
-    await assertSucceeds(updateDoc(doc(db,"etablissements_repos",uid),{
-      disponibilite:"Occupée",updatedAt:serverTimestamp()
-    }));
-    await assertFails(updateDoc(doc(db,"etablissements_repos",uid),{
-      disponibilite:"Libre",tarifNuit:1,updatedAt:serverTimestamp()
-    }));
+
+    it("autorise un utilisateur connecté à déposer une demande conforme", async () => {
+      const db = testEnv.authenticatedContext(CLIENT_UID, { email: "client@example.test" }).firestore();
+      const { doc, setDoc } = require("firebase/firestore");
+      await assertSucceeds(setDoc(doc(db, "demandes_foncieres_privees", "terrain-create-001"), dossier(CLIENT_UID, "client@example.test")));
+    });
+
+    it("interdit de déposer une demande au nom d'un autre utilisateur", async () => {
+      const db = testEnv.authenticatedContext(CLIENT_UID, { email: "client@example.test" }).firestore();
+      const { doc, setDoc } = require("firebase/firestore");
+      await assertFails(setDoc(doc(db, "demandes_foncieres_privees", "terrain-create-002"), dossier(OTHER_UID, "client@example.test")));
+    });
+
+    it("autorise le demandeur à lire son dossier mais pas celui d'un tiers", async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        await context.firestore().doc("demandes_foncieres_privees/" + dossierId).set({
+          uid: CLIENT_UID, email: "client@example.test", nom: "Demandeur test",
+          telephone: "0102030405", typeDemande: "verification_parcelle",
+          question: "Vérification demandée", refs: { localite: "Yopougon" },
+          statut: "reçue", reponseAdmin: ""
+        });
+      });
+      const own = testEnv.authenticatedContext(CLIENT_UID).firestore();
+      const other = testEnv.authenticatedContext(OTHER_UID).firestore();
+      const { doc, getDoc } = require("firebase/firestore");
+      await assertSucceeds(getDoc(doc(own, "demandes_foncieres_privees", dossierId)));
+      await assertFails(getDoc(doc(other, "demandes_foncieres_privees", dossierId)));
+    });
+
+    it("réserve la modification du rapport à l'administrateur", async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        await context.firestore().doc("demandes_foncieres_privees/" + dossierId).set({
+          uid: CLIENT_UID, email: "client@example.test", nom: "Demandeur test",
+          telephone: "0102030405", typeDemande: "verification_parcelle",
+          question: "Vérification demandée", refs: { localite: "Yopougon" },
+          statut: "reçue", reponseAdmin: ""
+        });
+      });
+      const client = testEnv.authenticatedContext(CLIENT_UID).firestore();
+      const admin = testEnv.authenticatedContext(ADMIN_UID).firestore();
+      const { doc, updateDoc } = require("firebase/firestore");
+      await assertFails(updateDoc(doc(client, "demandes_foncieres_privees", dossierId), {
+        rapport: { resume: "Rapport falsifié" }
+      }));
+      await assertSucceeds(updateDoc(doc(admin, "demandes_foncieres_privees", dossierId), {
+        rapport: { resume: "Rapport de vérification test" }
+      }));
+    });
   });
 
 });
