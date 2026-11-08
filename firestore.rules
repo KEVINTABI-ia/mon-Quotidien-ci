@@ -730,18 +730,27 @@ service cloud.firestore {
       allow update: if estAdmin() || (estConnecte() && request.auth.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nom","telephone"]));
       allow delete: if estAdmin();
     }
+    // Offres d'emploi : soumissions utilisateurs en attente ; validation par l'administrateur.
     match /annonces_offres/{id} {
-      allow create: if estConnecte() && request.resource.data.uid == request.auth.uid
-        && request.resource.data.keys().hasAll(["uid","annonceurNom","typeAnnonce","titre","categorie","commune","telephone","description","paiementMoyen","referencePaiement","montantFCFA","dureeJours","paiementStatut","statut","createdAt"])
-        && request.resource.data.keys().hasOnly(["uid","annonceurNom","typeAnnonce","titre","categorie","commune","telephone","description","paiementMoyen","referencePaiement","montantFCFA","dureeJours","paiementStatut","statut","createdAt"])
-        && ((request.resource.data.montantFCFA == 2000 && request.resource.data.dureeJours == 15)
-          || (request.resource.data.montantFCFA == 3500 && request.resource.data.dureeJours == 30))
-        && request.resource.data.paiementMoyen in ["Wave","Orange Money"]
-        && request.resource.data.referencePaiement is string && request.resource.data.referencePaiement.size() >= 4
-        && request.resource.data.statut == "paiement_en_attente" && request.resource.data.paiementStatut == "a_verifier"
-        && request.resource.data.createdAt == request.time;
+      allow create: if estConnecte()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasAll(["uid","titre","entreprise","categorie","commune","telephone","description","typeAnnonce","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","titre","entreprise","categorie","commune","telephone","description","typeAnnonce","statut","createdAt","annonceurNom","paiementMoyen","referencePaiement","montantFCFA","dureeJours","paiementStatut"])
+        && request.resource.data.typeAnnonce == "emploi"
+        && request.resource.data.titre is string && request.resource.data.titre.size() >= 3 && request.resource.data.titre.size() <= 120
+        && request.resource.data.entreprise is string && request.resource.data.entreprise.size() >= 2 && request.resource.data.entreprise.size() <= 120
+        && request.resource.data.categorie in ["Emploi","Stage","Formation","Appel à candidatures","Autre opportunité"]
+        && request.resource.data.commune is string && request.resource.data.commune.size() >= 2 && request.resource.data.commune.size() <= 80
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 6 && request.resource.data.telephone.size() <= 25
+        && request.resource.data.description is string && request.resource.data.description.size() >= 20 && request.resource.data.description.size() <= 1800
+        && request.resource.data.createdAt == request.time
+        && (request.resource.data.statut == "en_attente" || (estAdmin() && request.resource.data.statut == "publiee"));
       allow read: if estAdmin() || resource.data.statut == "publiee" || (estConnecte() && resource.data.uid == request.auth.uid);
-      allow update, delete: if estAdmin();
+      allow update: if estAdmin() && resource.data.typeAnnonce == "emploi"
+        && resource.data.statut == "en_attente" && request.resource.data.statut == "publiee"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","valideePar","dateValidation"])
+        && request.resource.data.valideePar == request.auth.uid && request.resource.data.dateValidation == request.time;
+      allow delete: if estAdmin();
     }
     match /informations_admin/{id} {
       allow read: if estAdmin() || resource.data.statut == "publiee";
