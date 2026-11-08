@@ -1589,8 +1589,9 @@ header .header-badge{margin-top:6px!important;font-size:8px!important}
 <style>
 /* Trois accès prioritaires regroupés à l'ancien emplacement de Commerce et boutique */
 #espaceAutomobiliste /* Trois accès compacts, toujours côte à côte sur l'accueil général */
-.acces-prioritaires{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 12px;width:100%;box-sizing:border-box}
-.acces-prioritaire{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:88px;padding:8px 5px;border:1px solid #e2eae3;border-radius:12px;color:#fff;text-align:center;box-shadow:0 3px 9px rgba(24,53,42,.10);-webkit-tap-highlight-color:transparent;box-sizing:border-box;overflow-wrap:anywhere}
+/* Forcer les trois boutons sur une seule rangée, y compris sur iPhone */
+.acces-prioritaires{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:stretch!important;justify-content:space-between!important;gap:7px!important;margin:0 0 12px;width:100%;box-sizing:border-box}
+.acces-prioritaires>.acces-prioritaire{display:flex;flex:1 1 0!important;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0!important;width:33.333%!important;max-width:33.333%!important;min-height:88px;padding:8px 4px;border:1px solid #e2eae3;border-radius:12px;color:#fff;text-align:center;box-shadow:0 3px 9px rgba(24,53,42,.10);-webkit-tap-highlight-color:transparent;box-sizing:border-box;overflow-wrap:anywhere}
 .acces-prioritaire-icone{display:grid;place-items:center;width:25px;height:25px;flex:0 0 25px;border-radius:8px;background:rgba(255,255,255,.18);font-size:15px}
 .acces-prioritaire strong{display:block;font-size:10px;line-height:1.15;font-weight:800;overflow-wrap:anywhere}
 .acces-prioritaire small{display:none}
