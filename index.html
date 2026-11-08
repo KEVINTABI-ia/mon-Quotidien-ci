@@ -2776,9 +2776,9 @@ function chargerPublicitesAccueil() {
   <h2>🎓 Éducation et formation</h2>
   <p>Accédez rapidement aux établissements et organismes de formation autour de vous.</p>
   <div class="modes">
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('educationFormation')">🏫 Trouver une école</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('educationFormation')">🎓 Trouver une université</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('educationFormation')">🧑‍🏫 Centres de formation</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('educationFormation','École')">🏫 Trouver une école</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('educationFormation','Université')">🎓 Trouver une université</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('educationFormation','Centre de formation')">🧑‍🏫 Centres de formation</button>
   </div>
   <p class="notice">Les inscriptions, agréments, frais et conditions doivent être confirmés directement auprès de chaque établissement.</p>
 </section>
@@ -2786,9 +2786,9 @@ function chargerPublicitesAccueil() {
   <h2>🏠 Logement et immobilier</h2>
   <p>Recherchez des professionnels et agences immobilières dans votre commune.</p>
   <div class="modes">
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('logementImmobilier')">🏢 Agences immobilières</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('logementImmobilier')">🔑 Locations de logements</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('logementImmobilier')">🏗️ Promoteurs immobiliers</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('logementImmobilier','Agence immobilière')">🏢 Agences immobilières</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('logementImmobilier','Location de logement')">🔑 Locations de logements</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('logementImmobilier','Promoteur immobilier')">🏗️ Promoteurs immobiliers</button>
   </div>
   <p class="notice">Visitez le logement et vérifiez les documents, l’identité du bailleur et les conditions avant tout paiement.</p>
 </section>
@@ -2796,10 +2796,10 @@ function chargerPublicitesAccueil() {
   <h2>🛠️ Dépannage à domicile</h2>
   <p>Trouvez des techniciens et prestataires à proximité de votre quartier.</p>
   <div class="modes">
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile')">🚰 Plombiers</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile')">💡 Électriciens</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile')">❄️ Climatisation</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile')">🔌 Électroménager</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile','Plomberie')">🚰 Plombiers</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile','Électricité')">💡 Électriciens</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile','Climatisation')">❄️ Climatisation</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile','Réparation électroménager')">🔌 Électroménager</button>
   </div>
   <p class="notice">Demandez un devis et confirmez le prix et le déplacement avant toute intervention.</p>
 </section>
@@ -2807,9 +2807,9 @@ function chargerPublicitesAccueil() {
   <h2>🌱 Agriculture et élevage</h2>
   <p>Repérez les fournisseurs, marchés et professionnels du secteur agricole.</p>
   <div class="modes">
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('agricultureElevage')">🥬 Marchés agricoles</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('agricultureElevage')">🚜 Fournitures et matériel</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('agricultureElevage')">🐓 Élevage et alimentation animale</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('agricultureElevage','Producteur agricole')">🥬 Marchés agricoles</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('agricultureElevage','Matériel agricole')">🚜 Fournitures et matériel</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('agricultureElevage','Élevage')">🐓 Élevage et alimentation animale</button>
   </div>
   <p class="notice">Vérifiez la qualité, l’origine des produits et les conditions de vente directement avec le fournisseur.</p>
 </section>
@@ -2829,10 +2829,10 @@ function chargerPublicitesAccueil() {
   <h2>🎉 Événements et prestations</h2>
   <p>Recherchez des prestataires pour vos cérémonies et événements.</p>
   <div class="modes">
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations')">🍽️ Traiteurs</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations')">🏛️ Salles de réception</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations')">📸 Photographes et vidéastes</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations')">🎈 Décoration</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations','Traiteur')">🍽️ Traiteurs</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations','Salle de réception')">🏛️ Salles de réception</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations','Photographe')">📸 Photographes et vidéastes</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations','Décoration')">🎈 Décoration</button>
   </div>
   <p class="notice">Contactez les prestataires pour confirmer leurs disponibilités, tarifs et références.</p>
 </section>
@@ -2840,13 +2840,13 @@ function chargerPublicitesAccueil() {
   <h2>🔧 Artisans et professionnels</h2>
   <p>Accédez aux métiers et services de proximité.</p>
   <div class="modes">
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels')">🧵 Couturiers</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels')">🪚 Menuisiers</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels')">⚒️ Soudeurs</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels')">🚗 Mécaniciens</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels')">💇 Coiffeurs</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Couturier')">🧵 Couturiers</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Menuisier')">🪚 Menuisiers</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Soudeur')">⚒️ Soudeurs</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Mécanicien')">🚗 Mécaniciens</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Coiffeur')">💇 Coiffeurs</button>
   </div>
-  <p class="notice">Les résultats proviennent d’un service cartographique externe. Vérifiez les coordonnées et les avis avant de choisir un prestataire.</p>
+  <p class="notice">Les fiches de cet annuaire sont publiées directement dans Mon Quotidien CI après validation administrative.</p>
 </section>
 <section class="card" id="servicesPublicsDemarches" style="display:none;">
   <h2>🏛️ Services publics et démarches</h2>
@@ -3146,13 +3146,15 @@ const CATEGORIES_ANNUAIRE={
  artisansProfessionnels:["Couturier","Menuisier","Soudeur","Mécanicien","Coiffeur","Autre artisan"]
 };
 let annuaireRubriqueActive="educationFormation";
-function ouvrirAnnuaireInterne(rubrique){
+function ouvrirAnnuaireInterne(rubrique,categorie){
  if(!CATEGORIES_ANNUAIRE[rubrique])return;
  annuaireRubriqueActive=rubrique;
  const noms={educationFormation:"Éducation et formation",logementImmobilier:"Logement et immobilier",depannageDomicile:"Dépannage à domicile",agricultureElevage:"Agriculture et élevage",evenementsPrestations:"Événements et prestations",artisansProfessionnels:"Artisans et professionnels"};
  ouvrirSectionPleinEcran("annuaireInterne",noms[rubrique]);
  document.getElementById("annuaireInterneTitre").textContent="📒 "+noms[rubrique];
- document.getElementById("annuaireFiltreCategorie").innerHTML='<option value="">Toutes les catégories</option>'+CATEGORIES_ANNUAIRE[rubrique].map(c=>'<option>'+c+'</option>').join("");
+ const filtre=document.getElementById("annuaireFiltreCategorie");
+ filtre.innerHTML='<option value="">Toutes les catégories</option>'+CATEGORIES_ANNUAIRE[rubrique].map(c=>'<option>'+c+'</option>').join("");
+ filtre.value=CATEGORIES_ANNUAIRE[rubrique].includes(categorie)?categorie:"";
  document.getElementById("annuaireInscriptionZone").style.display="none";
  chargerAnnuaireInterne();
 }
