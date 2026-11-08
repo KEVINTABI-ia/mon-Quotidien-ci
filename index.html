@@ -3187,9 +3187,15 @@ async function chargerAnnuairesAdmin(){
  const z=document.getElementById("listeValidationAnnuairesAdmin");if(!z)return;
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){z.textContent="Accès administrateur requis.";return;}
  z.innerHTML='<p class="notice">Chargement des inscriptions...</p>';
- try{const snap=await db.collection("demandes_nouveaux_services").where("type","==","annuaire").orderBy("createdAt","desc").limit(200).get();
- if(snap.empty){z.innerHTML='<p class="notice">Aucune inscription.</p>';return;}
- z.innerHTML=snap.docs.map(doc=>{const d=doc.data(),actions=d.statut==="en_attente"?'<button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'approuve\')">Approuver et publier</button><button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'refuse\')">Refuser</button>':'<span class="notice">Statut : '+echapperTextePublicite(d.statut)+'</span>';return '<article class="card" style="padding:12px;margin:10px 0"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.rubrique)+' · '+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.quartier||"")+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+'</p>'+actions+'</article>';}).join("");
+ try{
+  const snap=await db.collection("demandes_nouveaux_services").where("type","==","annuaire").orderBy("createdAt","desc").limit(200).get();
+  if(snap.empty){z.innerHTML='<p class="notice">Aucune inscription.</p>';return;}
+  z.innerHTML=snap.docs.map(doc=>{
+   const d=doc.data(),fin=d.abonnementFin&&d.abonnementFin.toDate?d.abonnementFin.toDate():null,expire=!fin||fin.getTime()<=Date.now();
+   const infos=d.statut==="approuve"?'<p><strong>Abonnement :</strong> '+(d.abonnementStatut==="essai_gratuit"?"Premier mois gratuit":d.abonnementStatut==="actif"?"Payé":"À activer")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée — période expirée":"Visible jusqu’au "+fin.toLocaleDateString("fr-FR"))+'</p><p>Après l’essai : 1 000 FCFA / mois.</p><button type="button" onclick="renouvelerAbonnementAnnuaire(\''+doc.id+'\')">Confirmer paiement et activer 30 jours (1 000 FCFA)</button>':"";
+   const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'approuve\')">Approuver et démarrer 30 jours gratuits</button><button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'refuse\')">Refuser</button>':'<span class="notice">Statut : '+echapperTextePublicite(d.statut)+'</span>';
+   return '<article class="card" style="padding:12px;margin:10px 0"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.rubrique)+' · '+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.quartier||"")+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+'</p>'+infos+actions+'</article>';
+  }).join("");
  }catch(e){console.error(e);z.textContent="Erreur de chargement : "+e.message;}
 }
 async function traiterInscriptionAnnuaire(id,statut){
