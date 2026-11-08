@@ -1574,8 +1574,6 @@ main{padding:14px 13px 24px!important}
 
 <div class="menu-dropdown" id="menuDropdown">
   <button type="button" data-ouvrir-section="devenirPartenaire" data-titre-section="Devenir partenaire">🤝 Devenir partenaire</button>
-  <button type="button" data-ouvrir-section="securiserTerrain" data-titre-section="Sécuriser mon terrain">🛡️ Sécuriser mon terrain</button>
-  <button type="button" data-ouvrir-section="demarchesJudiciaires" data-titre-section="Mes démarches judiciaires">⚖️ Mes démarches judiciaires</button>
   <button type="button" data-ouvrir-section="espaceAdmin" data-titre-section="Espace administrateur">🔐 Espace administrateur</button>
   <button type="button" onclick="signalerProblemeGeneral()">⚠️ Signaler un problème</button>
 </div>
@@ -2657,6 +2655,8 @@ function chargerPublicitesAccueil() {
   <h2 style="margin:0 0 6px;color:#174B40;">🌞 Le quotidien</h2>
   <p style="margin:0 0 13px;font-size:13px;color:#68786E;">Les services pratiques, la santé, les annonces et les informations près de vous.</p>
   <div class="grille-services-quotidiens">
+    <button type="button" onclick="ouvrirSectionPleinEcran('securiserTerrain','Sécuriser mon terrain')" class="tuile-quotidien">🛡️ Sécuriser mon terrain<small>Consulter les références de votre parcelle et préparer vos vérifications</small></button>
+    <button type="button" onclick="ouvrirSectionPleinEcran('demarchesJudiciaires','Mes démarches judiciaires')" class="tuile-quotidien">⚖️ Mes démarches judiciaires<small>Accéder rapidement aux démarches et documents officiels</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacie et santé')" class="tuile-quotidien">💊 Pharmacie et santé<small>Pharmacies de garde, centres de santé, urgences et laboratoires</small></button>
     <button type="button" onclick="ouvrirPortailAnnoncesOffres()" class="tuile-quotidien">📢 Consulter ou faire une annonce et une offre</button>
     <button type="button" onclick="ouvrirEspaceCommunautaire()" class="tuile-quotidien">🗞️ M’informer / Attraper les derniers Gbairai</button>
