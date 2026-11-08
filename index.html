@@ -3181,7 +3181,7 @@ async function chargerAnnuaireInterne(){
   const docs=snap.docs.filter(doc=>{const d=doc.data();return d.rubrique===annuaireRubriqueActive&&(!cat||d.categorie===cat)&&(!c||String(d.commune||"").toLocaleLowerCase("fr").includes(c))&&(!q||[d.titre,d.description,d.categorie,d.commune,d.quartier].join(" ").toLocaleLowerCase("fr").includes(q));});
   if(!docs.length){z.innerHTML='<p class="notice">Aucun professionnel validé pour le moment. Vous pouvez proposer une inscription gratuite.</p>';return;}
   z.innerHTML=docs.map(doc=>{const d=doc.data(),tel=String(d.telephone||"").replace(/[^+0-9]/g,""),wa=tel.replace(/^\+/,"").replace(/^0/,"225");return '<article class="card" style="padding:14px;margin:10px 0"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+(d.quartier?' · '+echapperTextePublicite(d.quartier):'')+'</p><p>'+echapperTextePublicite(d.description)+'</p><a class="primary" style="display:inline-block;text-decoration:none;margin:4px" href="tel:'+tel+'">📞 Appeler</a><a class="primary" style="display:inline-block;text-decoration:none;margin:4px" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+wa+'">WhatsApp</a></article>';}).join("");
- }catch(e){console.error(e);z.innerHTML='<p class="notice">Impossible de charger l’annuaire. Vérifiez Firestore.</p>';}
+ }catch(e){console.error('Erreur chargement annuaire Firestore:',e);const p=document.createElement('p');p.className='notice';p.textContent='Erreur Firestore ('+(e&&e.code?e.code:'code inconnu')+') : '+(e&&e.message?e.message:String(e));z.replaceChildren(p);}
 }
 async function chargerAnnuairesAdmin(){
  const z=document.getElementById("listeValidationAnnuairesAdmin");if(!z)return;
