@@ -1605,6 +1605,24 @@ header .header-badge{margin-top:6px!important;font-size:8px!important}
 #menuQuotidien .bouton-commerce-accueil strong{font-size:16px!important}
 #menuQuotidien .bouton-commerce-accueil small{font-size:12px!important}
 </style>
+
+<style>
+/* Boutons de contact des fiches de l'annuaire */
+.annuaire-contact-btn{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  box-sizing:border-box !important;
+  min-height:44px;
+  padding:11px 18px !important;
+  margin:4px !important;
+  text-align:center !important;
+  text-decoration:none !important;
+  line-height:1.2 !important;
+  white-space:nowrap;
+  vertical-align:middle;
+}
+</style>
 </head>
 <body>
 
@@ -3180,7 +3198,7 @@ async function chargerAnnuaireInterne(){
   const q=(document.getElementById("annuaireRecherche")?.value||"").toLocaleLowerCase("fr"),c=(document.getElementById("annuaireFiltreCommune")?.value||"").toLocaleLowerCase("fr"),cat=document.getElementById("annuaireFiltreCategorie")?.value||"";
   const docs=snap.docs.filter(doc=>{const d=doc.data();return d.rubrique===annuaireRubriqueActive&&(!cat||d.categorie===cat)&&(!c||String(d.commune||"").toLocaleLowerCase("fr").includes(c))&&(!q||[d.titre,d.description,d.categorie,d.commune,d.quartier].join(" ").toLocaleLowerCase("fr").includes(q));});
   if(!docs.length){z.innerHTML='<p class="notice">Aucun professionnel validé pour le moment. Vous pouvez proposer une inscription gratuite.</p>';return;}
-  z.innerHTML=docs.map(doc=>{const d=doc.data(),tel=String(d.telephone||"").replace(/[^+0-9]/g,""),wa=tel.replace(/^\+/,"").replace(/^0/,"225");return '<article class="card" style="padding:14px;margin:10px 0"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+(d.quartier?' · '+echapperTextePublicite(d.quartier):'')+'</p><p>'+echapperTextePublicite(d.description)+'</p><a class="primary" style="display:inline-block;text-decoration:none;margin:4px" href="tel:'+tel+'">📞 Appeler</a><a class="primary" style="display:inline-block;text-decoration:none;margin:4px" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+wa+'">WhatsApp</a></article>';}).join("");
+  z.innerHTML=docs.map(doc=>{const d=doc.data(),tel=String(d.telephone||"").replace(/[^+0-9]/g,""),wa=tel.replace(/^\+/,"").replace(/^0/,"225");return '<article class="card" style="padding:14px;margin:10px 0"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+(d.quartier?' · '+echapperTextePublicite(d.quartier):'')+'</p><p>'+echapperTextePublicite(d.description)+'</p><a class="primary annuaire-contact-btn" href="tel:'+tel+'">📞 Appeler</a><a class="primary annuaire-contact-btn" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+wa+'">WhatsApp</a></article>';}).join("");
  }catch(e){console.error('Erreur chargement annuaire Firestore:',e);const p=document.createElement('p');p.className='notice';p.textContent='Erreur Firestore ('+(e&&e.code?e.code:'code inconnu')+') : '+(e&&e.message?e.message:String(e));z.replaceChildren(p);}
 }
 async function chargerAnnuairesAdmin(){
