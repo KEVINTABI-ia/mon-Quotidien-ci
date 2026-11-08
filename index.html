@@ -1226,6 +1226,14 @@ header{padding:22px 18px 24px!important}
 #demarchesJudiciaires .judiciaire-pied{font-size:11px;color:#69776F;line-height:1.6;margin:14px 2px}
 @media(max-width:360px){#demarchesJudiciaires .judiciaire-grille{gap:7px}#demarchesJudiciaires .judiciaire-carte{padding:10px;min-height:108px}}
 
+
+#demarchesJudiciaires a.judiciaire-carte{display:flex;text-decoration:none}
+#demarchesJudiciaires .judiciaire-guides{margin-top:16px;padding:13px;border-radius:13px;background:#F6F8F6}
+#demarchesJudiciaires .judiciaire-guides h3{margin-top:0}
+#demarchesJudiciaires .judiciaire-guides p{font-size:12px;color:#637269}
+#demarchesJudiciaires .judiciaire-guides-boutons{display:flex;flex-wrap:wrap;gap:7px}
+#demarchesJudiciaires .judiciaire-guides-boutons button{border:1px solid #C9D8CE;border-radius:20px;background:#fff;color:#174B40;padding:8px 10px;font-size:11px;font-weight:700}
+
 </style>
 
 <style>
@@ -2803,15 +2811,27 @@ function chargerPublicitesAccueil() {
   <h3>Que souhaitez-vous obtenir ?</h3>
   <p class="notice">Choisissez un document pour découvrir son utilité, les points à préparer et la marche à suivre.</p>
   <div class="judiciaire-grille">
-    <button type="button" class="judiciaire-carte" onclick="mtcAfficherActeJudiciaire('casier')"><span>📄</span><strong>Casier judiciaire</strong><small>Bulletin n° 3</small></button>
-    <button type="button" class="judiciaire-carte" onclick="mtcAfficherActeJudiciaire('nationalite')"><span>🇨🇮</span><strong>Certificat de nationalité</strong><small>Selon votre situation</small></button>
-    <button type="button" class="judiciaire-carte" onclick="mtcAfficherActeJudiciaire('authentification')"><span>🛡️</span><strong>Attestation d’authentification</strong><small>Vérification d’un acte</small></button>
-    <button type="button" class="judiciaire-carte" onclick="mtcAfficherActeJudiciaire('etatcivil')"><span>📚</span><strong>Actes d’état civil</strong><small>Copies, extraits, rectifications</small></button>
-    <button type="button" class="judiciaire-carte" onclick="mtcAfficherActeJudiciaire('jugements')"><span>⚖️</span><strong>Jugements et décisions</strong><small>Jugements, ordonnances, expéditions</small></button>
-    <button type="button" class="judiciaire-carte" onclick="mtcAfficherActeJudiciaire('certificats')"><span>📑</span><strong>Autres certificats et attestations</strong><small>Situation familiale et nationalité</small></button>
+    <a class="judiciaire-carte" href="https://www.e-justice.ci/surfer/requests/new/cj" target="_blank" rel="noopener noreferrer"><span>📄</span><strong>Faire mon casier judiciaire</strong><small>Bulletin n° 3 · Accès direct ↗</small></a>
+    <a class="judiciaire-carte" href="https://www.e-justice.ci/surfer/requests/new/cni" target="_blank" rel="noopener noreferrer"><span>🇨🇮</span><strong>Demander ma nationalité</strong><small>Certificat · Accès direct ↗</small></a>
+    <a class="judiciaire-carte" href="https://www.e-justice.ci/surfer/requests" target="_blank" rel="noopener noreferrer"><span>🛡️</span><strong>Authentifier un document</strong><small>Attestation · Portail officiel ↗</small></a>
+    <a class="judiciaire-carte" href="https://www.e-justice.ci/surfer/requests" target="_blank" rel="noopener noreferrer"><span>📚</span><strong>Actes d’état civil</strong><small>Copies, extraits, rectifications ↗</small></a>
+    <a class="judiciaire-carte" href="https://www.e-justice.ci/surfer/requests" target="_blank" rel="noopener noreferrer"><span>⚖️</span><strong>Jugements et décisions</strong><small>Jugements, ordonnances, expéditions ↗</small></a>
+    <a class="judiciaire-carte" href="https://www.e-justice.ci/surfer/requests" target="_blank" rel="noopener noreferrer"><span>📑</span><strong>Autres actes et certificats</strong><small>Voir les actes disponibles ↗</small></a>
+  </div>
+  <div class="judiciaire-guides">
+    <h3>Vous souhaitez être accompagné avant de cliquer ?</h3>
+    <p>Choisissez un guide rapide pour connaître les pièces et les étapes à préparer.</p>
+    <div class="judiciaire-guides-boutons">
+      <button type="button" onclick="mtcAfficherActeJudiciaire('casier')">Guide casier</button>
+      <button type="button" onclick="mtcAfficherActeJudiciaire('nationalite')">Guide nationalité</button>
+      <button type="button" onclick="mtcAfficherActeJudiciaire('authentification')">Guide authentification</button>
+      <button type="button" onclick="mtcAfficherActeJudiciaire('etatcivil')">Guide état civil</button>
+      <button type="button" onclick="mtcAfficherActeJudiciaire('jugements')">Guide jugements</button>
+      <button type="button" onclick="mtcAfficherActeJudiciaire('certificats')">Guide autres actes</button>
+    </div>
   </div>
   <div id="judiciaireDetailActe" class="judiciaire-detail" aria-live="polite">
-    <p>Sélectionnez une démarche ci-dessus pour afficher son accompagnement.</p>
+    <p>Les boutons ci-dessus vous dirigent directement vers e-Justice. Les guides de préparation sont facultatifs.</p>
   </div>
   <div class="judiciaire-suivi">
     <h3>Vous avez déjà déposé une demande ?</h3>
