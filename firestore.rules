@@ -647,7 +647,7 @@ service cloud.firestore {
         && (!request.resource.data.keys().hasAny(["photoUrl"]) || (request.resource.data.photoUrl is string && request.resource.data.photoUrl.size() <= 400000 && request.resource.data.photoUrl.matches("^data:image/jpeg;base64,.*$")))
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time;
-      allow read: if estAdmin() || (resource.data.statut == "approuve" && (resource.data.type != "depannage" || estAbonneAutomobiliste()));
+      allow read: if estAdmin() || (resource.data.statut == "approuve" && (resource.data.type != "depannage" || estAbonneAutomobiliste()) && (resource.data.type != "annuaire" || (resource.data.abonnementFin is timestamp && resource.data.abonnementFin > request.time)));
       allow update, delete: if estAdmin();
     }
 
