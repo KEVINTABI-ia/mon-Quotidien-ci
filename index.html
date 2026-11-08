@@ -10669,8 +10669,8 @@ window.mtcAfficherActeJudiciaire = function(type){
       const b=e.target.closest('button'); if(!b)return;
       const action=b.dataset.nav;
       if(action==='home'){window.scrollTo({top:0,behavior:'smooth'});nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
-      else if(action==='transport') aller('homeMobilite');
-      else if(action==='services') aller('homeQuotidien');
+      else if(action==='transport') {aller('homeMobilite');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
+      else if(action==='services') {aller('homeQuotidien');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
       else if(action==='communaute') {if(typeof ouvrirEspaceCommunautaire==='function')ouvrirEspaceCommunautaire();}
       else if(action==='menu'){const m=document.getElementById('menuDropdown');if(m)m.style.display=m.style.display==='block'?'none':'block';}
     });
