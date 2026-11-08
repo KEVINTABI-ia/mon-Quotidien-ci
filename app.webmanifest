@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Mon Transport CI",
-  "short_name": "Transport CI",
-  "description": "Trouvez vos moyens de transport, vos itinéraires, les gares et les marchés en Côte d’Ivoire.",
+  "name": "Mon Quotidien CI",
+  "short_name": "Mon Quotidien",
+  "description": "Mon Quotidien CI réunit transport, démarches administratives, justice, foncier, commerce, livraison et services utiles en Côte d’Ivoire.",
   "lang": "fr-CI",
   "start_url": "./",
   "scope": "./",
