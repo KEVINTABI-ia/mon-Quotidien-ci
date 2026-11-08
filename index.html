@@ -3003,10 +3003,7 @@ function chargerPublicitesAccueil() {
   <div id="nouveauxServicesPublics"><p class="notice">Chargement...</p></div>
 </section>
 
-<section class="card" id="espaceAnnoncesOffres" style="display:none;"><h2>📢 Consulter ou faire une annonce et une offre</h2><p>Choisissez votre espace.</p>
-<div class="card" style="padding:14px;"><h3>👀 Consulter les annonces et offres</h3><p class="notice">Accès libre pour les clients.</p><button class="primary" onclick="consulterAnnoncesOffres()">Consulter les annonces et offres</button></div>
-<div class="card" style="padding:14px;"><h3>🔐 Espace connexion et création de compte</h3><p class="notice">Pour les annonceurs et les personnes qui proposent une offre.</p><button class="primary" onclick="ouvrirEspaceAnnonceur()">Espace connexion et création de compte</button></div>
-<div id="zoneConsultationAnnonces" style="display:none"></div><div id="zoneConnexionAnnonceur" style="display:none"></div><div id="zoneEspaceAnnonceur" style="display:none"></div></section>
+
 <section class="card" id="espaceCommunautaire" style="display:none;"><h2>🗞️ M’informer / Gbairai</h2><p>Informations utiles et échanges de la communauté.</p>
 <div id="menuCommunautaire" class="modes"><button class="mode" onclick="ouvrirInformationsCommunautaires()">📰 M’informer</button><button class="mode" onclick="ouvrirTchatGbairai()">💬 Faire un gbairai</button></div>
 <div id="zoneInformationsCommunautaires" style="display:none"></div><div id="zoneTchatGbairai" style="display:none"></div></section>
@@ -10691,7 +10688,7 @@ window.mtcAfficherActeJudiciaire = function(type){
 
     const champ=document.getElementById('rechercheUniverselleAccueil');
     const statut=document.getElementById('statutRechercheUniverselle');
-    const selecteurs='.accueil-service, #menuQuotidien .tuile-quotidien, #menuQuotidien .bouton-commerce-accueil, .acces-prioritaire';
+    const selecteurs='.accueil-service, #menuQuotidien .tuile-quotidien, .bouton-commerce-accueil, .acces-prioritaire';
     function filtrer(){
       const q=(champ.value||'').trim().toLocaleLowerCase('fr');
       const items=Array.from(shell.querySelectorAll(selecteurs));
