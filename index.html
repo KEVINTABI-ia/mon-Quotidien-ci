@@ -9,9 +9,10 @@
 <link rel="icon" href="./icon-transport-ci.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon-transport-ci.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Transport CI">
+<meta name="apple-mobile-web-app-title" content="Mon Quotidien CI">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Mon Transport CI</title>
+<meta name="description" content="Mon Quotidien CI : transport, démarches administratives, justice, foncier, commerce, livraison et services utiles en Côte d’Ivoire.">
+<title>Mon Quotidien CI</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -1141,7 +1142,7 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 @media(prefers-reduced-motion:reduce){.confirmation-overlay,.confirmation-dialog{animation:none}}
 
 
-/* En-tête compact et identité visuelle MON TRANSPORT CI */
+/* En-tête compact et identité visuelle MON QUOTIDIEN CI */
 header{padding:22px 18px 24px!important}
 .brand{display:flex!important;align-items:center!important;gap:10px!important;font-size:inherit!important;line-height:1!important}
 .brand-icon{width:40px!important;height:40px!important;flex:0 0 40px!important;border-radius:12px!important;font-size:23px!important}
@@ -1622,14 +1623,14 @@ header .header-badge{margin-top:6px!important;font-size:8px!important}
 
 <header>
   <div class="brand">
-    <img class="brand-icon" src="./logo-mon-transport-ci.jpg" alt="Logo Mon Transport CI">
-    <span class="brand-name"><span class="brand-mon">MON</span><span class="brand-title">TRANSPORT CI</span></span>
+    <img class="brand-icon" src="./logo-mon-transport-ci.jpg" alt="Icône provisoire de Mon Quotidien CI">
+    <span class="brand-name"><span class="brand-mon">MON</span><span class="brand-title">QUOTIDIEN CI</span></span>
   </div>
 
-  <div class="header-badge">VOTRE GUIDE DE MOBILITÉ</div>
+  <div class="header-badge">VOTRE PLATEFORME DE SERVICES</div>
 
-  <div class="tagline tagline-anime" aria-label="Votre guide de mobilité, toujours avec vous au quotidien : trouvez votre trajet, consultez les tarifs, repérez les gares qui desservent votre destination et laissez-vous guider jusqu’à votre gare.">
-    <span>Votre guide de mobilité, toujours avec vous au quotidien : trouvez votre trajet, consultez les tarifs, repérez les gares qui desservent votre destination et laissez-vous guider jusqu’à votre gare.</span>
+  <div class="tagline tagline-anime" aria-label="Tous les services utiles, au même endroit.">
+    <span>Tous les services utiles, au même endroit.</span>
   </div>
 </header>
 
@@ -1637,7 +1638,7 @@ header .header-badge{margin-top:6px!important;font-size:8px!important}
   <section class="card transport-colis-screen" id="transportColis" style="display:none;">
   <div class="transport-colis-intro">
     <h2>📦 Transport Colis CI</h2>
-    <p class="transport-colis-service">Un service de Mon Transport CI</p>
+    <p class="transport-colis-service">Un service de Mon Quotidien CI</p>
     <p class="transport-colis-description">Envoyez et recevez vos colis partout à Abidjan.</p>
   </div>
   <h1 class="transport-colis-connexion-titre">ESPACE DE CONNEXION</h1>
@@ -1650,7 +1651,7 @@ header .header-badge{margin-top:6px!important;font-size:8px!important}
 </section>
 
 <section class="card" id="devenirPartenaire" style="display:none;">
-  <h2>🤝 Devenir partenaire de Mon Transport CI</h2>
+  <h2>🤝 Devenir partenaire de Mon Quotidien CI</h2>
   <p>Rejoignez notre réseau professionnel. Choisissez votre activité pour afficher le formulaire correspondant. Chaque dossier est soumis à vérification avant activation ou publication.</p>
   <label for="typePartenaireSouhaite"><strong>Quel type de partenaire souhaitez-vous être ?</strong></label>
   <select id="typePartenaireSouhaite" onchange="afficherFormulairePartenaire(this.value)" style="width:100%;padding:14px;border:1px solid #D5E2D9;border-radius:12px;margin:8px 0 14px;">
@@ -1948,7 +1949,7 @@ header .header-badge{margin-top:6px!important;font-size:8px!important}
 <section class="espace-publicitaire" id="espacePublicitaire" aria-label="Espace publicitaire" style="display:none;">
   <div class="publicite-entete">
     <span>ESPACE PUBLICITAIRE</span>
-    <small>Faites connaître votre activité sur Mon Transport CI</small>
+    <small>Faites connaître votre activité sur Mon Quotidien CI</small>
   </div>
   <div class="publicite-media" id="publiciteMedia">
     <div class="publicite-placeholder">
@@ -2020,7 +2021,7 @@ async function envoyerDemandePublicite(event) {
       statut: "en_attente",
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    statut.textContent = "Votre demande a bien été envoyée à Mon Transport CI. Nous allons examiner vos informations et vous contacter au numéro indiqué pour la suite. Vous pourrez nous transmettre votre photo ou vidéo directement lors de cet échange.";
+    statut.textContent = "Votre demande a bien été envoyée à Mon Quotidien CI. Nous allons examiner vos informations et vous contacter au numéro indiqué pour la suite. Vous pourrez nous transmettre votre photo ou vidéo directement lors de cet échange.";
     formulaire.reset();
   } catch (erreur) {
     console.error("Erreur demande publicitaire :", erreur);
@@ -2671,7 +2672,7 @@ function chargerPublicitesAccueil() {
     <a href="https://www.transports.gouv.ci/" target="_blank" rel="noopener noreferrer" class="ministere-action ministere-action-secondary">🏛️ Visiter le site du ministère <span aria-hidden="true">↗</span></a>
     <a href="tel:1302" class="ministere-action ministere-action-secondary">☎️ Appeler le CGI : 1302 (appel gratuit)</a>
   </div>
-  <p class="ministere-note">Mon Transport CI facilite l’accès aux démarches, mais ne délivre pas les documents officiels. Les demandes, paiements, rendez-vous et vérifications sont effectués sur les plateformes officielles. Certains services peuvent nécessiter un compte CGI Digital.</p>
+  <p class="ministere-note">Mon Quotidien CI facilite l’accès aux démarches, mais ne délivre pas les documents officiels. Les demandes, paiements, rendez-vous et vérifications sont effectués sur les plateformes officielles. Certains services peuvent nécessiter un compte CGI Digital.</p>
 </section>
 
 <section id="abonnementAutomobiliste" class="card" style="display:none;padding:18px;border:2px solid #D5A84B;background:#FFFCF4;">
@@ -2692,7 +2693,7 @@ function chargerPublicitesAccueil() {
     <input id="motPasseAbonnementAuto" type="password" autocomplete="current-password" placeholder="6 caractères minimum" style="width:100%;padding:12px;margin:5px 0 10px;">
     <button type="button" onclick="connecterCompteAbonnementAuto()" style="width:100%;margin:4px 0;">Se connecter</button>
     <button type="button" onclick="creerCompteAbonnementAuto()" style="width:100%;margin:4px 0;">Créer mon compte</button>
-    <p class="notice">Si vous avez déjà un compte Mon Transport CI, utilisez la même adresse e-mail.</p>
+    <p class="notice">Si vous avez déjà un compte Mon Quotidien CI, utilisez la même adresse e-mail.</p>
   </div>
   <div id="formulaireDemandeAbonnementAuto" style="display:none;padding:12px;border:1px solid #E2E9E4;border-radius:12px;margin-top:12px;">
     <p id="etatAbonnementAuto" class="notice" aria-live="polite">Vérification de votre abonnement...</p>
@@ -2824,7 +2825,7 @@ function chargerPublicitesAccueil() {
 <section class="card" id="servicesSante" style="display:none;"><h2>🏥 Centres de santé et laboratoires</h2><p>Recherchez les structures médicales autour de votre commune ou de votre position.</p><div class="modes"><a class="mode" style="display:block;text-align:center;text-decoration:none;padding:14px;" href="https://www.google.com/maps/search/centre+de+santé+près+de+moi" target="_blank" rel="noopener noreferrer">🏥 Centres de santé à proximité</a><a class="mode" style="display:block;text-align:center;text-decoration:none;padding:14px;" href="https://www.google.com/maps/search/laboratoire+analyses+médicales+près+de+moi" target="_blank" rel="noopener noreferrer">🧪 Laboratoires d’analyses</a><a class="mode" style="display:block;text-align:center;text-decoration:none;padding:14px;" href="https://www.google.com/maps/search/service+médical+près+de+moi" target="_blank" rel="noopener noreferrer">📍 Services médicaux</a></div><h3>📞 Numéros d’urgence en Côte d’Ivoire</h3><p><a href="tel:185">SAMU — 185</a></p><p><a href="tel:180">Sapeurs-pompiers — 180</a></p><p><a href="tel:170">Police secours — 170</a></p><p class="notice">En cas d’urgence vitale, appelez directement les secours. Vérifiez les informations locales si vous êtes hors de Côte d’Ivoire.</p></section>
 <section class="card" id="nouveauxServices" style="display:none;">
   <h2 id="nouveauxServicesTitre">📢 Petites annonces et emplois</h2>
-  <p id="nouveauxServicesDescription">Consultez et publiez des annonces et offres validées par Mon Transport CI.</p>
+  <p id="nouveauxServicesDescription">Consultez et publiez des annonces et offres validées par Mon Quotidien CI.</p>
   <div id="connexionBoutiqueZone" class="card" style="padding:14px;margin:14px 0;">
     <h3>🔐 Espace commerçant</h3>
     <p>Connectez-vous pour consulter les commandes de votre boutique et les retours des clients.</p>
@@ -2852,7 +2853,7 @@ function chargerPublicitesAccueil() {
   <p>Préparez une recherche foncière à partir des références de votre parcelle. Vous pouvez aussi lire le QR code IDUFCI présent sur un document, lorsqu'il est disponible.</p>
   <div class="terrain-action">
     <strong>📷 Lire un QR code IDUFCI</strong>
-    <p class="terrain-note">La lecture se fait sur cet appareil. L'image du document n'est pas envoyée à Mon Transport CI. Le contenu du QR code sera affiché pour vérification avant utilisation.</p>
+    <p class="terrain-note">La lecture se fait sur cet appareil. L'image du document n'est pas envoyée à Mon Quotidien CI. Le contenu du QR code sera affiché pour vérification avant utilisation.</p>
     <div class="terrain-buttons">
       <button type="button" class="primary" onclick="demarrerLectureQrTerrain()">Ouvrir la caméra</button>
       <button type="button" onclick="document.getElementById('fichierQrTerrain').click()">Choisir une image</button>
@@ -2874,7 +2875,7 @@ function chargerPublicitesAccueil() {
   <div id="resultatRechercheTerrain" class="terrain-result" aria-live="polite"></div>
   <p class="terrain-note"><strong>Important :</strong> cette première version lit le QR code et prépare les références. Elle n'interroge pas directement les bases du ministère et ne certifie ni l'authenticité du document ni l'absence de litige. Ne transmettez jamais votre mot de passe SIGFU.</p>
   <hr><h3>📨 Déposer une demande et suivre mon dossier</h3>
-  <p class="terrain-note">Connectez-vous avec votre compte Mon Transport CI. Votre demande sera privée : vous et l'administrateur autorisé pourrez la consulter.</p>
+  <p class="terrain-note">Connectez-vous avec votre compte Mon Quotidien CI. Votre demande sera privée : vous et l'administrateur autorisé pourrez la consulter.</p>
   <div id="terrainAuthZone">
     <label for="terrainEmail">Adresse e-mail</label><input id="terrainEmail" type="email" autocomplete="email" placeholder="Votre e-mail">
     <label for="terrainMotDePasse">Mot de passe</label><input id="terrainMotDePasse" type="password" autocomplete="current-password" placeholder="Mot de passe">
@@ -2901,7 +2902,7 @@ function chargerPublicitesAccueil() {
     <h2>⚖️ Mes démarches judiciaires</h2>
     <p>Comprendre votre démarche, préparer les éléments utiles et accéder au portail officiel du Ministère de la Justice.</p>
   </div>
-  <div class="judiciaire-alerte"><strong>Important</strong><br>Mon Transport CI vous accompagne dans vos démarches. Les demandes, les paiements et la délivrance des actes sont réalisés exclusivement par les services officiels. Nous ne délivrons pas de documents judiciaires et ne sommes pas un service du Ministère.</div>
+  <div class="judiciaire-alerte"><strong>Important</strong><br>Mon Quotidien CI vous accompagne dans vos démarches. Les demandes, les paiements et la délivrance des actes sont réalisés exclusivement par les services officiels. Nous ne délivrons pas de documents judiciaires et ne sommes pas un service du Ministère.</div>
   <h3>Que souhaitez-vous obtenir ?</h3>
   <p class="notice">Choisissez un document pour découvrir son utilité, les points à préparer et la marche à suivre.</p>
   <div class="judiciaire-grille">
@@ -2943,7 +2944,7 @@ function chargerPublicitesAccueil() {
 
 </main>
 
-<footer>Mon Transport CI · La mobilité en Côte d'Ivoire</footer>
+<footer>Mon Quotidien CI · Tous les services utiles en Côte d’Ivoire</footer>
 <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore-compat.js"></script>
@@ -3052,7 +3053,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
    ?"Consultez les professionnels du dépannage automobile et proposez vos services après validation."
    :type==="commerce"
      ?"Consultez les boutiques et commerces référencés, ou proposez votre établissement après validation."
-     :"Consultez et publiez des petites annonces et offres validées par Mon Transport CI.";
+     :"Consultez et publiez des petites annonces et offres validées par Mon Quotidien CI.";
  if(titreListe) titreListe.textContent=type==="depannage"
    ?"Professionnels du dépannage disponibles"
    :type==="commerce"?"Commerces et boutiques référencés":"Annonces et offres disponibles";
@@ -3578,7 +3579,7 @@ function afficherMenuAdmin(){
   const menu=document.getElementById("adminMenuRubriques");
   if(!menu)return;
   const groupes=[...new Set(RUBRIQUES_ADMIN.map(r=>r.groupe))];
-  menu.innerHTML=`<h2 class="admin-dashboard-heading">ADMINISTRATION — MON TRANSPORT CI</h2><p class="admin-dashboard-subtitle">Centre de contrôle de la plateforme · Sélectionne une rubrique pour ouvrir son espace de gestion.</p>`+
+  menu.innerHTML=`<h2 class="admin-dashboard-heading">ADMINISTRATION — MON QUOTIDIEN CI</h2><p class="admin-dashboard-subtitle">Centre de contrôle de la plateforme · Sélectionne une rubrique pour ouvrir son espace de gestion.</p>`+
     groupes.map(g=>`<section class="admin-groupe"><h3 class="admin-groupe-titre">${g}</h3><div class="admin-groupe-grille">`+
       RUBRIQUES_ADMIN.filter(r=>r.groupe===g).map(r=>`<button type="button" class="admin-rubrique" style="background-image:url('./assets/illustrations/${r.image||'services'}.svg')" onclick="ouvrirRubriqueAdmin('${r.id}')"><span class="admin-rubrique-icone" aria-hidden="true">${r.icone}</span><span class="admin-rubrique-contenu"><span class="admin-rubrique-titre">${r.titre}${r.notification?'<span class="admin-notification-count" data-notification-type="'+r.notification+'" hidden>0</span>':''}</span><span class="admin-rubrique-description">${r.description}</span></span><span class="admin-rubrique-fleche" aria-hidden="true">›</span></button>`).join("")+
       `</div></section>`).join("");
@@ -4253,7 +4254,7 @@ const route=item.route;
 const stop=route.stops[item.index];
 
 const message=
-"🇨🇮 MON TRANSPORT CI\n\n"+
+"🇨🇮 MON QUOTIDIEN CI\n\n"+
 "🚌 Transport : "+route.transport+"\n"+
 "📍 Départ : "+route.depart+"\n"+
 "🏁 Destination : "+stop[0]+"\n"+
@@ -4396,7 +4397,7 @@ const route=item.route;
 const stop=route.stops[item.index];
 
 const message=
-"🇨🇮 SIGNALEMENT - MON TRANSPORT CI\n\n"+
+"🇨🇮 SIGNALEMENT - MON QUOTIDIEN CI\n\n"+
 "Transport : "+route.transport+"\n"+
 "Départ : "+route.depart+"\n"+
 "Destination : "+stop[0]+"\n"+
@@ -4637,7 +4638,7 @@ function afficherFicheDetailleeGare(id){
     '<p><strong>Moyens de transport :</strong> '+(transports.length?transports.map(echapperTextePublicite).join(", "):"Non renseignés")+'</p>'+
     '<h3>Destinations et tarifs</h3>'+
     (lignes||'<p class="notice">Aucune destination n’est encore enregistrée pour cette gare.</p>')+
-    '<p class="notice">Les tarifs affichés sont ceux enregistrés dans Mon Transport CI. Confirmez le prix auprès du transporteur avant le départ.</p></article>';
+    '<p class="notice">Les tarifs affichés sont ceux enregistrés dans Mon Quotidien CI. Confirmez le prix auprès du transporteur avant le départ.</p></article>';
 }
 
 function placerMarqueurPositionGare(lat,lng){
@@ -4759,7 +4760,7 @@ async function verifierDestinationGare(){
       zone.innerHTML="<p class='notice'>Votre commune n’a pas pu être déterminée par GPS. Pour ne pas interrompre la recherche, les autres gares de la commune de la gare saisie (« "+echapperTextePublicite(communeUtilisateur||"non précisée")+" ») seront recherchées.</p>";
     }
     if(!communeUtilisateur){
-      zone.innerHTML+="<p class='notice'>Autorisez la localisation de Mon Transport CI ou utilisez « Je cherche une gare » en indiquant votre commune.</p>";
+      zone.innerHTML+="<p class='notice'>Autorisez la localisation de Mon Quotidien CI ou utilisez « Je cherche une gare » en indiquant votre commune.</p>";
       return;
     }
     const alternatives=garesFirestore.filter(g=>
@@ -4854,7 +4855,7 @@ function trouverGaresProchesDeMoi(){
   },erreur=>{
     bouton.disabled=false;
     bouton.textContent="📍 Trouver les gares près de moi";
-    zone.textContent=erreur.code===1?"Autorisez l’accès à votre position pour Mon Transport CI dans les réglages de votre téléphone, puis réessayez.":"Votre position n’a pas pu être récupérée. Activez le GPS et réessayez.";
+    zone.textContent=erreur.code===1?"Autorisez l’accès à votre position pour Mon Quotidien CI dans les réglages de votre téléphone, puis réessayez.":"Votre position n’a pas pu être récupérée. Activez le GPS et réessayez.";
   },{enableHighAccuracy:true,timeout:18000,maximumAge:60000});
 }
 
@@ -6461,7 +6462,7 @@ function ouvrirElementPleinEcran(element, titre){
   const displayInitial = element.style.display;
   element.parentNode.insertBefore(placeholder, element);
 
-  document.getElementById("vuePleinEcranTitre").textContent = titre || "Mon Transport CI";
+  document.getElementById("vuePleinEcranTitre").textContent = titre || "Mon Quotidien CI";
   const contenu = document.getElementById("vuePleinEcranContenu");
   contenu.replaceChildren(element);
   element.style.display = "block";
@@ -7807,7 +7808,7 @@ async function chargerHistoriqueCommandes(){
       carte.append(numero, statut, trajet);
       if(commande.tarification){
         const prix=document.createElement("p");
-        prix.textContent="Montant Mon Transport CI : "+Number(commande.tarification.montantTotal||0).toLocaleString("fr-FR")+" FCFA";
+        prix.textContent="Montant Mon Quotidien CI : "+Number(commande.tarification.montantTotal||0).toLocaleString("fr-FR")+" FCFA";
         carte.appendChild(prix);
       }
       if(commande.referencesExpedition){
@@ -7860,7 +7861,7 @@ function signalerProblemeGeneral(){
   document.getElementById("menuDropdown").style.display = "none";
 
   const message =
-    "🇨🇮 SIGNALEMENT - MON TRANSPORT CI\n\n" +
+    "🇨🇮 SIGNALEMENT - MON QUOTIDIEN CI\n\n" +
     "Je souhaite signaler un problème concernant l'application ou un trajet.\n\n" +
     "Description du problème : ";
 
@@ -8599,7 +8600,7 @@ function afficherReseauNational(){
     });
   });
 
-  html += "<p class='notice'>Ce répertoire présente uniquement les itinéraires enregistrés dans Mon Transport CI. D'autres villes et régions seront ajoutées progressivement.</p>";
+  html += "<p class='notice'>Ce répertoire présente uniquement les itinéraires enregistrés dans Mon Quotidien CI. D'autres villes et régions seront ajoutées progressivement.</p>";
 
   resultat.style.display = "block";
   resultat.innerHTML = html;
@@ -9175,7 +9176,7 @@ async function preparerRappelWhatsApp(id) {
 
     const numero = compagnie.telephone.replace(/\D/g, "");
 
-    const message = `Bonjour ${compagnie.nom}, votre abonnement Mon Transport CI est actuellement ${compagnie.statutAbonnement}. Formule : ${compagnie.formule}. Montant : ${Number(compagnie.montant).toLocaleString("fr-FR")} FCFA. Merci de nous contacter pour toute information concernant votre abonnement.`;
+    const message = `Bonjour ${compagnie.nom}, votre abonnement Mon Quotidien CI est actuellement ${compagnie.statutAbonnement}. Formule : ${compagnie.formule}. Montant : ${Number(compagnie.montant).toLocaleString("fr-FR")} FCFA. Merci de nous contacter pour toute information concernant votre abonnement.`;
 
     const lien = "https://wa.me/" + numero + "?text=" + encodeURIComponent(message);
 
@@ -9206,11 +9207,11 @@ async function preparerRappelEmail(id) {
       return;
     }
 
-    const sujet = "Rappel concernant votre abonnement Mon Transport CI";
+    const sujet = "Rappel concernant votre abonnement Mon Quotidien CI";
 
     const message = `Bonjour ${compagnie.nom},
 
-Votre abonnement Mon Transport CI est actuellement : ${compagnie.statutAbonnement}.
+Votre abonnement Mon Quotidien CI est actuellement : ${compagnie.statutAbonnement}.
 
 Formule : ${compagnie.formule}
 Montant : ${Number(compagnie.montant).toLocaleString("fr-FR")} FCFA.
@@ -9218,7 +9219,7 @@ Montant : ${Number(compagnie.montant).toLocaleString("fr-FR")} FCFA.
 Merci de nous contacter pour toute information concernant votre abonnement.
 
 Cordialement,
-L'équipe Mon Transport CI.`;
+L'équipe Mon Quotidien CI.`;
 
     const lien = "mailto:" + encodeURIComponent(compagnie.email)
       + "?subject=" + encodeURIComponent(sujet)
@@ -9264,7 +9265,7 @@ const logoHTML = logoValide
 
 const numeroWhatsApp = String(compagnie.telephone || "").replace(/\D/g, "");
 
-const messageVoyageur = `Bonjour ${compagnie.nom}, je vous contacte depuis Mon Transport CI. Je souhaiterais obtenir des informations sur vos voyages, vos horaires et vos tarifs. Merci.`;
+const messageVoyageur = `Bonjour ${compagnie.nom}, je vous contacte depuis Mon Quotidien CI. Je souhaiterais obtenir des informations sur vos voyages, vos horaires et vos tarifs. Merci.`;
 
 const boutonWhatsApp = numeroWhatsApp
   ? `<a href="https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(messageVoyageur)}"
@@ -9527,7 +9528,7 @@ async function afficherMissionPartenaire(c, partenaire, zone) {
     const prixSnap=await db.collection("commandes_colis").doc(c.id).collection("tarification").doc("prix").get();
     if(prixSnap.exists){
       const p=prixSnap.data();
-      const montant=document.createElement("p"); montant.textContent="Montant Mon Transport CI à percevoir : "+Number(p.montantTotal||0).toLocaleString("fr-FR")+" FCFA"; card.appendChild(montant);
+      const montant=document.createElement("p"); montant.textContent="Montant Mon Quotidien CI à percevoir : "+Number(p.montantTotal||0).toLocaleString("fr-FR")+" FCFA"; card.appendChild(montant);
     } else {
       const alerte=document.createElement("p"); alerte.textContent="Tarif privé introuvable. Contactez l'administrateur avant de clôturer."; card.appendChild(alerte);
     }
@@ -9631,7 +9632,7 @@ async function marquerColisRecupere(commandeId) {
 
 async function marquerArriveDestination(commandeId) {
   const user=auth.currentUser; if(!user) return;
-  if(!confirm("Confirmer votre arrivée au point de destination ? Le montant Mon Transport CI deviendra visible.")) return;
+  if(!confirm("Confirmer votre arrivée au point de destination ? Le montant Mon Quotidien CI deviendra visible.")) return;
   try {
     await db.runTransaction(async tx=>{
       const ref=db.collection("commandes_colis").doc(commandeId), snap=await tx.get(ref);
@@ -9666,7 +9667,7 @@ async function terminerExpeditionGare(commandeId) {
   const lire=id=>{const el=document.getElementById(id);return el?el.value.trim():"";};
   const compagnie=lire("refCompagnieExpedition"), gareDestination=lire("refGareDestination"), codeColis=lire("refCodeColisExpedition");
   if(!compagnie||!gareDestination||!codeColis) return alert("Les trois références sont obligatoires.");
-  if(!confirm("Confirmez-vous que le règlement Mon Transport CI a été effectué ? Les frais éventuels du service courrier de la gare restent distincts et convenus directement avec le client.\n\nEnregistrer les références d'expédition et terminer la course ?")) return;
+  if(!confirm("Confirmez-vous que le règlement Mon Quotidien CI a été effectué ? Les frais éventuels du service courrier de la gare restent distincts et convenus directement avec le client.\n\nEnregistrer les références d'expédition et terminer la course ?")) return;
   const ref=db.collection("commandes_colis").doc(commandeId);
   const lock=db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
   try{
@@ -9678,7 +9679,7 @@ async function terminerExpeditionGare(commandeId) {
     batch.update(ref,{statut:"livre",dateLivraison:firebase.firestore.FieldValue.serverTimestamp()});
     await batch.commit();
     await lock.delete();
-    alert("Références enregistrées. Le client les retrouvera dans son espace Mon Transport CI.");
+    alert("Références enregistrées. Le client les retrouvera dans son espace Mon Quotidien CI.");
     chargerCommandesPartenaire();
   }catch(e){alert("Enregistrement impossible : "+e.message);}
 }
@@ -9733,7 +9734,7 @@ async function enregistrerCommande() {
     const fraisService=service==="compagnie"?300:0;
     const montantLivraison=Math.round(distanceKm*tarifKm);
     const montantTotal=montantLivraison+fraisService;
-    const resumeTarif="MONTANT TOTAL MON TRANSPORT CI : "+montantTotal.toLocaleString("fr-FR")+" FCFA";
+    const resumeTarif="MONTANT TOTAL MON QUOTIDIEN CI : "+montantTotal.toLocaleString("fr-FR")+" FCFA";
     const noteGare=service==="compagnie"&&operation==="expedition"?"\nLes frais d'expédition de la compagnie sont à régler séparément et seront discutés directement avec le livreur.":(service==="compagnie"&&operation==="recuperation"?"\nLes éventuels frais de retrait du service courrier de la gare seront communiqués sur place par le livreur et discutés directement avec lui.":"");
     if(!confirm("Vérifiez le tarif de votre commande :\n\n"+resumeTarif+noteGare+"\n\nConfirmer la commande ?")) return;
     const numeroSuivi="TCI-"+Date.now().toString(36).toUpperCase()+"-"+Math.floor(1000+Math.random()*9000);
@@ -9765,7 +9766,7 @@ async function enregistrerCommande() {
       tx.set(ref.collection("informations_privees").doc("details"),{...privateData,clientId:user.uid,createdAt});
       tx.set(ref.collection("tarification").doc("prix"),prixPrive);
     });
-    document.getElementById("zoneFormulaireCommande").innerHTML=`<hr><h3>✅ Commande enregistrée !</h3><p><strong>Numéro de suivi :</strong></p><h3>${numeroSuivi}</h3><p><strong>Montant Mon Transport CI :</strong> ${montantTotal.toLocaleString("fr-FR")} FCFA</p><p><strong>Statut :</strong> En attente</p><p>Votre commande a bien été enregistrée.</p><button type="button" onclick="afficherFormulaireCommande()">Nouvelle commande</button>`;
+    document.getElementById("zoneFormulaireCommande").innerHTML=`<hr><h3>✅ Commande enregistrée !</h3><p><strong>Numéro de suivi :</strong></p><h3>${numeroSuivi}</h3><p><strong>Montant Mon Quotidien CI :</strong> ${montantTotal.toLocaleString("fr-FR")} FCFA</p><p><strong>Statut :</strong> En attente</p><p>Votre commande a bien été enregistrée.</p><button type="button" onclick="afficherFormulaireCommande()">Nouvelle commande</button>`;
     await chargerHistoriqueCommandes();
   } catch(e) { console.error("Erreur commande :",e); alert("Impossible d'enregistrer la commande : "+e.message); }
 }
@@ -9907,14 +9908,14 @@ async function afficherCompagniesPubliques() {
  const toutes=CATALOGUE_COMPAGNIES_INTERURBAINES.map(n=>({nom:n,source:"Annuaire public",actif:false}));
  actifs.forEach(c=>{
   const nom=String(c.nom||"").trim();
-  if(nom && !toutes.some(x=>x.nom.toLocaleLowerCase("fr")===nom.toLocaleLowerCase("fr"))) toutes.unshift({nom,source:"Partenaire Mon Transport CI",actif:true,fiche:c});
+  if(nom && !toutes.some(x=>x.nom.toLocaleLowerCase("fr")===nom.toLocaleLowerCase("fr"))) toutes.unshift({nom,source:"Partenaire Mon Quotidien CI",actif:true,fiche:c});
  });
  const filtrees=toutes.filter(c=>(!nomRecherche||c.nom.toLocaleLowerCase("fr").includes(nomRecherche))&&(!villeChoisie||villeChoisie==="Toutes les villes"||((c.fiche?.destinations||[]).some(d=>String(d.ville||"").toLocaleLowerCase("fr")===villeChoisie.toLocaleLowerCase("fr")))));
  const prixHTML=TARIFS_INTERURBAINS_INDICATIFS.filter(t=>!villeChoisie||villeChoisie==="Toutes les villes"||t.ville===villeChoisie).map(t=>'<li><strong>'+echapperTexteCompagnie(t.depart)+' → '+echapperTexteCompagnie(t.ville)+'</strong> : dès '+t.prix.toLocaleString("fr-FR")+' FCFA <small>(indicatif, non attribué à une compagnie précise)</small></li>').join("");
  const listeHTML=filtrees.map(c=>{
   const fiche=c.fiche||{};
   const destinations=(fiche.destinations||[]).map(d=>'<li>'+echapperTexteCompagnie(d.ville)+' : '+(Number(d.prix)>0?Number(d.prix).toLocaleString("fr-FR")+' FCFA':'Tarif à confirmer')+' — Service : '+echapperTexteCompagnie(d.service||"Non précisé")+'</li>').join("");
-  return '<article class="stop" style="margin:10px 0;padding:14px"><strong>'+echapperTexteCompagnie(c.nom)+'</strong><p class="notice">'+(c.actif?'Partenaire actif sur Mon Transport CI':'Référencée dans les sources publiques — lignes et agence à confirmer')+'</p>'+(fiche.agence?'<p>Agence : '+echapperTexteCompagnie(fiche.agence)+'</p>':'')+(fiche.localisation?'<p>Localisation : '+echapperTexteCompagnie(fiche.localisation)+'</p>':'')+(fiche.telephone?'<p>Téléphone : '+echapperTexteCompagnie(fiche.telephone)+'</p>':'')+(destinations?'<p><strong>Destinations et tarifs saisis par la compagnie :</strong></p><ul>'+destinations+'</ul>':'<p class="notice">Aucun tarif ou itinéraire confirmé pour cette fiche. Contactez la compagnie avant le départ.</p>')+'</article>';
+  return '<article class="stop" style="margin:10px 0;padding:14px"><strong>'+echapperTexteCompagnie(c.nom)+'</strong><p class="notice">'+(c.actif?'Partenaire actif sur Mon Quotidien CI':'Référencée dans les sources publiques — lignes et agence à confirmer')+'</p>'+(fiche.agence?'<p>Agence : '+echapperTexteCompagnie(fiche.agence)+'</p>':'')+(fiche.localisation?'<p>Localisation : '+echapperTexteCompagnie(fiche.localisation)+'</p>':'')+(fiche.telephone?'<p>Téléphone : '+echapperTexteCompagnie(fiche.telephone)+'</p>':'')+(destinations?'<p><strong>Destinations et tarifs saisis par la compagnie :</strong></p><ul>'+destinations+'</ul>':'<p class="notice">Aucun tarif ou itinéraire confirmé pour cette fiche. Contactez la compagnie avant le départ.</p>')+'</article>';
  }).join("");
  zone.innerHTML=
  '<div class="card" style="padding:14px"><p><strong>Annuaire national — '+toutes.length+' compagnies référencées</strong></p><label for="rechercheCompagnieNationale">Rechercher une compagnie</label><input id="rechercheCompagnieNationale" placeholder="Ex. UTB, AVS, TSR..." value="'+echapperTexteCompagnie(nomRecherche)+'" onchange="afficherCompagniesPubliques()"><label for="filtreVilleNationale">Filtrer par ville desservie</label><select id="filtreVilleNationale" onchange="afficherCompagniesPubliques()"><option>Toutes les villes</option>'+VILLES_INTERURBAINES_DOCUMENTEES.map(v=>'<option '+(villeChoisie===v?'selected':'')+'>'+echapperTexteCompagnie(v)+'</option>').join("")+'</select><p class="notice">Le catalogue initial réunit les compagnies repérées publiquement. Une compagnie référencée n’est pas nécessairement partenaire ou vérifiée. Les destinations non publiées restent à confirmer.</p></div>'+
@@ -9937,7 +9938,7 @@ async function supprimerPartenaire(id) {
       alert("Suppression bloquée : ce partenaire possède une mission active. Terminez ou réattribuez d'abord la mission.");
       return;
     }
-    if (!(await demanderConfirmation("Supprimer ce partenaire ?", "Supprimer définitivement le dossier de " + nom + " ?\n\nLe profil sera retiré de Mon Transport CI. Les commandes et leur historique seront conservés. Le compte de connexion Firebase ne sera pas supprimé automatiquement.", "Oui, supprimer"))) return;
+    if (!(await demanderConfirmation("Supprimer ce partenaire ?", "Supprimer définitivement le dossier de " + nom + " ?\n\nLe profil sera retiré de Mon Quotidien CI. Les commandes et leur historique seront conservés. Le compte de connexion Firebase ne sera pas supprimé automatiquement.", "Oui, supprimer"))) return;
     if (verrou.exists) await verrou.ref.delete();
     await reference.delete();
     alert("Dossier partenaire supprimé. Son compte de connexion peut encore exister.");
@@ -10212,7 +10213,7 @@ activerVisibiliteMenusPublique();
     event.preventDefault();
     event.stopPropagation();
     const id = bouton.getAttribute("data-ouvrir-section");
-    const titre = bouton.getAttribute("data-titre-section") || "Mon Transport CI";
+    const titre = bouton.getAttribute("data-titre-section") || "Mon Quotidien CI";
     menu.style.display = "none";
     if (typeof window.ouvrirSectionPleinEcran !== "function") {
       alert("Le module de navigation n’a pas terminé son chargement. Actualise la page puis réessaie.");
@@ -10250,7 +10251,7 @@ function afficherContenuQrTerrain(texte){var zone=document.getElementById('resul
 async function demarrerLectureQrTerrain(){try{await chargerBibliothequeQrTerrain();var cible=document.getElementById('lecteurQrTerrain');if(!cible)throw new Error('Lecteur indisponible.');cible.innerHTML='';lecteurQrTerrainInstance=new Html5Qrcode('lecteurQrTerrain');await lecteurQrTerrainInstance.start({facingMode:'environment'},{fps:10,qrbox:{width:230,height:230}},function(txt){afficherContenuQrTerrain(txt);arreterLectureQrTerrain();},function(){});document.getElementById('arreterQrTerrain').style.display='inline-block';}catch(e){alert('Impossible d’ouvrir la caméra : '+(e.message||e)+'. Autorisez l’accès à la caméra ou choisissez une image du QR code.');}}
 async function arreterLectureQrTerrain(){if(!lecteurQrTerrainInstance)return;try{if(lecteurQrTerrainInstance.isScanning)await lecteurQrTerrainInstance.stop();await lecteurQrTerrainInstance.clear();}catch(e){console.warn('Arrêt du lecteur QR :',e);}lecteurQrTerrainInstance=null;var b=document.getElementById('arreterQrTerrain');if(b)b.style.display='none';}
 async function lireQrDepuisImageTerrain(fichier){if(!fichier)return;try{await chargerBibliothequeQrTerrain();var temporaire=new Html5Qrcode('lecteurQrTerrain');var texte=await temporaire.scanFile(fichier,true);afficherContenuQrTerrain(texte);await temporaire.clear();}catch(e){alert('Aucun QR code lisible trouvé dans cette image. Essaie une photo plus nette et bien cadrée.');}}
-function preparerRechercheTerrainOfficielle(){var v=function(id){return(document.getElementById(id)?.value||'').trim();};var donnees={localite:v('terrainLocalite'),lotissement:v('terrainLotissement'),ilot:v('terrainIlot'),lot:v('terrainLot'),idufci:v('terrainIdufci')};if(!donnees.localite&&!donnees.idufci){alert('Renseigne au minimum la localité ou l’IDUFCI.');return;}var zone=document.getElementById('resultatRechercheTerrain');zone.style.display='block';zone.replaceChildren();var titre=document.createElement('strong');titre.textContent='Références préparées pour vérification';zone.appendChild(titre);Object.entries(donnees).forEach(function(pair){if(pair[1]){var p=document.createElement('p');p.textContent=pair[0].toUpperCase()+' : '+pair[1];zone.appendChild(p);}});var note=document.createElement('p');note.className='terrain-note';note.textContent='La recherche officielle doit encore être effectuée sur le portail SIGFU. Mon Transport CI n’a pas encore de connexion autorisée aux bases du ministère.';zone.appendChild(note);var lien=document.createElement('a');lien.href='https://sigfu.gouv.ci/parcelles';lien.target='_blank';lien.rel='noopener noreferrer';lien.textContent='Ouvrir le SIGFU pour effectuer la recherche';zone.appendChild(lien);}
+function preparerRechercheTerrainOfficielle(){var v=function(id){return(document.getElementById(id)?.value||'').trim();};var donnees={localite:v('terrainLocalite'),lotissement:v('terrainLotissement'),ilot:v('terrainIlot'),lot:v('terrainLot'),idufci:v('terrainIdufci')};if(!donnees.localite&&!donnees.idufci){alert('Renseigne au minimum la localité ou l’IDUFCI.');return;}var zone=document.getElementById('resultatRechercheTerrain');zone.style.display='block';zone.replaceChildren();var titre=document.createElement('strong');titre.textContent='Références préparées pour vérification';zone.appendChild(titre);Object.entries(donnees).forEach(function(pair){if(pair[1]){var p=document.createElement('p');p.textContent=pair[0].toUpperCase()+' : '+pair[1];zone.appendChild(p);}});var note=document.createElement('p');note.className='terrain-note';note.textContent='La recherche officielle doit encore être effectuée sur le portail SIGFU. Mon Quotidien CI n’a pas encore de connexion autorisée aux bases du ministère.';zone.appendChild(note);var lien=document.createElement('a');lien.href='https://sigfu.gouv.ci/parcelles';lien.target='_blank';lien.rel='noopener noreferrer';lien.textContent='Ouvrir le SIGFU pour effectuer la recherche';zone.appendChild(lien);}
 
 // DEMANDES FONCIERES : dossiers privés, sans pièces jointes tant que le stockage privé n'est pas activé.
 function terrainMessage(id,texte){const e=document.getElementById(id);if(e)e.textContent=texte;}
@@ -10263,7 +10264,7 @@ async function envoyerDemandeTerrain(){const user=auth.currentUser;if(!user){ale
 async function chargerMesDemandesTerrain(){const zone=document.getElementById('mesDemandesTerrain'),user=auth.currentUser;if(!zone||!user)return;zone.textContent='Chargement...';try{const snap=await db.collection('demandes_foncieres_privees').where('uid','==',user.uid).limit(50).get();if(snap.empty){zone.textContent='Aucune demande pour le moment.';return;}zone.replaceChildren();snap.docs.sort((a,b)=>((b.data().createdAt?.seconds)||0)-((a.data().createdAt?.seconds)||0)).forEach(doc=>{const d=doc.data(),card=document.createElement('article');card.className='terrain-action';const h=document.createElement('strong');h.textContent='Dossier '+doc.id;const p=document.createElement('p');p.textContent='Type : '+d.typeDemande+' · Statut : '+d.statut;const q=document.createElement('p');q.textContent='Réponse : '+(d.reponseAdmin||'En attente de traitement');card.append(h,p,q);if(d.rapport&&d.rapport.resume){const info=document.createElement('p');info.className='terrain-note';info.textContent='Rapport de vérification disponible · Date : '+(d.rapport.dateVerification||'non précisée');const pdf=document.createElement('button');pdf.type='button';pdf.className='primary';pdf.textContent='📄 Télécharger mon rapport PDF';pdf.onclick=()=>telechargerRapportTerrainPDF(doc.id,d);card.append(info,pdf);}zone.appendChild(card);});}catch(e){zone.textContent='Impossible de charger vos demandes. Vérifiez les règles Firestore.';console.error(e);}}
 async function chargerDemandesFoncieresAdmin(){const zone=document.getElementById('listeDemandesFoncieresAdmin');if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){if(zone)zone.textContent='Accès administrateur requis.';return;}zone.textContent='Chargement...';try{const snap=await db.collection('demandes_foncieres_privees').limit(100).get();if(snap.empty){zone.textContent='Aucune demande reçue.';return;}zone.replaceChildren();snap.docs.sort((a,b)=>((b.data().createdAt?.seconds)||0)-((a.data().createdAt?.seconds)||0)).forEach(doc=>{const d=doc.data(),card=document.createElement('article');card.className='terrain-action';const h=document.createElement('strong');h.textContent='Dossier '+doc.id;const p=document.createElement('p');p.textContent=d.nom+' · '+d.telephone+' · '+d.email;const details=document.createElement('p');details.textContent='Type : '+d.typeDemande+' · '+JSON.stringify(d.refs)+' · '+d.question;const status=document.createElement('select');['reçue','en_cours','information_manquante','orientée_vers_service_officiel','terminée','refusée'].forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=x;o.selected=d.statut===x;status.appendChild(o);});const reply=document.createElement('textarea');reply.rows=3;reply.maxLength=1200;reply.placeholder='Réponse destinée au demandeur';reply.value=d.reponseAdmin||'';const reportTitle=document.createElement('h4');reportTitle.textContent='Rapport de vérification PDF';const date=document.createElement('input');date.type='date';date.value=(d.rapport&&d.rapport.dateVerification)||new Date().toISOString().slice(0,10);date.setAttribute('aria-label','Date de vérification');const resume=document.createElement('textarea');resume.rows=3;resume.placeholder='Résumé des vérifications effectuées';resume.value=(d.rapport&&d.rapport.resume)||'';const sources=document.createElement('textarea');sources.rows=2;sources.placeholder='Sources officielles consultées (nom, URL, référence)';sources.value=(d.rapport&&d.rapport.sources)||'';const resultat=document.createElement('textarea');resultat.rows=3;resultat.placeholder='Résultats observés sur les sources consultées';resultat.value=(d.rapport&&d.rapport.resultat)||'';const anomalies=document.createElement('textarea');anomalies.rows=2;anomalies.placeholder='Anomalies ou incohérences constatées (indiquer aucune si rien de relevé)';anomalies.value=(d.rapport&&d.rapport.anomalies)||'';const demarches=document.createElement('textarea');demarches.rows=2;demarches.placeholder='Démarches ou pièces complémentaires recommandées';demarches.value=(d.rapport&&d.rapport.demarches)||'';const save=document.createElement('button');save.type='button';save.textContent='Enregistrer le suivi et le rapport';save.onclick=async()=>{if(!resume.value.trim()||!sources.value.trim()||!resultat.value.trim()){alert('Complète au minimum le résumé, les sources et les résultats avant de publier le rapport.');return;}try{await db.collection('demandes_foncieres_privees').doc(doc.id).update({statut:status.value,reponseAdmin:reply.value.trim(),rapport:{dateVerification:date.value,resume:resume.value.trim(),sources:sources.value.trim(),resultat:resultat.value.trim(),anomalies:anomalies.value.trim(),demarches:demarches.value.trim()},rapportMisAJourAt:firebase.firestore.FieldValue.serverTimestamp(),rapportMisAJourPar:auth.currentUser.uid,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});alert('Suivi et rapport enregistrés. Le PDF est maintenant accessible au demandeur.');await chargerDemandesFoncieresAdmin();}catch(e){alert('Mise à jour impossible : '+e.message);}};card.append(h,p,details,status,reply,reportTitle,date,resume,sources,resultat,anomalies,demarches,save);zone.appendChild(card);});}catch(e){zone.textContent='Erreur de chargement : '+e.message;}}
 async function chargerJsPdfTerrain(){if(window.jspdf&&window.jspdf.jsPDF)return window.jspdf.jsPDF;await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js';s.onload=resolve;s.onerror=()=>reject(new Error('La bibliothèque PDF ne peut pas être chargée. Vérifie ta connexion Internet.'));document.head.appendChild(s);});if(!window.jspdf||!window.jspdf.jsPDF)throw new Error('Générateur PDF indisponible.');return window.jspdf.jsPDF;}
-async function telechargerRapportTerrainPDF(id,d){try{const JsPDF=await chargerJsPdfTerrain(),pdf=new JsPDF({unit:'mm',format:'a4'});const marge=16,largeur=178;let y=18;function ajouter(t,taille=10,gras=false){pdf.setFont('helvetica',gras?'bold':'normal');pdf.setFontSize(taille);const lignes=pdf.splitTextToSize(String(t||'Non renseigné'),largeur);if(y+lignes.length*(taille*0.42+1)>280){pdf.addPage();y=18;}pdf.text(lignes,marge,y);y+=lignes.length*(taille*0.42+1)+3;}pdf.setFont('helvetica','bold');pdf.setFontSize(16);pdf.text('MON TRANSPORT CI',marge,y);y+=8;pdf.setFontSize(13);pdf.text('RAPPORT DE VERIFICATION FONCIERE',marge,y);y+=9;ajouter('Référence du dossier : '+id,10,true);ajouter('Date du rapport : '+new Date().toLocaleDateString('fr-FR'));ajouter('Demandeur : '+d.nom);ajouter('E-mail : '+d.email);ajouter('Téléphone : '+d.telephone);ajouter('Objet : '+d.typeDemande);ajouter('Statut du dossier : '+d.statut,10,true);ajouter('REFERENCES DE LA PARCELLE',11,true);const r=d.refs||{};[['Localité / commune',r.localite],['Lotissement',r.lotissement],['Îlot',r.ilot],['Lot / parcelle',r.lot],['IDUFCI',r.idufci]].forEach(x=>{if(x[1])ajouter(x[0]+' : '+x[1]);});ajouter('RESUME DES VERIFICATIONS',11,true);ajouter(d.rapport.resume);ajouter('Date des vérifications : '+(d.rapport.dateVerification||'Non précisée'));ajouter('SOURCES CONSULTEES',11,true);ajouter(d.rapport.sources);ajouter('RESULTATS OBSERVES',11,true);ajouter(d.rapport.resultat);ajouter('ANOMALIES / POINTS DE VIGILANCE',11,true);ajouter(d.rapport.anomalies);ajouter('DEMARCHES RECOMMANDEES',11,true);ajouter(d.rapport.demarches);ajouter('REPONSE DE MON TRANSPORT CI',11,true);ajouter(d.reponseAdmin);ajouter('LIMITES ET AVERTISSEMENT',11,true);ajouter('Ce rapport présente les informations et vérifications consignées à la date indiquée, à partir des sources mentionnées. Il ne constitue pas un titre de propriété, une certification d’authenticité documentaire, une attestation de situation juridique complète ni une garantie d’absence de litige. Pour toute décision ou transaction, faites confirmer les éléments par les services publics compétents et, si nécessaire, par un professionnel du droit foncier.');pdf.setFontSize(8);pdf.setFont('helvetica','italic');pdf.text('Document généré par Mon Transport CI · Vérifiez les références auprès des autorités compétentes.',marge,287);pdf.save('rapport-foncier-'+id+'.pdf');}catch(e){alert('Téléchargement du PDF impossible : '+(e.message||e));}}
+async function telechargerRapportTerrainPDF(id,d){try{const JsPDF=await chargerJsPdfTerrain(),pdf=new JsPDF({unit:'mm',format:'a4'});const marge=16,largeur=178;let y=18;function ajouter(t,taille=10,gras=false){pdf.setFont('helvetica',gras?'bold':'normal');pdf.setFontSize(taille);const lignes=pdf.splitTextToSize(String(t||'Non renseigné'),largeur);if(y+lignes.length*(taille*0.42+1)>280){pdf.addPage();y=18;}pdf.text(lignes,marge,y);y+=lignes.length*(taille*0.42+1)+3;}pdf.setFont('helvetica','bold');pdf.setFontSize(16);pdf.text('MON QUOTIDIEN CI',marge,y);y+=8;pdf.setFontSize(13);pdf.text('RAPPORT DE VERIFICATION FONCIERE',marge,y);y+=9;ajouter('Référence du dossier : '+id,10,true);ajouter('Date du rapport : '+new Date().toLocaleDateString('fr-FR'));ajouter('Demandeur : '+d.nom);ajouter('E-mail : '+d.email);ajouter('Téléphone : '+d.telephone);ajouter('Objet : '+d.typeDemande);ajouter('Statut du dossier : '+d.statut,10,true);ajouter('REFERENCES DE LA PARCELLE',11,true);const r=d.refs||{};[['Localité / commune',r.localite],['Lotissement',r.lotissement],['Îlot',r.ilot],['Lot / parcelle',r.lot],['IDUFCI',r.idufci]].forEach(x=>{if(x[1])ajouter(x[0]+' : '+x[1]);});ajouter('RESUME DES VERIFICATIONS',11,true);ajouter(d.rapport.resume);ajouter('Date des vérifications : '+(d.rapport.dateVerification||'Non précisée'));ajouter('SOURCES CONSULTEES',11,true);ajouter(d.rapport.sources);ajouter('RESULTATS OBSERVES',11,true);ajouter(d.rapport.resultat);ajouter('ANOMALIES / POINTS DE VIGILANCE',11,true);ajouter(d.rapport.anomalies);ajouter('DEMARCHES RECOMMANDEES',11,true);ajouter(d.rapport.demarches);ajouter('REPONSE DE MON QUOTIDIEN CI',11,true);ajouter(d.reponseAdmin);ajouter('LIMITES ET AVERTISSEMENT',11,true);ajouter('Ce rapport présente les informations et vérifications consignées à la date indiquée, à partir des sources mentionnées. Il ne constitue pas un titre de propriété, une certification d’authenticité documentaire, une attestation de situation juridique complète ni une garantie d’absence de litige. Pour toute décision ou transaction, faites confirmer les éléments par les services publics compétents et, si nécessaire, par un professionnel du droit foncier.');pdf.setFontSize(8);pdf.setFont('helvetica','italic');pdf.text('Document généré par Mon Quotidien CI · Vérifiez les références auprès des autorités compétentes.',marge,287);pdf.save('rapport-foncier-'+id+'.pdf');}catch(e){alert('Téléchargement du PDF impossible : '+(e.message||e));}}
 </script>
 
 <script>
@@ -10318,7 +10319,7 @@ window.mtcAfficherActeJudiciaire = function(type){
   const f= fiches[type];
   if(!f)return;
   const liste=f.etapes.map(x=>"<li>"+x+"</li>").join("");
-  zone.innerHTML="<h3>"+f.titre+"</h3><p>"+f.utilite+"</p><h4>Votre parcours de préparation</h4><ol>"+liste+"</ol><p class='judiciaire-note'><strong>À retenir :</strong> cette fiche est un guide d’orientation. Elle ne remplace pas les instructions du portail, du greffe ou de la juridiction compétente. Les frais et délais ne sont pas figés dans Mon Transport CI : vérifiez-les au moment de la demande.</p><a class='judiciaire-lien' href='"+f.lien+"' target='_blank' rel='noopener noreferrer'>"+f.bouton+" ↗</a>";
+  zone.innerHTML="<h3>"+f.titre+"</h3><p>"+f.utilite+"</p><h4>Votre parcours de préparation</h4><ol>"+liste+"</ol><p class='judiciaire-note'><strong>À retenir :</strong> cette fiche est un guide d’orientation. Elle ne remplace pas les instructions du portail, du greffe ou de la juridiction compétente. Les frais et délais ne sont pas figés dans Mon Quotidien CI : vérifiez-les au moment de la demande.</p><a class='judiciaire-lien' href='"+f.lien+"' target='_blank' rel='noopener noreferrer'>"+f.bouton+" ↗</a>";
   zone.scrollIntoView({behavior:"smooth",block:"nearest"});
 };
 </script>
