@@ -702,4 +702,39 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
   });
 
+
+  describe("annuaires professionnels", () => {
+    const fiche = (uid=CLIENT_UID) => ({
+      uid, type:"annuaire", rubrique:"depannageDomicile",
+      titre:"Plomberie test", categorie:"Plomberie", commune:"Yopougon",
+      quartier:"Niangon", telephone:"0700000000",
+      description:"Intervention plomberie de test", email:"pro@example.test",
+      statut:"en_attente", createdAt:require("firebase/firestore").serverTimestamp()
+    });
+    it("autorise une inscription gratuite conforme par son propriétaire", async () => {
+      const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      const {doc,setDoc}=require("firebase/firestore");
+      await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","annuaire-create-001"),fiche()));
+    });
+    it("interdit une inscription au nom d'un autre utilisateur", async () => {
+      const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      const {doc,setDoc}=require("firebase/firestore");
+      await assertFails(setDoc(doc(db,"demandes_nouveaux_services","annuaire-create-002"),fiche(OTHER_UID)));
+    });
+    it("réserve l'approbation à l'administrateur et limite la lecture publique aux fiches approuvées", async () => {
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        await context.firestore().doc("demandes_nouveaux_services/annuaire-approved").set({...fiche(),statut:"approuve"});
+        await context.firestore().doc("demandes_nouveaux_services/annuaire-pending").set(fiche());
+      });
+      const publicDb=testEnv.unauthenticatedContext().firestore();
+      const clientDb=testEnv.authenticatedContext(CLIENT_UID).firestore();
+      const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      const {doc,getDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
+      await assertSucceeds(getDoc(doc(publicDb,"demandes_nouveaux_services","annuaire-approved")));
+      await assertFails(getDoc(doc(publicDb,"demandes_nouveaux_services","annuaire-pending")));
+      await assertFails(updateDoc(doc(clientDb,"demandes_nouveaux_services","annuaire-pending"),{statut:"approuve"}));
+      await assertSucceeds(updateDoc(doc(adminDb,"demandes_nouveaux_services","annuaire-pending"),{statut:"approuve",traiteLe:serverTimestamp()}));
+    });
+  });
+
 });
