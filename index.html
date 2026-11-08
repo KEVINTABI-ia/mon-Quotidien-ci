@@ -4250,8 +4250,8 @@ const url=
 window.open(url,"_blank");
 }
 function rechercher(){
-const depart=normaliser(document.getElementById("depart").value);
-const arrivee=normaliser(document.getElementById("arrivee").value);
+const depart=normaliserRechercheGare(document.getElementById("depart").value);
+const arrivee=normaliserRechercheGare(document.getElementById("arrivee").value);
 const transport=document.getElementById("transport").value;
 const resultat=document.getElementById("resultatRechercheGares");
 
@@ -4269,16 +4269,16 @@ return;
 
 const lignes=MON_TRANSPORT_CI_ROUTES.filter(route=>{
 return (transport==="Tous" || route.transport===transport)
-&& normaliser(route.depart)===depart;
+&& normaliserRechercheGare(route.depart)===depart;
 });
 
 let trouvees=[];
 
 lignes.forEach(route=>{
-const destination=normaliser(route.arrivee);
+const destination=normaliserRechercheGare(route.arrivee);
 const index=route.stops.findIndex(stop=>{
-return normaliser(stop[0])===arrivee
-|| normaliser(stop[0]).includes(arrivee);
+return normaliserRechercheGare(stop[0])===arrivee
+|| normaliserRechercheGare(stop[0]).includes(arrivee);
 });
 
 if(destination===arrivee && route.stops.length){
@@ -4291,16 +4291,16 @@ trouvees.push({route,index});
 if(trouvees.length===0){
 
 const gare = garesFirestore.find(g =>
-normaliser(g.nom)===depart
+normaliserRechercheGare(g.nom)===depart
 );
 
 if(gare){
 const tarifs = destinationsGareNormalisees(gare).filter(d =>
-normaliser(d.nom)===arrivee &&
+normaliserRechercheGare(d.nom)===arrivee &&
 d.transport &&
 Number.isFinite(Number(d.prix)) &&
 Number(d.prix)>0 &&
-(transport==="Tous" || normaliser(d.transport)===normaliser(transport))
+(transport==="Tous" || normaliserRechercheGare(d.transport)===normaliserRechercheGare(transport))
 );
 
 if(tarifs.length){
@@ -4353,7 +4353,16 @@ document.getElementById("arrivee").value
 
 /* RECHERCHE DES GARES — DEUX PARCOURS */
 function normaliserRechercheGare(valeur){
-  return String(valeur||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+  return String(valeur||"")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .toLocaleLowerCase("fr")
+    .replace(/[’']/g," ")
+    .replace(/[^a-z0-9]+/g," ")
+    .trim()
+    .split(/\s+/)
+    .filter(mot => mot && !["de","du","des","la","le","les","d"].includes(mot))
+    .join("");
 }
 function choisirModeGare(mode){
   const destination=mode==="destination";
