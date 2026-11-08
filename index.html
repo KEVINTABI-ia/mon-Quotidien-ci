@@ -1678,17 +1678,8 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 </head>
 <body>
 
-<div class="menu-container">
-  <button class="menu-toggle" type="button" onclick="var m=document.getElementById('menuDropdown'); if(m){m.style.display=m.style.display==='block'?'none':'block';}" aria-label="Ouvrir le menu">
-    ☰
-  </button>
 
-<div class="menu-dropdown" id="menuDropdown">
-  <button type="button" onclick="ouvrirEspaceSolidarite()">🤝 Dons et solidarité</button>
-  <button type="button" data-ouvrir-section="devenirPartenaire" data-titre-section="Devenir partenaire">🤝 Devenir partenaire</button>
-  <button type="button" onclick="signalerProblemeGeneral()">⚠️ Signaler un problème</button>
-</div>
-</div>
+<div id="menuDropdown" hidden aria-hidden="true"></div>
 
 <header>
   <div class="brand">
@@ -10790,6 +10781,10 @@ function basculerServicesQuotidiens(){const b=document.querySelector('#menuQuoti
 #parametresApplication .setting-row{padding:13px 0;border-bottom:1px solid #e4ece6}
 #parametresApplication .setting-row:last-child{border-bottom:0}
 #parametresApplication button{margin:5px 5px 5px 0}
+</style>
+<style id="contour-orange-bouton-accueil">
+#accueilBottomNav button[data-nav="home"]{border:2px solid #F28C28!important;background:#fff!important;color:#16834A!important;border-radius:12px!important;box-shadow:0 3px 12px rgba(242,140,40,.18)!important}
+#accueilBottomNav button[data-nav="home"].nav-active{background:#FFF7ED!important;border-color:#F28C28!important;color:#145B38!important}
 </style>
 </body>
 </html>
