@@ -2822,12 +2822,10 @@ function chargerPublicitesAccueil() {
 
 <section id="menuQuotidien" class="card" aria-label="Le quotidien" style="margin:14px 0 12px;padding:16px;border:2px solid #D5A84B;background:linear-gradient(145deg,#FFFDF5,#F0F8F4);">
   <h2 style="margin:0 0 6px;color:#174B40;">🌞 Le quotidien</h2>
-  <p style="margin:0 0 13px;font-size:13px;color:#68786E;">Les services pratiques, la santé, les annonces et les informations près de vous.</p>
+  <p style="margin:0 0 13px;font-size:13px;color:#68786E;">Les services pratiques, la santé et les services près de vous.</p>
   <div class="grille-services-quotidiens">
-    <button type="button" class="bouton-commerce-accueil" onclick="ouvrirResultatPleinEcran('Commerce et boutique'); afficherMarchesCommune()" aria-label="Ouvrir Commerce et boutique"><span style="display:flex;align-items:center;gap:12px;"><span style="font-size:29px;">🛍️</span><span><strong>Commerce et boutique</strong><small>Découvrez les commerces, boutiques et marchés par commune</small></span></span><span aria-hidden="true" style="font-size:24px;">›</span></button>
-    <button type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacie et santé')" class="tuile-quotidien">💊 Pharmacie et santé<small>Pharmacies de garde, centres de santé, urgences et laboratoires</small></button>
-    <button type="button" onclick="ouvrirPortailAnnoncesOffres()" class="tuile-quotidien">💼 Emploi et opportunités<small>Offres d’emploi, stages et annonces</small></button>
-    <button type="button" onclick="ouvrirSectionPleinEcran('educationFormation','Éducation et formation')" class="tuile-quotidien">🎓 Éducation et formation<small>Écoles, universités et formations</small></button>
+<button type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacie et santé')" class="tuile-quotidien">💊 Pharmacie et santé<small>Pharmacies de garde, centres de santé, urgences et laboratoires</small></button>
+<button type="button" onclick="ouvrirSectionPleinEcran('educationFormation','Éducation et formation')" class="tuile-quotidien">🎓 Éducation et formation<small>Écoles, universités et formations</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier')" class="tuile-quotidien">🏠 Logement et immobilier<small>Maisons, chambres et agences</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('depannageDomicile','Dépannage à domicile')" class="tuile-quotidien">🛠️ Dépannage à domicile<small>Plomberie, électricité et réparations</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('agricultureElevage','Agriculture et élevage')" class="tuile-quotidien">🌱 Agriculture et élevage<small>Producteurs, fournisseurs et matériel</small></button>
@@ -2835,8 +2833,7 @@ function chargerPublicitesAccueil() {
     <button type="button" onclick="ouvrirSectionPleinEcran('evenementsPrestations','Événements et prestations')" class="tuile-quotidien">🎉 Événements et prestations<small>Traiteurs, salles et photographes</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('artisansProfessionnels','Artisans et professionnels')" class="tuile-quotidien">🔧 Artisans et professionnels<small>Artisans et prestataires près de vous</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('servicesPublicsDemarches','Services publics et démarches')" class="tuile-quotidien">🏛️ Services publics et démarches<small>Accès aux portails officiels</small></button>
-    <button type="button" onclick="ouvrirEspaceCommunautaire()" class="tuile-quotidien">🗞️ M’informer / Attraper les derniers Gbairai</button>
-    <button type="button" onclick="ouvrirSectionPleinEcran('toilettesPubliques','Toilettes publiques')" class="tuile-quotidien">🚻 Toilettes publiques<small>Rechercher les toilettes autour de vous</small></button>
+<button type="button" onclick="ouvrirSectionPleinEcran('toilettesPubliques','Toilettes publiques')" class="tuile-quotidien">🚻 Toilettes publiques<small>Rechercher les toilettes autour de vous</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('rappelsPaiement','Rappels de paiement')" class="tuile-quotidien">🔔 Rappels de paiement<small>Enregistrer vos prochaines échéances</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Signaler et retrouver un objet ou un document perdu')" class="tuile-quotidien">🔎 Objets et documents perdus</button>
   </div>
@@ -3108,6 +3105,15 @@ function chargerPublicitesAccueil() {
   <p class="judiciaire-pied">Les conditions, pièces exigées, juridictions compétentes, délais et tarifs peuvent varier selon l’acte et la situation du demandeur. Vérifiez toujours les informations affichées sur le portail officiel avant de payer ou de transmettre un document.</p>
 </section>
 
+
+<section class="card" id="espaceEmploisOpportunites" style="display:none;">
+<h2>💼 Emplois et opportunités</h2><p>Consultez les offres d’emploi et de stage. Toute publication envoyée par un utilisateur est vérifiée par l’administrateur avant sa diffusion publique.</p>
+<div id="emploisListePublique"><p class="notice">Chargement des offres...</p></div><hr><h3>Proposer une offre d’emploi ou une opportunité</h3>
+<p id="emploisEtatConnexion" class="notice">Connectez-vous ou créez un compte pour proposer une offre.</p>
+<div id="emploisConnexion"><label>Adresse e-mail</label><input id="emploisEmail" type="email" placeholder="Votre adresse e-mail"><label>Mot de passe</label><input id="emploisMotDePasse" type="password" placeholder="6 caractères minimum"><div class="modes"><button type="button" class="primary" onclick="connecterEmplois()">Se connecter</button><button type="button" onclick="creerCompteEmplois()">Créer un compte</button></div></div>
+<div id="emploisFormZone" style="display:none;"><label>Intitulé du poste / opportunité</label><input id="emploiTitre" maxlength="120" placeholder="Ex. Assistant comptable"><label>Entreprise / organisme</label><input id="emploiEntreprise" maxlength="120" placeholder="Nom de l'entreprise"><label>Type d’opportunité</label><select id="emploiCategorie"><option>Emploi</option><option>Stage</option><option>Formation</option><option>Appel à candidatures</option><option>Autre opportunité</option></select><label>Commune / localité</label><input id="emploiCommune" maxlength="80" placeholder="Ex. Cocody, Abidjan"><label>Contact de candidature</label><input id="emploiTelephone" type="tel" maxlength="25" placeholder="Téléphone ou WhatsApp"><label>Description et conditions</label><textarea id="emploiDescription" rows="5" maxlength="1800" placeholder="Décrivez le poste, les compétences demandées et les modalités de candidature"></textarea><button class="primary" type="button" onclick="soumettreOffreEmploi()">Envoyer pour validation</button><p id="emploiStatutEnvoi" class="notice" aria-live="polite"></p></div>
+<div id="emploisZoneAdmin" style="display:none;margin-top:18px;border-top:2px solid #D5A84B;padding-top:14px;"><h3>🔐 Administration des offres d’emploi</h3><p>Les offres proposées par les utilisateurs apparaissent ici en attente. Leur publication nécessite une validation.</p><button type="button" class="primary" onclick="chargerOffresEmploiAdmin()">Actualiser les demandes</button><div id="emploisListeAdmin"></div><h4>Publication directe par l’administrateur</h4><p class="notice">L’administrateur peut publier directement une offre en remplissant le formulaire ci-dessus.</p><button type="button" onclick="publierOffreEmploiAdmin()">Publier directement</button></div>
+</section>
 </main>
 
 <footer>Mon Quotidien CI · Tous les services utiles en Côte d’Ivoire</footer>
@@ -10621,16 +10627,17 @@ window.mtcAfficherActeJudiciaire = function(type){
         <div class="home-section-heading"><div><h2>Transport et mobilité</h2><p>Gares, trajets, compagnies et livraison</p></div></div>
       </section>
       <section class="home-panel" id="homeDemarches">
+        <button type="button" class="bouton-commerce-accueil" onclick="ouvrirResultatPleinEcran('Commerce et boutique'); afficherMarchesCommune()" aria-label="Ouvrir Commerce et boutique"><span style="display:flex;align-items:center;gap:12px;"><span style="font-size:29px;">🛍️</span><span><strong>Commerce et boutique</strong><small>Découvrez les commerces, boutiques et marchés par commune</small></span></span><span aria-hidden="true" style="font-size:24px;">›</span></button>
         <div class="home-section-heading"><div><h2>Démarches et services officiels</h2><p>Accédez directement aux portails et parcours utiles</p></div></div>
       </section>
       <section class="home-panel" id="homeQuotidien">
         <div class="home-section-heading"><div><h2>Explorer les services</h2><p>Découvrez les professionnels et les services de la vie quotidienne</p></div></div>
       </section>
       <section class="home-panel" id="homeActualites">
-        <div class="home-section-heading"><div><h2>La vie de votre communauté</h2><p>Informations, annonces et nouveautés</p></div></div>
+        <div class="home-section-heading"><div><h2>La vie de votre communauté</h2><p>Informations, emplois et opportunités</p></div></div>
         <div class="home-discovery-grid">
           <button class="home-discovery-card" type="button" onclick="ouvrirEspaceCommunautaire()"><span>📰</span><strong>M'informer / Gbairai</strong><small>Actualités et échanges de la communauté</small></button>
-          <button class="home-discovery-card" type="button" onclick="ouvrirPortailAnnoncesOffres()"><span>📢</span><strong>Offres et annonces</strong><small>Emploi, opportunités et publications</small></button>
+          <button class="home-discovery-card" type="button" onclick="ouvrirEmploisOpportunites()"><span>💼</span><strong>Emplois et opportunités</strong><small>Offres d’emploi, stages et opportunités vérifiées</small></button>
         </div>
       </section>`;
     main.insertBefore(shell,recherche);
@@ -10707,6 +10714,24 @@ window.mtcAfficherActeJudiciaire = function(type){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initAccueilProfessionnel,{once:true});
   else initAccueilProfessionnel();
 })();
+</script>
+
+<script>
+(function(){function move(){const b=document.querySelector('#menuQuotidien .bouton-commerce-accueil'),z=document.getElementById('homeDemarches');if(b&&z)z.insertBefore(b,z.firstChild);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',move,{once:true});else move();})();
+function ouvrirEmploisOpportunites(){if(typeof ouvrirSectionPleinEcran==='function')ouvrirSectionPleinEcran('espaceEmploisOpportunites','Emplois et opportunités');else{const s=document.getElementById('espaceEmploisOpportunites');if(s){s.style.display='block';s.scrollIntoView({behavior:'smooth'});}}chargerOffresEmploiPubliques();actualiserEspaceEmplois();}
+function actualiserEspaceEmplois(){const u=auth.currentUser,a=!!u&&u.uid===ADMIN_UID;const c=document.getElementById('emploisConnexion'),f=document.getElementById('emploisFormZone'),z=document.getElementById('emploisZoneAdmin'),t=document.getElementById('emploisEtatConnexion');if(c)c.style.display=u?'none':'block';if(f)f.style.display=u?'block':'none';if(z)z.style.display=a?'block':'none';if(t)t.textContent=u?(a?'Administrateur connecté : vos offres sont publiées immédiatement.':'Connecté : vos propositions seront soumises à validation.'):'Connectez-vous ou créez un compte pour proposer une offre.';if(a)chargerOffresEmploiAdmin();}
+async function connecterEmplois(){try{await auth.signInWithEmailAndPassword(document.getElementById('emploisEmail').value.trim(),document.getElementById('emploisMotDePasse').value);actualiserEspaceEmplois();chargerOffresEmploiPubliques();}catch(e){alert('Connexion impossible : '+e.message);}}
+async function creerCompteEmplois(){const m=document.getElementById('emploisMotDePasse').value;if(m.length<6)return alert('Le mot de passe doit contenir au moins 6 caractères.');try{await auth.createUserWithEmailAndPassword(document.getElementById('emploisEmail').value.trim(),m);actualiserEspaceEmplois();}catch(e){alert('Création du compte impossible : '+e.message);}}
+function lireOffreEmploi(){const v=id=>(document.getElementById(id)?.value||'').trim();const d={titre:v('emploiTitre'),entreprise:v('emploiEntreprise'),categorie:v('emploiCategorie'),commune:v('emploiCommune'),telephone:v('emploiTelephone'),description:v('emploiDescription')};if(d.titre.length<3||d.entreprise.length<2||d.commune.length<2||d.telephone.length<6||d.description.length<20)throw Error('Complétez les champs. La description doit contenir au moins 20 caractères.');return d;}
+async function enregistrerOffreEmploi(statut){if(!auth.currentUser)throw Error('Connectez-vous avant de publier.');await db.collection('annonces_offres').add({...lireOffreEmploi(),uid:auth.currentUser.uid,annonceurNom:auth.currentUser.email||'Administrateur',typeAnnonce:'emploi',paiementMoyen:'aucun',referencePaiement:'publication_emploi',montantFCFA:0,dureeJours:0,paiementStatut:'non_requis',statut,createdAt:firebase.firestore.FieldValue.serverTimestamp()});['emploiTitre','emploiEntreprise','emploiCommune','emploiTelephone','emploiDescription'].forEach(id=>document.getElementById(id).value='');}
+async function soumettreOffreEmploi(){const m=document.getElementById('emploiStatutEnvoi');try{const a=auth.currentUser&&auth.currentUser.uid===ADMIN_UID;await enregistrerOffreEmploi(a?'publiee':'en_attente');m.textContent=a?'Offre publiée.':'Offre envoyée. Elle sera visible après validation par l’administrateur.';chargerOffresEmploiPubliques();if(a)chargerOffresEmploiAdmin();}catch(e){m.textContent=e.message;}}
+async function publierOffreEmploiAdmin(){if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert('Accès administrateur requis.');const m=document.getElementById('emploiStatutEnvoi');try{await enregistrerOffreEmploi('publiee');m.textContent='Offre publiée directement par l’administrateur.';chargerOffresEmploiPubliques();chargerOffresEmploiAdmin();}catch(e){m.textContent=e.message;}}
+function echapperEmploi(v){return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function chargerOffresEmploiPubliques(){const z=document.getElementById('emploisListePublique');if(!z)return;z.innerHTML='<p class="notice">Chargement...</p>';try{const s=await db.collection('annonces_offres').where('statut','==','publiee').get(),d=s.docs.filter(x=>x.data().typeAnnonce==='emploi').sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));z.innerHTML=d.length?d.map(x=>{const a=x.data();return '<article class="card" style="padding:13px;margin:10px 0;"><strong>'+echapperEmploi(a.titre)+'</strong><p>'+echapperEmploi(a.categorie)+' · '+echapperEmploi(a.entreprise)+'</p><p>'+echapperEmploi(a.commune)+'</p><p style="white-space:pre-wrap">'+echapperEmploi(a.description)+'</p><p>Contact : '+echapperEmploi(a.telephone)+'</p></article>';}).join(''):'<p class="notice">Aucune offre d’emploi publiée pour le moment.</p>';}catch(e){console.error(e);z.innerHTML='<p class="notice">Impossible de charger les offres pour le moment.</p>';}}
+async function chargerOffresEmploiAdmin(){const z=document.getElementById('emploisListeAdmin');if(!z||!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;z.innerHTML='<p class="notice">Chargement...</p>';try{const s=await db.collection('annonces_offres').get(),d=s.docs.filter(x=>x.data().typeAnnonce==='emploi').sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));z.innerHTML=d.length?d.map(x=>{const a=x.data(),pending=a.statut==='en_attente';return '<article class="card" style="padding:12px;margin:9px 0;"><strong>'+echapperEmploi(a.titre)+'</strong><p>'+echapperEmploi(a.entreprise)+' · '+echapperEmploi(a.commune)+'</p><p>'+echapperEmploi(a.telephone)+'</p><p>'+echapperEmploi(a.description)+'</p><p>Statut : '+echapperEmploi(a.statut)+'</p>'+(pending?'<button class="primary" onclick="validerOffreEmploi(\''+x.id+'\')">Valider et publier</button><button onclick="rejeterOffreEmploi(\''+x.id+'\')">Refuser</button>':'')+'</article>';}).join(''):'<p class="notice">Aucune proposition.</p>';}catch(e){console.error(e);z.innerHTML='<p class="notice">Erreur de chargement.</p>';}}
+async function validerOffreEmploi(id){if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert('Accès administrateur requis.');try{await db.collection('annonces_offres').doc(id).update({statut:'publiee',valideePar:auth.currentUser.uid,dateValidation:firebase.firestore.FieldValue.serverTimestamp()});chargerOffresEmploiAdmin();chargerOffresEmploiPubliques();}catch(e){alert('Validation impossible : '+e.message);}}
+async function rejeterOffreEmploi(id){if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert('Accès administrateur requis.');if(!confirm('Refuser et supprimer cette proposition ?'))return;try{await db.collection('annonces_offres').doc(id).delete();chargerOffresEmploiAdmin();}catch(e){alert('Refus impossible : '+e.message);}}
+auth.onAuthStateChanged(function(){actualiserEspaceEmplois();});
 </script>
 </body>
 </html>
