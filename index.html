@@ -1588,16 +1588,17 @@ header .header-badge{margin-top:6px!important;font-size:8px!important}
 
 <style>
 /* Trois accès prioritaires regroupés à l'ancien emplacement de Commerce et boutique */
-#espaceAutomobiliste .acces-prioritaires{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 16px}
-.acces-prioritaire{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;min-width:0;min-height:132px;padding:13px 11px;border:1px solid #e2eae3;border-radius:17px;color:#fff;text-align:left;box-shadow:0 7px 18px rgba(24,53,42,.12);-webkit-tap-highlight-color:transparent}
-.acces-prioritaire-icone{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.18);font-size:21px}
-.acces-prioritaire strong{font-size:12px;line-height:1.25;font-weight:850}
-.acces-prioritaire small{font-size:10px;line-height:1.35;color:rgba(255,255,255,.9)}
+#espaceAutomobiliste /* Trois accès compacts, toujours côte à côte sur l'accueil général */
+.acces-prioritaires{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 12px;width:100%;box-sizing:border-box}
+.acces-prioritaire{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:88px;padding:8px 5px;border:1px solid #e2eae3;border-radius:12px;color:#fff;text-align:center;box-shadow:0 3px 9px rgba(24,53,42,.10);-webkit-tap-highlight-color:transparent;box-sizing:border-box;overflow-wrap:anywhere}
+.acces-prioritaire-icone{display:grid;place-items:center;width:25px;height:25px;flex:0 0 25px;border-radius:8px;background:rgba(255,255,255,.18);font-size:15px}
+.acces-prioritaire strong{display:block;font-size:10px;line-height:1.15;font-weight:800;overflow-wrap:anywhere}
+.acces-prioritaire small{display:none}
 .acces-ministere{background:linear-gradient(140deg,#176b48,#239665)}
 .acces-judiciaire{background:linear-gradient(140deg,#164e70,#287fa1)}
 .acces-terrain{background:linear-gradient(140deg,#b85b19,#ef963b)}
 .acces-prioritaire:active{transform:scale(.98)}
-@media(max-width:350px){.acces-prioritaires{gap:6px}.acces-prioritaire{min-height:124px;padding:9px 7px}.acces-prioritaire strong{font-size:10px}.acces-prioritaire small{font-size:9px}}
+@media(max-width:350px){.acces-prioritaires{gap:5px}.acces-prioritaire{min-height:82px;padding:6px 3px;border-radius:10px}.acces-prioritaire strong{font-size:9px;line-height:1.12}.acces-prioritaire-icone{width:22px;height:22px;flex-basis:22px;font-size:13px}}
 /* Commerce et boutique conserve son bouton large en première position du quotidien */
 #menuQuotidien .bouton-commerce-accueil{grid-column:1/-1;display:flex;flex-direction:row;align-items:center;justify-content:space-between;min-height:76px;margin:0;padding:13px 15px!important;border:0;border-left:5px solid #F28C28;border-radius:17px;background:linear-gradient(120deg,#174B35,#16834A)!important;color:#fff;text-align:left;box-shadow:0 5px 15px rgba(28,63,40,.10)}
 #menuQuotidien .bouton-commerce-accueil strong{font-size:16px!important}
