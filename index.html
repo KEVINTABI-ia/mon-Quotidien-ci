@@ -10729,5 +10729,38 @@ async function validerOffreEmploi(id){if(!auth.currentUser||auth.currentUser.uid
 async function rejeterOffreEmploi(id){if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert('Accès administrateur requis.');if(!confirm('Refuser et supprimer cette proposition ?'))return;try{await db.collection('annonces_offres').doc(id).delete();chargerOffresEmploiAdmin();}catch(e){alert('Refus impossible : '+e.message);}}
 auth.onAuthStateChanged(function(){actualiserEspaceEmplois();});
 </script>
+
+<style id="menu-quotidien-defilant-contour-ivoirien">
+/* En-tête conservé avec contour aux couleurs du drapeau ivoirien */
+#menuQuotidien h2{
+  box-sizing:border-box;
+  width:100%;
+  padding:10px 12px!important;
+  border:3px solid transparent!important;
+  border-radius:15px!important;
+  background:
+    linear-gradient(#fff,#fff) padding-box,
+    linear-gradient(90deg,#F28C28 0 33.33%,#fff 33.33% 66.66%,#16834A 66.66% 100%) border-box!important;
+}
+/* Les services défilent dans leur propre zone ; le titre et l'introduction restent visibles */
+#menuQuotidien .grille-services-quotidiens{
+  max-height:min(56vh,440px);
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  scrollbar-color:#16834A #edf2ed;
+  padding:4px 7px 10px 4px!important;
+  align-content:start;
+}
+#menuQuotidien .grille-services-quotidiens::-webkit-scrollbar{width:6px}
+#menuQuotidien .grille-services-quotidiens::-webkit-scrollbar-track{background:#edf2ed;border-radius:8px}
+#menuQuotidien .grille-services-quotidiens::-webkit-scrollbar-thumb{background:#16834A;border-radius:8px}
+@media(max-width:480px){
+  #menuQuotidien .grille-services-quotidiens{max-height:52vh}
+}
+</style>
+
 </body>
 </html>
