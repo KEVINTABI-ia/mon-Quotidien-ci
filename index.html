@@ -2609,21 +2609,52 @@ function chargerPublicitesAccueil() {
   </div>
 </section>
 
-<section id="servicesMinistereTransport" class="card" style="display:none;margin:14px 0;padding:16px;border:2px solid #17663D;background:linear-gradient(145deg,#F4FAF5,#FFFDF5);" aria-label="Services du ministère des Transports">
-  <h2 style="margin:0 0 6px;color:#17663D;">🏛️ Services du ministère des Transports</h2>
-  <p class="notice" style="margin:0 0 12px;">Accédez directement aux plateformes officielles pour vos démarches. Choisissez le service qui correspond à votre besoin.</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
-    <a href="https://eservices.cgi.ci/avit/" target="_blank" rel="noopener noreferrer" class="tuile-auto" style="display:block;text-decoration:none;color:inherit;">🪪 Permis de conduire<small>Accéder au portail CGI Digital pour les démarches liées au permis</small></a>
-    <a href="https://web.transports.gouv.ci/services" target="_blank" rel="noopener noreferrer" class="tuile-auto" style="display:block;text-decoration:none;color:inherit;">🚘 Carte grise et immatriculation<small>Accéder aux e-services du ministère, notamment la réimmatriculation</small></a>
-    <a href="https://eservices.cgi.ci/avit/" target="_blank" rel="noopener noreferrer" class="tuile-auto" style="display:block;text-decoration:none;color:inherit;">🚦 Infractions et permis à points<small>Ouvrir CGI Digital pour les notifications et le suivi des démarches liées aux infractions</small></a>
-    <a href="https://www.quipuxafrique.com/es/documents" target="_blank" rel="noopener noreferrer" class="tuile-auto" style="display:block;text-decoration:none;color:inherit;">📄 Documents et formalités<small>Consulter les informations officielles sur les documents de transport</small></a>
-    <a href="https://web.transports.gouv.ci/services" target="_blank" rel="noopener noreferrer" class="tuile-auto" style="display:block;text-decoration:none;color:inherit;">🏫 Auto-écoles et examens<small>Consulter les informations officielles sur les auto-écoles et les examens</small></a>
-    <a href="https://www.quipuxafrique.com/map" target="_blank" rel="noopener noreferrer" class="tuile-auto" style="display:block;text-decoration:none;color:inherit;">📍 Trouver une agence CGI<small>Localiser les agences et guichets CGI</small></a>
+<section id="servicesMinistereTransport" class="card ministere-hub" style="display:none;" aria-label="Services du ministère des Transports">
+  <style>
+    #servicesMinistereTransport.ministere-hub{padding:18px 14px;border:1px solid #dce9df;border-radius:22px;background:linear-gradient(155deg,#f5fbf6 0%,#fff 62%,#fffaf1 100%);box-shadow:0 12px 32px rgba(22,78,49,.09);color:#173b2b}
+    #servicesMinistereTransport .ministere-head{display:flex;align-items:center;gap:13px;margin-bottom:8px}
+    #servicesMinistereTransport .ministere-embleme{width:48px;height:48px;flex:0 0 48px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(145deg,#17663d,#0a8a62);color:#fff;font-size:24px;box-shadow:0 7px 16px rgba(23,102,61,.2)}
+    #servicesMinistereTransport h2{margin:0;color:#145b38;font-size:20px;line-height:1.2}
+    #servicesMinistereTransport .ministere-intro{margin:0 0 17px;color:#63766a;font-size:13px;line-height:1.5}
+    #servicesMinistereTransport .ministere-label{margin:18px 2px 9px;color:#537061;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+    #servicesMinistereTransport .ministere-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    #servicesMinistereTransport .ministere-service{position:relative;display:flex;min-height:142px;flex-direction:column;align-items:flex-start;gap:8px;padding:14px 12px;border:1px solid #e1ebe4;border-radius:17px;background:#fff;color:#173b2b;text-decoration:none;box-shadow:0 4px 13px rgba(18,63,39,.045);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+    #servicesMinistereTransport .ministere-service:active{transform:scale(.98);border-color:#75ae8a;box-shadow:0 7px 18px rgba(18,63,39,.1)}
+    #servicesMinistereTransport .ministere-icon{display:grid;width:38px;height:38px;place-items:center;border-radius:12px;background:#edf7f0;color:#17663d;font-size:20px}
+    #servicesMinistereTransport .ministere-service strong{font-size:13px;line-height:1.3}
+    #servicesMinistereTransport .ministere-service small{color:#718176;font-size:11px;line-height:1.4}
+    #servicesMinistereTransport .ministere-arrow{position:absolute;right:11px;top:17px;color:#248052;font-size:17px;font-weight:800}
+    #servicesMinistereTransport .ministere-actions{display:grid;gap:9px;margin-top:18px}
+    #servicesMinistereTransport .ministere-action{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px;border-radius:14px;text-align:center;text-decoration:none;font-size:13px;font-weight:800}
+    #servicesMinistereTransport .ministere-action-primary{background:linear-gradient(100deg,#087c55,#17663d);color:#fff;box-shadow:0 7px 16px rgba(8,124,85,.18)}
+    #servicesMinistereTransport .ministere-action-secondary{border:1px solid #dce8df;background:#fff;color:#17663d}
+    #servicesMinistereTransport .ministere-note{margin:15px 1px 0;padding:11px 12px;border-radius:12px;background:#f2f6f3;color:#637267;font-size:11px;line-height:1.5}
+    @media(max-width:360px){#servicesMinistereTransport .ministere-grid{grid-template-columns:1fr}#servicesMinistereTransport .ministere-service{min-height:unset}}
+    @media(prefers-reduced-motion:reduce){#servicesMinistereTransport .ministere-service{transition:none}}
+  </style>
+  <div class="ministere-head">
+    <div class="ministere-embleme" aria-hidden="true">🏛️</div>
+    <div><h2>Services du ministère des Transports</h2><small style="display:block;margin-top:4px;color:#718176;font-size:11px;">Vos démarches officielles, en quelques clics</small></div>
   </div>
-  <a href="https://eservices.cgi.ci/avit/" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;background:#087C62;color:#fff;padding:13px 15px;border-radius:11px;font-weight:700;margin-top:12px;">🌐 Ouvrir CGI Digital</a>
-  <a href="https://www.transports.gouv.ci/" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;background:#fff;color:#17663D;border:1px solid #17663D;padding:12px 15px;border-radius:11px;font-weight:700;margin-top:8px;">🏛️ Visiter le site du ministère</a>
-  <a href="tel:1302" style="display:block;text-align:center;text-decoration:none;background:#fff;color:#17663D;border:1px solid #17663D;padding:12px 15px;border-radius:11px;font-weight:700;margin-top:8px;">☎️ Appeler le CGI : 1302 (appel gratuit)</a>
-  <p class="notice" style="margin:12px 0 0;">Mon Transport CI facilite l’accès aux démarches, mais ne délivre pas les documents officiels. Les demandes, paiements, rendez-vous et vérifications sont effectués sur les plateformes officielles. Les services proposés peuvent nécessiter un compte CGI Digital.</p>
+  <p class="ministere-intro">Choisissez directement votre démarche. Vous serez redirigé vers la plateforme officielle concernée.</p>
+  <div class="ministere-label">Permis et circulation</div>
+  <div class="ministere-grid">
+    <a href="https://eservices.cgi.ci/avit/" target="_blank" rel="noopener noreferrer" class="ministere-service"><span class="ministere-icon">🪪</span><strong>Permis de conduire</strong><small>Accéder aux démarches liées au permis</small><span class="ministere-arrow" aria-hidden="true">›</span></a>
+    <a href="https://eservices.cgi.ci/avit/" target="_blank" rel="noopener noreferrer" class="ministere-service"><span class="ministere-icon">🚦</span><strong>Infractions et permis à points</strong><small>Consulter le portail CGI Digital</small><span class="ministere-arrow" aria-hidden="true">›</span></a>
+  </div>
+  <div class="ministere-label">Véhicule et formalités</div>
+  <div class="ministere-grid">
+    <a href="https://web.transports.gouv.ci/services" target="_blank" rel="noopener noreferrer" class="ministere-service"><span class="ministere-icon">🚘</span><strong>Carte grise et immatriculation</strong><small>Accéder aux e-services du ministère</small><span class="ministere-arrow" aria-hidden="true">›</span></a>
+    <a href="https://www.quipuxafrique.com/es/documents" target="_blank" rel="noopener noreferrer" class="ministere-service"><span class="ministere-icon">📄</span><strong>Documents et formalités</strong><small>Consulter les informations officielles</small><span class="ministere-arrow" aria-hidden="true">›</span></a>
+    <a href="https://web.transports.gouv.ci/services" target="_blank" rel="noopener noreferrer" class="ministere-service"><span class="ministere-icon">🎓</span><strong>Auto-écoles et examens</strong><small>Informations et services du ministère</small><span class="ministere-arrow" aria-hidden="true">›</span></a>
+    <a href="https://www.quipuxafrique.com/map" target="_blank" rel="noopener noreferrer" class="ministere-service"><span class="ministere-icon">📍</span><strong>Trouver une agence CGI</strong><small>Localiser les agences et guichets</small><span class="ministere-arrow" aria-hidden="true">›</span></a>
+  </div>
+  <div class="ministere-actions">
+    <a href="https://eservices.cgi.ci/avit/" target="_blank" rel="noopener noreferrer" class="ministere-action ministere-action-primary">🌐 Ouvrir CGI Digital <span aria-hidden="true">↗</span></a>
+    <a href="https://www.transports.gouv.ci/" target="_blank" rel="noopener noreferrer" class="ministere-action ministere-action-secondary">🏛️ Visiter le site du ministère <span aria-hidden="true">↗</span></a>
+    <a href="tel:1302" class="ministere-action ministere-action-secondary">☎️ Appeler le CGI : 1302 (appel gratuit)</a>
+  </div>
+  <p class="ministere-note">Mon Transport CI facilite l’accès aux démarches, mais ne délivre pas les documents officiels. Les demandes, paiements, rendez-vous et vérifications sont effectués sur les plateformes officielles. Certains services peuvent nécessiter un compte CGI Digital.</p>
 </section>
 
 <section id="abonnementAutomobiliste" class="card" style="display:none;padding:18px;border:2px solid #D5A84B;background:#FFFCF4;">
