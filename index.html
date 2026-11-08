@@ -4355,6 +4355,14 @@ document.getElementById("arrivee").value
 function normaliserRechercheGare(valeur){
   return String(valeur||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
 }
+// Pour les noms de gares uniquement : ignore les préfixes facultatifs
+// « gare », « gare de » et « gare d' » sans modifier les communes ni destinations.
+function normaliserNomGareRecherche(valeur){
+  return normaliserRechercheGare(valeur)
+    .replace(/^garede/,"")
+    .replace(/^gared/,"")
+    .replace(/^gare/,"");
+}
 function choisirModeGare(mode){
   const destination=mode==="destination";
   document.getElementById("rechercheParDestination").style.display=destination?"block":"none";
@@ -4393,7 +4401,7 @@ function synchroniserSelectionGare(){
   const saisie=document.getElementById("nomGareRecherche");
   const selection=document.getElementById("selectionNomGareRecherche");
   if(!saisie||!selection)return;
-  const option=[...selection.options].find(o=>o.value&&normaliserRechercheGare(o.value)===normaliserRechercheGare(saisie.value));
+  const option=[...selection.options].find(o=>o.value&&normaliserNomGareRecherche(o.value)===normaliserNomGareRecherche(saisie.value));
   selection.value=option?option.value:"";
 }
 function tarifsConfirmesPourGare(gare,destination,transport){
@@ -4559,7 +4567,7 @@ async function verifierDestinationGare(){
   try{
     await actualiserGaresAvantRecherche();
     const nomNormalise=normaliserRechercheGare(nom);
-    const gare=garesFirestore.find(g=>normaliserRechercheGare(g.nom)===nomNormalise);
+    const gare=garesFirestore.find(g=>normaliserNomGareRecherche(g.nom)===normaliserNomGareRecherche(nom));
     if(!gare){zone.textContent="Cette gare n’a pas été trouvée. Choisissez son nom dans la liste ou vérifiez l’orthographe.";return;}
     const tarifs=tarifsConfirmesPourGare(gare,destination,transport);
     if(tarifs.length){
