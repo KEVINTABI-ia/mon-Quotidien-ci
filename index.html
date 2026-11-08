@@ -1200,6 +1200,40 @@ header{padding:22px 18px 24px!important}
 #securiserTerrain .terrain-buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 #securiserTerrain .terrain-buttons button{width:100%;min-height:48px}
 #securiserTerrain #lecteurQrTerrain{width:100%;margin-top:12px}
+
+/* SERVICE MES DEMARCHES JUDICIAIRES */
+#demarchesJudiciaires .judiciaire-hero{padding:18px;border-radius:16px;background:linear-gradient(135deg,#102D35,#176B55);color:#fff;margin-bottom:15px}
+#demarchesJudiciaires .judiciaire-kicker{font-size:10px;letter-spacing:1.3px;font-weight:800;color:#D5C18D}
+#demarchesJudiciaires .judiciaire-hero h2{margin:5px 0 7px;color:#fff;font-size:21px}
+#demarchesJudiciaires .judiciaire-hero p{margin:0;color:#E3EEE8;font-size:13px}
+#demarchesJudiciaires .judiciaire-alerte{padding:13px;border-radius:12px;background:#FFF6E8;border:1px solid #EBD6AE;color:#684719;font-size:12px;line-height:1.6;margin:14px 0}
+#demarchesJudiciaires h3{font-size:16px;color:#174B40;margin:18px 0 7px}
+#demarchesJudiciaires .judiciaire-grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0}
+#demarchesJudiciaires .judiciaire-carte{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-height:112px;padding:13px;border:1px solid #DCE8DF;border-radius:13px;background:#F7FAF7;color:#173F32;text-align:left;cursor:pointer}
+#demarchesJudiciaires .judiciaire-carte span{font-size:23px}
+#demarchesJudiciaires .judiciaire-carte strong{font-size:12px;line-height:1.35}
+#demarchesJudiciaires .judiciaire-carte small{font-size:10px;color:#66766D}
+#demarchesJudiciaires .judiciaire-carte:focus-visible{outline:3px solid #D5A84B;outline-offset:2px}
+#demarchesJudiciaires .judiciaire-detail,#demarchesJudiciaires .judiciaire-suivi,#demarchesJudiciaires .judiciaire-contact{padding:15px;border:1px solid #DFE9E2;border-radius:14px;background:#fff;margin-top:14px}
+#demarchesJudiciaires .judiciaire-detail h3{margin-top:0}
+#demarchesJudiciaires .judiciaire-detail p,#demarchesJudiciaires .judiciaire-detail li{font-size:13px;line-height:1.6}
+#demarchesJudiciaires .judiciaire-detail ul{padding-left:20px}
+#demarchesJudiciaires .judiciaire-lien{display:inline-block;margin-top:7px;padding:12px 15px;border-radius:10px;background:#087C62;color:#fff;text-decoration:none;font-weight:700;font-size:13px}
+#demarchesJudiciaires .judiciaire-detail .judiciaire-note{padding:11px;border-radius:10px;background:#F2F7F3;color:#385747;font-size:12px}
+#demarchesJudiciaires .judiciaire-contact{background:#F6F8F6;font-size:12px}
+#demarchesJudiciaires .judiciaire-contact p{margin:6px 0}
+#demarchesJudiciaires .judiciaire-contact a{color:#087C62;font-weight:700}
+#demarchesJudiciaires .judiciaire-pied{font-size:11px;color:#69776F;line-height:1.6;margin:14px 2px}
+@media(max-width:360px){#demarchesJudiciaires .judiciaire-grille{gap:7px}#demarchesJudiciaires .judiciaire-carte{padding:10px;min-height:108px}}
+
+
+#demarchesJudiciaires a.judiciaire-carte{display:flex;text-decoration:none}
+#demarchesJudiciaires .judiciaire-guides{margin-top:16px;padding:13px;border-radius:13px;background:#F6F8F6}
+#demarchesJudiciaires .judiciaire-guides h3{margin-top:0}
+#demarchesJudiciaires .judiciaire-guides p{font-size:12px;color:#637269}
+#demarchesJudiciaires .judiciaire-guides-boutons{display:flex;flex-wrap:wrap;gap:7px}
+#demarchesJudiciaires .judiciaire-guides-boutons button{border:1px solid #C9D8CE;border-radius:20px;background:#fff;color:#174B40;padding:8px 10px;font-size:11px;font-weight:700}
+
 </style>
 
 <style>
@@ -1541,6 +1575,7 @@ main{padding:14px 13px 24px!important}
 <div class="menu-dropdown" id="menuDropdown">
   <button type="button" data-ouvrir-section="devenirPartenaire" data-titre-section="Devenir partenaire">🤝 Devenir partenaire</button>
   <button type="button" data-ouvrir-section="securiserTerrain" data-titre-section="Sécuriser mon terrain">🛡️ Sécuriser mon terrain</button>
+  <button type="button" data-ouvrir-section="demarchesJudiciaires" data-titre-section="Mes démarches judiciaires">⚖️ Mes démarches judiciaires</button>
   <button type="button" data-ouvrir-section="espaceAdmin" data-titre-section="Espace administrateur">🔐 Espace administrateur</button>
   <button type="button" onclick="signalerProblemeGeneral()">⚠️ Signaler un problème</button>
 </div>
@@ -2765,6 +2800,53 @@ function chargerPublicitesAccueil() {
   <p class="terrain-note">Le dépôt de fichiers fonciers sera activé après configuration et test du stockage privé. N'envoyez pas encore de copie de document via cette rubrique.</p>
   <p><a href="https://sigfu.gouv.ci/parcelles" target="_blank" rel="noopener noreferrer">Consulter le portail officiel SIGFU – Parcelles</a></p>
 </section>
+
+<section class="card" id="demarchesJudiciaires" style="display:none;">
+  <div class="judiciaire-hero">
+    <span class="judiciaire-kicker">SERVICE D’ACCOMPAGNEMENT</span>
+    <h2>⚖️ Mes démarches judiciaires</h2>
+    <p>Comprendre votre démarche, préparer les éléments utiles et accéder au portail officiel du Ministère de la Justice.</p>
+  </div>
+  <div class="judiciaire-alerte"><strong>Important</strong><br>Mon Transport CI vous accompagne dans vos démarches. Les demandes, les paiements et la délivrance des actes sont réalisés exclusivement par les services officiels. Nous ne délivrons pas de documents judiciaires et ne sommes pas un service du Ministère.</div>
+  <h3>Que souhaitez-vous obtenir ?</h3>
+  <p class="notice">Choisissez un document pour découvrir son utilité, les points à préparer et la marche à suivre.</p>
+  <div class="judiciaire-grille">
+    <a class="judiciaire-carte" href="https://www.e-justice.ci/surfer/requests/new/cj" target="_blank" rel="noopener noreferrer"><span>📄</span><strong>Faire mon casier judiciaire</strong><small>Bulletin n° 3 · Accès direct ↗</small></a>
+    <a class="judiciaire-carte" href="https://www.e-justice.ci/surfer/requests/new/cni" target="_blank" rel="noopener noreferrer"><span>🇨🇮</span><strong>Demander ma nationalité</strong><small>Certificat · Accès direct ↗</small></a>
+    <a class="judiciaire-carte" href="https://www.e-justice.ci/surfer/requests" target="_blank" rel="noopener noreferrer"><span>🛡️</span><strong>Authentifier un document</strong><small>Attestation · Portail officiel ↗</small></a>
+    <a class="judiciaire-carte" href="https://www.e-justice.ci/surfer/requests" target="_blank" rel="noopener noreferrer"><span>📚</span><strong>Actes d’état civil</strong><small>Copies, extraits, rectifications ↗</small></a>
+    <a class="judiciaire-carte" href="https://www.e-justice.ci/surfer/requests" target="_blank" rel="noopener noreferrer"><span>⚖️</span><strong>Jugements et décisions</strong><small>Jugements, ordonnances, expéditions ↗</small></a>
+    <a class="judiciaire-carte" href="https://www.e-justice.ci/surfer/requests" target="_blank" rel="noopener noreferrer"><span>📑</span><strong>Autres actes et certificats</strong><small>Voir les actes disponibles ↗</small></a>
+  </div>
+  <div class="judiciaire-guides">
+    <h3>Vous souhaitez être accompagné avant de cliquer ?</h3>
+    <p>Choisissez un guide rapide pour connaître les pièces et les étapes à préparer.</p>
+    <div class="judiciaire-guides-boutons">
+      <button type="button" onclick="mtcAfficherActeJudiciaire('casier')">Guide casier</button>
+      <button type="button" onclick="mtcAfficherActeJudiciaire('nationalite')">Guide nationalité</button>
+      <button type="button" onclick="mtcAfficherActeJudiciaire('authentification')">Guide authentification</button>
+      <button type="button" onclick="mtcAfficherActeJudiciaire('etatcivil')">Guide état civil</button>
+      <button type="button" onclick="mtcAfficherActeJudiciaire('jugements')">Guide jugements</button>
+      <button type="button" onclick="mtcAfficherActeJudiciaire('certificats')">Guide autres actes</button>
+    </div>
+  </div>
+  <div id="judiciaireDetailActe" class="judiciaire-detail" aria-live="polite">
+    <p>Les boutons ci-dessus vous dirigent directement vers e-Justice. Les guides de préparation sont facultatifs.</p>
+  </div>
+  <div class="judiciaire-suivi">
+    <h3>Vous avez déjà déposé une demande ?</h3>
+    <p>Le suivi officiel se fait sur la plateforme e-Justice. Munissez-vous des références communiquées lors de votre demande.</p>
+    <a class="judiciaire-lien" href="https://e-justice.ci/" target="_blank" rel="noopener noreferrer">Suivre ma demande sur e-Justice ↗</a>
+  </div>
+  <div class="judiciaire-contact">
+    <strong>Besoin d’une assistance officielle ?</strong>
+    <p>Contactez directement le support e-Justice pour une question sur votre dossier, un paiement ou une demande en cours.</p>
+    <p><a href="tel:+2250798000037">07 98 00 00 37</a> · <a href="tel:+2250759274767">07 59 27 47 67</a></p>
+    <p><a href="mailto:reclamation@e-justice.ci">reclamation@e-justice.ci</a></p>
+  </div>
+  <p class="judiciaire-pied">Les conditions, pièces exigées, juridictions compétentes, délais et tarifs peuvent varier selon l’acte et la situation du demandeur. Vérifiez toujours les informations affichées sur le portail officiel avant de payer ou de transmettre un document.</p>
+</section>
+
 </main>
 
 <footer>Mon Transport CI · La mobilité en Côte d'Ivoire</footer>
@@ -10089,5 +10171,63 @@ async function chargerDemandesFoncieresAdmin(){const zone=document.getElementByI
 async function chargerJsPdfTerrain(){if(window.jspdf&&window.jspdf.jsPDF)return window.jspdf.jsPDF;await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js';s.onload=resolve;s.onerror=()=>reject(new Error('La bibliothèque PDF ne peut pas être chargée. Vérifie ta connexion Internet.'));document.head.appendChild(s);});if(!window.jspdf||!window.jspdf.jsPDF)throw new Error('Générateur PDF indisponible.');return window.jspdf.jsPDF;}
 async function telechargerRapportTerrainPDF(id,d){try{const JsPDF=await chargerJsPdfTerrain(),pdf=new JsPDF({unit:'mm',format:'a4'});const marge=16,largeur=178;let y=18;function ajouter(t,taille=10,gras=false){pdf.setFont('helvetica',gras?'bold':'normal');pdf.setFontSize(taille);const lignes=pdf.splitTextToSize(String(t||'Non renseigné'),largeur);if(y+lignes.length*(taille*0.42+1)>280){pdf.addPage();y=18;}pdf.text(lignes,marge,y);y+=lignes.length*(taille*0.42+1)+3;}pdf.setFont('helvetica','bold');pdf.setFontSize(16);pdf.text('MON TRANSPORT CI',marge,y);y+=8;pdf.setFontSize(13);pdf.text('RAPPORT DE VERIFICATION FONCIERE',marge,y);y+=9;ajouter('Référence du dossier : '+id,10,true);ajouter('Date du rapport : '+new Date().toLocaleDateString('fr-FR'));ajouter('Demandeur : '+d.nom);ajouter('E-mail : '+d.email);ajouter('Téléphone : '+d.telephone);ajouter('Objet : '+d.typeDemande);ajouter('Statut du dossier : '+d.statut,10,true);ajouter('REFERENCES DE LA PARCELLE',11,true);const r=d.refs||{};[['Localité / commune',r.localite],['Lotissement',r.lotissement],['Îlot',r.ilot],['Lot / parcelle',r.lot],['IDUFCI',r.idufci]].forEach(x=>{if(x[1])ajouter(x[0]+' : '+x[1]);});ajouter('RESUME DES VERIFICATIONS',11,true);ajouter(d.rapport.resume);ajouter('Date des vérifications : '+(d.rapport.dateVerification||'Non précisée'));ajouter('SOURCES CONSULTEES',11,true);ajouter(d.rapport.sources);ajouter('RESULTATS OBSERVES',11,true);ajouter(d.rapport.resultat);ajouter('ANOMALIES / POINTS DE VIGILANCE',11,true);ajouter(d.rapport.anomalies);ajouter('DEMARCHES RECOMMANDEES',11,true);ajouter(d.rapport.demarches);ajouter('REPONSE DE MON TRANSPORT CI',11,true);ajouter(d.reponseAdmin);ajouter('LIMITES ET AVERTISSEMENT',11,true);ajouter('Ce rapport présente les informations et vérifications consignées à la date indiquée, à partir des sources mentionnées. Il ne constitue pas un titre de propriété, une certification d’authenticité documentaire, une attestation de situation juridique complète ni une garantie d’absence de litige. Pour toute décision ou transaction, faites confirmer les éléments par les services publics compétents et, si nécessaire, par un professionnel du droit foncier.');pdf.setFontSize(8);pdf.setFont('helvetica','italic');pdf.text('Document généré par Mon Transport CI · Vérifiez les références auprès des autorités compétentes.',marge,287);pdf.save('rapport-foncier-'+id+'.pdf');}catch(e){alert('Téléchargement du PDF impossible : '+(e.message||e));}}
 </script>
+
+<script>
+/* Accompagnement aux démarches judiciaires - liens et indications vérifiés sur e-Justice */
+window.mtcAfficherActeJudiciaire = function(type){
+  const zone=document.getElementById("judiciaireDetailActe");
+  if(!zone)return;
+  const fiches={
+    casier:{
+      titre:"Casier judiciaire — Bulletin n° 3",
+      utilite:"Le bulletin n° 3 présente les condamnations pénales inscrites au casier judiciaire. Il est strictement personnel : seule la personne concernée peut en faire la demande.",
+      etapes:["Identifiez votre profil : Ivoirien né en Côte d’Ivoire, Ivoirien né à l’étranger, étranger né en Côte d’Ivoire ou étranger né à l’étranger résidant en Côte d’Ivoire.","Préparez les informations personnelles demandées par le portail.","Préparez votre acte de naissance correspondant à votre situation. Un acte de mariage peut être demandé si la mention du mariage ne figure pas sur l’acte de naissance.","Vérifiez sur e-Justice les pièces, frais et modalités applicables à votre profil avant de valider."],
+      lien:"https://www.e-justice.ci/surfer/requests/new/cj",
+      bouton:"Commencer ma demande de casier judiciaire"
+    },
+    nationalite:{
+      titre:"Certificat de nationalité ivoirienne",
+      utilite:"Ce document officiel atteste de la nationalité ivoirienne. Le parcours dépend de la manière dont la nationalité a été acquise ou attribuée.",
+      etapes:["Identifiez le mode correspondant à votre situation : filiation, adoption, mariage, naturalisation, déclaration, réintégration ou cas particulier.","Préparez votre acte de naissance et les justificatifs correspondant à votre mode d’acquisition.","Suivez les questions du portail : la liste exacte des pièces est déterminée par votre situation.","Vérifiez les conditions d’une première demande ou d’un duplicata avant de poursuivre."],
+      lien:"https://e-justice.ci/surfer/requests/new/cni",
+      bouton:"Commencer ma demande de certificat"
+    },
+    authentification:{
+      titre:"Attestation d’authentification",
+      utilite:"Cette attestation est délivrée par le Ministère de la Justice pour certifier l’authenticité d’un acte d’état civil ou d’un document juridique, selon les catégories proposées sur le portail.",
+      etapes:["Identifiez précisément le document dont vous souhaitez faire authentifier l’original ou la version concernée.","Vérifiez que la catégorie correspondante est proposée sur e-Justice.","Consultez les pièces à fournir et les conditions particulières affichées avant le dépôt.","Ne transmettez vos documents que dans l’espace officiel sécurisé prévu à cet effet."],
+      lien:"https://e-justice.ci/",
+      bouton:"Consulter les actes d’authentification"
+    },
+    etatcivil:{
+      titre:"Actes d’état civil",
+      utilite:"Le catalogue e-Justice répertorie, selon les cas, des copies et extraits d’actes de naissance, de mariage ou de décès, y compris certains actes consulaires et certaines demandes de rectification.",
+      etapes:["Déterminez s’il s’agit d’une copie, d’un extrait, d’une rectification ou d’une transcription.","Repérez l’acte concerné et l’autorité qui l’a établi.","Préparez les références de l’acte et les justificatifs demandés par le portail.","Si l’acte recherché n’est pas disponible en ligne, consultez la mairie, le consulat ou la juridiction compétente selon la nature de la demande."],
+      lien:"https://e-justice.ci/",
+      bouton:"Consulter le catalogue officiel"
+    },
+    jugements:{
+      titre:"Jugements, décisions et ordonnances",
+      utilite:"Le catalogue officiel mentionne notamment des expéditions de jugement, grosses, jugements supplétifs ou déclaratifs, jugements de divorce, d’adoption ou de rectification, ainsi que certaines ordonnances.",
+      etapes:["Identifiez la juridiction et la décision concernées, si elles sont connues.","Notez la date, le numéro de décision et les noms des parties lorsqu’ils sont disponibles.","Vérifiez si vous devez demander une copie, une expédition, une grosse ou un autre acte.","La juridiction compétente et les pièces requises doivent être confirmées par le greffe ou par le portail officiel."],
+      lien:"https://e-justice.ci/",
+      bouton:"Consulter les actes disponibles"
+    },
+    certificats:{
+      titre:"Autres certificats et attestations",
+      utilite:"Selon le catalogue officiel, d’autres actes peuvent concerner la situation familiale, la capacité matrimoniale, la tutelle, l’autorité parentale ou l’acquisition de la nationalité.",
+      etapes:["Décrivez précisément l’objectif administratif ou juridique du document demandé.","Recherchez son intitulé exact dans le catalogue e-Justice.","Vérifiez les conditions, les justificatifs et la disponibilité du service.","Si le document n’apparaît pas ou est indiqué comme indisponible, demandez confirmation au service officiel avant toute démarche."],
+      lien:"https://e-justice.ci/",
+      bouton:"Rechercher mon document sur e-Justice"
+    }
+  };
+  const f= fiches[type];
+  if(!f)return;
+  const liste=f.etapes.map(x=>"<li>"+x+"</li>").join("");
+  zone.innerHTML="<h3>"+f.titre+"</h3><p>"+f.utilite+"</p><h4>Votre parcours de préparation</h4><ol>"+liste+"</ol><p class='judiciaire-note'><strong>À retenir :</strong> cette fiche est un guide d’orientation. Elle ne remplace pas les instructions du portail, du greffe ou de la juridiction compétente. Les frais et délais ne sont pas figés dans Mon Transport CI : vérifiez-les au moment de la demande.</p><a class='judiciaire-lien' href='"+f.lien+"' target='_blank' rel='noopener noreferrer'>"+f.bouton+" ↗</a>";
+  zone.scrollIntoView({behavior:"smooth",block:"nearest"});
+};
+</script>
+
 </body>
 </html>
