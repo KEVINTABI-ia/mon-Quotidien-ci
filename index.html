@@ -1765,6 +1765,7 @@ header .header-badge{margin-top:6px!important;font-size:8px!important}
 <div id="gestionValidationBoutiques" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🛍️ Validation des boutiques</h3><p class="notice">Vérifie les boutiques, les paiements d’abonnement et leur visibilité.</p><div id="listeValidationBoutiquesAdmin">Chargement...</div></div>
 <div id="gestionDonsSolidarite" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🤝 Dons et demandes d’aide</h3><p class="notice">Les coordonnées des personnes sont privées et visibles uniquement ici.</p><div id="listeDonsSolidariteAdmin">Chargement...</div></div>
 <div id="gestionServicesProximite" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📍 Services de proximité</h3><p class="notice">Gère les stations-service, banques, hôtels et supermarchés de la plateforme.</p><button type="button" class="primary" onclick="importerServicesQuotidiensOSM()">⬇️ Importer / actualiser stations, banques et hôtels</button><p id="statutGestionServicesProximite" class="notice"></p><div id="resumeGestionServicesProximite">Chargement...</div></div>
+<div id="gestionValidationAnnuaires" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📒 Validation des annuaires professionnels</h3><p class="notice">Vérifie les coordonnées et l’activité avant publication.</p><div id="listeValidationAnnuairesAdmin">Chargement...</div></div>
 <div id="gestionValidationAnnonces" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>📢 Validation des annonces</h3><p class="notice">Examine les petites annonces et les offres avant leur publication.</p><div id="listeValidationAnnoncesAdmin">Chargement...</div></div>
 <div id="gestionObjetsPerdus" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🔎 Gestion des objets et documents retrouvés</h3><p class="notice">Les coordonnées des trouveurs et les demandes sont privées et visibles uniquement ici. Vérifie les paiements avant la mise en relation.</p><div id="listeObjetsRetrouvesAdmin">Chargement...</div><h3>Demandes de récupération et paiements</h3><div id="listeReclamationsObjetsAdmin">Chargement...</div></div>
 <div id="gestionGares" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
@@ -2771,13 +2772,13 @@ function chargerPublicitesAccueil() {
   </div>
 </section>
 
-<section class="card" id="educationFormation" style="display:none;">
+<section class="card" id="annuaireInterne" style="display:none;"><h2 id="annuaireInterneTitre">📒 Annuaire des professionnels</h2><p>Consultez les professionnels référencés dans Mon Quotidien CI. Les fiches affichées ont été validées par l’administration.</p><label>Rechercher un nom ou un service</label><input id="annuaireRecherche" maxlength="100" placeholder="Ex. plombier, école, traiteur" oninput="chargerAnnuaireInterne()"><div class="modes"><div><label>Catégorie</label><select id="annuaireFiltreCategorie" onchange="chargerAnnuaireInterne()"><option value="">Toutes les catégories</option></select></div><div><label>Commune</label><input id="annuaireFiltreCommune" placeholder="Ex. Cocody" oninput="chargerAnnuaireInterne()"></div></div><button type="button" class="primary" onclick="afficherInscriptionAnnuaire()">➕ Inscrire gratuitement mon activité</button><div id="annuaireInscriptionZone" style="display:none"></div><h3>Professionnels validés</h3><div id="annuaireResultats"></div></section><section class="card" id="educationFormation" style="display:none;">
   <h2>🎓 Éducation et formation</h2>
   <p>Accédez rapidement aux établissements et organismes de formation autour de vous.</p>
   <div class="modes">
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=écoles+près+de+moi" target="_blank" rel="noopener noreferrer">🏫 Trouver une école</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=universités+près+de+moi" target="_blank" rel="noopener noreferrer">🎓 Trouver une université</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=centre+de+formation+professionnelle+près+de+moi" target="_blank" rel="noopener noreferrer">🧑‍🏫 Centres de formation</a>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('educationFormation')">🏫 Trouver une école</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('educationFormation')">🎓 Trouver une université</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('educationFormation')">🧑‍🏫 Centres de formation</button>
   </div>
   <p class="notice">Les inscriptions, agréments, frais et conditions doivent être confirmés directement auprès de chaque établissement.</p>
 </section>
@@ -2785,9 +2786,9 @@ function chargerPublicitesAccueil() {
   <h2>🏠 Logement et immobilier</h2>
   <p>Recherchez des professionnels et agences immobilières dans votre commune.</p>
   <div class="modes">
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=agence+immobilière+près+de+moi" target="_blank" rel="noopener noreferrer">🏢 Agences immobilières</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=location+maison+appartement+près+de+moi" target="_blank" rel="noopener noreferrer">🔑 Locations de logements</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=promoteur+immobilier+près+de+moi" target="_blank" rel="noopener noreferrer">🏗️ Promoteurs immobiliers</a>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('logementImmobilier')">🏢 Agences immobilières</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('logementImmobilier')">🔑 Locations de logements</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('logementImmobilier')">🏗️ Promoteurs immobiliers</button>
   </div>
   <p class="notice">Visitez le logement et vérifiez les documents, l’identité du bailleur et les conditions avant tout paiement.</p>
 </section>
@@ -2795,10 +2796,10 @@ function chargerPublicitesAccueil() {
   <h2>🛠️ Dépannage à domicile</h2>
   <p>Trouvez des techniciens et prestataires à proximité de votre quartier.</p>
   <div class="modes">
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=plombier+près+de+moi" target="_blank" rel="noopener noreferrer">🚰 Plombiers</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=électricien+près+de+moi" target="_blank" rel="noopener noreferrer">💡 Électriciens</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=réparation+climatisation+près+de+moi" target="_blank" rel="noopener noreferrer">❄️ Climatisation</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=réparation+électroménager+près+de+moi" target="_blank" rel="noopener noreferrer">🔌 Électroménager</a>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile')">🚰 Plombiers</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile')">💡 Électriciens</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile')">❄️ Climatisation</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile')">🔌 Électroménager</button>
   </div>
   <p class="notice">Demandez un devis et confirmez le prix et le déplacement avant toute intervention.</p>
 </section>
@@ -2806,9 +2807,9 @@ function chargerPublicitesAccueil() {
   <h2>🌱 Agriculture et élevage</h2>
   <p>Repérez les fournisseurs, marchés et professionnels du secteur agricole.</p>
   <div class="modes">
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=marché+de+produits+agricoles+près+de+moi" target="_blank" rel="noopener noreferrer">🥬 Marchés agricoles</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=fournitures+agricoles+près+de+moi" target="_blank" rel="noopener noreferrer">🚜 Fournitures et matériel</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=aliments+pour+bétail+près+de+moi" target="_blank" rel="noopener noreferrer">🐓 Élevage et alimentation animale</a>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('agricultureElevage')">🥬 Marchés agricoles</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('agricultureElevage')">🚜 Fournitures et matériel</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('agricultureElevage')">🐓 Élevage et alimentation animale</button>
   </div>
   <p class="notice">Vérifiez la qualité, l’origine des produits et les conditions de vente directement avec le fournisseur.</p>
 </section>
@@ -2828,10 +2829,10 @@ function chargerPublicitesAccueil() {
   <h2>🎉 Événements et prestations</h2>
   <p>Recherchez des prestataires pour vos cérémonies et événements.</p>
   <div class="modes">
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=traiteur+près+de+moi" target="_blank" rel="noopener noreferrer">🍽️ Traiteurs</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=salle+de+réception+près+de+moi" target="_blank" rel="noopener noreferrer">🏛️ Salles de réception</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=photographe+événementiel+près+de+moi" target="_blank" rel="noopener noreferrer">📸 Photographes et vidéastes</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=décorateur+événementiel+près+de+moi" target="_blank" rel="noopener noreferrer">🎈 Décoration</a>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations')">🍽️ Traiteurs</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations')">🏛️ Salles de réception</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations')">📸 Photographes et vidéastes</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations')">🎈 Décoration</button>
   </div>
   <p class="notice">Contactez les prestataires pour confirmer leurs disponibilités, tarifs et références.</p>
 </section>
@@ -2839,11 +2840,11 @@ function chargerPublicitesAccueil() {
   <h2>🔧 Artisans et professionnels</h2>
   <p>Accédez aux métiers et services de proximité.</p>
   <div class="modes">
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=couturier+près+de+moi" target="_blank" rel="noopener noreferrer">🧵 Couturiers</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=menuisier+près+de+moi" target="_blank" rel="noopener noreferrer">🪚 Menuisiers</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=soudeur+près+de+moi" target="_blank" rel="noopener noreferrer">⚒️ Soudeurs</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=mécanicien+près+de+moi" target="_blank" rel="noopener noreferrer">🚗 Mécaniciens</a>
-    <a class="mode" href="https://www.google.com/maps/search/?api=1&query=coiffeur+près+de+moi" target="_blank" rel="noopener noreferrer">💇 Coiffeurs</a>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels')">🧵 Couturiers</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels')">🪚 Menuisiers</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels')">⚒️ Soudeurs</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels')">🚗 Mécaniciens</button>
+    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels')">💇 Coiffeurs</button>
   </div>
   <p class="notice">Les résultats proviennent d’un service cartographique externe. Vérifiez les coordonnées et les avis avant de choisir un prestataire.</p>
 </section>
@@ -3134,6 +3135,68 @@ const NOUVEAUX_SERVICES = {
 let nouveauServiceActif="depannage";
 let filtrePublicCommerce="tout";
 function ouvrirAnnuaireCommerce(type){if(!["commerce","boutique"].includes(type))return;filtrePublicCommerce=type;ouvrirSectionPleinEcran("nouveauxServices",type==="boutique"?"Boutiques":"Commerces");choisirNouveauService("commerce");const c=document.getElementById("nsCategorie");if(c){if(type==="boutique"){c.value="Boutique";c.disabled=true;}else c.disabled=false;}chargerNouveauxServicesPublics("commerce");}
+
+// ANNUAIRES INTERNES DE MON QUOTIDIEN CI
+const CATEGORIES_ANNUAIRE={
+ educationFormation:["École","Université","Centre de formation","Cours particuliers"],
+ logementImmobilier:["Agence immobilière","Location de logement","Promoteur immobilier","Gestion locative"],
+ depannageDomicile:["Plomberie","Électricité","Climatisation","Réparation électroménager","Nettoyage"],
+ agricultureElevage:["Producteur agricole","Fournisseur agricole","Élevage","Matériel agricole"],
+ evenementsPrestations:["Traiteur","Salle de réception","Photographe","Décoration","Location de matériel"],
+ artisansProfessionnels:["Couturier","Menuisier","Soudeur","Mécanicien","Coiffeur","Autre artisan"]
+};
+let annuaireRubriqueActive="educationFormation";
+function ouvrirAnnuaireInterne(rubrique){
+ if(!CATEGORIES_ANNUAIRE[rubrique])return;
+ annuaireRubriqueActive=rubrique;
+ const noms={educationFormation:"Éducation et formation",logementImmobilier:"Logement et immobilier",depannageDomicile:"Dépannage à domicile",agricultureElevage:"Agriculture et élevage",evenementsPrestations:"Événements et prestations",artisansProfessionnels:"Artisans et professionnels"};
+ ouvrirSectionPleinEcran("annuaireInterne",noms[rubrique]);
+ document.getElementById("annuaireInterneTitre").textContent="📒 "+noms[rubrique];
+ document.getElementById("annuaireFiltreCategorie").innerHTML='<option value="">Toutes les catégories</option>'+CATEGORIES_ANNUAIRE[rubrique].map(c=>'<option>'+c+'</option>').join("");
+ document.getElementById("annuaireInscriptionZone").style.display="none";
+ chargerAnnuaireInterne();
+}
+function afficherInscriptionAnnuaire(){
+ const z=document.getElementById("annuaireInscriptionZone");z.style.display="block";
+ z.innerHTML='<div class="card" style="padding:14px"><h3>Inscrire gratuitement mon activité</h3><p class="notice">Inscription gratuite. Publication après validation administrative.</p><label>Nom de l’établissement / professionnel</label><input id="annTitre" maxlength="100"><label>Catégorie</label><select id="annCategorie">'+CATEGORIES_ANNUAIRE[annuaireRubriqueActive].map(c=>'<option>'+c+'</option>').join("")+'</select><label>Commune</label><input id="annCommune" maxlength="60"><label>Quartier / adresse</label><input id="annQuartier" maxlength="120"><label>Téléphone / WhatsApp</label><input id="annTelephone" type="tel" maxlength="20"><label>Description</label><textarea id="annDescription" rows="4" maxlength="1000"></textarea><label>E-mail</label><input id="annEmail" type="email" maxlength="120"><label>Mot de passe (6 caractères minimum)</label><input id="annPassword" type="password" minlength="6"><button type="button" class="primary" onclick="envoyerInscriptionAnnuaire()">Envoyer mon inscription gratuite</button><p id="annStatut" class="notice"></p></div>';
+}
+async function envoyerInscriptionAnnuaire(){
+ const v=id=>document.getElementById(id)?.value.trim()||"",titre=v("annTitre"),categorie=v("annCategorie"),commune=v("annCommune"),quartier=v("annQuartier"),telephone=v("annTelephone"),description=v("annDescription"),email=v("annEmail"),password=document.getElementById("annPassword")?.value||"",statut=document.getElementById("annStatut");
+ if(!titre||!categorie||!commune||!telephone||!description||!email||password.length<6){statut.textContent="Complétez les champs obligatoires. Mot de passe : 6 caractères minimum.";return;}
+ statut.textContent="Envoi du dossier...";
+ try{
+  let user=auth.currentUser;if(user&&user.email!==email){await auth.signOut();user=null;}
+  if(!user){try{user=(await auth.createUserWithEmailAndPassword(email,password)).user;}catch(e){if(e.code==="auth/email-already-in-use")user=(await auth.signInWithEmailAndPassword(email,password)).user;else throw e;}}
+  await db.collection("demandes_nouveaux_services").add({uid:user.uid,type:"annuaire",rubrique:annuaireRubriqueActive,titre,categorie,commune,quartier,telephone,description,email,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  statut.textContent="Dossier envoyé. Votre fiche sera visible après validation administrative.";
+ }catch(e){console.error(e);statut.textContent="Envoi impossible : "+(e.code==="permission-denied"?"règles Firestore à mettre à jour.":e.message);}
+}
+async function chargerAnnuaireInterne(){
+ const z=document.getElementById("annuaireResultats");if(!z)return;z.innerHTML='<p class="notice">Chargement...</p>';
+ try{
+  const snap=await db.collection("demandes_nouveaux_services").where("type","==","annuaire").where("statut","==","approuve").limit(250).get();
+  const q=(document.getElementById("annuaireRecherche")?.value||"").toLocaleLowerCase("fr"),c=(document.getElementById("annuaireFiltreCommune")?.value||"").toLocaleLowerCase("fr"),cat=document.getElementById("annuaireFiltreCategorie")?.value||"";
+  const docs=snap.docs.filter(doc=>{const d=doc.data();return d.rubrique===annuaireRubriqueActive&&(!cat||d.categorie===cat)&&(!c||String(d.commune||"").toLocaleLowerCase("fr").includes(c))&&(!q||[d.titre,d.description,d.categorie,d.commune,d.quartier].join(" ").toLocaleLowerCase("fr").includes(q));});
+  if(!docs.length){z.innerHTML='<p class="notice">Aucun professionnel validé pour le moment. Vous pouvez proposer une inscription gratuite.</p>';return;}
+  z.innerHTML=docs.map(doc=>{const d=doc.data(),tel=String(d.telephone||"").replace(/[^+0-9]/g,""),wa=tel.replace(/^\+/,"").replace(/^0/,"225");return '<article class="card" style="padding:14px;margin:10px 0"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+(d.quartier?' · '+echapperTextePublicite(d.quartier):'')+'</p><p>'+echapperTextePublicite(d.description)+'</p><a class="primary" style="display:inline-block;text-decoration:none;margin:4px" href="tel:'+tel+'">📞 Appeler</a><a class="primary" style="display:inline-block;text-decoration:none;margin:4px" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+wa+'">WhatsApp</a></article>';}).join("");
+ }catch(e){console.error(e);z.innerHTML='<p class="notice">Impossible de charger l’annuaire. Vérifiez Firestore.</p>';}
+}
+async function chargerAnnuairesAdmin(){
+ const z=document.getElementById("listeValidationAnnuairesAdmin");if(!z)return;
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){z.textContent="Accès administrateur requis.";return;}
+ z.innerHTML='<p class="notice">Chargement des inscriptions...</p>';
+ try{const snap=await db.collection("demandes_nouveaux_services").where("type","==","annuaire").orderBy("createdAt","desc").limit(200).get();
+ if(snap.empty){z.innerHTML='<p class="notice">Aucune inscription.</p>';return;}
+ z.innerHTML=snap.docs.map(doc=>{const d=doc.data(),actions=d.statut==="en_attente"?'<button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'approuve\')">Approuver et publier</button><button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'refuse\')">Refuser</button>':'<span class="notice">Statut : '+echapperTextePublicite(d.statut)+'</span>';return '<article class="card" style="padding:12px;margin:10px 0"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.rubrique)+' · '+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.quartier||"")+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+'</p>'+actions+'</article>';}).join("");
+ }catch(e){console.error(e);z.textContent="Erreur de chargement : "+e.message;}
+}
+async function traiterInscriptionAnnuaire(id,statut){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ if(!["approuve","refuse"].includes(statut))return;
+ try{await db.collection("demandes_nouveaux_services").doc(id).update({statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()});await chargerAnnuairesAdmin();}
+ catch(e){console.error(e);alert("Modification impossible : "+e.message);}
+}
+
 function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId){
  if(!NOUVEAUX_SERVICES[type])return;
  nouveauServiceActif=type;
@@ -3641,6 +3704,7 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionRoutes",groupe:"Transport",icone:"🛣️",titre:"Itinéraires et tarifs",description:"Gérer les lignes, arrêts et prix."},
   {id:"gestionCompagnies",groupe:"Transport",icone:"🚍",image:"compagnies",titre:"Compagnies de voyage",description:"Gérer les agences et leurs dessertes."},
   {id:"gestionAbonnementsRamassage",groupe:"Professionnels",icone:"🚌",titre:"Compagnies de ramassage",description:"Valider les dossiers et abonnements."},
+  {id:"gestionValidationAnnuaires",groupe:"Professionnels",icone:"📒",titre:"Annuaires professionnels",description:"Valider les inscriptions avant publication.",notification:"annuaire"},
   {id:"gestionPartenaires",groupe:"Professionnels",icone:"👥",titre:"Partenaires",description:"Gérer les partenaires de services."},
   {id:"gestionCommandesPartenaires",groupe:"Professionnels",icone:"📦",titre:"Commandes partenaires",description:"Suivre et attribuer les commandes."},
   {id:"gestionPublicites",groupe:"Publications et communication",icone:"📣",titre:"Publicités",description:"Gérer les campagnes publicitaires."},
@@ -3661,7 +3725,7 @@ function surveillerNotificationsAdmin(){
  if(arretNotificationsAdmin){arretNotificationsAdmin();arretNotificationsAdmin=null;}
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;
  arretNotificationsAdmin=db.collection("demandes_nouveaux_services").onSnapshot(snap=>{
-  const comptes={depannage:0,commerce:0,boutique:0,annonce:0};
+  const comptes={depannage:0,commerce:0,boutique:0,annonce:0,annuaire:0};
   snap.forEach(doc=>{const d=doc.data()||{};if((d.statut||"en_attente")!=="en_attente")return;if(d.type==="commerce"){if(String(d.categorie||"").toLowerCase()==="boutique")comptes.boutique++;else comptes.commerce++;}else if(Object.prototype.hasOwnProperty.call(comptes,d.type))comptes[d.type]++;});
   document.querySelectorAll("[data-notification-type]").forEach(el=>{
    const n=comptes[el.dataset.notificationType]||0;el.textContent=String(n);el.hidden=n===0;
@@ -3693,6 +3757,7 @@ function ouvrirRubriqueAdmin(id){
   if(id==="gestionDonsSolidarite") chargerDonsSolidariteAdmin();
   if(id==="gestionServicesProximite") chargerGestionServicesProximiteAdmin();
   if(id==="gestionValidationAnnonces") chargerNouveauxServicesAdmin("annonce");
+  if(id==="gestionValidationAnnuaires") chargerAnnuairesAdmin();
   if(id==="gestionObjetsPerdus") chargerObjetsPerdusAdmin();
    if(id==="gestionCommunautaire") chargerGestionCommunautaireAdmin();
   if(id==="gestionVisibiliteMenus") afficherGestionVisibiliteMenus();
