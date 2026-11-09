@@ -637,7 +637,8 @@ service cloud.firestore {
       allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
       allow create: if estConnecte() && request.auth.uid == uid
         && request.resource.data.uid == uid
-        && request.resource.data.keys().hasOnly(["uid","statut","essaiGratuitUtilise","dateDebut","dateExpiration","paiementStatut","createdAt"])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.keys().hasOnly(["uid","email","statut","essaiGratuitUtilise","dateDebut","dateExpiration","paiementStatut","createdAt"])
         && request.resource.data.statut == "actif"
         && request.resource.data.essaiGratuitUtilise == true
         && request.resource.data.paiementStatut == "gratuit"
