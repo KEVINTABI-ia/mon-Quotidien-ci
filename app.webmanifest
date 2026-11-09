@@ -12,7 +12,7 @@
   "theme_color": "#075B35",
   "icons": [
     {
-      "src": "./logo-mon-quotidien-ci.svg",
+      "src": "./icon-transport-ci.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
