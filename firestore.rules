@@ -978,5 +978,11 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
+    // File d'attente des notifications : seul l'administrateur peut créer ou consulter les événements.
+    // Le Worker utilise un compte de service côté serveur et contourne les règles Firestore.
+    match /notifications_queue/{eventId} {
+      allow read, create, update, delete: if estAdmin();
+    }
+
   }
 }
