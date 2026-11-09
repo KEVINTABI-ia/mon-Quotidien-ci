@@ -3546,7 +3546,7 @@ async function envoyerNouveauService(){
     const abonnement=await transaction.get(abonnementRef);
     if(!abonnement.exists){
      const debut=Date.now();
-     transaction.set(abonnementRef,{uid:user.uid,statut:"actif",essaiGratuitUtilise:true,dateDebut:firebase.firestore.FieldValue.serverTimestamp(),dateExpiration:firebase.firestore.Timestamp.fromMillis(debut+30*86400000),paiementStatut:"gratuit",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+     transaction.set(abonnementRef,{uid:user.uid,email:user.email||email,statut:"actif",essaiGratuitUtilise:true,dateDebut:firebase.firestore.FieldValue.serverTimestamp(),dateExpiration:firebase.firestore.Timestamp.fromMillis(debut+30*86400000),paiementStatut:"gratuit",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     }else{
      const data=abonnement.data();
      if(!data.dateExpiration||data.dateExpiration.toDate().getTime()<=Date.now()){
