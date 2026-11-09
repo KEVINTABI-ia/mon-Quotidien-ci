@@ -1850,7 +1850,7 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 <div id="gestionDonsSolidarite" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🤝 Dons et demandes d’aide</h3><p class="notice">Les coordonnées des personnes sont privées et visibles uniquement ici.</p><div id="listeDonsSolidariteAdmin">Chargement...</div></div>
 <div id="gestionServicesProximite" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📍 Services de proximité</h3><p class="notice">Gère les stations-service, banques, hôtels et supermarchés de la plateforme.</p><button type="button" class="primary" onclick="importerServicesQuotidiensOSM()">⬇️ Importer / actualiser stations, banques et hôtels</button><p id="statutGestionServicesProximite" class="notice"></p><div id="resumeGestionServicesProximite">Chargement...</div></div>
 <div id="gestionValidationAnnuaires" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📒 Validation des annuaires professionnels</h3><p class="notice">Vérifie les coordonnées et l’activité avant publication.</p><div id="listeValidationAnnuairesAdmin">Chargement...</div></div>
-<div id="gestionValidationAnnonces" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>📢 Validation des annonces</h3><p class="notice">Examine les petites annonces et les offres avant leur publication.</p><div id="listeValidationAnnoncesAdmin">Chargement...</div></div>
+<div id="gestionValidationAnnonces" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>📢 Validation des annonces</h3><p class="notice">Examine les petites annonces et les offres avant leur publication.</p><div id="listeValidationAnnoncesAdmin">Chargement...</div><h4>💳 Renouvellements d’abonnement</h4><button type="button" onclick="chargerPaiementsAnnoncesAdmin()">Actualiser les paiements en attente</button><div id="listePaiementsAnnoncesAdmin"></div></div>
 <div id="gestionObjetsPerdus" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🔎 Gestion des objets et documents retrouvés</h3><p class="notice">Les coordonnées des trouveurs et les demandes sont privées et visibles uniquement ici. Vérifie les paiements avant la mise en relation.</p><div id="listeObjetsRetrouvesAdmin">Chargement...</div><h3>Demandes de récupération et paiements</h3><div id="listeReclamationsObjetsAdmin">Chargement...</div></div>
 <div id="gestionGares" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
   <h3>📍 Gestion des gares et terminus</h3>
@@ -3453,8 +3453,8 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <h3>${cfg.icone} ${cfg.titre}</h3>
  <p>Proposez votre service ou votre annonce. La publication sera possible après validation de l'administration.</p>
  <label>Nom / entreprise / titre de l'annonce</label><input id="nsTitre" maxlength="100" placeholder="Nom ou titre" required>
- <div id="nsPhotoZone" style="display:${type==="depannage"||type==="commerce"?"block":"none"};margin:12px 0;">
- <label>${type==="commerce"?"Photo de la boutique":"Photo de profil du service de dépannage"} (facultatif)</label>
+ <div id="nsPhotoZone" style="display:${type==="depannage"||type==="commerce"||type==="annonce"?"block":"none"};margin:12px 0;">
+ <label>${type==="commerce"?"Photo de la boutique":type==="annonce"?"Photo de votre annonce":"Photo de profil du service de dépannage"} (facultatif)</label>
  <input id="nsPhoto" type="file" accept="image/jpeg,image/png,image/webp" onchange="previsualiserPhotoNouveauService(event)">
  <small>Formats JPG, PNG ou WEBP · 3 Mo maximum.</small>
  <img id="nsPhotoPreview" alt="Aperçu de la photo sélectionnée" style="display:none;width:120px;height:120px;object-fit:cover;border-radius:12px;margin-top:8px;">
@@ -3467,6 +3467,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  ${type==="commerce"&&!modePartenaire?'<label>Produits proposés et prix (un produit par ligne)</label><textarea id="nsProduits" rows="5" maxlength="3000" placeholder="Riz 25 kg | 15 000\nHuile 1 L | 1 200\nSucre 1 kg | 800"></textarea><small>Indiquez le nom du produit et son prix en FCFA, séparés par |.</small><label>Tarif de livraison fixé par la boutique</label><select id="nsTarifLivraison" required><option value="">Choisir le tarif</option><option value="1000">1 000 FCFA</option><option value="1500">1 500 FCFA</option><option value="2000">2 000 FCFA</option><option value="2500">2 500 FCFA</option></select>':''}
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
+ ${type==="annonce"?'<div id="zoneAbonnementPetitesAnnonces" style="margin:12px 0;"><button type="button" onclick="ouvrirGestionAbonnementPetitesAnnonces()">Consulter mon abonnement / renouveler</button></div>':""}
  ${type==="commerce"&&!modePartenaire?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="15" data-montant="4000">15 jours — 4 000 FCFA</option><option value="30" data-montant="7000">30 jours — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p>Wave : <strong>0757522319</strong><br>Orange Money : <strong>0757522319</strong><br>Titulaire : <strong>TA BI SERGE KEVIN</strong></p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
  <button class="primary" type="button" onclick="envoyerNouveauService()">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
@@ -3526,18 +3527,38 @@ async function envoyerNouveauService(){
   }
   let photoUrl=null;
   const photo=document.getElementById("nsPhoto")?.files?.[0];
-  if(photo&&(nouveauServiceActif==="depannage"||nouveauServiceActif==="commerce")){
+  if(photo&&(nouveauServiceActif==="depannage"||nouveauServiceActif==="commerce"||nouveauServiceActif==="annonce")){
    if(!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>3*1024*1024)throw new Error("Photo JPG, PNG ou WEBP de 3 Mo maximum.");
    statut.textContent="Préparation de la photo...";
    photoUrl=await compresserPhotoNouveauService(photo);
   }
-  await db.collection("demandes_nouveaux_services").add({
+  const donneesDossier={
    uid:user.uid,type:nouveauServiceActif,titre,categorie:valeur("nsCategorie"),commune,telephone,description,email,
    ...(modePartenaire?{modePartenaire:true}:{}),
    ...(photoUrl?{photoUrl}:{}),
    ...(estBoutique?{produits,adresseBoutique,tarifLivraisonBoutique,paiementMoyen,paiementReference,montantAbonnement:Number(document.getElementById("nsDureeAbonnement").selectedOptions[0].dataset.montant),dureeAbonnementJours:Number(document.getElementById("nsDureeAbonnement").value),paiementStatut:"a_verifier"}:{}),
    statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  });
+  };
+  if(nouveauServiceActif==="annonce"){
+   const abonnementRef=db.collection("abonnements_petites_annonces").doc(user.uid);
+   const annonceRef=db.collection("demandes_nouveaux_services").doc();
+   await db.runTransaction(async transaction=>{
+    const abonnement=await transaction.get(abonnementRef);
+    if(!abonnement.exists){
+     const debut=Date.now();
+     transaction.set(abonnementRef,{uid:user.uid,statut:"actif",essaiGratuitUtilise:true,dateDebut:firebase.firestore.FieldValue.serverTimestamp(),dateExpiration:firebase.firestore.Timestamp.fromMillis(debut+30*86400000),paiementStatut:"gratuit",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    }else{
+     const data=abonnement.data();
+     if(!data.dateExpiration||data.dateExpiration.toDate().getTime()<=Date.now()){
+      if(data.paiementStatut==="a_verifier")throw new Error("Votre paiement est en attente de vérification. Les nouvelles annonces seront débloquées après confirmation.");
+      throw new Error("Votre période gratuite ou votre abonnement est expiré. Consultez votre abonnement et renouvelez pour 500 FCFA.");
+     }
+    }
+    transaction.set(annonceRef,donneesDossier);
+   });
+  }else{
+   await db.collection("demandes_nouveaux_services").add(donneesDossier);
+  }
   statut.textContent="Dossier envoyé. Il sera vérifié par l’administration avant publication.";
   document.getElementById("nsTitre").value="";
   document.getElementById("nsDescription").value="";
@@ -3546,6 +3567,50 @@ async function envoyerNouveauService(){
   statut.textContent="Envoi impossible : "+(e.code==="permission-denied"?"les règles Firestore doivent être mises à jour.":e.message||"réessayez.");
   if(auth.currentUser)try{await auth.signOut();}catch(_){}
  }
+}
+async function ouvrirGestionAbonnementPetitesAnnonces(){
+ const zone=document.getElementById("zoneAbonnementPetitesAnnonces");if(!zone)return;
+ const email=document.getElementById("nsEmail")?.value.trim()||"",password=document.getElementById("nsPassword")?.value||"";
+ try{
+  if(!auth.currentUser){if(!email||!password){zone.textContent="Saisissez votre e-mail et votre mot de passe pour consulter votre abonnement.";return;}await auth.signInWithEmailAndPassword(email,password);}
+  const user=auth.currentUser,snap=await db.collection("abonnements_petites_annonces").doc(user.uid).get();
+  if(!snap.exists){zone.innerHTML='<p class="notice">Votre premier mois gratuit sera activé lors de votre première annonce.</p>';return;}
+  const d=snap.data(),fin=d.dateExpiration?.toDate?.(),actif=!!fin&&fin.getTime()>Date.now();
+  if(actif){zone.innerHTML='<p class="notice">Abonnement actif jusqu’au '+fin.toLocaleDateString("fr-FR")+'. Plusieurs annonces sont autorisées pendant cette période.</p>';return;}
+  if(d.paiementStatut==="a_verifier"){zone.innerHTML='<p class="notice">Votre paiement est en attente de vérification. La publication de nouvelles annonces sera débloquée après confirmation.</p>';return;}
+  zone.innerHTML='<div class="card" style="padding:12px;"><strong>Renouvellement : 500 FCFA pour 30 jours</strong><p>Wave : <strong>07 57 52 23 19</strong><br>Orange Money : <strong>07 57 52 23 19</strong><br>Titulaire : <strong>TA BI SERGE KEVIN</strong></p><label>Moyen de paiement</label><select id="nsRenouvellementMoyen"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select><label>Référence de transaction</label><input id="nsRenouvellementReference" maxlength="80" placeholder="Référence reçue après paiement"><button type="button" class="primary" onclick="envoyerRenouvellementPetitesAnnonces()">Envoyer pour vérification</button></div>';
+ }catch(e){zone.textContent="Consultation impossible : "+(e.message||"réessayez.");}
+}
+async function envoyerRenouvellementPetitesAnnonces(){
+ const user=auth.currentUser,zone=document.getElementById("zoneAbonnementPetitesAnnonces"),moyen=document.getElementById("nsRenouvellementMoyen")?.value||"",reference=document.getElementById("nsRenouvellementReference")?.value.trim()||"";
+ if(!user||!["Wave","Orange Money"].includes(moyen)||reference.length<4)return alert("Choisissez un moyen de paiement et saisissez une référence valide.");
+ try{
+  const ref=db.collection("abonnements_petites_annonces").doc(user.uid),snap=await ref.get();
+  if(!snap.exists||snap.data().dateExpiration?.toDate?.().getTime()>Date.now())return alert("Le renouvellement n’est pas nécessaire pour le moment.");
+  await ref.update({paiementMoyen:moyen,paiementReference:reference,montantRenouvellement:500,paiementStatut:"a_verifier",demandeRenouvellementLe:firebase.firestore.FieldValue.serverTimestamp()});
+  zone.innerHTML='<p class="notice">Demande reçue. Le renouvellement sera activé après vérification manuelle du paiement.</p>';
+ }catch(e){console.error(e);alert("Envoi impossible : "+e.message);}
+}
+async function chargerPaiementsAnnoncesAdmin(){
+ const zone=document.getElementById("listePaiementsAnnoncesAdmin");if(!zone)return;
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){zone.textContent="Accès administrateur requis.";return;}
+ zone.textContent="Chargement...";
+ try{
+  const snap=await db.collection("abonnements_petites_annonces").where("paiementStatut","==","a_verifier").limit(100).get();
+  if(snap.empty){zone.innerHTML='<p class="notice">Aucun renouvellement en attente.</p>';return;}
+  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();return '<article class="card" style="padding:12px;margin:8px 0;"><strong>Compte : '+echapperTextePublicite(d.email||d.uid)+'</strong><p>500 FCFA / 30 jours · '+echapperTextePublicite(d.paiementMoyen||"")+' · Référence : '+echapperTextePublicite(d.paiementReference||"")+'</p><button type="button" class="primary" onclick="confirmerRenouvellementAnnonce(\''+doc.id+'\')">Confirmer le paiement et activer 30 jours</button></article>';}).join("");
+ }catch(e){console.error(e);zone.textContent="Erreur : "+e.message;}
+}
+async function confirmerRenouvellementAnnonce(uid){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ const ref=db.collection("abonnements_petites_annonces").doc(uid);
+ try{
+  const snap=await ref.get();if(!snap.exists||snap.data().paiementStatut!=="a_verifier")return alert("Demande introuvable ou déjà traitée.");
+  const d=snap.data();if(!confirm("Confirmer la réception de 500 FCFA et activer 30 jours ?"))return;
+  const debut=Math.max(Date.now(),d.dateExpiration?.toDate?.().getTime()||0);
+  await ref.update({statut:"actif",paiementStatut:"confirme",dateExpiration:firebase.firestore.Timestamp.fromMillis(debut+30*86400000),dateConfirmationPaiement:firebase.firestore.FieldValue.serverTimestamp(),confirmePar:auth.currentUser.uid});
+  await chargerPaiementsAnnoncesAdmin();
+ }catch(e){console.error(e);alert("Activation impossible : "+e.message);}
 }
 async function chargerNouveauxServicesPublics(type){
  const zone=document.getElementById("nouveauxServicesPublics");if(!zone)return;
