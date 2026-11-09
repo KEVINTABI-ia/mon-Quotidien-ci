@@ -2023,6 +2023,25 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 
 
 
+
+<div id="gestionMaCommuneDirect" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;">
+  <h3>📍 Gestion — Ma commune en direct</h3>
+  <p class="notice">Publiez des informations locales vérifiées. Les habitants peuvent les consulter sans créer de compte. Aucune notification push n'est utilisée.</p>
+  <label for="communeAdminTitre">Titre de l'information</label><input id="communeAdminTitre" maxlength="120" placeholder="Ex. : Travaux sur le boulevard">
+  <label for="communeAdminCommune">Commune / ville concernée</label>
+  <select id="communeAdminCommune"><option value="">Choisir une commune</option><option>Abobo</option><option>Adjamé</option><option>Anyama</option><option>Attécoubé</option><option>Bingerville</option><option>Cocody</option><option>Koumassi</option><option>Marcory</option><option>Plateau</option><option>Port-Bouët</option><option>Treichville</option><option>Yopougon</option><option>Autre commune / ville</option></select>
+  <label for="communeAdminCategorie">Catégorie</label>
+  <select id="communeAdminCategorie"><option value="routes">🚧 Routes et travaux</option><option value="eau_electricite">💧 Eau et électricité</option><option value="municipal">🏛️ Vie municipale</option><option value="securite">🛡️ Sécurité et prévention</option><option value="evenement">🎉 Événements</option><option value="autre">📌 Autres informations</option></select>
+  <label for="communeAdminDescription">Description</label><textarea id="communeAdminDescription" rows="4" maxlength="1800" placeholder="Décrivez clairement l'information, les quartiers et les personnes concernés."></textarea>
+  <label for="communeAdminSource">Source / organisme (recommandé)</label><input id="communeAdminSource" maxlength="160" placeholder="Ex. : mairie, CIE, SODECI, communiqué officiel">
+  <label for="communeAdminLien">Lien de la source (facultatif)</label><input id="communeAdminLien" type="url" maxlength="500" placeholder="https://...">
+  <label for="communeAdminDateFin">Date de fin de validité (facultatif)</label><input id="communeAdminDateFin" type="date">
+  <button type="button" class="primary" onclick="publierInfoCommuneAdmin()">Publier l'information</button>
+  <p id="communeAdminStatut" class="notice" aria-live="polite"></p>
+  <h4>Publications existantes</h4><button type="button" onclick="chargerInfosCommuneAdmin()">Actualiser la liste</button>
+  <div id="communeAdminListe"></div>
+</div>
+
 <div id="gestionCommunautaire" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🗞️ Gestion de la communauté</h3>
 <h4>Publier une information</h4><textarea id="nouvelleInformationCommunautaire" rows="4" maxlength="1500" placeholder="Rédige l’information"></textarea><button class="primary" onclick="publierInformationCommunautaire()">Publier l’information</button><p id="statutInformationCommunautaire" class="notice"></p>
 <h4>Informations publiées</h4><div id="listeInformationsAdmin"></div><h4>Recharges du tchat — 100 FCFA / 15 messages</h4><div id="listeRechargesGbairaiAdmin"></div><h4>Messages du tchat — 24 heures</h4><div id="listeMessagesGbairaiAdmin"></div><h4>Annonces et offres — 2 000 FCFA / 15 jours · 3 500 FCFA / 30 jours</h4><div id="listeAnnoncesAdmin"></div></div>
@@ -3017,6 +3036,29 @@ function chargerPublicitesAccueil() {
 </section>
 
 
+
+<section class="card" id="maCommuneDirect" style="display:none;">
+  <div style="background:linear-gradient(120deg,#145b36,#16834a);color:#fff;padding:18px;border-radius:16px;margin-bottom:14px;">
+    <p style="margin:0 0 5px;color:#eaf7ed;font-size:11px;font-weight:800;letter-spacing:1px;">INFORMATIONS DE PROXIMITÉ</p>
+    <h2 style="color:#fff!important;margin:0 0 6px;">📍 Ma commune en direct</h2>
+    <p style="color:#f0fff4;margin:0;font-size:13px;">Les informations utiles près de chez vous.</p>
+  </div>
+  <label for="communeDirectFiltre">Choisir une commune</label>
+  <select id="communeDirectFiltre">
+    <option value="">Toutes les communes</option>
+    <option>Abobo</option><option>Adjamé</option><option>Anyama</option><option>Attécoubé</option><option>Bingerville</option><option>Cocody</option><option>Koumassi</option><option>Marcory</option><option>Plateau</option><option>Port-Bouët</option><option>Treichville</option><option>Yopougon</option>
+    <option>Autre commune / ville</option>
+  </select>
+  <label for="communeDirectCategorie">Type d'information</label>
+  <select id="communeDirectCategorie">
+    <option value="">Toutes les catégories</option>
+    <option value="routes">🚧 Routes et travaux</option><option value="eau_electricite">💧 Eau et électricité</option><option value="municipal">🏛️ Vie municipale</option><option value="securite">🛡️ Sécurité et prévention</option><option value="evenement">🎉 Événements</option><option value="autre">📌 Autres informations</option>
+  </select>
+  <button type="button" class="primary" onclick="chargerMaCommuneDirect()">Afficher les informations</button>
+  <p class="notice">Les informations sont publiées par l’administration de Mon Quotidien CI. Une publication n’est officielle que si sa source est clairement indiquée et vérifiable.</p>
+  <div id="communeDirectListe" aria-live="polite"><p class="notice">Choisissez une commune puis affichez les informations disponibles.</p></div>
+</section>
+
 <section class="card" id="espaceCommunautaire" style="display:none;"><h2>🗞️ M’informer / Gbairai</h2><p>Informations utiles et échanges de la communauté.</p>
 <div id="menuCommunautaire" class="modes"><button class="mode" onclick="ouvrirInformationsCommunautaires()">📰 M’informer</button><button class="mode" onclick="ouvrirTchatGbairai()">💬 Faire un gbairai</button></div>
 <div id="zoneInformationsCommunautaires" style="display:none"></div><div id="zoneTchatGbairai" style="display:none"></div></section>
@@ -3880,6 +3922,7 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionCommandesPartenaires",groupe:"Professionnels",icone:"📦",titre:"Commandes partenaires",description:"Suivre et attribuer les commandes."},
   {id:"gestionPublicites",groupe:"Publications et communication",icone:"📣",titre:"Publicités",description:"Gérer les campagnes publicitaires."},
   {id:"gestionCommunautaire",groupe:"Publications et communication",icone:"🗞️",titre:"Informations et Gbairai",description:"Publier les informations communautaires."},
+  {id:"gestionMaCommuneDirect",groupe:"Publications et communication",icone:"📍",titre:"Ma commune en direct",description:"Publier et gérer les informations locales."},
   {id:"gestionValidationAnnonces",groupe:"Publications et communication",icone:"📢",image:"annonces",titre:"Annonces",description:"Examiner les annonces avant publication.",notification:"annonce"},
   {id:"gestionAbonnementsAutomobiliste",groupe:"Services et abonnements",icone:"🚘",titre:"Abonnements automobilistes",description:"Contrôler les demandes et activations."},
   {id:"gestionValidationDepannage",groupe:"Services et abonnements",icone:"🔧",image:"automobile",titre:"Dépannage automobile",description:"Valider les professionnels du dépannage.",notification:"depannage"},
@@ -3931,6 +3974,7 @@ function ouvrirRubriqueAdmin(id){
   if(id==="gestionValidationAnnuaires") chargerAnnuairesAdmin();
   if(id==="gestionObjetsPerdus") chargerObjetsPerdusAdmin();
    if(id==="gestionCommunautaire") chargerGestionCommunautaireAdmin();
+  if(id==="gestionMaCommuneDirect") chargerInfosCommuneAdmin();
   if(id==="gestionVisibiliteMenus") afficherGestionVisibiliteMenus();
   if(id==="gestionAbonnementsAutomobiliste") chargerDemandesAbonnementAutomobilisteAdmin();
   let retour=cible.querySelector(":scope > .admin-retour-menu");
@@ -10682,6 +10726,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       <section class="home-panel" id="homeActualites">
         <div class="home-section-heading"><div><h2>La vie de votre communauté</h2><p>Informations, emplois et opportunités</p></div></div>
         <div class="home-discovery-grid">
+          <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('maCommuneDirect','Ma commune en direct'); chargerMaCommuneDirect()"><span>📍</span><strong>Ma commune en direct</strong><small>Travaux, eau, électricité et vie locale</small></button>
           <button class="home-discovery-card" type="button" onclick="ouvrirEspaceCommunautaire()"><span>📰</span><strong>M'informer / Gbairai</strong><small>Actualités et échanges de la communauté</small></button>
           <button class="home-discovery-card" type="button" onclick="ouvrirEmploisOpportunites()"><span>💼</span><strong>Emplois et opportunités</strong><small>Offres d’emploi, stages et opportunités vérifiées</small></button>
           <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier')"><span>🏠</span><strong>Logement et immobilier</strong><small>Maisons, chambres et agences dans votre commune</small></button>
@@ -10903,6 +10948,58 @@ html.mqci-dark-mode .menu-dropdown button{background:#192820!important;color:#ed
 html.mqci-dark-mode footer{color:#a7b8ad!important}
 html.mqci-dark-mode .home-welcome{filter:brightness(.88)}
 </style>
+
+
+<script id="ma-commune-en-direct">
+(function(){
+ const collectionCommune = () => db.collection("actualites_communes");
+ const libelleCategorie = {routes:"🚧 Routes et travaux",eau_electricite:"💧 Eau et électricité",municipal:"🏛️ Vie municipale",securite:"🛡️ Sécurité et prévention",evenement:"🎉 Événements",autre:"📌 Autres informations"};
+ function texteSecurise(v){return String(v||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+ function dateLisible(v){if(!v)return "";const d=new Date(v);return Number.isNaN(d.getTime())?"":d.toLocaleDateString("fr-FR");}
+ window.chargerMaCommuneDirect=async function(){
+  const zone=document.getElementById("communeDirectListe");if(!zone)return;
+  const commune=document.getElementById("communeDirectFiltre").value;
+  const categorie=document.getElementById("communeDirectCategorie").value;
+  zone.innerHTML='<p class="notice">Chargement des informations...</p>';
+  try{
+   const snap=await collectionCommune().where("statut","==","publiee").limit(100).get();
+   const maintenant=Date.now();
+   const docs=snap.docs.map(x=>({id:x.id,...x.data()})).filter(x=>(!commune||x.commune===commune)&&(!categorie||x.categorie===categorie)&&(!x.dateFin||new Date(x.dateFin+"T23:59:59").getTime()>=maintenant)).sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
+   if(!docs.length){zone.innerHTML='<p class="notice">Aucune information publiée pour ces critères. Revenez consulter cette rubrique.</p>';return;}
+   zone.innerHTML=docs.map(d=>'<article class="card" style="padding:15px;margin:12px 0;border-left:4px solid #16834A;"><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"><span class="price">'+texteSecurise(d.commune)+'</span><span class="notice">'+texteSecurise(libelleCategorie[d.categorie]||"Information locale")+'</span></div><h3 style="margin:4px 0 8px;">'+texteSecurise(d.titre)+'</h3><p style="white-space:pre-wrap;">'+texteSecurise(d.description)+'</p><p class="notice">Publié le '+dateLisible(d.createdAt?.toDate?.()?.toISOString?.()||d.createdAt)+' · '+(d.source?'Source : '+texteSecurise(d.source):'Source non précisée')+'</p>'+(d.lienSource?'<a href="'+texteSecurise(d.lienSource)+'" target="_blank" rel="noopener noreferrer">Consulter la source ↗</a>':'')+(d.dateFin?'<p class="notice">Valable jusqu’au '+dateLisible(d.dateFin)+'</p>':'')+'</article>').join("");
+  }catch(e){console.error("Ma commune en direct",e);zone.innerHTML='<p class="notice">Impossible de charger les informations. Réessayez plus tard.</p>';}
+ };
+ window.publierInfoCommuneAdmin=async function(){
+  const msg=document.getElementById("communeAdminStatut");
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){msg.textContent="Accès administrateur requis.";return;}
+  const val=id=>(document.getElementById(id)?.value||"").trim();
+  const titre=val("communeAdminTitre"),commune=val("communeAdminCommune"),categorie=val("communeAdminCategorie"),description=val("communeAdminDescription"),source=val("communeAdminSource"),lienSource=val("communeAdminLien"),dateFin=val("communeAdminDateFin");
+  if(titre.length<4||!commune||description.length<10){msg.textContent="Renseignez un titre, une commune et une description suffisamment précise.";return;}
+  if(lienSource&&!/^https:\/\//i.test(lienSource)){msg.textContent="Le lien de la source doit commencer par https://.";return;}
+  if(dateFin&&dateFin<new Date().toISOString().slice(0,10)){msg.textContent="La date de fin ne peut pas être dans le passé.";return;}
+  msg.textContent="Publication en cours...";
+  try{
+   await collectionCommune().add({titre,commune,categorie,description,source,lienSource,dateFin,statut:"publiee",createdAt:firebase.firestore.FieldValue.serverTimestamp(),publiePar:auth.currentUser.uid});
+   msg.textContent="Information publiée.";
+   ["communeAdminTitre","communeAdminDescription","communeAdminSource","communeAdminLien","communeAdminDateFin"].forEach(id=>document.getElementById(id).value="");
+   await chargerInfosCommuneAdmin();
+  }catch(e){console.error(e);msg.textContent="Publication impossible : "+(e.code==="permission-denied"?"vérifiez les règles Firestore.":e.message);}
+ };
+ window.chargerInfosCommuneAdmin=async function(){
+  const zone=document.getElementById("communeAdminListe");if(!zone)return;
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){zone.textContent="Accès administrateur requis.";return;}
+  zone.innerHTML='<p class="notice">Chargement...</p>';
+  try{
+   const snap=await collectionCommune().limit(150).get();
+   const docs=snap.docs.sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
+   if(!docs.length){zone.innerHTML='<p class="notice">Aucune publication pour le moment.</p>';return;}
+   zone.innerHTML=docs.map(doc=>{const d=doc.data();return '<article class="card" style="padding:12px;margin:9px 0;"><strong>'+texteSecurise(d.titre)+'</strong><p>'+texteSecurise(d.commune)+' · '+texteSecurise(libelleCategorie[d.categorie]||d.categorie)+'</p><p class="notice">Statut : '+texteSecurise(d.statut)+' · '+(d.dateFin?'Fin : '+dateLisible(d.dateFin):'Sans date de fin')+'</p><button type="button" onclick="changerStatutInfoCommune(\''+doc.id+'\',\''+(d.statut==="publiee"?"masquee":"publiee")+'\')">'+(d.statut==="publiee"?"Masquer":"Publier")+'</button> <button type="button" onclick="supprimerInfoCommune(\''+doc.id+'\')">Supprimer</button></article>';}).join("");
+  }catch(e){console.error(e);zone.innerHTML='<p class="notice">Impossible de charger les publications.</p>';}
+ };
+ window.changerStatutInfoCommune=async function(id,statut){if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");try{await collectionCommune().doc(id).update({statut,modifieLe:firebase.firestore.FieldValue.serverTimestamp()});await chargerInfosCommuneAdmin();}catch(e){alert("Modification impossible : "+e.message);}};
+ window.supprimerInfoCommune=async function(id){if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");if(!confirm("Supprimer définitivement cette information ?"))return;try{await collectionCommune().doc(id).delete();await chargerInfosCommuneAdmin();}catch(e){alert("Suppression impossible : "+e.message);}};
+})();
+</script>
 
 </body>
 </html>
