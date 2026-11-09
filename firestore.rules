@@ -73,6 +73,29 @@ service cloud.firestore {
       ]);
     }
 
+    // Jetons FCM : chaque utilisateur ne peut gérer que ses propres appareils.
+    match /appareils_notifications/{tokenId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasOnly(["uid","token","createdAt","plateforme","userAgent"])
+        && request.resource.data.keys().hasAll(["uid","token","createdAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.token == tokenId
+        && request.resource.data.token is string
+        && request.resource.data.token.size() >= 20
+        && request.resource.data.token.size() <= 4096
+        && request.resource.data.createdAt == request.time
+        && (!("plateforme" in request.resource.data) || request.resource.data.plateforme in ["iOS","web"])
+        && (!("userAgent" in request.resource.data) || (request.resource.data.userAgent is string && request.resource.data.userAgent.size() <= 300));
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update: if estConnecte()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.token == tokenId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["createdAt","plateforme","userAgent"])
+        && request.resource.data.createdAt == request.time;
+      allow delete: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+    }
+
     match /routes/{routeId} {
       allow read: if true;
       allow create, update, delete: if estAdmin();
