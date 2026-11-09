@@ -8,8 +8,8 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#F5F5F0",
-  "theme_color": "#087C62",
+  "background_color": "#FFFFFF",
+  "theme_color": "#075B35",
   "icons": [
     {
       "src": "./icon-transport-ci.svg",
