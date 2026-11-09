@@ -11019,7 +11019,7 @@ html.mqci-dark-mode .home-welcome{filter:brightness(.88)}
  window.supprimerInfoCommune=async function(id){if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");if(!confirm("Supprimer définitivement cette information ?"))return;try{await collectionCommune().doc(id).delete();await chargerInfosCommuneAdmin();}catch(e){alert("Suppression impossible : "+e.message);}};
 })();
 
-<script id="propositions-ma-commune">
+
 (function(){
  const propositions=()=>db.collection("propositions_communes");
  const actualites=()=>db.collection("actualites_communes");
@@ -11075,7 +11075,6 @@ html.mqci-dark-mode .home-welcome{filter:brightness(.88)}
   }catch(e){console.error(e);alert("Traitement impossible : "+e.message);}
  };
 })();
-</script>
 </script>
 
 </body>
