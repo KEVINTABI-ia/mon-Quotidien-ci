@@ -8,6 +8,7 @@ Ce Worker Cloudflare consomme la collection Firestore `notifications_queue` et e
 - Ne jamais coller la clé privée dans `index.html`, GitHub, un ticket ou une conversation.
 - Le Worker ne traite que les documents dont `status == "pending"`.
 - Un document est verrouillé avec son `updateTime` avant envoi pour limiter les doubles traitements.
+- Le Worker traite un événement à la fois et 20 appareils par passage, puis reprend au passage Cron suivant. Cela limite les sous-requêtes sur le plan Workers Free.
 - Les jetons invalides sont supprimés de `appareils_notifications`.
 
 ## Déploiement Cloudflare
@@ -23,7 +24,7 @@ Ce Worker Cloudflare consomme la collection Firestore `notifications_queue` et e
 
 ### Création du compte de service
 
-Dans Google Cloud Console, sélectionner le projet `mon-transport-ci`, créer un compte de service dédié, puis lui attribuer uniquement les rôles nécessaires à Firestore et Firebase Cloud Messaging. Générer une clé JSON et la conserver hors du dépôt. La clé JSON complète est sensible.
+Dans Google Cloud Console, sélectionner le projet `mon-transport-ci`, créer un compte de service dédié, puis lui attribuer les rôles IAM minimaux : **Cloud Datastore User** pour l'accès Firestore et **Firebase Cloud Messaging API Admin** pour l'envoi FCM. Vérifier que l'API Firebase Cloud Messaging est activée. Générer une clé JSON et la conserver hors du dépôt. La clé JSON complète est sensible. Les appels REST Firestore authentifiés par compte de service sont autorisés par IAM et ne passent pas par les règles de sécurité Firestore.
 
 ## Format de la file Firestore
 
