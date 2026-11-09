@@ -1,2 +1,2 @@
-# mon-transport-ci
-Application ivoirienne de transport : itinéraires, gares, lignes, arrêts et tarifs des transports en commun.
+# mon-quotidien-ci
+application conçue pour faciliter la vie des populations en Côte d’Ivoire, en regroupant plusieurs services pratiques dans un seul espace,transport, santé, commerce, boutique et démarche administratives
