@@ -633,6 +633,34 @@ service cloud.firestore {
       allow read, update, delete: if estAdmin();
     }
 
+    match /abonnements_petites_annonces/{uid} {
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
+      allow create: if estConnecte() && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly(["uid","statut","essaiGratuitUtilise","dateDebut","dateExpiration","paiementStatut","createdAt"])
+        && request.resource.data.statut == "actif"
+        && request.resource.data.essaiGratuitUtilise == true
+        && request.resource.data.paiementStatut == "gratuit"
+        && request.resource.data.dateDebut == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.dateExpiration is timestamp
+        && request.resource.data.dateExpiration >= request.time + duration.value(29, "d")
+        && request.resource.data.dateExpiration <= request.time + duration.value(31, "d");
+      allow update: if estAdmin()
+        || (estConnecte() && request.auth.uid == uid
+          && resource.data.dateExpiration is timestamp
+          && resource.data.dateExpiration <= request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["paiementMoyen","paiementReference","montantRenouvellement","paiementStatut","demandeRenouvellementLe"])
+          && request.resource.data.paiementMoyen in ["Wave","Orange Money"]
+          && request.resource.data.paiementReference is string
+          && request.resource.data.paiementReference.size() >= 4
+          && request.resource.data.paiementReference.size() <= 80
+          && request.resource.data.montantRenouvellement == 500
+          && request.resource.data.paiementStatut == "a_verifier"
+          && request.resource.data.demandeRenouvellementLe == request.time);
+      allow delete: if estAdmin();
+    }
+
     match /demandes_nouveaux_services/{demandeId} {
       allow create: if estConnecte()
         && request.resource.data.uid == request.auth.uid
@@ -668,6 +696,10 @@ service cloud.firestore {
         && request.resource.data.description is string && request.resource.data.description.size() > 0 && request.resource.data.description.size() <= 1200
         && request.resource.data.email is string && request.resource.data.email.size() <= 120
         && (!request.resource.data.keys().hasAny(["photoUrl"]) || (request.resource.data.photoUrl is string && request.resource.data.photoUrl.size() <= 400000 && request.resource.data.photoUrl.matches("^data:image/jpeg;base64,.*$")))
+        && (request.resource.data.type != "annonce"
+          || (existsAfter(/databases/$(database)/documents/abonnements_petites_annonces/$(request.auth.uid))
+            && getAfter(/databases/$(database)/documents/abonnements_petites_annonces/$(request.auth.uid)).data.dateExpiration is timestamp
+            && getAfter(/databases/$(database)/documents/abonnements_petites_annonces/$(request.auth.uid)).data.dateExpiration > request.time))
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time;
       allow read: if estAdmin() || (resource.data.statut == "approuve" && (resource.data.type != "depannage" || estAbonneAutomobiliste()) && (resource.data.type != "annuaire" || (resource.data.abonnementFin is timestamp && resource.data.abonnementFin > request.time)));
