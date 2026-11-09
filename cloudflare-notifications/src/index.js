@@ -79,14 +79,16 @@ async function fsRequest(env, token, path, options = {}) {
   return body;
 }
 
-async function queryCollection(env, token, collectionId, uid) {
+async function queryCollection(env, token, collectionId, uid, afterName = null, limit = 20) {
   const filters = uid ? {
     fieldFilter: { field: { fieldPath: "uid" }, op: "EQUAL", value: { stringValue: uid } }
   } : null;
   const structuredQuery = {
     from: [{ collectionId }],
     ...(filters ? { where: filters } : {}),
-    limit: 500
+    orderBy: [{ field: { fieldPath: "__name__" }, direction: "ASCENDING" }],
+    ...(afterName ? { startAt: { values: [{ referenceValue: afterName }], before: false } } : {}),
+    limit
   };
   const rows = await fsRequest(env, token, ":runQuery", {
     method: "POST",
@@ -135,7 +137,8 @@ async function dispatch(env) {
   if (!env.FIREBASE_PROJECT_ID || !env.FIREBASE_SERVICE_ACCOUNT_JSON) throw new Error("Secrets FIREBASE_PROJECT_ID et FIREBASE_SERVICE_ACCOUNT_JSON manquants.");
   const token = await accessToken(env);
   const queue = await queryCollection(env, token, "notifications_queue");
-  const pending = queue.filter(doc => documentData(doc).status === "pending").slice(0, 30);
+  // One event per invocation keeps the Free-plan subrequest budget predictable.
+  const pending = queue.filter(doc => documentData(doc).status === "pending").slice(0, 1);
   let processed = 0;
   for (const doc of pending) {
     const data = documentData(doc);
@@ -149,9 +152,11 @@ async function dispatch(env) {
       const title = String(data.title || "").trim().slice(0, 80);
       const body = String(data.body || "").trim().slice(0, 220);
       if (!title || !body) throw new Error("Titre ou message manquant.");
-      const devices = await queryCollection(env, token, "appareils_notifications", data.targetUid || null);
-      let sent = 0;
-      let removed = 0;
+      // Page recipients in small batches: each device needs one FCM request and
+      // may need one deletion request if its registration token has expired.
+      const devices = await queryCollection(env, token, "appareils_notifications", data.targetUid || null, data.lastDeviceName || null, 20);
+      let sent = Number(data.sentCount || 0);
+      let removed = Number(data.removedTokenCount || 0);
       for (const device of devices) {
         const d = documentData(device);
         if (!d.token || !d.uid) continue;
@@ -165,7 +170,13 @@ async function dispatch(env) {
           removed++;
         }
       }
-      await patchFields(env, token, docPath, {
+      const moreRecipientsMayExist = devices.length === 20;
+      await patchFields(env, token, docPath, moreRecipientsMayExist ? {
+        status: "pending",
+        lastDeviceName: devices[devices.length - 1].name,
+        sentCount: sent,
+        removedTokenCount: removed
+      } : {
         status: "sent",
         sentCount: sent,
         removedTokenCount: removed,
