@@ -3123,7 +3123,40 @@ function basculerMenuBasDroite(){const m=document.getElementById('menuBasDroite'
 function fermerMenuBasDroite(){const m=document.getElementById('menuBasDroite');if(m)m.hidden=true;const b=document.querySelector('#accueilBottomNav [data-nav="menu"]');if(b)b.setAttribute('aria-expanded','false');}
 function changerTailleTexteApplication(taille){const valeurs={'normal':'16px','grand':'18px','tres-grand':'20px'};if(!valeurs[taille])return;document.documentElement.style.setProperty('--taille-texte-app',valeurs[taille]);document.body.style.fontSize=valeurs[taille];try{localStorage.setItem('mqci_taille_texte',taille);}catch(e){}}
 function actualiserEtatNotificationsApplication(){const z=document.getElementById('etatNotificationsApplication');if(!z)return;if(!('Notification'in window)){z.textContent='Les notifications ne sont pas prises en charge par ce navigateur.';return;}z.textContent=Notification.permission==='granted'?'Les notifications sont autorisées sur cet appareil.':Notification.permission==='denied'?'Les notifications sont bloquées dans les réglages du navigateur.':'Les notifications ne sont pas encore autorisées.';}
-async function activerNotificationsApplication(){if(!('Notification'in window)){alert('Ce navigateur ne prend pas en charge les notifications.');return;}if(!window.isSecureContext){alert('Les notifications nécessitent une connexion sécurisée HTTPS.');return;}try{const p=await Notification.requestPermission();actualiserEtatNotificationsApplication();if(p==='granted'){alert('Autorisation accordée sur cet appareil. Les notifications système seront disponibles lorsque les événements seront reliés au service de notification.');}else if(p==='denied'){alert('Autorisation refusée. Vous pourrez la modifier dans les réglages du navigateur ou de votre appareil.');}}catch(e){alert('Impossible de demander l’autorisation : '+e.message);}}
+async function activerNotificationsApplication(){
+ if(!('Notification'in window)){alert('Ce navigateur ne prend pas en charge les notifications.');return;}
+ if(!window.isSecureContext){alert('Les notifications nécessitent une connexion sécurisée HTTPS.');return;}
+ try{
+  let permission=Notification.permission;
+  if(permission!=='granted') permission=await Notification.requestPermission();
+  actualiserEtatNotificationsApplication();
+  if(permission!=='granted'){if(permission==='denied')alert('Autorisation refusée. Vous pourrez la modifier dans les réglages du navigateur ou de votre appareil.');return;}
+  if(!firebase.messaging || !(await firebase.messaging.isSupported())){alert('La messagerie push Firebase n’est pas prise en charge sur ce navigateur.');return;}
+  const utilisateur=auth.currentUser;
+  if(!utilisateur){alert('Connectez-vous à votre compte Mon Quotidien CI avant d’enregistrer cet appareil pour les notifications.');return;}
+  const inscriptionSW=await navigator.serviceWorker.ready;
+  const messagerie=firebase.messaging();
+  const jeton=await messagerie.getToken({vapidKey:'BIBpctdw_zwgjCe0aRW-3-pcXAhGQ9o4QVCOp9pyQHSe8sLx1oZ58sq_i6OmHqGWtkEYvR6bMn-EGw0L19SpqcY',serviceWorkerRegistration:inscriptionSW});
+  if(!jeton){alert('Firebase n’a pas fourni de jeton pour cet appareil. Réessayez.');return;}
+  await db.collection('appareils_notifications').doc(jeton).set({
+   uid:utilisateur.uid,token:jeton,createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+   plateforme:/iPhone|iPad|iPod/.test(navigator.userAgent)?'iOS':'web',
+   userAgent:navigator.userAgent.slice(0,300)
+  },{merge:true});
+  if(!window.__mqciFcmForegroundReady){
+   messagerie.onMessage(async payload=>{
+    const titre=(payload.notification&&payload.notification.title)||'Mon Quotidien CI';
+    const options={body:(payload.notification&&payload.notification.body)||'Une nouvelle information vous attend.',icon:'./icon-transport-ci.svg',data:payload.data||{}};
+    const sw=await navigator.serviceWorker.ready;
+    await sw.showNotification(titre,options);
+   });
+   window.__mqciFcmForegroundReady=true;
+  }
+  const z=document.getElementById('etatNotificationsApplication');
+  if(z)z.textContent='Notifications autorisées et cet appareil est enregistré.';
+  alert('Notifications activées et appareil enregistré. Les alertes apparaîtront lorsque les événements de l’application seront reliés au service d’envoi.');
+ }catch(e){console.error('Activation FCM :',e);alert('Impossible d’activer les notifications : '+(e.message||e));}
+}
 function appliquerModeSombreApplication(actif){document.documentElement.classList.toggle('mqci-dark-mode',!!actif);const etat=document.getElementById('etatModeSombreApplication'),bouton=document.getElementById('boutonModeSombreApplication');if(etat)etat.textContent=actif?'Mode sombre activé.':'Mode clair activé.';if(bouton){bouton.textContent=actif?'Désactiver le mode sombre':'Activer le mode sombre';bouton.setAttribute('aria-pressed',String(!!actif));}try{localStorage.setItem('mqci_mode_sombre',actif?'oui':'non');}catch(e){}}
 function basculerModeSombreApplication(){appliquerModeSombreApplication(!document.documentElement.classList.contains('mqci-dark-mode'));}
 document.addEventListener('DOMContentLoaded',function(){try{const t=localStorage.getItem('mqci_taille_texte');if(t)changerTailleTexteApplication(t);appliquerModeSombreApplication(localStorage.getItem('mqci_mode_sombre')==='oui');}catch(e){appliquerModeSombreApplication(false);}actualiserEtatNotificationsApplication();});
@@ -3135,6 +3168,7 @@ document.addEventListener('DOMContentLoaded',function(){try{const t=localStorage
 <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-messaging-compat.js"></script>
 <script src="routes.js"></script>
 <script>
 // Déclaré dès le début pour éviter toute erreur d'initialisation lors de l'ouverture des rubriques.
