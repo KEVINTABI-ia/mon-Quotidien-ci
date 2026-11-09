@@ -1675,8 +1675,46 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 @media(max-width:370px){#accueilHomeShell{padding:12px 10px 105px}.home-welcome{padding:17px 14px}.home-welcome h1{font-size:20px}.home-quick-grid{gap:6px}.home-quick{min-height:82px}.home-quick strong{font-size:9px}#homeDemarches .acces-prioritaires{gap:5px!important}#homeDemarches .acces-prioritaire strong{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.home-quick{transition:none}}
 </style>
+
+<style id="mqci-splash-screen-styles">
+  #mqci-splash-screen{
+    position:fixed;inset:0;z-index:2147483000;
+    display:flex;align-items:center;justify-content:center;
+    width:100%;height:100%;height:100dvh;
+    padding:env(safe-area-inset-top) 22px env(safe-area-inset-bottom);
+    box-sizing:border-box;background:#fff;
+    opacity:1;visibility:visible;
+    transition:opacity .28s ease,visibility .28s ease;
+  }
+  #mqci-splash-screen.is-leaving{opacity:0;visibility:hidden;pointer-events:none}
+  #mqci-splash-screen img{
+    display:block;width:min(86vw,430px);max-width:100%;
+    max-height:78vh;object-fit:contain;
+  }
+  @media(prefers-reduced-motion:reduce){
+    #mqci-splash-screen{transition:none}
+  }
+</style>
+
 </head>
 <body>
+
+<div id="mqci-splash-screen" role="status" aria-label="Chargement de Mon Quotidien CI">
+  <img src="./logo-mon-quotidien-ci.svg" alt="Mon Quotidien CI — Tous les services utiles, au même endroit.">
+</div>
+<script id="mqci-splash-screen-script">
+(function(){
+  var splash=document.getElementById("mqci-splash-screen");
+  if(!splash)return;
+  window.setTimeout(function(){
+    splash.classList.add("is-leaving");
+    window.setTimeout(function(){
+      if(splash.parentNode)splash.parentNode.removeChild(splash);
+    },320);
+  },3000);
+})();
+</script>
+
 
 
 <div id="menuDropdown" hidden aria-hidden="true"></div>
