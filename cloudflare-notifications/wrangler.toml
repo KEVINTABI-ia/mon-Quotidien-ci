@@ -1,0 +1,6 @@
+name = "mon-quotidien-ci-notifications"
+main = "src/index.js"
+compatibility_date = "2026-11-09"
+
+[triggers]
+crons = ["* * * * *"]
