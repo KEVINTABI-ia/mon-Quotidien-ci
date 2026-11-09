@@ -155,8 +155,13 @@ export default {
   async fetch(request, env) {
     if (request.method !== "GET") return new Response("Method not allowed", { status: 405 });
     if (new URL(request.url).pathname !== "/health") return new Response("Not found", { status: 404 });
-    const configured = Boolean(env.FIREBASE_PROJECT_ID && env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY);
-    return Response.json({ service: "mqci-notification-relay", configured });
+    const checks = {
+      hasProjectId: typeof env.FIREBASE_PROJECT_ID === "string" && env.FIREBASE_PROJECT_ID.trim().length > 0,
+      hasClientEmail: typeof env.FIREBASE_CLIENT_EMAIL === "string" && env.FIREBASE_CLIENT_EMAIL.trim().length > 0,
+      hasPrivateKey: typeof env.FIREBASE_PRIVATE_KEY === "string" && env.FIREBASE_PRIVATE_KEY.trim().length > 0
+    };
+    const configured = Object.values(checks).every(Boolean);
+    return Response.json({ service: "mqci-notification-relay", configured, checks });
   },
   async scheduled(controller, env, ctx) {
     ctx.waitUntil(processQueue(env).catch(error => {
