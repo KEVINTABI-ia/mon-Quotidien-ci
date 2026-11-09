@@ -2038,6 +2038,10 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
   <label for="communeAdminDateFin">Date de fin de validité (facultatif)</label><input id="communeAdminDateFin" type="date">
   <button type="button" class="primary" onclick="publierInfoCommuneAdmin()">Publier l'information</button>
   <p id="communeAdminStatut" class="notice" aria-live="polite"></p>
+  <h4>Propositions des habitants à vérifier</h4>
+  <p class="notice">Les propositions sont privées et visibles uniquement par l’administration. Vérifiez les faits et la source avant publication.</p>
+  <button type="button" onclick="chargerPropositionsCommuneAdmin()">Actualiser les propositions</button>
+  <div id="propositionsCommuneAdminListe"></div>
   <h4>Publications existantes</h4><button type="button" onclick="chargerInfosCommuneAdmin()">Actualiser la liste</button>
   <div id="communeAdminListe"></div>
 </div>
@@ -3043,6 +3047,21 @@ function chargerPublicitesAccueil() {
     <h2 style="color:#fff!important;margin:0 0 6px;">📍 Ma commune en direct</h2>
     <p style="color:#f0fff4;margin:0;font-size:13px;">Les informations utiles près de chez vous.</p>
   </div>
+  <div class="card" style="padding:15px;border:1px solid #DCEBDD;margin:14px 0;">
+    <h3 style="margin-top:0;">📝 Proposer une information</h3>
+    <p class="notice">Vous avez une information utile sur votre commune ? Envoyez-la à l’administration. Elle sera vérifiée avant toute publication.</p>
+    <label for="propositionCommuneEmail">Adresse e-mail</label><input id="propositionCommuneEmail" type="email" autocomplete="email" placeholder="Votre adresse e-mail">
+    <label for="propositionCommuneMotPasse">Mot de passe (6 caractères minimum)</label><input id="propositionCommuneMotPasse" type="password" autocomplete="current-password" placeholder="Mot de passe">
+    <label for="propositionCommuneTitre">Titre</label><input id="propositionCommuneTitre" maxlength="120" placeholder="Ex. : Coupure d’eau annoncée à Niangon">
+    <label for="propositionCommuneVille">Commune / ville</label>
+    <select id="propositionCommuneVille"><option value="">Choisir une commune</option><option>Abobo</option><option>Adjamé</option><option>Anyama</option><option>Attécoubé</option><option>Bingerville</option><option>Cocody</option><option>Koumassi</option><option>Marcory</option><option>Plateau</option><option>Port-Bouët</option><option>Treichville</option><option>Yopougon</option><option>Autre commune / ville</option></select>
+    <label for="propositionCommuneCategorie">Catégorie</label><select id="propositionCommuneCategorie"><option value="routes">🚧 Routes et travaux</option><option value="eau_electricite">💧 Eau et électricité</option><option value="municipal">🏛️ Vie municipale</option><option value="securite">🛡️ Sécurité et prévention</option><option value="evenement">🎉 Événements</option><option value="autre">📌 Autres informations</option></select>
+    <label for="propositionCommuneDescription">Description</label><textarea id="propositionCommuneDescription" rows="4" maxlength="1800" placeholder="Précisez les faits, le lieu et la date si possible."></textarea>
+    <label for="propositionCommuneSource">Source ou organisme (facultatif)</label><input id="propositionCommuneSource" maxlength="160" placeholder="Ex. : communiqué de la mairie, CIE, SODECI">
+    <label for="propositionCommuneLien">Lien de la source (facultatif)</label><input id="propositionCommuneLien" type="url" maxlength="500" placeholder="https://...">
+    <button type="button" class="primary" onclick="envoyerPropositionCommune()">Envoyer ma proposition</button>
+    <p id="propositionCommuneStatut" class="notice" aria-live="polite"></p>
+  </div>
   <label for="communeDirectFiltre">Choisir une commune</label>
   <select id="communeDirectFiltre">
     <option value="">Toutes les communes</option>
@@ -3974,7 +3993,7 @@ function ouvrirRubriqueAdmin(id){
   if(id==="gestionValidationAnnuaires") chargerAnnuairesAdmin();
   if(id==="gestionObjetsPerdus") chargerObjetsPerdusAdmin();
    if(id==="gestionCommunautaire") chargerGestionCommunautaireAdmin();
-  if(id==="gestionMaCommuneDirect") chargerInfosCommuneAdmin();
+  if(id==="gestionMaCommuneDirect"){ chargerInfosCommuneAdmin(); chargerPropositionsCommuneAdmin(); }
   if(id==="gestionVisibiliteMenus") afficherGestionVisibiliteMenus();
   if(id==="gestionAbonnementsAutomobiliste") chargerDemandesAbonnementAutomobilisteAdmin();
   let retour=cible.querySelector(":scope > .admin-retour-menu");
@@ -10998,6 +11017,63 @@ html.mqci-dark-mode .home-welcome{filter:brightness(.88)}
  };
  window.changerStatutInfoCommune=async function(id,statut){if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");try{await collectionCommune().doc(id).update({statut,modifieLe:firebase.firestore.FieldValue.serverTimestamp()});await chargerInfosCommuneAdmin();}catch(e){alert("Modification impossible : "+e.message);}};
  window.supprimerInfoCommune=async function(id){if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");if(!confirm("Supprimer définitivement cette information ?"))return;try{await collectionCommune().doc(id).delete();await chargerInfosCommuneAdmin();}catch(e){alert("Suppression impossible : "+e.message);}};
+})();
+
+
+(function(){
+ const propositions=()=>db.collection("propositions_communes");
+ const actualites=()=>db.collection("actualites_communes");
+ const categories=["routes","eau_electricite","municipal","securite","evenement","autre"];
+ const noms={routes:"Routes et travaux",eau_electricite:"Eau et électricité",municipal:"Vie municipale",securite:"Sécurité et prévention",evenement:"Événements",autre:"Autres informations"};
+ const esc=v=>String(v||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+ window.envoyerPropositionCommune=async function(){
+  const msg=document.getElementById("propositionCommuneStatut");
+  const val=id=>(document.getElementById(id)?.value||"").trim();
+  const email=val("propositionCommuneEmail"),password=val("propositionCommuneMotPasse");
+  const titre=val("propositionCommuneTitre"),commune=val("propositionCommuneVille"),categorie=val("propositionCommuneCategorie"),description=val("propositionCommuneDescription"),source=val("propositionCommuneSource"),lienSource=val("propositionCommuneLien");
+  if(!email||password.length<6||titre.length<4||!commune||description.length<10){msg.textContent="Complétez les champs obligatoires. Le mot de passe doit contenir au moins 6 caractères.";return;}
+  if(!categories.includes(categorie)){msg.textContent="Choisissez une catégorie valide.";return;}
+  if(lienSource&&!/^https:\/\//i.test(lienSource)){msg.textContent="Le lien doit commencer par https://.";return;}
+  msg.textContent="Connexion et envoi en cours...";
+  try{
+   let user=auth.currentUser;
+   if(user&&user.email!==email){await auth.signOut();user=null;}
+   if(!user){try{user=(await auth.createUserWithEmailAndPassword(email,password)).user;}catch(e){if(e.code==="auth/email-already-in-use")user=(await auth.signInWithEmailAndPassword(email,password)).user;else throw e;}}
+   await propositions().add({uid:user.uid,email:user.email||email,titre,commune,categorie,description,source,lienSource,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+   msg.textContent="Proposition envoyée. Merci ! Elle sera vérifiée par l’administration avant publication.";
+   ["propositionCommuneTitre","propositionCommuneDescription","propositionCommuneSource","propositionCommuneLien","propositionCommuneMotPasse"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  }catch(e){console.error(e);msg.textContent="Envoi impossible : "+(e.code==="auth/weak-password"?"le mot de passe doit contenir au moins 6 caractères.":e.code==="auth/invalid-email"?"adresse e-mail invalide.":e.code==="permission-denied"?"accès refusé par les règles Firestore.":e.message);}
+ };
+ window.chargerPropositionsCommuneAdmin=async function(){
+  const zone=document.getElementById("propositionsCommuneAdminListe");if(!zone)return;
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){zone.textContent="Accès administrateur requis.";return;}
+  zone.innerHTML='<p class="notice">Chargement des propositions...</p>';
+  try{
+   const snap=await propositions().where("statut","==","en_attente").limit(100).get();
+   if(snap.empty){zone.innerHTML='<p class="notice">Aucune proposition en attente.</p>';return;}
+   zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();const date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date en cours";return '<article class="card" style="padding:13px;margin:10px 0;border-left:4px solid #F28C28;"><strong>'+esc(d.titre)+'</strong><p>'+esc(d.commune)+' · '+esc(noms[d.categorie]||d.categorie)+'</p><p style="white-space:pre-wrap;">'+esc(d.description)+'</p><p class="notice">Proposé par : '+esc(d.email)+' · '+date+'</p><p class="notice">Source : '+esc(d.source||"Non précisée")+'</p>'+(d.lienSource?'<p><a href="'+esc(d.lienSource)+'" target="_blank" rel="noopener noreferrer">Consulter la source ↗</a></p>':'')+'<button type="button" onclick="traiterPropositionCommune(\''+doc.id+'\',true)">Valider et publier</button> <button type="button" onclick="traiterPropositionCommune(\''+doc.id+'\',false)">Refuser</button></article>';}).join("");
+  }catch(e){console.error(e);zone.innerHTML='<p class="notice">Impossible de charger les propositions : '+esc(e.message)+'</p>';}
+ };
+ window.traiterPropositionCommune=async function(id,accepter){
+  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+  const ref=propositions().doc(id);
+  try{
+   const doc=await ref.get();if(!doc.exists||doc.data().statut!=="en_attente")return alert("Cette proposition a déjà été traitée.");
+   const d=doc.data();
+   if(accepter){
+    const batch=db.batch();
+    const pub=actualites().doc();
+    batch.set(pub,{titre:d.titre,commune:d.commune,categorie:d.categorie,description:d.description,source:d.source||"",lienSource:d.lienSource||"",dateFin:"",statut:"publiee",createdAt:firebase.firestore.FieldValue.serverTimestamp(),publiePar:auth.currentUser.uid});
+    batch.update(ref,{statut:"publiee",traiteeLe:firebase.firestore.FieldValue.serverTimestamp(),traiteePar:auth.currentUser.uid,actualiteId:pub.id});
+    await batch.commit();
+    alert("Proposition validée et publiée dans Ma commune en direct.");
+   }else{
+    await ref.update({statut:"refusee",traiteeLe:firebase.firestore.FieldValue.serverTimestamp(),traiteePar:auth.currentUser.uid});
+    alert("Proposition refusée. Elle reste privée.");
+   }
+   await chargerPropositionsCommuneAdmin();await chargerInfosCommuneAdmin();
+  }catch(e){console.error(e);alert("Traitement impossible : "+e.message);}
+ };
 })();
 </script>
 
