@@ -995,6 +995,26 @@ service cloud.firestore {
       allow delete: if estAdmin();
     }
 
+    // Propositions d'informations locales : lecture privée à l'administrateur, création par un compte connecté.
+    match /propositions_communes/{propositionId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["uid","email","titre","commune","categorie","description","source","lienSource","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","email","titre","commune","categorie","description","source","lienSource","statut","createdAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.titre is string && request.resource.data.titre.size() >= 4 && request.resource.data.titre.size() <= 120
+        && request.resource.data.commune is string && request.resource.data.commune.size() >= 2 && request.resource.data.commune.size() <= 80
+        && request.resource.data.categorie in ["routes","eau_electricite","municipal","securite","evenement","autre"]
+        && request.resource.data.description is string && request.resource.data.description.size() >= 10 && request.resource.data.description.size() <= 1800
+        && request.resource.data.source is string && request.resource.data.source.size() <= 160
+        && request.resource.data.lienSource is string && request.resource.data.lienSource.size() <= 500
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin();
+      allow update: if estAdmin();
+      allow delete: if estAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
