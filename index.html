@@ -4013,7 +4013,7 @@ const CONFIG_ABONNEMENTS_DEFAUT={
  automobiliste:{libelle:"Abonnement automobiliste",actif:true,prix:1000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques_15j:{libelle:"Boutiques — formule 15 jours",actif:true,prix:4000,duree:15,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques_30j:{libelle:"Boutiques — formule 30 jours",actif:true,prix:7000,duree:30,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
- partenaires_colis:{libelle:"Livreurs indépendants et représentants de gare",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ partenaires_colis:{libelle:"Livreurs indépendants et représentants de gare",actif:true,prix:10000,duree:1,unite:"mois",essai:21,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  compagnie_essentielle_mensuel:{libelle:"Compagnie de voyage — Essentielle mensuelle",actif:true,prix:5000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  compagnie_essentielle_annuel:{libelle:"Compagnie de voyage — Essentielle annuelle",actif:true,prix:50000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  compagnie_professionnelle_mensuel:{libelle:"Compagnie de voyage — Professionnelle mensuelle",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
@@ -6482,17 +6482,13 @@ async function validerPartenaire(id) {
   if (!confirm("Confirmer l'approbation de ce partenaire ?")) return;
 
   try {
-    const debutEssai = new Date();
-    const finEssai = new Date(debutEssai.getTime() + 21 * 24 * 60 * 60 * 1000);
-    const refP=db.collection("partenaires").doc(id);const snapP=await refP.get();if(!snapP.exists)throw new Error("Dossier introuvable.");const p=snapP.data();
-    await refP.update({
-      statut: "approuve",
-      etatCompte: "actif",
-      statutAbonnementPartenaire: "Essai",
-      dateDebutEssai: firebase.firestore.Timestamp.fromDate(debutEssai),
-      dateFinEssai: firebase.firestore.Timestamp.fromDate(finEssai)
-    });
-    alert("Partenaire approuvé. Son essai gratuit de 21 jours commence maintenant et se termine le " + finEssai.toLocaleDateString("fr-FR") + ".");
+    const cfg=await obtenirConfigurationAbonnement("partenaires_colis");
+    const debutEssai=new Date(),joursEssai=cfg.actif?Number(cfg.essai||0):0,finEssai=new Date(debutEssai.getTime()+joursEssai*86400000);
+    const refP=db.collection("partenaires").doc(id);const snapP=await refP.get();if(!snapP.exists)throw new Error("Dossier introuvable.");
+    const maj={statut:"approuve",etatCompte:"actif",statutAbonnementPartenaire:joursEssai>0?"Essai":"Expiré"};
+    if(joursEssai>0){maj.dateDebutEssai=firebase.firestore.Timestamp.fromDate(debutEssai);maj.dateFinEssai=firebase.firestore.Timestamp.fromDate(finEssai);}
+    await refP.update(maj);
+    alert(joursEssai>0?"Partenaire approuvé. Son essai gratuit de "+joursEssai+" jours se termine le "+finEssai.toLocaleDateString("fr-FR")+".":"Partenaire approuvé sans période d’essai gratuite. L’abonnement payant devra être activé après vérification du paiement.");
     chargerPartenairesAdmin();
 
   } catch (erreur) {
@@ -6505,8 +6501,11 @@ async function demarrerEssaiPartenaire(id) {
     alert("Accès réservé à l'administrateur.");
     return;
   }
-  if (!confirm("Démarrer maintenant les 21 jours d'essai gratuit pour ce partenaire ?")) return;
   try {
+    const cfg=await obtenirConfigurationAbonnement("partenaires_colis");
+    if(!cfg.actif||Number(cfg.essai||0)<=0)return alert("La période d’essai gratuite est désactivée dans la gestion générale des abonnements.");
+    const joursEssai=Number(cfg.essai);
+    if (!confirm("Démarrer maintenant les "+joursEssai+" jours d'essai gratuit pour ce partenaire ?")) return;
     const reference = db.collection("partenaires").doc(id);
     const document = await reference.get();
     if (!document.exists) throw new Error("Partenaire introuvable.");
@@ -6514,14 +6513,14 @@ async function demarrerEssaiPartenaire(id) {
     if (partenaire.statut !== "approuve") throw new Error("Le dossier doit d'abord être approuvé.");
     if (partenaire.dateFinEssai || partenaire.dateExpirationAbonnement) throw new Error("Une période d'essai ou un abonnement est déjà enregistré. Aucun renouvellement automatique n'est effectué.");
     const debutEssai = new Date();
-    const finEssai = new Date(debutEssai.getTime() + 21 * 24 * 60 * 60 * 1000);
+    const finEssai = new Date(debutEssai.getTime() + joursEssai * 24 * 60 * 60 * 1000);
     await reference.update({
       etatCompte: "actif",
       statutAbonnementPartenaire: "Essai",
       dateDebutEssai: firebase.firestore.Timestamp.fromDate(debutEssai),
       dateFinEssai: firebase.firestore.Timestamp.fromDate(finEssai)
     });
-    alert("Essai gratuit activé jusqu'au " + finEssai.toLocaleDateString("fr-FR") + ".");
+    alert("Essai gratuit de "+joursEssai+" jours activé jusqu'au " + finEssai.toLocaleDateString("fr-FR") + ".");
     chargerPartenairesAdmin();
     chargerCommandesAdmin();
   } catch (erreur) {
