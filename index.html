@@ -5656,7 +5656,7 @@ function afficherFormulaireInscriptionCompagnie(zone){
       <label>Destinations, prix des tickets et service</label>
       <textarea id="partCompagnieDestinations" rows="5" placeholder="Bouaké | 5000 | Premium&#10;Yamoussoukro | 4000 | Express&#10;Daloa | 7000 | Standard" required></textarea>
       <small>Une destination par ligne : Destination | Prix en FCFA | Premium, Express ou Standard.</small>
-      <label>Formule d’abonnement</label><select id="partCompagnieFormule"><option value="Essentielle">Essentielle</option><option value="Professionnelle">Professionnelle</option></select>
+      <label>Formule d’abonnement</label><select id="partCompagnieFormule" onchange="actualiserPrixInscriptionCompagnie()"><option value="Essentielle">Essentielle</option><option value="Professionnelle">Professionnelle</option></select>
       <label>Périodicité</label><select id="partCompagniePeriodicite" onchange="actualiserPrixInscriptionCompagnie()"><option value="Mensuel">Mensuel</option><option value="Annuel">Annuel</option></select>
       <p id="partCompagniePrix" class="notice">Tarif : 5 000 FCFA / mois</p>
       <label>Moyen de paiement</label><select id="partCompagniePaiement"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select>
