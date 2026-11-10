@@ -1048,6 +1048,13 @@ service cloud.firestore {
       allow delete: if estAdmin();
     }
 
+    // Paramètres des abonnements : lecture pour les comptes connectés,
+    // modification réservée à l'administrateur. Les annuaires ne sont pas configurables ici.
+    match /configuration_abonnements/{configId} {
+      allow read: if estConnecte();
+      allow create, update, delete: if estAdmin() && configId == "globale";
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
