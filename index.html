@@ -4028,7 +4028,7 @@ function tarifAbonnementEffectif(c){
  const maintenant=new Date(),debut=c.promotionDebut?new Date(c.promotionDebut+"T00:00:00"):null,fin=c.promotionFin?new Date(c.promotionFin+"T23:59:59"):null;
  return c.promotionActive&&c.promotionPrix>0&&c.promotionPrix<=c.prix&&debut&&fin&&maintenant>=debut&&maintenant<=fin?Number(c.promotionPrix):Number(c.prix);
 }
-function dureeAbonnementEnJours(c){const n=Number(c.duree||1);return c.unite==="mois"?Math.round(n*30.4375):n;}
+function dureeAbonnementEnJours(c){const n=Number(c.duree||1);return c.unite==="mois"?Math.round(n*30):n;}
 async function initialiserFormulaireAbonnementBoutique(){
  const select=document.getElementById("nsDureeAbonnement");if(!select)return;
  try{const c=await obtenirConfigurationAbonnement("boutiques");if(!c.actif){select.innerHTML='<option value="">Souscriptions temporairement suspendues</option>';select.disabled=true;return;}
@@ -4082,7 +4082,7 @@ async function sauvegarderConfigurationAbonnementsAdmin(){
  }
  try{
   await db.collection("configuration_abonnements").doc("globale").set({services,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.uid},{merge:true});
-  configurationAbonnementsCachee=services;alert("Paramètres enregistrés. Ils sont conservés dans Firestore.");await chargerConfigurationAbonnementsAdmin();
+  configurationAbonnementsCachee=services;configurationAbonnementsPromise=null;alert("Paramètres enregistrés. Ils sont conservés dans Firestore.");await chargerConfigurationAbonnementsAdmin();
  }catch(e){console.error(e);alert("Enregistrement impossible : "+e.message+" Vérifie les règles Firestore.");}
 }
 
@@ -7026,7 +7026,9 @@ async function actualiserEtatAbonnementAutomobiliste(){
     document.getElementById("nomPayeurAbonnementAuto").disabled=true;
     return;
   }
-  zone.textContent="Aucun abonnement actif. Après votre transfert de 1 000 FCFA, renseignez la référence ci-dessous.";
+  const cfg=await obtenirConfigurationAbonnement("automobiliste");
+  if(!cfg.actif){zone.textContent="Les nouvelles souscriptions automobilistes sont temporairement suspendues.";document.getElementById("operateurAbonnementAuto").disabled=true;document.getElementById("referenceAbonnementAuto").disabled=true;document.getElementById("nomPayeurAbonnementAuto").disabled=true;return;}
+  zone.textContent="Aucun abonnement actif. Après votre transfert de "+tarifAbonnementEffectif(cfg).toLocaleString("fr-FR")+" FCFA pour "+cfg.duree+" mois, renseignez la référence ci-dessous.";
   document.getElementById("operateurAbonnementAuto").disabled=false;
   document.getElementById("referenceAbonnementAuto").disabled=false;
   document.getElementById("nomPayeurAbonnementAuto").disabled=false;
