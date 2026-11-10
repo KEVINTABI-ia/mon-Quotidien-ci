@@ -3584,7 +3584,7 @@ async function ouvrirGestionAbonnementPetitesAnnonces(){
  try{
   if(!auth.currentUser){if(!email||!password){zone.textContent="Saisissez votre e-mail et votre mot de passe pour consulter votre abonnement.";return;}await auth.signInWithEmailAndPassword(email,password);}
   const user=auth.currentUser,snap=await db.collection("abonnements_petites_annonces").doc(user.uid).get();
-  if(!snap.exists){zone.innerHTML='<p class="notice">Votre premier mois gratuit sera activé lors de votre première annonce.</p>';return;}
+  if(!snap.exists){const cfg=await obtenirConfigurationAbonnement("petites_annonces");zone.innerHTML=cfg.actif&&Number(cfg.essai)>0?'<p class="notice">Votre période gratuite de '+Number(cfg.essai)+' jours sera activée lors de votre première annonce.</p>':'<p class="notice">Les nouvelles souscriptions sont temporairement suspendues.</p>';return;}
   const d=snap.data(),fin=d.dateExpiration?.toDate?.(),actif=!!fin&&fin.getTime()>Date.now();
   if(actif){zone.innerHTML='<p class="notice">Abonnement actif jusqu’au '+fin.toLocaleDateString("fr-FR")+'. Plusieurs annonces sont autorisées pendant cette période.</p>';return;}
   if(d.paiementStatut==="a_verifier"){zone.innerHTML='<p class="notice">Votre paiement est en attente de vérification. La publication de nouvelles annonces sera débloquée après confirmation.</p>';return;}
@@ -4069,7 +4069,7 @@ async function chargerConfigurationAbonnementsAdmin(){
     '<label>Prix normal (FCFA)</label><input type="number" min="0" step="1" id="cfg_'+id+'_prix" value="'+Number(c.prix||0)+'">'+
     '<label>Durée</label><input type="number" min="1" step="1" id="cfg_'+id+'_duree" value="'+Number(c.duree||1)+'">'+
     '<select id="cfg_'+id+'_unite"><option value="jours">Jours</option><option value="mois">Mois</option></select>'+
-    '<label>Période gratuite (0 = aucune)</label><input type="number" min="0" step="1" id="cfg_'+id+'_essai" value="'+Number(c.essai||0)+'">'+
+    '<label>Période gratuite (prise en charge pour petites annonces et partenaires colis)</label><input type="number" min="0" step="1" id="cfg_'+id+'_essai" value="'+Number(c.essai||0)+'" '+(["petites_annonces","partenaires_colis"].includes(id)?"":"disabled")+ '>'+
     '<label><input type="checkbox" id="cfg_'+id+'_promo" '+(c.promotionActive?'checked':'')+'> Activer une promotion</label>'+
     '<label>Prix promotionnel (FCFA)</label><input type="number" min="0" step="1" id="cfg_'+id+'_promoPrix" value="'+Number(c.promotionPrix||0)+'">'+
     '<label>Début de promotion</label><input type="date" id="cfg_'+id+'_promoDebut" value="'+(c.promotionDebut||'')+'">'+
@@ -4090,6 +4090,7 @@ async function sauvegarderConfigurationAbonnementsAdmin(){
   const unite=lire('unite').value, debut=lire('promoDebut').value,fin=lire('promoFin').value;
   if(!Number.isFinite(prix)||prix<0||!Number.isInteger(prix)||!Number.isFinite(duree)||duree<1||!Number.isInteger(duree)||!Number.isInteger(essai)||essai<0||!Number.isInteger(promotionPrix)||promotionPrix<0)return alert("Vérifie les prix, durées et périodes gratuites : nombres entiers positifs uniquement.");
   if(id==="petites_annonces"&&essai<1)return alert("Le parcours de paiement du premier abonnement des petites annonces n’est pas encore disponible : conserve au moins un jour de période gratuite.");
+  if((id==="automobiliste"||id.startsWith("compagnie_"))&&unite!=="mois")return alert("Les abonnements automobilistes et compagnies de voyage doivent être configurés en mois.");
   if(lire('promo').checked&&(!promotionPrix||promotionPrix>prix||!debut||!fin||fin<debut))return alert("Chaque promotion active doit avoir un prix inférieur ou égal au prix normal, ainsi qu'une date de début et de fin valides.");
   services[id]={libelle:CONFIG_ABONNEMENTS_DEFAUT[id].libelle,actif:lire('actif').checked,prix,duree,unite,essai,promotionActive:lire('promo').checked,promotionPrix,promotionDebut:debut,promotionFin:fin,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
  }
