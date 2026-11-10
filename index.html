@@ -2792,12 +2792,8 @@ function chargerPublicitesAccueil() {
 <section id="abonnementAutomobiliste" class="card" style="display:none;padding:18px;border:2px solid #D5A84B;background:#FFFCF4;">
   <h2>🔐 Abonnement à l’espace de l’automobiliste</h2>
   <p>Les services de cet espace sont réservés aux abonnés actifs.</p>
-  <div style="background:#F3F7F4;padding:14px;border-radius:12px;margin:12px 0;">
-    <strong>Abonnement annuel : 1 000 FCFA</strong>
-    <p style="margin:8px 0 4px;">Wave : <strong>0757522319</strong></p>
-    <p style="margin:4px 0;">Orange Money : <strong>0757522319</strong></p>
-    <p style="margin:4px 0;">Titulaire : <strong>TA BI SERGE KEVIN</strong></p>
-    <p style="font-size:13px;margin-bottom:0;">Effectuez le transfert de 1 000 FCFA, puis indiquez la référence de la transaction. L'accès sera activé après vérification manuelle.</p>
+  <div id="prixAbonnementAutoPublic" style="background:#F3F7F4;padding:14px;border-radius:12px;margin:12px 0;" aria-live="polite">
+    Chargement du tarif actuel...
   </div>
   <div id="connexionAbonnementAuto" style="padding:12px;border:1px solid #E2E9E4;border-radius:12px;">
     <h3>Créer un compte ou se connecter</h3>
@@ -4025,10 +4021,12 @@ const CONFIG_ABONNEMENTS_DEFAUT={
 };
 let configurationAbonnementsCachee={};
 let configurationAbonnementsPromise=null;
-async function obtenirConfigurationAbonnement(id){
+async function obtenirConfigurationAbonnement(id,forcerLectureServeur=false){
  if(!CONFIG_ABONNEMENTS_DEFAUT[id])throw new Error("Service d'abonnement non configuré.");
+ if(forcerLectureServeur)configurationAbonnementsPromise=null;
  if(!configurationAbonnementsPromise){
-  configurationAbonnementsPromise=db.collection("configuration_abonnements").doc("globale").get().then(s=>s.exists?(s.data().services||{}):{}).catch(e=>{console.warn("Configuration abonnements indisponible, valeurs par défaut utilisées.",e);return {};});
+  const lecture=db.collection("configuration_abonnements").doc("globale").get(forcerLectureServeur?{source:"server"}:undefined);
+  configurationAbonnementsPromise=lecture.then(s=>s.exists?(s.data().services||{}):{}).catch(e=>{console.warn("Configuration abonnements indisponible.",e);throw e;});
  }
  const services=await configurationAbonnementsPromise;
  return {...CONFIG_ABONNEMENTS_DEFAUT[id],...(services[id]||{})};
@@ -7015,8 +7013,27 @@ async function verifierAbonnementAutomobiliste(){
   }catch(e){console.error("Vérification abonnement automobile:",e);abonnementAutomobilisteValide=false;return false;}
 }
 
+async function actualiserTarifPublicAutomobiliste(){
+  const zone=document.getElementById("prixAbonnementAutoPublic");if(!zone)return;
+  zone.textContent="Chargement du tarif actuel...";
+  try{
+    const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
+    if(!cfg.actif){zone.innerHTML="<strong>Les nouvelles souscriptions sont temporairement suspendues.</strong>";return;}
+    const montant=tarifAbonnementEffectif(cfg),duree=Number(cfg.duree),unite=cfg.unite==="mois"?"mois":"jours";
+    zone.innerHTML="<strong>Tarif actuel : "+montant.toLocaleString("fr-FR")+" FCFA / "+duree+" "+unite+"</strong>"+
+      '<p style="margin:8px 0 4px;">Wave : <strong>0757522319</strong></p>'+
+      '<p style="margin:4px 0;">Orange Money : <strong>0757522319</strong></p>'+
+      '<p style="margin:4px 0;">Titulaire : <strong>TA BI SERGE KEVIN</strong></p>'+
+      '<p style="font-size:13px;margin-bottom:0;">Effectuez le transfert du montant indiqué, puis saisissez la référence de la transaction. L’accès sera activé après vérification manuelle.</p>';
+  }catch(e){
+    console.error("Lecture du tarif automobiliste impossible :",e);
+    zone.textContent="Impossible de charger le tarif actuel. Vérifiez votre connexion puis rouvrez cette rubrique.";
+  }
+}
+
 async function ouvrirEspaceAbonnementAutomobiliste(){
   ouvrirElementPleinEcran(document.getElementById("abonnementAutomobiliste"),"Abonnement automobile");
+  await actualiserTarifPublicAutomobiliste();
   const form=document.getElementById("formulaireDemandeAbonnementAuto");
   const connexion=document.getElementById("connexionAbonnementAuto");
   if(!auth.currentUser){if(form)form.style.display="none";if(connexion)connexion.style.display="block";return;}
@@ -7044,7 +7061,7 @@ async function actualiserEtatAbonnementAutomobiliste(){
     document.getElementById("nomPayeurAbonnementAuto").disabled=true;
     return;
   }
-  const cfg=await obtenirConfigurationAbonnement("automobiliste");
+  const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
   if(!cfg.actif){zone.textContent="Les nouvelles souscriptions automobilistes sont temporairement suspendues.";document.getElementById("operateurAbonnementAuto").disabled=true;document.getElementById("referenceAbonnementAuto").disabled=true;document.getElementById("nomPayeurAbonnementAuto").disabled=true;return;}
   zone.textContent="Aucun abonnement actif. Après votre transfert de "+tarifAbonnementEffectif(cfg).toLocaleString("fr-FR")+" FCFA pour "+cfg.duree+" mois, renseignez la référence ci-dessous.";
   document.getElementById("operateurAbonnementAuto").disabled=false;
@@ -7073,7 +7090,7 @@ async function envoyerDemandeAbonnementAuto(){
   const operateur=document.getElementById("operateurAbonnementAuto").value;
   const nomPayeur=document.getElementById("nomPayeurAbonnementAuto").value.trim();
   try{
-    const cfg=await obtenirConfigurationAbonnement("automobiliste");if(!cfg.actif)return alert("Les nouvelles souscriptions automobilistes sont temporairement suspendues.");if(cfg.unite!=="mois")return alert("La durée doit être configurée en mois.");const montant=tarifAbonnementEffectif(cfg);
+    const cfg=await obtenirConfigurationAbonnement("automobiliste",true);if(!cfg.actif)return alert("Les nouvelles souscriptions automobilistes sont temporairement suspendues.");if(cfg.unite!=="mois")return alert("La durée doit être configurée en mois.");const montant=tarifAbonnementEffectif(cfg);
     await db.collection("demandes_abonnement_automobiliste").add({
       uid:user.uid,email:user.email||"",operateur,referencePaiement:reference,nomPayeur,
       montantFCFA:montant,dureeMois:Number(cfg.duree),statut:"en_attente",
