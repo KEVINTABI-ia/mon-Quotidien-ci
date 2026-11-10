@@ -3470,14 +3470,23 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <button id="nsEnvoyerValidation" class="primary" type="button">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
  </div>`;
- const boutonEnvoi=document.getElementById("nsEnvoyerValidation");
+ const boutonEnvoi=zone.querySelector("#nsEnvoyerValidation");
  if(boutonEnvoi){
   boutonEnvoi.addEventListener("click",()=>{
-   const statutEnvoi=document.getElementById("nsStatut");
-   if(typeof window.envoyerNouveauService==="function"){
-    window.envoyerNouveauService();
-   }else if(statutEnvoi){
-    statutEnvoi.textContent="Le traitement du formulaire est indisponible. Rechargez la page et réessayez.";
+   const statutEnvoi=zone.querySelector("#nsStatut");
+   if(statutEnvoi)statutEnvoi.textContent="Clic détecté. Vérification du formulaire…";
+   boutonEnvoi.disabled=true;
+   try{
+    if(typeof window.envoyerNouveauService==="function"){
+     Promise.resolve(window.envoyerNouveauService()).finally(()=>{boutonEnvoi.disabled=false;});
+    }else{
+     if(statutEnvoi)statutEnvoi.textContent="Le traitement du formulaire est indisponible. Rechargez la page et réessayez.";
+     boutonEnvoi.disabled=false;
+    }
+   }catch(erreur){
+    console.error("Envoi formulaire partenaire",erreur);
+    if(statutEnvoi)statutEnvoi.textContent="Erreur lors de l'envoi : "+(erreur.message||"réessayez.");
+    boutonEnvoi.disabled=false;
    }
   });
  }
@@ -8956,7 +8965,8 @@ function ouvrirTourBoutiques(){
 }
 function ouvrirEspaceProprietaireBoutique(){
   ouvrirSectionPleinEcran("nouveauxServices","Espace propriétaire boutique et commerce");
-  choisirNouveauService("commerce");
+  // Ne pas créer le formulaire public caché : l'inscription partenaire crée son propre formulaire.
+  nouveauServiceActif="commerce";
   const connexion=document.getElementById("connexionBoutiqueZone");
   const formulaire=document.getElementById("nouveauServiceFormZone");
   const liste=document.getElementById("nouveauxServicesPublics");
