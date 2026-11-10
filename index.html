@@ -1843,6 +1843,12 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
   <div id="gestionVisibiliteMenus" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>👁️ Affichage et masquage des menus</h3><p class="notice">Choisis les rubriques visibles par les utilisateurs. Un menu masqué disparaît de l’application sans supprimer ses données.</p><div id="listeVisibiliteMenusAdmin"><p class="notice">Chargement des menus...</p></div></div>
   <button id="adminDeconnexion" type="button" onclick="deconnexionAdmin()" style="display:none;width:100%;margin:12px 0;">Se déconnecter</button>
 <div id="gestionAbonnementsRamassage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🚌 Validation des compagnies de ramassage</h3><p class="notice">Vérifie les dossiers et les paiements avant d’approuver une compagnie ou d’activer son forfait mensuel.</p><div id="listeCompagniesRamassageAdmin">Chargement...</div></div>
+<div id="gestionGeneraleAbonnements" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;">
+<h3>⚙️ Gestion générale des abonnements</h3>
+<p class="notice">Configure les prix, durées, périodes gratuites et promotions des services payants. Les annuaires professionnels sont exclus et conservent leurs règles actuelles. Désactiver un service bloque les nouvelles souscriptions ; les abonnements déjà actifs restent valables jusqu’à leur expiration.</p>
+<div id="configurationAbonnementsAdmin"><p class="notice">Chargement des paramètres...</p></div>
+<button type="button" class="primary" onclick="chargerConfigurationAbonnementsAdmin()">Actualiser les paramètres</button>
+</div>
 <div id="gestionAbonnementsAutomobiliste" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🚘 Validation des abonnements automobiles</h3><p class="notice">Vérifie le moyen de paiement et la référence avant d'activer 12 mois d'accès. Ne valide qu'après réception effective des 1 000 FCFA.</p><div id="listeAbonnementsAutomobilisteAdmin">Chargement...</div></div>
 <div id="gestionValidationDepannage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🔧 Validation des dépannages</h3><p class="notice">Examine séparément les demandes des professionnels du dépannage automobile.</p><div id="listeValidationDepannageAdmin">Chargement...</div></div>
 <div id="gestionValidationCommerce" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🏪 Validation des commerces</h3><p class="notice">Vérifie les établissements commerciaux hors boutiques.</p><div id="listeValidationCommerceAdmin">Chargement...</div></div>
@@ -3997,10 +4003,70 @@ async function traiterReclamationObjet(id,statut){
 }
 
 // MENU ADMINISTRATEUR : tableau de bord par rubriques, une seule page de gestion visible à la fois
+const CONFIG_ABONNEMENTS_DEFAUT={
+ petites_annonces:{libelle:"Petites annonces de ma commune",actif:true,prix:500,duree:30,unite:"jours",essai:30,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ automobiliste:{libelle:"Abonnement automobiliste",actif:true,prix:1000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ boutiques:{libelle:"Boutiques",actif:true,prix:4000,duree:15,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ partenaires_colis:{libelle:"Livreurs indépendants et représentants de gare",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ ramassage:{libelle:"Compagnies de ramassage",actif:true,prix:0,duree:30,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ compagnies_voyage:{libelle:"Compagnies de voyage",actif:true,prix:5000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""}
+};
+let configurationAbonnementsCachee={};
+function valeurConfigAbonnement(id,champ){
+ const cfg=configurationAbonnementsCachee[id]||CONFIG_ABONNEMENTS_DEFAUT[id];
+ return cfg&&cfg[champ]!==undefined?cfg[champ]:CONFIG_ABONNEMENTS_DEFAUT[id]?.[champ];
+}
+async function chargerConfigurationAbonnementsAdmin(){
+ const zone=document.getElementById("configurationAbonnementsAdmin");
+ if(!zone)return;
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){zone.textContent="Accès administrateur requis.";return;}
+ zone.innerHTML="<p class='notice'>Chargement des paramètres...</p>";
+ try{
+  const snap=await db.collection("configuration_abonnements").doc("globale").get();
+  configurationAbonnementsCachee=snap.exists?(snap.data().services||{}):{};
+  zone.innerHTML="";
+  Object.keys(CONFIG_ABONNEMENTS_DEFAUT).forEach(id=>{
+   const c={...CONFIG_ABONNEMENTS_DEFAUT[id],...(configurationAbonnementsCachee[id]||{})};
+   const card=document.createElement("section");card.className="card";card.style.cssText="padding:14px;margin:12px 0;border:1px solid #ddd;border-radius:12px";
+   card.innerHTML='<h4>'+c.libelle+'</h4>'+
+    '<label><input type="checkbox" id="cfg_'+id+'_actif" '+(c.actif?'checked':'')+'> Autoriser les nouvelles souscriptions et renouvellements</label>'+
+    '<label>Prix normal (FCFA)</label><input type="number" min="0" step="1" id="cfg_'+id+'_prix" value="'+Number(c.prix||0)+'">'+
+    '<label>Durée</label><input type="number" min="1" step="1" id="cfg_'+id+'_duree" value="'+Number(c.duree||1)+'">'+
+    '<select id="cfg_'+id+'_unite"><option value="jours">Jours</option><option value="mois">Mois</option></select>'+
+    '<label>Période gratuite (0 = aucune)</label><input type="number" min="0" step="1" id="cfg_'+id+'_essai" value="'+Number(c.essai||0)+'">'+
+    '<label><input type="checkbox" id="cfg_'+id+'_promo" '+(c.promotionActive?'checked':'')+'> Activer une promotion</label>'+
+    '<label>Prix promotionnel (FCFA)</label><input type="number" min="0" step="1" id="cfg_'+id+'_promoPrix" value="'+Number(c.promotionPrix||0)+'">'+
+    '<label>Début de promotion</label><input type="date" id="cfg_'+id+'_promoDebut" value="'+(c.promotionDebut||'')+'">'+
+    '<label>Fin de promotion</label><input type="date" id="cfg_'+id+'_promoFin" value="'+(c.promotionFin||'')+'">';
+   card.querySelector('#cfg_'+id+'_unite').value=c.unite||'jours';
+   zone.appendChild(card);
+  });
+  const save=document.createElement("button");save.type="button";save.className="primary";save.textContent="Enregistrer tous les paramètres";save.onclick=sauvegarderConfigurationAbonnementsAdmin;zone.appendChild(save);
+  const note=document.createElement("p");note.className="notice";note.textContent="Les tarifs proposés ci-dessus reprennent les valeurs identifiées dans le code actuel lorsqu’elles sont connues. Vérifie les formules avant de les modifier. Les annuaires ne figurent volontairement pas dans cette liste.";zone.appendChild(note);
+ }catch(e){console.error(e);zone.textContent="Chargement impossible : "+e.message;}
+}
+async function sauvegarderConfigurationAbonnementsAdmin(){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ const services={};
+ for(const id of Object.keys(CONFIG_ABONNEMENTS_DEFAUT)){
+  const lire=suffixe=>document.getElementById('cfg_'+id+'_'+suffixe);
+  const prix=Number(lire('prix').value),duree=Number(lire('duree').value),essai=Number(lire('essai').value),promotionPrix=Number(lire('promoPrix').value);
+  const unite=lire('unite').value, debut=lire('promoDebut').value,fin=lire('promoFin').value;
+  if(!Number.isFinite(prix)||prix<0||!Number.isInteger(prix)||!Number.isFinite(duree)||duree<1||!Number.isInteger(duree)||!Number.isInteger(essai)||essai<0||!Number.isInteger(promotionPrix)||promotionPrix<0)return alert("Vérifie les prix, durées et périodes gratuites : nombres entiers positifs uniquement.");
+  if(lire('promo').checked&&(!promotionPrix||promotionPrix>prix||!debut||!fin||fin<debut))return alert("Chaque promotion active doit avoir un prix inférieur ou égal au prix normal, ainsi qu'une date de début et de fin valides.");
+  services[id]={libelle:CONFIG_ABONNEMENTS_DEFAUT[id].libelle,actif:lire('actif').checked,prix,duree,unite,essai,promotionActive:lire('promo').checked,promotionPrix,promotionDebut:debut,promotionFin:fin,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+ }
+ try{
+  await db.collection("configuration_abonnements").doc("globale").set({services,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.uid},{merge:true});
+  configurationAbonnementsCachee=services;alert("Paramètres enregistrés. Ils sont conservés dans Firestore.");await chargerConfigurationAbonnementsAdmin();
+ }catch(e){console.error(e);alert("Enregistrement impossible : "+e.message+" Vérifie les règles Firestore.");}
+}
+
 const RUBRIQUES_ADMIN = [
   {id:"gestionGares",groupe:"Transport",icone:"📍",image:"gare",titre:"Gares et terminus",description:"Créer, positionner et gérer les gares."},
   {id:"gestionRoutes",groupe:"Transport",icone:"🛣️",titre:"Itinéraires et tarifs",description:"Gérer les lignes, arrêts et prix."},
   {id:"gestionCompagnies",groupe:"Transport",icone:"🚍",image:"compagnies",titre:"Compagnies de voyage",description:"Gérer les agences et leurs dessertes."},
+  {id:"gestionGeneraleAbonnements",groupe:"Contrôle et paramètres",icone:"⚙️",titre:"Gestion générale des abonnements",description:"Configurer les tarifs, durées et promotions des services payants."},
   {id:"gestionAbonnementsRamassage",groupe:"Professionnels",icone:"🚌",titre:"Compagnies de ramassage",description:"Valider les dossiers et abonnements."},
   {id:"gestionValidationAnnuaires",groupe:"Professionnels",icone:"📒",titre:"Annuaires professionnels",description:"Valider les inscriptions avant publication.",notification:"annuaire"},
   {id:"gestionPartenaires",groupe:"Professionnels",icone:"👥",titre:"Partenaires",description:"Gérer les partenaires de services."},
@@ -4062,6 +4128,7 @@ function ouvrirRubriqueAdmin(id){
   if(id==="gestionMaCommuneDirect"){ chargerInfosCommuneAdmin(); chargerPropositionsCommuneAdmin(); }
   if(id==="gestionVisibiliteMenus") afficherGestionVisibiliteMenus();
   if(id==="gestionAbonnementsAutomobiliste") chargerDemandesAbonnementAutomobilisteAdmin();
+  if(id==="gestionGeneraleAbonnements") chargerConfigurationAbonnementsAdmin();
   let retour=cible.querySelector(":scope > .admin-retour-menu");
   if(!retour){retour=document.createElement("button");retour.type="button";retour.className="admin-retour-menu";retour.textContent="← Retour au menu administrateur";retour.onclick=retourMenuAdmin;cible.insertBefore(retour,cible.firstChild);}
   cible.scrollIntoView({behavior:"smooth",block:"start"});
