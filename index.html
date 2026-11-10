@@ -3466,7 +3466,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
  ${type==="annonce"?'<div id="zoneAbonnementPetitesAnnonces" style="margin:12px 0;"><button type="button" onclick="ouvrirGestionAbonnementPetitesAnnonces()">Consulter mon abonnement / renouveler</button></div>':""}
- ${type==="commerce"&&!modePartenaire?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="15" data-montant="4000">15 jours — 4 000 FCFA</option><option value="30" data-montant="7000">30 jours — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p id="coordonneesPaiementBoutique">Chargement des coordonnées de paiement...</p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
+ ${type==="commerce"&&!modePartenaire?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="30" data-montant="2500">1 mois — 2 500 FCFA</option><option value="60" data-montant="4500">2 mois — 4 500 FCFA</option><option value="90" data-montant="7000">3 mois — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p id="coordonneesPaiementBoutique">Chargement des coordonnées de paiement...</p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
  <button class="primary" type="button" onclick="envoyerNouveauService()">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
  </div>`;
@@ -4004,9 +4004,12 @@ async function traiterReclamationObjet(id,statut){
 // MENU ADMINISTRATEUR : tableau de bord par rubriques, une seule page de gestion visible à la fois
 const CONFIG_ABONNEMENTS_DEFAUT={
  petites_annonces:{libelle:"Petites annonces de ma commune",actif:true,prix:500,duree:30,unite:"jours",essai:30,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
- automobiliste:{libelle:"Abonnement automobiliste",actif:true,prix:1000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ automobiliste:{libelle:"Abonnement automobiliste annuel",actif:true,prix:1000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques_15j:{libelle:"Boutiques — formule 15 jours",actif:true,prix:4000,duree:15,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
- boutiques_30j:{libelle:"Boutiques — formule 30 jours",actif:true,prix:7000,duree:30,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ boutiques_30j:{libelle:"Ancienne formule boutique 30 jours",actif:true,prix:7000,duree:30,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ boutiques_1mois:{libelle:"Boutiques et commerces 1 mois",actif:true,prix:2500,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ boutiques_2mois:{libelle:"Boutiques et commerces 2 mois",actif:true,prix:4500,duree:2,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ boutiques_3mois:{libelle:"Boutiques et commerces 3 mois",actif:true,prix:7000,duree:3,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  partenaires_colis:{libelle:"Partenaires colis — période d’essai",actif:true,prix:0,duree:21,unite:"jours",essai:21,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  partenaires_colis_1mois:{libelle:"Partenaires colis — abonnement 1 mois",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  partenaires_colis_3mois:{libelle:"Partenaires colis — abonnement 3 mois",actif:true,prix:27000,duree:3,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
@@ -4053,8 +4056,8 @@ function dureeAbonnementEnJours(c){const n=Number(c.duree||1);return c.unite==="
 async function initialiserFormulaireAbonnementBoutique(){
  const select=document.getElementById("nsDureeAbonnement");if(!select)return;
  try{
-  const formules=await Promise.all(["boutiques_15j","boutiques_30j"].map(async id=>({id,c:await obtenirConfigurationAbonnement(id)})));
-  const options=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&dureeAbonnementEnJours(x.c)>0).map(x=>{const jours=dureeAbonnementEnJours(x.c),prix=tarifAbonnementEffectif(x.c);return '<option value="'+jours+'" data-montant="'+prix+'" data-config="'+x.id+'">'+jours+' jours — '+prix.toLocaleString("fr-FR")+' FCFA'+(prix<x.c.prix?' (promotion)':'')+'</option>';});
+  const formules=await Promise.all(["boutiques_1mois","boutiques_2mois","boutiques_3mois"].map(async id=>({id,c:await obtenirConfigurationAbonnement(id)})));
+  const options=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&dureeAbonnementEnJours(x.c)>0).map(x=>{const jours=dureeAbonnementEnJours(x.c),prix=tarifAbonnementEffectif(x.c);return '<option value="'+jours+'" data-montant="'+prix+'" data-config="'+x.id+'">'+Number(x.c.duree)+' mois — '+prix.toLocaleString("fr-FR")+' FCFA'+(prix<x.c.prix?' (promotion)':'')+'</option>';});
   select.innerHTML=options.length?options.join(""):'<option value="">Souscriptions temporairement suspendues ou formules non configurées</option>';
   select.disabled=!options.length;
  }catch(e){console.error(e);select.disabled=true;}
@@ -4115,7 +4118,7 @@ async function sauvegarderConfigurationAbonnementsAdmin(){
   const unite=lire('unite').value, debut=lire('promoDebut').value,fin=lire('promoFin').value;
   if(!Number.isFinite(prix)||prix<0||!Number.isInteger(prix)||!Number.isFinite(duree)||duree<1||!Number.isInteger(duree)||!Number.isInteger(essai)||essai<0||!Number.isInteger(promotionPrix)||promotionPrix<0)return alert("Vérifie les prix, durées et périodes gratuites : nombres entiers positifs uniquement.");
   if(id==="petites_annonces"&&essai<1)return alert("Le parcours de paiement du premier abonnement des petites annonces n’est pas encore disponible : conserve au moins un jour de période gratuite.");
-  if((id==="automobiliste"||id.startsWith("compagnie_"))&&unite!=="mois")return alert("Les abonnements automobilistes et compagnies de voyage doivent être configurés en mois.");
+  if((id==="automobiliste"&&(unite!=="mois"||duree!==12))||(id.startsWith("compagnie_")&&unite!=="mois"))return alert("L’abonnement automobiliste doit être annuel et les abonnements des compagnies doivent être configurés en mois.");
   if(lire('promo').checked&&(!promotionPrix||promotionPrix>prix||!debut||!fin||fin<debut))return alert("Chaque promotion active doit avoir un prix inférieur ou égal au prix normal, ainsi qu'une date de début et de fin valides.");
   services[id]={libelle:CONFIG_ABONNEMENTS_DEFAUT[id].libelle,actif:lire('actif').checked,prix,duree,unite,essai,promotionActive:lire('promo').checked,promotionPrix,promotionDebut:debut,promotionFin:fin,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
  }
@@ -7047,7 +7050,7 @@ async function actualiserTarifPublicAutomobiliste(){
     const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
     if(!cfg.actif){zone.innerHTML="<strong>Les nouvelles souscriptions sont temporairement suspendues.</strong>";return;}
     const paiement=await window.chargerCoordonneesPaiementMQCI();
-    const montant=tarifAbonnementEffectif(cfg),duree=Number(cfg.duree),unite=cfg.unite==="mois"?"mois":"jours";
+    const montant=tarifAbonnementEffectif(cfg),duree=Number(cfg.duree),unite=cfg.unite==="mois"?(duree===12?"an":"mois"):"jours";
     zone.innerHTML="<strong>Tarif actuel : "+montant.toLocaleString("fr-FR")+" FCFA / "+duree+" "+unite+"</strong>"+
       '<p style="margin:8px 0 4px;">Wave : <strong>'+echapperTextePublicite(paiement.numero)+'</strong></p>'+
       '<p style="margin:4px 0;">Orange Money : <strong>'+echapperTextePublicite(paiement.numero)+'</strong></p>'+
@@ -7118,7 +7121,7 @@ async function envoyerDemandeAbonnementAuto(){
   const operateur=document.getElementById("operateurAbonnementAuto").value;
   const nomPayeur=document.getElementById("nomPayeurAbonnementAuto").value.trim();
   try{
-    const cfg=await obtenirConfigurationAbonnement("automobiliste",true);if(!cfg.actif)return alert("Les nouvelles souscriptions automobilistes sont temporairement suspendues.");if(cfg.unite!=="mois")return alert("La durée doit être configurée en mois.");const montant=tarifAbonnementEffectif(cfg);
+    const cfg=await obtenirConfigurationAbonnement("automobiliste",true);if(!cfg.actif)return alert("Les nouvelles souscriptions automobilistes sont temporairement suspendues.");if(cfg.unite!=="mois"||Number(cfg.duree)!==12)return alert("L’abonnement automobiliste doit être annuel.");const montant=tarifAbonnementEffectif(cfg);
     await db.collection("demandes_abonnement_automobiliste").add({
       uid:user.uid,email:user.email||"",operateur,referencePaiement:reference,nomPayeur,
       montantFCFA:montant,dureeMois:Number(cfg.duree),statut:"en_attente",
@@ -7139,7 +7142,7 @@ async function chargerDemandesAbonnementAutomobilisteAdmin(){
     if(snap.empty){zone.innerHTML="<p class='notice'>Aucune demande reçue.</p>";return;}
     zone.innerHTML=snap.docs.map(doc=>{
       const d=doc.data(),date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date non disponible";
-      const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterDemandeAbonnementAutomobiliste(\''+doc.id+'\',true)">Valider 12 mois</button><button type="button" onclick="traiterDemandeAbonnementAutomobiliste(\''+doc.id+'\',false)">Refuser</button>':'<p class="notice">Demande '+echapperTextePublicite(d.statut)+'</p>';
+      const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterDemandeAbonnementAutomobiliste(\''+doc.id+'\',true)">Valider 1 an</button><button type="button" onclick="traiterDemandeAbonnementAutomobiliste(\''+doc.id+'\',false)">Refuser</button>':'<p class="notice">Demande '+echapperTextePublicite(d.statut)+'</p>';
       return '<article class="card" style="padding:12px;margin:10px 0;"><strong>'+echapperTextePublicite(d.email)+'</strong><p>'+echapperTextePublicite(d.operateur)+' · 1 000 FCFA</p><p>Référence : <strong>'+echapperTextePublicite(d.referencePaiement)+'</strong></p><p>Payeur : '+echapperTextePublicite(d.nomPayeur||"Non indiqué")+'</p><p>'+date+'</p>'+actions+'</article>';
     }).join("");
   }catch(e){console.error(e);zone.innerHTML="<p class='notice'>Erreur de chargement. Vérifiez les règles Firestore.</p>";}
