@@ -16,22 +16,22 @@ service cloud.firestore {
         ? get(/databases/$(database)/documents/configuration_abonnements/globale).data.get("services", {})
         : {};
     }
-    function abonnementChamp(service, champ, defaut) {
-      return abonnementServices().get(service, {}).get(champ, defaut);
+    function abonnementChamp(serviceId, champ, defaut) {
+      return abonnementServices().get(serviceId, {}).get(champ, defaut);
     }
-    function abonnementAutorise(service) {
-      return abonnementChamp(service, "actif", true) == true;
+    function abonnementAutorise(serviceId) {
+      return abonnementChamp(serviceId, "actif", true) == true;
     }
-    function abonnementMontantAutorise(service, montant, prixDefaut) {
-      return montant == abonnementChamp(service, "prix", prixDefaut)
-        || (abonnementChamp(service, "promotionActive", false) == true
-          && abonnementChamp(service, "promotionPrix", 0) > 0
-          && montant == abonnementChamp(service, "promotionPrix", 0));
+    function abonnementMontantAutorise(serviceId, montant, prixDefaut) {
+      return montant == abonnementChamp(serviceId, "prix", prixDefaut)
+        || (abonnementChamp(serviceId, "promotionActive", false) == true
+          && abonnementChamp(serviceId, "promotionPrix", 0) > 0
+          && montant == abonnementChamp(serviceId, "promotionPrix", 0));
     }
-    function dureeEnJours(service, defaut) {
-      return abonnementChamp(service, "unite", "jours") == "mois"
-        ? abonnementChamp(service, "duree", defaut) * 30
-        : abonnementChamp(service, "duree", defaut);
+    function dureeEnJours(serviceId, defaut) {
+      return abonnementChamp(serviceId, "unite", "jours") == "mois"
+        ? abonnementChamp(serviceId, "duree", defaut) * 30
+        : abonnementChamp(serviceId, "duree", defaut);
     }
 
     function estAbonneAutomobiliste() {
