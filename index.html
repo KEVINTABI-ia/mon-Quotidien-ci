@@ -1843,6 +1843,12 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
   <div id="gestionVisibiliteMenus" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>👁️ Affichage et masquage des menus</h3><p class="notice">Choisis les rubriques visibles par les utilisateurs. Un menu masqué disparaît de l’application sans supprimer ses données.</p><div id="listeVisibiliteMenusAdmin"><p class="notice">Chargement des menus...</p></div></div>
   <button id="adminDeconnexion" type="button" onclick="deconnexionAdmin()" style="display:none;width:100%;margin:12px 0;">Se déconnecter</button>
 <div id="gestionAbonnementsRamassage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🚌 Validation des compagnies de ramassage</h3><p class="notice">Vérifie les dossiers et les paiements avant d’approuver une compagnie ou d’activer son forfait mensuel.</p><div id="listeCompagniesRamassageAdmin">Chargement...</div></div>
+<div id="gestionGeneraleAbonnements" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;">
+<h3>⚙️ Gestion générale des abonnements</h3>
+<p class="notice">Configure les prix, durées, périodes gratuites et promotions des services payants. Les annuaires professionnels sont exclus et conservent leurs règles actuelles. Désactiver un service bloque les nouvelles souscriptions ; les abonnements déjà actifs restent valables jusqu’à leur expiration.</p>
+<div id="configurationAbonnementsAdmin"><p class="notice">Chargement des paramètres...</p></div>
+<button type="button" class="primary" onclick="chargerConfigurationAbonnementsAdmin()">Actualiser les paramètres</button>
+</div>
 <div id="gestionAbonnementsAutomobiliste" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🚘 Validation des abonnements automobiles</h3><p class="notice">Vérifie le moyen de paiement et la référence avant d'activer 12 mois d'accès. Ne valide qu'après réception effective des 1 000 FCFA.</p><div id="listeAbonnementsAutomobilisteAdmin">Chargement...</div></div>
 <div id="gestionValidationDepannage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🔧 Validation des dépannages</h3><p class="notice">Examine séparément les demandes des professionnels du dépannage automobile.</p><div id="listeValidationDepannageAdmin">Chargement...</div></div>
 <div id="gestionValidationCommerce" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🏪 Validation des commerces</h3><p class="notice">Vérifie les établissements commerciaux hors boutiques.</p><div id="listeValidationCommerceAdmin">Chargement...</div></div>
@@ -3369,6 +3375,7 @@ async function envoyerInscriptionAnnuaire(){
  if(!titre||!categorie||!commune||!telephone||!description||!email||password.length<6){statut.textContent="Complétez les champs obligatoires. Mot de passe : 6 caractères minimum.";return;}
  statut.textContent="Envoi du dossier...";
  try{
+  if(estBoutique){const choix=document.getElementById("nsDureeAbonnement")?.selectedOptions[0],idConfig=choix?.dataset.config;if(!idConfig)throw new Error("Aucune formule boutique n’est actuellement disponible.");const cfg=await obtenirConfigurationAbonnement(idConfig);if(!cfg.actif||Number(choix.dataset.montant)!==tarifAbonnementEffectif(cfg)||Number(choix.value)!==dureeAbonnementEnJours(cfg))throw new Error("La formule boutique a changé. Actualisez la page et réessayez.");}
   let user=auth.currentUser;if(user&&user.email!==email){await auth.signOut();user=null;}
   if(!user){try{user=(await auth.createUserWithEmailAndPassword(email,password)).user;}catch(e){if(e.code==="auth/email-already-in-use")user=(await auth.signInWithEmailAndPassword(email,password)).user;else throw e;}}
   await db.collection("demandes_nouveaux_services").add({uid:user.uid,type:"annuaire",rubrique:annuaireRubriqueActive,titre,categorie,commune,quartier,telephone,description,email,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
@@ -3473,6 +3480,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <button class="primary" type="button" onclick="envoyerNouveauService()">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
  </div>`;
+ if(type==="commerce"&&!modePartenaire)initialiserFormulaireAbonnementBoutique();
  chargerNouveauxServicesPublics(type);
 }
 function previsualiserPhotoNouveauService(event){
@@ -3546,8 +3554,9 @@ async function envoyerNouveauService(){
    await db.runTransaction(async transaction=>{
     const abonnement=await transaction.get(abonnementRef);
     if(!abonnement.exists){
-     const debut=Date.now();
-     transaction.set(abonnementRef,{uid:user.uid,email:user.email||email,statut:"actif",essaiGratuitUtilise:true,dateDebut:firebase.firestore.FieldValue.serverTimestamp(),dateExpiration:firebase.firestore.Timestamp.fromMillis(debut+30*86400000),paiementStatut:"gratuit",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+     const cfg=await obtenirConfigurationAbonnement("petites_annonces");if(!cfg.actif)throw new Error("Les nouvelles souscriptions de petites annonces sont temporairement suspendues.");
+     const debut=Date.now(),essaiJours=Number(cfg.essai||0);if(essaiJours<=0)throw new Error("La période gratuite est désactivée. Contactez l’administration pour connaître les conditions d’accès.");
+     transaction.set(abonnementRef,{uid:user.uid,email:user.email||email,statut:"actif",essaiGratuitUtilise:true,dateDebut:firebase.firestore.FieldValue.serverTimestamp(),dateExpiration:firebase.firestore.Timestamp.fromMillis(debut+essaiJours*86400000),paiementStatut:"gratuit",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     }else{
      const data=abonnement.data();
      if(!data.dateExpiration||data.dateExpiration.toDate().getTime()<=Date.now()){
@@ -3575,20 +3584,22 @@ async function ouvrirGestionAbonnementPetitesAnnonces(){
  try{
   if(!auth.currentUser){if(!email||!password){zone.textContent="Saisissez votre e-mail et votre mot de passe pour consulter votre abonnement.";return;}await auth.signInWithEmailAndPassword(email,password);}
   const user=auth.currentUser,snap=await db.collection("abonnements_petites_annonces").doc(user.uid).get();
-  if(!snap.exists){zone.innerHTML='<p class="notice">Votre premier mois gratuit sera activé lors de votre première annonce.</p>';return;}
+  if(!snap.exists){const cfg=await obtenirConfigurationAbonnement("petites_annonces");zone.innerHTML=cfg.actif&&Number(cfg.essai)>0?'<p class="notice">Votre période gratuite de '+Number(cfg.essai)+' jours sera activée lors de votre première annonce.</p>':'<p class="notice">Les nouvelles souscriptions sont temporairement suspendues.</p>';return;}
   const d=snap.data(),fin=d.dateExpiration?.toDate?.(),actif=!!fin&&fin.getTime()>Date.now();
   if(actif){zone.innerHTML='<p class="notice">Abonnement actif jusqu’au '+fin.toLocaleDateString("fr-FR")+'. Plusieurs annonces sont autorisées pendant cette période.</p>';return;}
   if(d.paiementStatut==="a_verifier"){zone.innerHTML='<p class="notice">Votre paiement est en attente de vérification. La publication de nouvelles annonces sera débloquée après confirmation.</p>';return;}
-  zone.innerHTML='<div class="card" style="padding:12px;"><strong>Renouvellement : 500 FCFA pour 30 jours</strong><p>Wave : <strong>07 57 52 23 19</strong><br>Orange Money : <strong>07 57 52 23 19</strong><br>Titulaire : <strong>TA BI SERGE KEVIN</strong></p><label>Moyen de paiement</label><select id="nsRenouvellementMoyen"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select><label>Référence de transaction</label><input id="nsRenouvellementReference" maxlength="80" placeholder="Référence reçue après paiement"><button type="button" class="primary" onclick="envoyerRenouvellementPetitesAnnonces()">Envoyer pour vérification</button></div>';
+  const cfg=await obtenirConfigurationAbonnement("petites_annonces");if(!cfg.actif){zone.innerHTML='<p class="notice">Les renouvellements sont temporairement suspendus.</p>';return;}const montant=tarifAbonnementEffectif(cfg),jours=dureeAbonnementEnJours(cfg);zone.innerHTML='<div class="card" style="padding:12px;"><strong>Renouvellement : '+montant.toLocaleString("fr-FR")+' FCFA pour '+jours+' jours</strong><p>Wave : <strong>07 57 52 23 19</strong><br>Orange Money : <strong>07 57 52 23 19</strong><br>Titulaire : <strong>TA BI SERGE KEVIN</strong></p><label>Moyen de paiement</label><select id="nsRenouvellementMoyen"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select><label>Référence de transaction</label><input id="nsRenouvellementReference" maxlength="80" placeholder="Référence reçue après paiement"><button type="button" class="primary" onclick="envoyerRenouvellementPetitesAnnonces()">Envoyer pour vérification</button></div>';
  }catch(e){zone.textContent="Consultation impossible : "+(e.message||"réessayez.");}
 }
 async function envoyerRenouvellementPetitesAnnonces(){
+ const cfg=await obtenirConfigurationAbonnement("petites_annonces");
  const user=auth.currentUser,zone=document.getElementById("zoneAbonnementPetitesAnnonces"),moyen=document.getElementById("nsRenouvellementMoyen")?.value||"",reference=document.getElementById("nsRenouvellementReference")?.value.trim()||"";
+ if(!cfg.actif)return alert("Les nouvelles souscriptions et renouvellements de petites annonces sont temporairement suspendus.");
  if(!user||!["Wave","Orange Money"].includes(moyen)||reference.length<4)return alert("Choisissez un moyen de paiement et saisissez une référence valide.");
  try{
   const ref=db.collection("abonnements_petites_annonces").doc(user.uid),snap=await ref.get();
   if(!snap.exists||snap.data().dateExpiration?.toDate?.().getTime()>Date.now())return alert("Le renouvellement n’est pas nécessaire pour le moment.");
-  await ref.update({paiementMoyen:moyen,paiementReference:reference,montantRenouvellement:500,paiementStatut:"a_verifier",demandeRenouvellementLe:firebase.firestore.FieldValue.serverTimestamp()});
+  await ref.update({paiementMoyen:moyen,paiementReference:reference,montantRenouvellement:tarifAbonnementEffectif(cfg),dureeRenouvellementJours:dureeAbonnementEnJours(cfg),paiementStatut:"a_verifier",demandeRenouvellementLe:firebase.firestore.FieldValue.serverTimestamp()});
   zone.innerHTML='<p class="notice">Demande reçue. Le renouvellement sera activé après vérification manuelle du paiement.</p>';
  }catch(e){console.error(e);alert("Envoi impossible : "+e.message);}
 }
@@ -3599,7 +3610,7 @@ async function chargerPaiementsAnnoncesAdmin(){
  try{
   const snap=await db.collection("abonnements_petites_annonces").where("paiementStatut","==","a_verifier").limit(100).get();
   if(snap.empty){zone.innerHTML='<p class="notice">Aucun renouvellement en attente.</p>';return;}
-  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();return '<article class="card" style="padding:12px;margin:8px 0;"><strong>Compte : '+echapperTextePublicite(d.email||d.uid)+'</strong><p>500 FCFA / 30 jours · '+echapperTextePublicite(d.paiementMoyen||"")+' · Référence : '+echapperTextePublicite(d.paiementReference||"")+'</p><button type="button" class="primary" onclick="confirmerRenouvellementAnnonce(\''+doc.id+'\')">Confirmer le paiement et activer 30 jours</button></article>';}).join("");
+  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();const montant=Number(d.montantRenouvellement||500),jours=Number(d.dureeRenouvellementJours||30);return '<article class="card" style="padding:12px;margin:8px 0;"><strong>Compte : '+echapperTextePublicite(d.email||d.uid)+'</strong><p>'+montant.toLocaleString("fr-FR")+' FCFA / '+jours+' jours · '+echapperTextePublicite(d.paiementMoyen||"")+' · Référence : '+echapperTextePublicite(d.paiementReference||"")+'</p><button type="button" class="primary" onclick="confirmerRenouvellementAnnonce(\''+doc.id+'\')">Confirmer le paiement et activer '+jours+' jours</button></article>';}).join("");
  }catch(e){console.error(e);zone.textContent="Erreur : "+e.message;}
 }
 async function confirmerRenouvellementAnnonce(uid){
@@ -3607,9 +3618,9 @@ async function confirmerRenouvellementAnnonce(uid){
  const ref=db.collection("abonnements_petites_annonces").doc(uid);
  try{
   const snap=await ref.get();if(!snap.exists||snap.data().paiementStatut!=="a_verifier")return alert("Demande introuvable ou déjà traitée.");
-  const d=snap.data();if(!confirm("Confirmer la réception de 500 FCFA et activer 30 jours ?"))return;
+  const d=snap.data();if(!confirm("Confirmer la réception de "+Number(d.montantRenouvellement||500).toLocaleString("fr-FR")+" FCFA et activer "+Number(d.dureeRenouvellementJours||30)+" jours ?"))return;
   const debut=Math.max(Date.now(),d.dateExpiration?.toDate?.().getTime()||0);
-  await ref.update({statut:"actif",paiementStatut:"confirme",dateExpiration:firebase.firestore.Timestamp.fromMillis(debut+30*86400000),dateConfirmationPaiement:firebase.firestore.FieldValue.serverTimestamp(),confirmePar:auth.currentUser.uid});
+  await ref.update({statut:"actif",paiementStatut:"confirme",dateExpiration:firebase.firestore.Timestamp.fromMillis(debut+Number(d.dureeRenouvellementJours||30)*86400000),dateConfirmationPaiement:firebase.firestore.FieldValue.serverTimestamp(),confirmePar:auth.currentUser.uid});
   await chargerPaiementsAnnoncesAdmin();
  }catch(e){console.error(e);alert("Activation impossible : "+e.message);}
 }
@@ -3796,7 +3807,7 @@ async function chargerAvisBoutiqueAdmin(boutiqueId){
 async function traiterNouveauService(id,statut){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
  if(!["approuve","refuse"].includes(statut))return;
- try{const ref=db.collection("demandes_nouveaux_services").doc(id);const doc=await ref.get();if(!doc.exists)return alert("Dossier introuvable.");const data=doc.data();const maj={statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()};if(statut==="approuve"&&data.type==="commerce"&&!data.modePartenaire){if(!data.paiementMoyen||!data.paiementReference)return alert("Impossible d’activer : informations de paiement manquantes.");const montantAttendu=Number(data.montantAbonnement||0),dureeJours=Number(data.dureeAbonnementJours||0);if(![4000,7000].includes(montantAttendu)||!([15,30].includes(dureeJours))||((dureeJours===15&&montantAttendu!==4000)||(dureeJours===30&&montantAttendu!==7000)))return alert("Forfait boutique invalide. Vérifiez le montant et la durée.");if(!confirm("Confirmer la réception de "+montantAttendu.toLocaleString("fr-FR")+" FCFA ? L’abonnement sera activé pour "+dureeJours+" jours."))return;const debut=new Date();const fin=new Date(debut.getTime()+dureeJours*24*60*60*1000);maj.paiementStatut="confirme";maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);}await ref.update(maj);await chargerNouveauxServicesAdmin(data.type==="commerce"?(String(data.categorie||"").toLowerCase()==="boutique"?"boutique":"commerce"):data.type);}
+ try{const ref=db.collection("demandes_nouveaux_services").doc(id);const doc=await ref.get();if(!doc.exists)return alert("Dossier introuvable.");const data=doc.data();const maj={statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()};if(statut==="approuve"&&data.type==="commerce"&&!data.modePartenaire){if(!data.paiementMoyen||!data.paiementReference)return alert("Impossible d’activer : informations de paiement manquantes.");const montantAttendu=Number(data.montantAbonnement||0),dureeJours=Number(data.dureeAbonnementJours||0);if(!Number.isInteger(montantAttendu)||montantAttendu<=0||!Number.isInteger(dureeJours)||dureeJours<=0)return alert("Forfait boutique invalide. Vérifiez le montant et la durée enregistrés.");if(!confirm("Confirmer la réception de "+montantAttendu.toLocaleString("fr-FR")+" FCFA ? L’abonnement sera activé pour "+dureeJours+" jours."))return;const debut=new Date();const fin=new Date(debut.getTime()+dureeJours*24*60*60*1000);maj.paiementStatut="confirme";maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);}await ref.update(maj);await chargerNouveauxServicesAdmin(data.type==="commerce"?(String(data.categorie||"").toLowerCase()==="boutique"?"boutique":"commerce"):data.type);}
  catch(e){console.error(e);alert("Impossible de modifier ce dossier. Vérifiez les règles Firestore.");}
 }
 
@@ -3997,10 +4008,103 @@ async function traiterReclamationObjet(id,statut){
 }
 
 // MENU ADMINISTRATEUR : tableau de bord par rubriques, une seule page de gestion visible à la fois
+const CONFIG_ABONNEMENTS_DEFAUT={
+ petites_annonces:{libelle:"Petites annonces de ma commune",actif:true,prix:500,duree:30,unite:"jours",essai:30,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ automobiliste:{libelle:"Abonnement automobiliste",actif:true,prix:1000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ boutiques_15j:{libelle:"Boutiques — formule 15 jours",actif:true,prix:4000,duree:15,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ boutiques_30j:{libelle:"Boutiques — formule 30 jours",actif:true,prix:7000,duree:30,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ partenaires_colis:{libelle:"Partenaires colis — période d’essai",actif:true,prix:0,duree:21,unite:"jours",essai:21,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ partenaires_colis_1mois:{libelle:"Partenaires colis — abonnement 1 mois",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ partenaires_colis_3mois:{libelle:"Partenaires colis — abonnement 3 mois",actif:true,prix:27000,duree:3,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ partenaires_colis_6mois:{libelle:"Partenaires colis — abonnement 6 mois",actif:true,prix:55000,duree:6,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ compagnie_essentielle_mensuel:{libelle:"Compagnie de voyage — Essentielle mensuelle",actif:true,prix:5000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ compagnie_essentielle_annuel:{libelle:"Compagnie de voyage — Essentielle annuelle",actif:true,prix:50000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ compagnie_professionnelle_mensuel:{libelle:"Compagnie de voyage — Professionnelle mensuelle",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ compagnie_professionnelle_annuel:{libelle:"Compagnie de voyage — Professionnelle annuelle",actif:true,prix:100000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ ramassage:{libelle:"Compagnies de ramassage",actif:true,prix:0,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+};
+let configurationAbonnementsCachee={};
+let configurationAbonnementsPromise=null;
+async function obtenirConfigurationAbonnement(id){
+ if(!CONFIG_ABONNEMENTS_DEFAUT[id])throw new Error("Service d'abonnement non configuré.");
+ if(!configurationAbonnementsPromise){
+  configurationAbonnementsPromise=db.collection("configuration_abonnements").doc("globale").get().then(s=>s.exists?(s.data().services||{}):{}).catch(e=>{console.warn("Configuration abonnements indisponible, valeurs par défaut utilisées.",e);return {};});
+ }
+ const services=await configurationAbonnementsPromise;
+ return {...CONFIG_ABONNEMENTS_DEFAUT[id],...(services[id]||{})};
+}
+function tarifAbonnementEffectif(c){
+ const maintenant=new Date(),debut=c.promotionDebut?new Date(c.promotionDebut+"T00:00:00"):null,fin=c.promotionFin?new Date(c.promotionFin+"T23:59:59"):null;
+ return c.promotionActive&&c.promotionPrix>0&&c.promotionPrix<=c.prix&&debut&&fin&&maintenant>=debut&&maintenant<=fin?Number(c.promotionPrix):Number(c.prix);
+}
+function dureeAbonnementEnJours(c){const n=Number(c.duree||1);return c.unite==="mois"?Math.round(n*30):n;}
+async function initialiserFormulaireAbonnementBoutique(){
+ const select=document.getElementById("nsDureeAbonnement");if(!select)return;
+ try{
+  const formules=await Promise.all(["boutiques_15j","boutiques_30j"].map(async id=>({id,c:await obtenirConfigurationAbonnement(id)})));
+  const options=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&dureeAbonnementEnJours(x.c)>0).map(x=>{const jours=dureeAbonnementEnJours(x.c),prix=tarifAbonnementEffectif(x.c);return '<option value="'+jours+'" data-montant="'+prix+'" data-config="'+x.id+'">'+jours+' jours — '+prix.toLocaleString("fr-FR")+' FCFA'+(prix<x.c.prix?' (promotion)':'')+'</option>';});
+  select.innerHTML=options.length?options.join(""):'<option value="">Souscriptions temporairement suspendues ou formules non configurées</option>';
+  select.disabled=!options.length;
+ }catch(e){console.error(e);select.disabled=true;}
+}
+
+function valeurConfigAbonnement(id,champ){
+ const cfg=configurationAbonnementsCachee[id]||CONFIG_ABONNEMENTS_DEFAUT[id];
+ return cfg&&cfg[champ]!==undefined?cfg[champ]:CONFIG_ABONNEMENTS_DEFAUT[id]?.[champ];
+}
+async function chargerConfigurationAbonnementsAdmin(){
+ const zone=document.getElementById("configurationAbonnementsAdmin");
+ if(!zone)return;
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){zone.textContent="Accès administrateur requis.";return;}
+ zone.innerHTML="<p class='notice'>Chargement des paramètres...</p>";
+ try{
+  const snap=await db.collection("configuration_abonnements").doc("globale").get();
+  configurationAbonnementsCachee=snap.exists?(snap.data().services||{}):{};
+  zone.innerHTML="";
+  Object.keys(CONFIG_ABONNEMENTS_DEFAUT).forEach(id=>{
+   const c={...CONFIG_ABONNEMENTS_DEFAUT[id],...(configurationAbonnementsCachee[id]||{})};
+   const card=document.createElement("section");card.className="card";card.style.cssText="padding:14px;margin:12px 0;border:1px solid #ddd;border-radius:12px";
+   card.innerHTML='<h4>'+c.libelle+'</h4>'+
+    '<label><input type="checkbox" id="cfg_'+id+'_actif" '+(c.actif?'checked':'')+'> Autoriser les nouvelles souscriptions et renouvellements</label>'+
+    '<label>Prix normal (FCFA)</label><input type="number" min="0" step="1" id="cfg_'+id+'_prix" value="'+Number(c.prix||0)+'">'+
+    '<label>Durée</label><input type="number" min="1" step="1" id="cfg_'+id+'_duree" value="'+Number(c.duree||1)+'">'+
+    '<select id="cfg_'+id+'_unite"><option value="jours">Jours</option><option value="mois">Mois</option></select>'+
+    '<label>Période gratuite (prise en charge pour petites annonces et partenaires colis)</label><input type="number" min="0" step="1" id="cfg_'+id+'_essai" value="'+Number(c.essai||0)+'" '+(["petites_annonces","partenaires_colis"].includes(id)?"":"disabled")+ '>'+
+    '<label><input type="checkbox" id="cfg_'+id+'_promo" '+(c.promotionActive?'checked':'')+'> Activer une promotion</label>'+
+    '<label>Prix promotionnel (FCFA)</label><input type="number" min="0" step="1" id="cfg_'+id+'_promoPrix" value="'+Number(c.promotionPrix||0)+'">'+
+    '<label>Début de promotion</label><input type="date" id="cfg_'+id+'_promoDebut" value="'+(c.promotionDebut||'')+'">'+
+    '<label>Fin de promotion</label><input type="date" id="cfg_'+id+'_promoFin" value="'+(c.promotionFin||'')+'">';
+   card.querySelector('#cfg_'+id+'_unite').value=c.unite||'jours';
+   zone.appendChild(card);
+  });
+  const save=document.createElement("button");save.type="button";save.className="primary";save.textContent="Enregistrer tous les paramètres";save.onclick=sauvegarderConfigurationAbonnementsAdmin;zone.appendChild(save);
+  const note=document.createElement("p");note.className="notice";note.textContent="Les tarifs proposés ci-dessus reprennent les valeurs identifiées dans le code actuel lorsqu’elles sont connues. Vérifie les formules avant de les modifier. Les annuaires ne figurent volontairement pas dans cette liste.";zone.appendChild(note);
+ }catch(e){console.error(e);zone.textContent="Chargement impossible : "+e.message;}
+}
+async function sauvegarderConfigurationAbonnementsAdmin(){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ const services={};
+ for(const id of Object.keys(CONFIG_ABONNEMENTS_DEFAUT)){
+  const lire=suffixe=>document.getElementById('cfg_'+id+'_'+suffixe);
+  const prix=Number(lire('prix').value),duree=Number(lire('duree').value),essai=Number(lire('essai').value),promotionPrix=Number(lire('promoPrix').value);
+  const unite=lire('unite').value, debut=lire('promoDebut').value,fin=lire('promoFin').value;
+  if(!Number.isFinite(prix)||prix<0||!Number.isInteger(prix)||!Number.isFinite(duree)||duree<1||!Number.isInteger(duree)||!Number.isInteger(essai)||essai<0||!Number.isInteger(promotionPrix)||promotionPrix<0)return alert("Vérifie les prix, durées et périodes gratuites : nombres entiers positifs uniquement.");
+  if(id==="petites_annonces"&&essai<1)return alert("Le parcours de paiement du premier abonnement des petites annonces n’est pas encore disponible : conserve au moins un jour de période gratuite.");
+  if((id==="automobiliste"||id.startsWith("compagnie_"))&&unite!=="mois")return alert("Les abonnements automobilistes et compagnies de voyage doivent être configurés en mois.");
+  if(lire('promo').checked&&(!promotionPrix||promotionPrix>prix||!debut||!fin||fin<debut))return alert("Chaque promotion active doit avoir un prix inférieur ou égal au prix normal, ainsi qu'une date de début et de fin valides.");
+  services[id]={libelle:CONFIG_ABONNEMENTS_DEFAUT[id].libelle,actif:lire('actif').checked,prix,duree,unite,essai,promotionActive:lire('promo').checked,promotionPrix,promotionDebut:debut,promotionFin:fin,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+ }
+ try{
+  await db.collection("configuration_abonnements").doc("globale").set({services,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.uid},{merge:true});
+  configurationAbonnementsCachee=services;configurationAbonnementsPromise=null;alert("Paramètres enregistrés. Ils sont conservés dans Firestore.");await chargerConfigurationAbonnementsAdmin();
+ }catch(e){console.error(e);alert("Enregistrement impossible : "+e.message+" Vérifie les règles Firestore.");}
+}
+
 const RUBRIQUES_ADMIN = [
   {id:"gestionGares",groupe:"Transport",icone:"📍",image:"gare",titre:"Gares et terminus",description:"Créer, positionner et gérer les gares."},
   {id:"gestionRoutes",groupe:"Transport",icone:"🛣️",titre:"Itinéraires et tarifs",description:"Gérer les lignes, arrêts et prix."},
   {id:"gestionCompagnies",groupe:"Transport",icone:"🚍",image:"compagnies",titre:"Compagnies de voyage",description:"Gérer les agences et leurs dessertes."},
+  {id:"gestionGeneraleAbonnements",groupe:"Contrôle et paramètres",icone:"⚙️",titre:"Gestion générale des abonnements",description:"Configurer les tarifs, durées et promotions des services payants."},
   {id:"gestionAbonnementsRamassage",groupe:"Professionnels",icone:"🚌",titre:"Compagnies de ramassage",description:"Valider les dossiers et abonnements."},
   {id:"gestionValidationAnnuaires",groupe:"Professionnels",icone:"📒",titre:"Annuaires professionnels",description:"Valider les inscriptions avant publication.",notification:"annuaire"},
   {id:"gestionPartenaires",groupe:"Professionnels",icone:"👥",titre:"Partenaires",description:"Gérer les partenaires de services."},
@@ -4062,6 +4166,7 @@ function ouvrirRubriqueAdmin(id){
   if(id==="gestionMaCommuneDirect"){ chargerInfosCommuneAdmin(); chargerPropositionsCommuneAdmin(); }
   if(id==="gestionVisibiliteMenus") afficherGestionVisibiliteMenus();
   if(id==="gestionAbonnementsAutomobiliste") chargerDemandesAbonnementAutomobilisteAdmin();
+  if(id==="gestionGeneraleAbonnements") chargerConfigurationAbonnementsAdmin();
   let retour=cible.querySelector(":scope > .admin-retour-menu");
   if(!retour){retour=document.createElement("button");retour.type="button";retour.className="admin-retour-menu";retour.textContent="← Retour au menu administrateur";retour.onclick=retourMenuAdmin;cible.insertBefore(retour,cible.firstChild);}
   cible.scrollIntoView({behavior:"smooth",block:"start"});
@@ -5555,12 +5660,12 @@ function afficherFormulaireInscriptionCompagnie(zone){
       <label>Destinations, prix des tickets et service</label>
       <textarea id="partCompagnieDestinations" rows="5" placeholder="Bouaké | 5000 | Premium&#10;Yamoussoukro | 4000 | Express&#10;Daloa | 7000 | Standard" required></textarea>
       <small>Une destination par ligne : Destination | Prix en FCFA | Premium, Express ou Standard.</small>
-      <label>Formule d’abonnement</label><select id="partCompagnieFormule"><option value="Essentielle">Essentielle</option><option value="Professionnelle">Professionnelle</option></select>
+      <label>Formule d’abonnement</label><select id="partCompagnieFormule" onchange="actualiserPrixInscriptionCompagnie()"><option value="Essentielle">Essentielle</option><option value="Professionnelle">Professionnelle</option></select>
       <label>Périodicité</label><select id="partCompagniePeriodicite" onchange="actualiserPrixInscriptionCompagnie()"><option value="Mensuel">Mensuel</option><option value="Annuel">Annuel</option></select>
       <p id="partCompagniePrix" class="notice">Tarif : 5 000 FCFA / mois</p>
       <label>Moyen de paiement</label><select id="partCompagniePaiement"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select>
       <label>Référence de paiement</label><input id="partCompagnieReference" maxlength="80" placeholder="Référence de la transaction" required>
-      <p class="notice">Tarifs existants : Essentielle 5 000 FCFA/mois ou 50 000 FCFA/an ; Professionnelle 10 000 FCFA/mois ou 100 000 FCFA/an. Paiement Wave ou Orange Money au 0757522319. L’activation intervient après vérification par l’administration.</p>
+      <p class="notice">Le tarif et la durée sont déterminés par la formule choisie et les paramètres en vigueur. Paiement Wave ou Orange Money au 0757522319. L’activation intervient après vérification par l’administration.</p>
       <button type="button" class="primary" onclick="envoyerInscriptionCompagnie()">Envoyer mon dossier</button>
       <p id="partCompagnieStatut" class="notice" aria-live="polite"></p>
     </div>`;
@@ -5585,8 +5690,12 @@ async function envoyerInscriptionCompagnie(){
       return {ville,prix,service:services[s]};
     });
   }catch(e){statut.textContent=e.message;return;}
-  const montant=tarifsAbonnements[formule]?.[periodicite];
-  if(!montant){statut.textContent="Formule d’abonnement invalide.";return;}
+  let cfgCompagnie;
+  try{cfgCompagnie=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));}catch(e){statut.textContent=e.message;return;}
+  if(!cfgCompagnie.actif){statut.textContent="Cette formule de compagnie est temporairement suspendue.";return;}
+  if(cfgCompagnie.unite!=="mois"){statut.textContent="La durée doit être configurée en mois.";return;}
+  const montant=tarifAbonnementEffectif(cfgCompagnie),dureeMois=Number(cfgCompagnie.duree);
+  if(!montant||!dureeMois){statut.textContent="Tarif ou durée non configuré.";return;}
   statut.textContent="Création du compte et envoi du dossier...";
   try{
     let credential;
@@ -5596,7 +5705,7 @@ async function envoyerInscriptionCompagnie(){
     const fichier=document.getElementById("partCompagnieLogo")?.files?.[0];
     if(fichier){logo=await compresserImage(fichier);if(logo.length>300000)throw new Error("Le logo est trop volumineux après compression. Choisissez une image plus légère.");}
     await db.collection("compagnies").add({
-      uid:credential.user.uid,nom,agence,localisation,telephone,email,logo,destinations,formule,periodicite,montant,
+      uid:credential.user.uid,nom,agence,localisation,telephone,email,logo,destinations,formule,periodicite,montant,dureeMois,
       moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",
       dateCreation:firebase.firestore.FieldValue.serverTimestamp(),dateDebut:null,dateExpiration:null
     });
@@ -6378,17 +6487,13 @@ async function validerPartenaire(id) {
   if (!confirm("Confirmer l'approbation de ce partenaire ?")) return;
 
   try {
-    const debutEssai = new Date();
-    const finEssai = new Date(debutEssai.getTime() + 21 * 24 * 60 * 60 * 1000);
-    const refP=db.collection("partenaires").doc(id);const snapP=await refP.get();if(!snapP.exists)throw new Error("Dossier introuvable.");const p=snapP.data();
-    await refP.update({
-      statut: "approuve",
-      etatCompte: "actif",
-      statutAbonnementPartenaire: "Essai",
-      dateDebutEssai: firebase.firestore.Timestamp.fromDate(debutEssai),
-      dateFinEssai: firebase.firestore.Timestamp.fromDate(finEssai)
-    });
-    alert("Partenaire approuvé. Son essai gratuit de 21 jours commence maintenant et se termine le " + finEssai.toLocaleDateString("fr-FR") + ".");
+    const cfg=await obtenirConfigurationAbonnement("partenaires_colis");
+    const debutEssai=new Date(),joursEssai=cfg.actif?Number(cfg.essai||0):0,finEssai=new Date(debutEssai.getTime()+joursEssai*86400000);
+    const refP=db.collection("partenaires").doc(id);const snapP=await refP.get();if(!snapP.exists)throw new Error("Dossier introuvable.");
+    const maj={statut:"approuve",etatCompte:"actif",statutAbonnementPartenaire:joursEssai>0?"Essai":"Expiré"};
+    if(joursEssai>0){maj.dateDebutEssai=firebase.firestore.Timestamp.fromDate(debutEssai);maj.dateFinEssai=firebase.firestore.Timestamp.fromDate(finEssai);}
+    await refP.update(maj);
+    alert(joursEssai>0?"Partenaire approuvé. Son essai gratuit de "+joursEssai+" jours se termine le "+finEssai.toLocaleDateString("fr-FR")+".":"Partenaire approuvé sans période d’essai gratuite. L’abonnement payant devra être activé après vérification du paiement.");
     chargerPartenairesAdmin();
 
   } catch (erreur) {
@@ -6401,8 +6506,11 @@ async function demarrerEssaiPartenaire(id) {
     alert("Accès réservé à l'administrateur.");
     return;
   }
-  if (!confirm("Démarrer maintenant les 21 jours d'essai gratuit pour ce partenaire ?")) return;
   try {
+    const cfg=await obtenirConfigurationAbonnement("partenaires_colis");
+    if(!cfg.actif||Number(cfg.essai||0)<=0)return alert("La période d’essai gratuite est désactivée dans la gestion générale des abonnements.");
+    const joursEssai=Number(cfg.essai);
+    if (!confirm("Démarrer maintenant les "+joursEssai+" jours d'essai gratuit pour ce partenaire ?")) return;
     const reference = db.collection("partenaires").doc(id);
     const document = await reference.get();
     if (!document.exists) throw new Error("Partenaire introuvable.");
@@ -6410,14 +6518,14 @@ async function demarrerEssaiPartenaire(id) {
     if (partenaire.statut !== "approuve") throw new Error("Le dossier doit d'abord être approuvé.");
     if (partenaire.dateFinEssai || partenaire.dateExpirationAbonnement) throw new Error("Une période d'essai ou un abonnement est déjà enregistré. Aucun renouvellement automatique n'est effectué.");
     const debutEssai = new Date();
-    const finEssai = new Date(debutEssai.getTime() + 21 * 24 * 60 * 60 * 1000);
+    const finEssai = new Date(debutEssai.getTime() + joursEssai * 24 * 60 * 60 * 1000);
     await reference.update({
       etatCompte: "actif",
       statutAbonnementPartenaire: "Essai",
       dateDebutEssai: firebase.firestore.Timestamp.fromDate(debutEssai),
       dateFinEssai: firebase.firestore.Timestamp.fromDate(finEssai)
     });
-    alert("Essai gratuit activé jusqu'au " + finEssai.toLocaleDateString("fr-FR") + ".");
+    alert("Essai gratuit de "+joursEssai+" jours activé jusqu'au " + finEssai.toLocaleDateString("fr-FR") + ".");
     chargerPartenairesAdmin();
     chargerCommandesAdmin();
   } catch (erreur) {
@@ -6426,67 +6534,24 @@ async function demarrerEssaiPartenaire(id) {
 }
 
 async function activerAbonnementPartenaire(id) {
-  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
-    alert("Accès réservé à l'administrateur.");
-    return;
-  }
-
-  const choix = prompt(
-    "Choisis la formule après vérification du paiement :\n1 = 1 mois : 10 000 FCFA\n2 = 3 mois : 27 000 FCFA\n3 = 6 mois : 55 000 FCFA",
-    "1"
-  );
-  if (choix === null) return;
-
-  const formules = {
-    "1": { mois: 1, montant: 10000, libelle: "1 mois" },
-    "2": { mois: 3, montant: 27000, libelle: "3 mois" },
-    "3": { mois: 6, montant: 55000, libelle: "6 mois" }
-  };
-  const formule = formules[choix.trim()];
-  if (!formule) {
-    alert("Choix invalide.");
-    return;
-  }
-
-  if (!confirm("Confirmer que le paiement de " + formule.montant.toLocaleString("fr-FR") + " FCFA a bien été reçu pour " + formule.libelle + " ?")) return;
-
-  try {
-    const reference = db.collection("partenaires").doc(id);
-    const document = await reference.get();
-    if (!document.exists) {
-      alert("Partenaire introuvable.");
-      return;
-    }
-
-    const partenaire = document.data();
-    const maintenant = new Date();
-    const ancienneFin = partenaire.dateExpirationAbonnement && partenaire.dateExpirationAbonnement.toDate
-      ? partenaire.dateExpirationAbonnement.toDate()
-      : (partenaire.dateExpirationAbonnement ? new Date(partenaire.dateExpirationAbonnement) : null);
-    const base = ancienneFin && ancienneFin > maintenant ? ancienneFin : maintenant;
-    const expiration = new Date(base);
-    expiration.setMonth(expiration.getMonth() + formule.mois);
-
-    await reference.update({
-      statutAbonnementPartenaire: "Actif",
-      formuleAbonnementPartenaire: formule.libelle,
-      montantAbonnementPartenaire: formule.montant,
-      dateDebutAbonnement: firebase.firestore.Timestamp.fromDate(maintenant),
-      dateExpirationAbonnement: firebase.firestore.Timestamp.fromDate(expiration),
-      historiqueAbonnements: firebase.firestore.FieldValue.arrayUnion({
-        formule: formule.libelle,
-        montant: formule.montant,
-        dateValidation: firebase.firestore.Timestamp.fromDate(maintenant),
-        dateExpiration: firebase.firestore.Timestamp.fromDate(expiration),
-        validePar: auth.currentUser.uid
-      })
-    });
-
-    alert("Abonnement activé jusqu'au " + expiration.toLocaleDateString("fr-FR") + ".");
-    chargerPartenairesAdmin();
-  } catch (erreur) {
-    alert("Erreur lors de l'activation : " + erreur.message);
-  }
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
+ try{
+  const ids=["partenaires_colis_1mois","partenaires_colis_3mois","partenaires_colis_6mois"];
+  const formules=await Promise.all(ids.map(async key=>({key,c:await obtenirConfigurationAbonnement(key)})));
+  const disponibles=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&x.c.unite==="mois");
+  if(!disponibles.length)return alert("Aucune formule partenaire n'est actuellement disponible.");
+  const lignes=disponibles.map((x,i)=>(i+1)+" = "+x.c.duree+" mois : "+tarifAbonnementEffectif(x.c).toLocaleString("fr-FR")+" FCFA").join("\n");
+  const choix=prompt("Choisis la formule après vérification du paiement :\n"+lignes,"1");if(choix===null)return;
+  const formule=disponibles[Number(choix.trim())-1];if(!formule)return alert("Choix invalide.");
+  const montant=tarifAbonnementEffectif(formule.c),mois=Number(formule.c.duree);
+  if(!confirm("Confirmer la réception de "+montant.toLocaleString("fr-FR")+" FCFA pour "+mois+" mois ?"))return;
+  const reference=db.collection("partenaires").doc(id),document=await reference.get();if(!document.exists)return alert("Partenaire introuvable.");
+  const partenaire=document.data(),maintenant=new Date(),ancienneFin=partenaire.dateExpirationAbonnement&&partenaire.dateExpirationAbonnement.toDate?partenaire.dateExpirationAbonnement.toDate():(partenaire.dateExpirationAbonnement?new Date(partenaire.dateExpirationAbonnement):null);
+  const base=ancienneFin&&ancienneFin>maintenant?ancienneFin:maintenant,expiration=new Date(base);expiration.setMonth(expiration.getMonth()+mois);
+  const libelle=mois+" mois";
+  await reference.update({statutAbonnementPartenaire:"Actif",formuleAbonnementPartenaire:libelle,montantAbonnementPartenaire:montant,dateDebutAbonnement:firebase.firestore.Timestamp.fromDate(maintenant),dateExpirationAbonnement:firebase.firestore.Timestamp.fromDate(expiration),historiqueAbonnements:firebase.firestore.FieldValue.arrayUnion({formule:libelle,montant,dateValidation:firebase.firestore.Timestamp.fromDate(maintenant),dateExpiration:firebase.firestore.Timestamp.fromDate(expiration),validePar:auth.currentUser.uid})});
+  alert("Abonnement activé jusqu'au "+expiration.toLocaleDateString("fr-FR")+".");chargerPartenairesAdmin();
+ }catch(erreur){alert("Erreur lors de l'activation : "+erreur.message);}
 }
 
 async function refuserPartenaire(id) {
@@ -6979,7 +7044,9 @@ async function actualiserEtatAbonnementAutomobiliste(){
     document.getElementById("nomPayeurAbonnementAuto").disabled=true;
     return;
   }
-  zone.textContent="Aucun abonnement actif. Après votre transfert de 1 000 FCFA, renseignez la référence ci-dessous.";
+  const cfg=await obtenirConfigurationAbonnement("automobiliste");
+  if(!cfg.actif){zone.textContent="Les nouvelles souscriptions automobilistes sont temporairement suspendues.";document.getElementById("operateurAbonnementAuto").disabled=true;document.getElementById("referenceAbonnementAuto").disabled=true;document.getElementById("nomPayeurAbonnementAuto").disabled=true;return;}
+  zone.textContent="Aucun abonnement actif. Après votre transfert de "+tarifAbonnementEffectif(cfg).toLocaleString("fr-FR")+" FCFA pour "+cfg.duree+" mois, renseignez la référence ci-dessous.";
   document.getElementById("operateurAbonnementAuto").disabled=false;
   document.getElementById("referenceAbonnementAuto").disabled=false;
   document.getElementById("nomPayeurAbonnementAuto").disabled=false;
@@ -7006,9 +7073,10 @@ async function envoyerDemandeAbonnementAuto(){
   const operateur=document.getElementById("operateurAbonnementAuto").value;
   const nomPayeur=document.getElementById("nomPayeurAbonnementAuto").value.trim();
   try{
+    const cfg=await obtenirConfigurationAbonnement("automobiliste");if(!cfg.actif)return alert("Les nouvelles souscriptions automobilistes sont temporairement suspendues.");if(cfg.unite!=="mois")return alert("La durée doit être configurée en mois.");const montant=tarifAbonnementEffectif(cfg);
     await db.collection("demandes_abonnement_automobiliste").add({
       uid:user.uid,email:user.email||"",operateur,referencePaiement:reference,nomPayeur,
-      montantFCFA:1000,dureeMois:12,statut:"en_attente",
+      montantFCFA:montant,dureeMois:Number(cfg.duree),statut:"en_attente",
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
     document.getElementById("referenceAbonnementAuto").value="";
@@ -7038,9 +7106,9 @@ async function traiterDemandeAbonnementAutomobiliste(id,approuver){
     if(!snap.exists||snap.data().statut!=="en_attente")return alert("Cette demande n'est plus en attente.");
     const d=snap.data(),batch=db.batch();
     if(approuver){
-      const debut=new Date(),fin=new Date(debut.getTime()+365*24*60*60*1000);
+      const debut=new Date(),fin=new Date(debut.getTime()+Number(d.dureeMois||12)*30.4375*24*60*60*1000);
       batch.set(db.collection("abonnements_automobiliste").doc(d.uid),{
-        uid:d.uid,statut:"actif",montantFCFA:1000,dureeMois:12,
+        uid:d.uid,statut:"actif",montantFCFA:Number(d.montantFCFA||1000),dureeMois:Number(d.dureeMois||12),
         dateActivation:firebase.firestore.Timestamp.fromDate(debut),
         dateExpiration:firebase.firestore.Timestamp.fromDate(fin),
         demandeId:id,activePar:auth.currentUser.uid
@@ -7048,7 +7116,7 @@ async function traiterDemandeAbonnementAutomobiliste(id,approuver){
       batch.update(ref,{statut:"approuve",traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});
     }else batch.update(ref,{statut:"refuse",traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});
     await batch.commit();await chargerDemandesAbonnementAutomobilisteAdmin();
-    alert(approuver?"Abonnement activé pour 12 mois.":"Demande refusée.");
+    alert(approuver?"Abonnement activé pour "+Number(d.dureeMois||12)+" mois.":"Demande refusée.");
   }catch(e){console.error(e);alert("Traitement impossible : "+e.message);}
 }
 
@@ -7329,7 +7397,7 @@ async function chargerCompagniesRamassageAdmin(){
       const title=document.createElement("strong");title.textContent=d.nom||"Compagnie sans nom";
       const detail=document.createElement("p");detail.textContent=(d.email||"")+" · "+(d.telephone||"")+" · Dossier : "+(d.statut||"inconnu")+" · Abonnement : "+(d.abonnement||"inactif");
       const approve=document.createElement("button");approve.type="button";approve.textContent="Approuver le dossier";approve.onclick=()=>modifierStatutCompagnieRamassage(doc.id,"approuve");
-      const activate=document.createElement("button");activate.type="button";activate.textContent="Activer 1 mois (après vérification du paiement)";activate.style.marginTop="8px";activate.onclick=()=>activerAbonnementCompagnieRamassage(doc.id);
+      const activate=document.createElement("button");activate.type="button";activate.textContent="Activer l’abonnement (après vérification du paiement)";activate.style.marginTop="8px";activate.onclick=()=>activerAbonnementCompagnieRamassage(doc.id);
       card.append(title,detail,approve,activate);zone.appendChild(card);
     });
   }catch(e){zone.textContent="Impossible de charger les compagnies : "+e.message;}
@@ -7341,9 +7409,7 @@ async function modifierStatutCompagnieRamassage(uid,statut){
 }
 async function activerAbonnementCompagnieRamassage(uid){
   if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
-  if(!confirm("Confirme-tu que le paiement mensuel de cette compagnie a bien été reçu ?"))return;
-  const expiration=new Date(Date.now()+30*24*60*60*1000);
-  try{await db.collection("comptes_ramassage").doc(uid).update({statut:"approuve",abonnement:"actif",dateExpirationAbonnement:firebase.firestore.Timestamp.fromDate(expiration)});alert("Abonnement activé pour 30 jours.");await chargerCompagniesRamassageAdmin();}
+  try{const cfg=await obtenirConfigurationAbonnement("ramassage");if(!cfg.actif)return alert("Les nouvelles souscriptions des compagnies de ramassage sont suspendues.");const jours=dureeAbonnementEnJours(cfg),montant=tarifAbonnementEffectif(cfg);if(montant<=0||jours<=0)return alert("Configure d'abord un prix supérieur à zéro et une durée dans Gestion générale des abonnements.");if(!confirm("Confirmer la réception de "+montant.toLocaleString("fr-FR")+" FCFA pour "+jours+" jours ?"))return;const expiration=new Date(Date.now()+jours*86400000);await db.collection("comptes_ramassage").doc(uid).update({statut:"approuve",abonnement:"actif",montantAbonnement:montant,dureeAbonnementJours:jours,dateExpirationAbonnement:firebase.firestore.Timestamp.fromDate(expiration)});alert("Abonnement activé pour "+jours+" jours.");await chargerCompagniesRamassageAdmin();}
   catch(e){alert("Activation impossible : "+e.message);}
 }
 
@@ -9071,32 +9137,18 @@ function afficherReseauNational(){
   });
 }
 // GESTION DES COMPAGNIES DE VOYAGE
-const tarifsAbonnements = {
-  Essentielle: { Mensuel: 5000, Annuel: 50000 },
-  Professionnelle: { Mensuel: 10000, Annuel: 100000 },
-};
-
-function actualiserPrixCompagnie() {
-  const formule = document.getElementById("compagnieFormule").value;
-  const periodicite = document.getElementById("compagniePeriodicite").value;
-
-  const tarifs = {
-    Essentielle: { Mensuel: 5000, Annuel: 50000 },
-    Professionnelle: { Mensuel: 10000, Annuel: 100000 },
-    };
-
-  const prix = tarifs[formule][periodicite];
-
-  document.getElementById("compagniePrix").textContent =
-    "Tarif : " + prix.toLocaleString("fr-FR") +
-    " FCFA / " + periodicite.toLowerCase();
+const tarifsAbonnements = {Essentielle:{Mensuel:5000,Annuel:50000},Professionnelle:{Mensuel:10000,Annuel:100000}};
+function cleConfigurationCompagnie(formule,periodicite){return "compagnie_"+(formule==="Professionnelle"?"professionnelle":"essentielle")+"_"+(periodicite==="Annuel"?"annuel":"mensuel");}
+async function actualiserPrixCompagnie(){
+ const formule=document.getElementById("compagnieFormule")?.value||"Essentielle",periodicite=document.getElementById("compagniePeriodicite")?.value||"Mensuel",zone=document.getElementById("compagniePrix");if(!zone)return;
+ try{const c=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));zone.textContent=!c.actif?"Souscriptions suspendues": "Tarif : "+tarifAbonnementEffectif(c).toLocaleString("fr-FR")+" FCFA / "+c.duree+" mois";}
+ catch(e){zone.textContent="Tarif indisponible.";}
 }
-
-document.getElementById("compagnieFormule")
-  .addEventListener("change", actualiserPrixCompagnie);
-
-document.getElementById("compagniePeriodicite")
-  .addEventListener("change", actualiserPrixCompagnie);
+async function actualiserPrixInscriptionCompagnie(){
+ const formule=document.getElementById("partCompagnieFormule")?.value||"Essentielle",periodicite=document.getElementById("partCompagniePeriodicite")?.value||"Mensuel",zone=document.getElementById("partCompagniePrix");if(!zone)return;
+ try{const c=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));zone.textContent=!c.actif?"Souscriptions suspendues":"Tarif : "+tarifAbonnementEffectif(c).toLocaleString("fr-FR")+" FCFA / "+c.duree+" mois";}
+ catch(e){zone.textContent="Tarif indisponible.";}
+}
 
 function echapperTexteCompagnie(texte) {
   return String(texte || "").replace(/[&<>"']/g, caractere => ({
@@ -9208,7 +9260,11 @@ async function enregistrerCompagnie() {
       return { ville, prix, service };
     });
 
-    const montant = tarifsAbonnements[formule][periodicite];
+    const cfgCompagnie=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));
+  if(!cfgCompagnie.actif)throw new Error("Cette formule de compagnie est temporairement suspendue.");
+  if(cfgCompagnie.unite!=="mois")throw new Error("Les durées des compagnies de voyage doivent être configurées en mois.");
+  const montant=tarifAbonnementEffectif(cfgCompagnie),dureeMois=Number(cfgCompagnie.duree);
+  if(montant<=0||dureeMois<=0)throw new Error("Le tarif ou la durée de cette formule n’est pas correctement configuré.");
 
     let logo = "";
 
@@ -9229,6 +9285,7 @@ async function enregistrerCompagnie() {
       formule,
       periodicite,
       montant,
+      dureeMois,
       statutAbonnement: "En attente",
       dateCreation: firebase.firestore.FieldValue.serverTimestamp(),
       dateDebut: null,
@@ -9553,11 +9610,7 @@ const dateDebut =
 
 const dateExpiration = new Date(dateDebut);
 
-    if (compagnie.periodicite === "Annuel") {
-      dateExpiration.setFullYear(dateExpiration.getFullYear() + 1);
-    } else {
-      dateExpiration.setMonth(dateExpiration.getMonth() + 1);
-    }
+    dateExpiration.setMonth(dateExpiration.getMonth()+Number(compagnie.dureeMois||(compagnie.periodicite==="Annuel"?12:1)));
 
     await reference.update({
       statutAbonnement: "Actif",
@@ -9600,11 +9653,12 @@ async function demanderRenouvellementCompagnie(id) {
   return;
 }
 
-    await reference.update({
-      statutAbonnement: "En attente",
-      dateDemandeRenouvellement:
-        firebase.firestore.FieldValue.serverTimestamp()
-    });
+    const cfg=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(compagnie.formule||"Essentielle",compagnie.periodicite||"Mensuel"));
+    if(!cfg.actif)return alert("Les nouvelles souscriptions et renouvellements de cette formule sont suspendus.");
+    if(cfg.unite!=="mois")return alert("La durée de cette formule doit être configurée en mois.");
+    const montant=tarifAbonnementEffectif(cfg),dureeMois=Number(cfg.duree);
+    if(montant<=0||dureeMois<=0)return alert("Tarif ou durée non configuré.");
+    await reference.update({statutAbonnement:"En attente",montant,dureeMois,dateDemandeRenouvellement:firebase.firestore.FieldValue.serverTimestamp()});
 
     alert("Demande enregistrée. Vérifie le paiement avant validation.");
     chargerCompagniesAdmin();

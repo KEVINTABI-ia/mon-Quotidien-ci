@@ -11,6 +11,28 @@ service cloud.firestore {
     function estConnecte() {
       return request.auth != null;
     }
+    function abonnementServices() {
+      return exists(/databases/$(database)/documents/configuration_abonnements/globale)
+        ? get(/databases/$(database)/documents/configuration_abonnements/globale).data.get("services", {})
+        : {};
+    }
+    function abonnementChamp(serviceId, champ, defaut) {
+      return abonnementServices().get(serviceId, {}).get(champ, defaut);
+    }
+    function abonnementAutorise(serviceId) {
+      return abonnementChamp(serviceId, "actif", true) == true;
+    }
+    function abonnementMontantAutorise(serviceId, montant, prixDefaut) {
+      return montant == abonnementChamp(serviceId, "prix", prixDefaut)
+        || (abonnementChamp(serviceId, "promotionActive", false) == true
+          && abonnementChamp(serviceId, "promotionPrix", 0) > 0
+          && montant == abonnementChamp(serviceId, "promotionPrix", 0));
+    }
+    function dureeEnJours(serviceId, defaut) {
+      return abonnementChamp(serviceId, "unite", "jours") == "mois"
+        ? abonnementChamp(serviceId, "duree", defaut) * 30
+        : abonnementChamp(serviceId, "duree", defaut);
+    }
 
     function estAbonneAutomobiliste() {
       return estConnecte()
@@ -109,12 +131,12 @@ service cloud.firestore {
           && request.resource.data.email == request.auth.token.email
           && request.resource.data.keys().hasAll([
             "uid","nom","agence","localisation","telephone","email","destinations",
-            "formule","periodicite","montant","moyenPaiement","referencePaiement",
+            "formule","periodicite","montant","dureeMois","moyenPaiement","referencePaiement",
             "statutAbonnement","dateCreation","dateDebut","dateExpiration"
           ])
           && request.resource.data.keys().hasOnly([
             "uid","nom","agence","localisation","telephone","email","logo","destinations",
-            "formule","periodicite","montant","moyenPaiement","referencePaiement",
+            "formule","periodicite","montant","dureeMois","moyenPaiement","referencePaiement",
             "statutAbonnement","dateCreation","dateDebut","dateExpiration"
           ])
           && request.resource.data.uid == request.auth.uid
@@ -126,11 +148,25 @@ service cloud.firestore {
           && request.resource.data.destinations is list && request.resource.data.destinations.size() > 0 && request.resource.data.destinations.size() <= 100
           && request.resource.data.formule in ["Essentielle","Professionnelle"]
           && request.resource.data.periodicite in ["Mensuel","Annuel"]
+          && request.resource.data.montant is int && request.resource.data.montant > 0
+          && request.resource.data.dureeMois is int && request.resource.data.dureeMois > 0
           && (
-            (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Mensuel" && request.resource.data.montant == 5000)
-            || (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Annuel" && request.resource.data.montant == 50000)
-            || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Mensuel" && request.resource.data.montant == 10000)
-            || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Annuel" && request.resource.data.montant == 100000)
+            (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Mensuel"
+              && abonnementAutorise("compagnie_essentielle_mensuel")
+              && abonnementMontantAutorise("compagnie_essentielle_mensuel", request.resource.data.montant, 5000)
+              && request.resource.data.dureeMois == abonnementChamp("compagnie_essentielle_mensuel", "duree", 1))
+            || (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Annuel"
+              && abonnementAutorise("compagnie_essentielle_annuel")
+              && abonnementMontantAutorise("compagnie_essentielle_annuel", request.resource.data.montant, 50000)
+              && request.resource.data.dureeMois == abonnementChamp("compagnie_essentielle_annuel", "duree", 12))
+            || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Mensuel"
+              && abonnementAutorise("compagnie_professionnelle_mensuel")
+              && abonnementMontantAutorise("compagnie_professionnelle_mensuel", request.resource.data.montant, 10000)
+              && request.resource.data.dureeMois == abonnementChamp("compagnie_professionnelle_mensuel", "duree", 1))
+            || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Annuel"
+              && abonnementAutorise("compagnie_professionnelle_annuel")
+              && abonnementMontantAutorise("compagnie_professionnelle_annuel", request.resource.data.montant, 100000)
+              && request.resource.data.dureeMois == abonnementChamp("compagnie_professionnelle_annuel", "duree", 12))
           )
           && request.resource.data.moyenPaiement in ["Wave","Orange Money"]
           && request.resource.data.referencePaiement is string
@@ -645,18 +681,24 @@ service cloud.firestore {
         && request.resource.data.dateDebut == request.time
         && request.resource.data.createdAt == request.time
         && request.resource.data.dateExpiration is timestamp
-        && request.resource.data.dateExpiration >= request.time + duration.value(29, "d")
-        && request.resource.data.dateExpiration <= request.time + duration.value(31, "d");
+        && abonnementAutorise("petites_annonces")
+        && abonnementChamp("petites_annonces", "essai", 30) > 0
+        && request.resource.data.dateExpiration >= request.time + duration.value(abonnementChamp("petites_annonces", "essai", 30) - 1, "d")
+        && request.resource.data.dateExpiration <= request.time + duration.value(abonnementChamp("petites_annonces", "essai", 30) + 1, "d");
       allow update: if estAdmin()
         || (estConnecte() && request.auth.uid == uid
           && resource.data.dateExpiration is timestamp
           && resource.data.dateExpiration <= request.time
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["paiementMoyen","paiementReference","montantRenouvellement","paiementStatut","demandeRenouvellementLe"])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["paiementMoyen","paiementReference","montantRenouvellement","dureeRenouvellementJours","paiementStatut","demandeRenouvellementLe"])
           && request.resource.data.paiementMoyen in ["Wave","Orange Money"]
           && request.resource.data.paiementReference is string
           && request.resource.data.paiementReference.size() >= 4
           && request.resource.data.paiementReference.size() <= 80
-          && request.resource.data.montantRenouvellement == 500
+          && abonnementAutorise("petites_annonces")
+          && request.resource.data.montantRenouvellement is int
+          && request.resource.data.montantRenouvellement > 0
+          && abonnementMontantAutorise("petites_annonces", request.resource.data.montantRenouvellement, 500)
+          && request.resource.data.dureeRenouvellementJours == dureeEnJours("petites_annonces", 30)
           && request.resource.data.paiementStatut == "a_verifier"
           && request.resource.data.demandeRenouvellementLe == request.time);
       allow delete: if estAdmin();
@@ -687,8 +729,17 @@ service cloud.firestore {
             && request.resource.data.paiementReference is string
             && request.resource.data.paiementReference.size() >= 4
             && request.resource.data.paiementReference.size() <= 80
-            && ((request.resource.data.montantAbonnement == 4000 && request.resource.data.dureeAbonnementJours == 15)
-              || (request.resource.data.montantAbonnement == 7000 && request.resource.data.dureeAbonnementJours == 30))
+            && request.resource.data.montantAbonnement is int
+              && request.resource.data.montantAbonnement > 0
+              && (
+                (abonnementAutorise("boutiques_15j")
+                  && abonnementMontantAutorise("boutiques_15j", request.resource.data.montantAbonnement, 4000)
+                  && request.resource.data.dureeAbonnementJours == dureeEnJours("boutiques_15j", 15))
+                ||
+                (abonnementAutorise("boutiques_30j")
+                  && abonnementMontantAutorise("boutiques_30j", request.resource.data.montantAbonnement, 7000)
+                  && request.resource.data.dureeAbonnementJours == dureeEnJours("boutiques_30j", 30))
+              )
             && request.resource.data.paiementStatut == "a_verifier"))
         && request.resource.data.titre is string && request.resource.data.titre.size() > 0 && request.resource.data.titre.size() <= 100
         && request.resource.data.categorie is string && request.resource.data.categorie.size() <= 80
@@ -757,8 +808,11 @@ service cloud.firestore {
         && request.resource.data.referencePaiement.size() <= 80
         && request.resource.data.nomPayeur is string
         && request.resource.data.nomPayeur.size() <= 80
-        && request.resource.data.montantFCFA == 1000
-        && request.resource.data.dureeMois == 12
+        && abonnementAutorise("automobiliste")
+        && request.resource.data.montantFCFA is int
+        && request.resource.data.montantFCFA > 0
+        && abonnementMontantAutorise("automobiliste", request.resource.data.montantFCFA, 1000)
+        && request.resource.data.dureeMois == abonnementChamp("automobiliste", "duree", 12)
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time;
       allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
@@ -1046,6 +1100,13 @@ service cloud.firestore {
       allow read: if estAdmin();
       allow update: if estAdmin();
       allow delete: if estAdmin();
+    }
+
+    // Paramètres des abonnements : lecture pour les comptes connectés,
+    // modification réservée à l'administrateur. Les annuaires ne sont pas configurables ici.
+    match /configuration_abonnements/{configId} {
+      allow read: if estConnecte();
+      allow create, update, delete: if estAdmin() && configId == "globale";
     }
 
     match /{document=**} {
