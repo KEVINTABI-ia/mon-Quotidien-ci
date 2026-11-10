@@ -2995,7 +2995,7 @@ function chargerPublicitesAccueil() {
 <label>Votre numéro de téléphone</label><input id="orReclamantTel" type="tel" maxlength="25">
 <label>Votre lieu de résidence</label><input id="orResidence" maxlength="180">
 <div style="margin:14px 0;padding:12px;border-radius:10px;background:#FFF7E8;border:1px solid #EBD6A8;"><strong>Frais de mise en relation : 1 500 FCFA</strong>
-<p>Wave : <strong>0757522319</strong><br>Orange Money : <strong>0757522319</strong><br>Titulaire : <strong>TA BI SERGE KEVIN</strong></p>
+<p id="coordonneesPaiementReclamation">Chargement des coordonnées de paiement...</p>
 <label>Moyen de paiement</label><select id="orOperateur"><option>Wave</option><option>Orange Money</option></select>
 <label>Numéro de référence de la transaction</label><input id="orReference" maxlength="100">
 <label>Heure et date de la transaction</label><input id="orHeurePaiement" type="datetime-local">
@@ -3472,11 +3472,14 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
  ${type==="annonce"?'<div id="zoneAbonnementPetitesAnnonces" style="margin:12px 0;"><button type="button" onclick="ouvrirGestionAbonnementPetitesAnnonces()">Consulter mon abonnement / renouveler</button></div>':""}
- ${type==="commerce"&&!modePartenaire?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="15" data-montant="4000">15 jours — 4 000 FCFA</option><option value="30" data-montant="7000">30 jours — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p>Wave : <strong>'+NUMERO_PAIEMENT_MQCI+'</strong><br>Orange Money : <strong>'+NUMERO_PAIEMENT_MQCI+'</strong><br>Titulaire : <strong>'+BENEFICIAIRE_PAIEMENT_MQCI+'</strong></p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
+ ${type==="commerce"&&!modePartenaire?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="15" data-montant="4000">15 jours — 4 000 FCFA</option><option value="30" data-montant="7000">30 jours — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p id="coordonneesPaiementBoutique">Chargement des coordonnées de paiement...</p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
  <button class="primary" type="button" onclick="envoyerNouveauService()">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
  </div>`;
- if(type==="commerce"&&!modePartenaire)initialiserFormulaireAbonnementBoutique();
+ if(type==="commerce"&&!modePartenaire){
+  initialiserFormulaireAbonnementBoutique();
+  window.chargerCoordonneesPaiementMQCI().then(p=>{const el=document.getElementById("coordonneesPaiementBoutique");if(el)el.textContent="Wave : "+p.numero+" · Orange Money : "+p.numero+" · Bénéficiaire : "+p.beneficiaire;});
+ }
  chargerNouveauxServicesPublics(type);
 }
 function previsualiserPhotoNouveauService(event){
@@ -3584,7 +3587,7 @@ async function ouvrirGestionAbonnementPetitesAnnonces(){
   const d=snap.data(),fin=d.dateExpiration?.toDate?.(),actif=!!fin&&fin.getTime()>Date.now();
   if(actif){zone.innerHTML='<p class="notice">Abonnement actif jusqu’au '+fin.toLocaleDateString("fr-FR")+'. Plusieurs annonces sont autorisées pendant cette période.</p>';return;}
   if(d.paiementStatut==="a_verifier"){zone.innerHTML='<p class="notice">Votre paiement est en attente de vérification. La publication de nouvelles annonces sera débloquée après confirmation.</p>';return;}
-  const cfg=await obtenirConfigurationAbonnement("petites_annonces");if(!cfg.actif){zone.innerHTML='<p class="notice">Les renouvellements sont temporairement suspendus.</p>';return;}const montant=tarifAbonnementEffectif(cfg),jours=dureeAbonnementEnJours(cfg);zone.innerHTML='<div class="card" style="padding:12px;"><strong>Renouvellement : '+montant.toLocaleString("fr-FR")+' FCFA pour '+jours+' jours</strong><p>Wave : <strong>'+NUMERO_PAIEMENT_MQCI+'</strong><br>Orange Money : <strong>'+NUMERO_PAIEMENT_MQCI+'</strong><br>Titulaire : <strong>'+BENEFICIAIRE_PAIEMENT_MQCI+'</strong></p><label>Moyen de paiement</label><select id="nsRenouvellementMoyen"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select><label>Référence de transaction</label><input id="nsRenouvellementReference" maxlength="80" placeholder="Référence reçue après paiement"><button type="button" class="primary" onclick="envoyerRenouvellementPetitesAnnonces()">Envoyer pour vérification</button></div>';
+  const cfg=await obtenirConfigurationAbonnement("petites_annonces");if(!cfg.actif){zone.innerHTML='<p class="notice">Les renouvellements sont temporairement suspendus.</p>';return;}const paiement=await window.chargerCoordonneesPaiementMQCI();const montant=tarifAbonnementEffectif(cfg),jours=dureeAbonnementEnJours(cfg);zone.innerHTML='<div class="card" style="padding:12px;"><strong>Renouvellement : '+montant.toLocaleString("fr-FR")+' FCFA pour '+jours+' jours</strong><p>Wave : <strong>'+echapperTextePublicite(paiement.numero)+'</strong><br>Orange Money : <strong>'+echapperTextePublicite(paiement.numero)+'</strong><br>Titulaire : <strong>'+echapperTextePublicite(paiement.beneficiaire)+'</strong></p><label>Moyen de paiement</label><select id="nsRenouvellementMoyen"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select><label>Référence de transaction</label><input id="nsRenouvellementReference" maxlength="80" placeholder="Référence reçue après paiement"><button type="button" class="primary" onclick="envoyerRenouvellementPetitesAnnonces()">Envoyer pour vérification</button></div>';
  }catch(e){zone.textContent="Consultation impossible : "+(e.message||"réessayez.");}
 }
 async function envoyerRenouvellementPetitesAnnonces(){
@@ -3927,11 +3930,12 @@ async function envoyerDeclarationObjet(){
     ["orTrouveurNom","orTrouveurTel","orNomDocument","orDescription","orLieu"].forEach(id=>document.getElementById(id).value="");
   }catch(e){console.error(e);statut.textContent="Envoi impossible. Vérifiez la connexion et réessayez.";}
 }
-function ouvrirReclamationObjet(id){
+async function ouvrirReclamationObjet(id){
   document.getElementById("orObjetReclameId").value=id;
   document.getElementById("formulaireReclamationObjet").style.display="block";
   document.getElementById("orStatutReclamation").textContent="";
   document.getElementById("formulaireReclamationObjet").scrollIntoView({behavior:"smooth",block:"start"});
+  const p=await window.chargerCoordonneesPaiementMQCI();const zone=document.getElementById("coordonneesPaiementReclamation");if(zone)zone.textContent="Wave : "+p.numero+" · Orange Money : "+p.numero+" · Bénéficiaire : "+p.beneficiaire;
 }
 async function envoyerReclamationObjet(){
   const objetId=document.getElementById("orObjetReclameId").value;
@@ -4021,6 +4025,20 @@ const CONFIG_ABONNEMENTS_DEFAUT={
 };
 const NUMERO_PAIEMENT_MQCI="0757522319";
 const BENEFICIAIRE_PAIEMENT_MQCI="TA BI SERGE KEVIN";
+let coordonneesPaiementMQCI={numero:NUMERO_PAIEMENT_MQCI,beneficiaire:BENEFICIAIRE_PAIEMENT_MQCI};
+window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
+window.chargerCoordonneesPaiementMQCI=async function(forcer=false){
+ try{
+  const snap=await db.collection("configuration_abonnements").doc("globale").get(forcer?{source:"server"}:undefined);
+  const p=snap.exists?(snap.data().paiement||{}):{};
+  const numero=String(p.numero||NUMERO_PAIEMENT_MQCI).trim();
+  const beneficiaire=String(p.beneficiaire||BENEFICIAIRE_PAIEMENT_MQCI).trim();
+  if(!/^[+0-9 .()-]{8,24}$/.test(numero)||beneficiaire.length<2||beneficiaire.length>100)throw new Error("Coordonnées de paiement invalides.");
+  coordonneesPaiementMQCI={numero,beneficiaire};
+  window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
+  return coordonneesPaiementMQCI;
+ }catch(e){console.warn("Coordonnées de paiement : configuration par défaut conservée.",e);return coordonneesPaiementMQCI;}
+};
 let configurationAbonnementsCachee={};
 let configurationAbonnementsPromise=null;
 async function obtenirConfigurationAbonnement(id,forcerLectureServeur=false){
@@ -4060,7 +4078,17 @@ async function chargerConfigurationAbonnementsAdmin(){
  try{
   const snap=await db.collection("configuration_abonnements").doc("globale").get();
   configurationAbonnementsCachee=snap.exists?(snap.data().services||{}):{};
+  const paiement=snap.exists?(snap.data().paiement||{}):{};
+  coordonneesPaiementMQCI={
+   numero:String(paiement.numero||NUMERO_PAIEMENT_MQCI),
+   beneficiaire:String(paiement.beneficiaire||BENEFICIAIRE_PAIEMENT_MQCI)
+  };
+  window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
   zone.innerHTML="";
+  const paiementCard=document.createElement("section");paiementCard.className="card";paiementCard.style.cssText="padding:14px;margin:12px 0;border:2px solid #16834A;border-radius:12px";
+  const echapperAttributPaiement=v=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  paiementCard.innerHTML='<h4>Coordonnées communes de réception des paiements</h4><p>Ces coordonnées seront affichées dans les rubriques payantes de Mon Quotidien CI. Les tarifs de chaque service restent indépendants.</p><label>Numéro Wave et Orange Money</label><input id="cfgPaiementNumero" type="tel" maxlength="24" value="'+echapperAttributPaiement(coordonneesPaiementMQCI.numero)+'"><label>Nom du bénéficiaire</label><input id="cfgPaiementBeneficiaire" maxlength="100" value="'+echapperAttributPaiement(coordonneesPaiementMQCI.beneficiaire)+'">';
+  zone.appendChild(paiementCard);
   Object.keys(CONFIG_ABONNEMENTS_DEFAUT).forEach(id=>{
    const c={...CONFIG_ABONNEMENTS_DEFAUT[id],...(configurationAbonnementsCachee[id]||{})};
    const card=document.createElement("section");card.className="card";card.style.cssText="padding:14px;margin:12px 0;border:1px solid #ddd;border-radius:12px";
@@ -4084,6 +4112,9 @@ async function chargerConfigurationAbonnementsAdmin(){
 async function sauvegarderConfigurationAbonnementsAdmin(){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
  const services={};
+ const numeroPaiement=document.getElementById("cfgPaiementNumero")?.value.trim()||"";
+ const beneficiairePaiement=document.getElementById("cfgPaiementBeneficiaire")?.value.trim()||"";
+ if(!/^[+0-9 .()-]{8,24}$/.test(numeroPaiement)||beneficiairePaiement.length<2||beneficiairePaiement.length>100)return alert("Vérifie le numéro de paiement et le nom du bénéficiaire.");
  for(const id of Object.keys(CONFIG_ABONNEMENTS_DEFAUT)){
   const lire=suffixe=>document.getElementById('cfg_'+id+'_'+suffixe);
   const prix=Number(lire('prix').value),duree=Number(lire('duree').value),essai=Number(lire('essai').value),promotionPrix=Number(lire('promoPrix').value);
@@ -4095,8 +4126,8 @@ async function sauvegarderConfigurationAbonnementsAdmin(){
   services[id]={libelle:CONFIG_ABONNEMENTS_DEFAUT[id].libelle,actif:lire('actif').checked,prix,duree,unite,essai,promotionActive:lire('promo').checked,promotionPrix,promotionDebut:debut,promotionFin:fin,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
  }
  try{
-  await db.collection("configuration_abonnements").doc("globale").set({services,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.uid},{merge:true});
-  configurationAbonnementsCachee=services;configurationAbonnementsPromise=null;alert("Paramètres enregistrés. Ils sont conservés dans Firestore.");await chargerConfigurationAbonnementsAdmin();
+  await db.collection("configuration_abonnements").doc("globale").set({services,paiement:{numero:numeroPaiement,beneficiaire:beneficiairePaiement},updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.uid},{merge:true});
+  configurationAbonnementsCachee=services;configurationAbonnementsPromise=null;coordonneesPaiementMQCI={numero:numeroPaiement,beneficiaire:beneficiairePaiement};window.MQCI_PAIEMENT=coordonneesPaiementMQCI;alert("Paramètres enregistrés. Les coordonnées de paiement sont également mises à jour.");await chargerConfigurationAbonnementsAdmin();
  }catch(e){console.error(e);alert("Enregistrement impossible : "+e.message+" Vérifie les règles Firestore.");}
 }
 
@@ -5665,10 +5696,11 @@ function afficherFormulaireInscriptionCompagnie(zone){
       <p id="partCompagniePrix" class="notice">Tarif : 5 000 FCFA / mois</p>
       <label>Moyen de paiement</label><select id="partCompagniePaiement"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select>
       <label>Référence de paiement</label><input id="partCompagnieReference" maxlength="80" placeholder="Référence de la transaction" required>
-      <p class="notice">Le tarif et la durée sont déterminés par la formule choisie et les paramètres en vigueur. Paiement Wave ou Orange Money au ${NUMERO_PAIEMENT_MQCI}. Bénéficiaire : ${BENEFICIAIRE_PAIEMENT_MQCI}. L’activation intervient après vérification par l’administration.</p>
+      <p class="notice" id="partCompagnieCoordonneesPaiement">Chargement des coordonnées de paiement...</p><p class="notice">Le tarif et la durée sont déterminés par la formule choisie et les paramètres en vigueur. L’activation intervient après vérification par l’administration.</p>
       <button type="button" class="primary" onclick="envoyerInscriptionCompagnie()">Envoyer mon dossier</button>
       <p id="partCompagnieStatut" class="notice" aria-live="polite"></p>
     </div>`;
+  window.chargerCoordonneesPaiementMQCI().then(p=>{const el=document.getElementById("partCompagnieCoordonneesPaiement");if(el)el.textContent="Paiement Wave ou Orange Money au "+p.numero+". Bénéficiaire : "+p.beneficiaire+"."});
 }
 function actualiserPrixInscriptionCompagnie(){
   const formule=document.getElementById("partCompagnieFormule")?.value||"Essentielle";
@@ -7021,11 +7053,12 @@ async function actualiserTarifPublicAutomobiliste(){
   try{
     const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
     if(!cfg.actif){zone.innerHTML="<strong>Les nouvelles souscriptions sont temporairement suspendues.</strong>";return;}
+    const paiement=await window.chargerCoordonneesPaiementMQCI();
     const montant=tarifAbonnementEffectif(cfg),duree=Number(cfg.duree),unite=cfg.unite==="mois"?"mois":"jours";
     zone.innerHTML="<strong>Tarif actuel : "+montant.toLocaleString("fr-FR")+" FCFA / "+duree+" "+unite+"</strong>"+
-      '<p style="margin:8px 0 4px;">Wave : <strong>'+NUMERO_PAIEMENT_MQCI+'</strong></p>'+
-      '<p style="margin:4px 0;">Orange Money : <strong>'+NUMERO_PAIEMENT_MQCI+'</strong></p>'+
-      '<p style="margin:4px 0;">Titulaire : <strong>'+BENEFICIAIRE_PAIEMENT_MQCI+'</strong></p>'+
+      '<p style="margin:8px 0 4px;">Wave : <strong>'+echapperTextePublicite(paiement.numero)+'</strong></p>'+
+      '<p style="margin:4px 0;">Orange Money : <strong>'+echapperTextePublicite(paiement.numero)+'</strong></p>'+
+      '<p style="margin:4px 0;">Titulaire : <strong>'+echapperTextePublicite(paiement.beneficiaire)+'</strong></p>'+
       '<p style="font-size:13px;margin-bottom:0;">Effectuez le transfert du montant indiqué, puis saisissez la référence de la transaction. L’accès sera activé après vérification manuelle.</p>';
   }catch(e){
     console.error("Lecture du tarif automobiliste impossible :",e);
