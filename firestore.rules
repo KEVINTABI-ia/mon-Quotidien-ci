@@ -125,12 +125,12 @@ service cloud.firestore {
           && request.resource.data.email == request.auth.token.email
           && request.resource.data.keys().hasAll([
             "uid","nom","agence","localisation","telephone","email","destinations",
-            "formule","periodicite","montant","moyenPaiement","referencePaiement",
+            "formule","periodicite","montant","dureeMois","moyenPaiement","referencePaiement",
             "statutAbonnement","dateCreation","dateDebut","dateExpiration"
           ])
           && request.resource.data.keys().hasOnly([
             "uid","nom","agence","localisation","telephone","email","logo","destinations",
-            "formule","periodicite","montant","moyenPaiement","referencePaiement",
+            "formule","periodicite","montant","dureeMois","moyenPaiement","referencePaiement",
             "statutAbonnement","dateCreation","dateDebut","dateExpiration"
           ])
           && request.resource.data.uid == request.auth.uid
@@ -142,11 +142,25 @@ service cloud.firestore {
           && request.resource.data.destinations is list && request.resource.data.destinations.size() > 0 && request.resource.data.destinations.size() <= 100
           && request.resource.data.formule in ["Essentielle","Professionnelle"]
           && request.resource.data.periodicite in ["Mensuel","Annuel"]
+          && request.resource.data.montant is int && request.resource.data.montant > 0
+          && request.resource.data.dureeMois is int && request.resource.data.dureeMois > 0
           && (
-            (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Mensuel" && request.resource.data.montant == 5000)
-            || (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Annuel" && request.resource.data.montant == 50000)
-            || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Mensuel" && request.resource.data.montant == 10000)
-            || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Annuel" && request.resource.data.montant == 100000)
+            (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Mensuel"
+              && abonnementAutorise("compagnie_essentielle_mensuel")
+              && request.resource.data.montant <= abonnementChamp("compagnie_essentielle_mensuel", "prix", 5000)
+              && request.resource.data.dureeMois == abonnementChamp("compagnie_essentielle_mensuel", "duree", 1))
+            || (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Annuel"
+              && abonnementAutorise("compagnie_essentielle_annuel")
+              && request.resource.data.montant <= abonnementChamp("compagnie_essentielle_annuel", "prix", 50000)
+              && request.resource.data.dureeMois == abonnementChamp("compagnie_essentielle_annuel", "duree", 12))
+            || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Mensuel"
+              && abonnementAutorise("compagnie_professionnelle_mensuel")
+              && request.resource.data.montant <= abonnementChamp("compagnie_professionnelle_mensuel", "prix", 10000)
+              && request.resource.data.dureeMois == abonnementChamp("compagnie_professionnelle_mensuel", "duree", 1))
+            || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Annuel"
+              && abonnementAutorise("compagnie_professionnelle_annuel")
+              && request.resource.data.montant <= abonnementChamp("compagnie_professionnelle_annuel", "prix", 100000)
+              && request.resource.data.dureeMois == abonnementChamp("compagnie_professionnelle_annuel", "duree", 12))
           )
           && request.resource.data.moyenPaiement in ["Wave","Orange Money"]
           && request.resource.data.referencePaiement is string
