@@ -22,6 +22,12 @@ service cloud.firestore {
     function abonnementAutorise(service) {
       return abonnementChamp(service, "actif", true) == true;
     }
+    function abonnementMontantAutorise(service, montant, prixDefaut) {
+      return montant == abonnementChamp(service, "prix", prixDefaut)
+        || (abonnementChamp(service, "promotionActive", false) == true
+          && abonnementChamp(service, "promotionPrix", 0) > 0
+          && montant == abonnementChamp(service, "promotionPrix", 0));
+    }
     function dureeEnJours(service, defaut) {
       return abonnementChamp(service, "unite", "jours") == "mois"
         ? abonnementChamp(service, "duree", defaut) * 30
@@ -147,19 +153,19 @@ service cloud.firestore {
           && (
             (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Mensuel"
               && abonnementAutorise("compagnie_essentielle_mensuel")
-              && request.resource.data.montant <= abonnementChamp("compagnie_essentielle_mensuel", "prix", 5000)
+              && abonnementMontantAutorise("compagnie_essentielle_mensuel", request.resource.data.montant, 5000)
               && request.resource.data.dureeMois == abonnementChamp("compagnie_essentielle_mensuel", "duree", 1))
             || (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Annuel"
               && abonnementAutorise("compagnie_essentielle_annuel")
-              && request.resource.data.montant <= abonnementChamp("compagnie_essentielle_annuel", "prix", 50000)
+              && abonnementMontantAutorise("compagnie_essentielle_annuel", request.resource.data.montant, 50000)
               && request.resource.data.dureeMois == abonnementChamp("compagnie_essentielle_annuel", "duree", 12))
             || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Mensuel"
               && abonnementAutorise("compagnie_professionnelle_mensuel")
-              && request.resource.data.montant <= abonnementChamp("compagnie_professionnelle_mensuel", "prix", 10000)
+              && abonnementMontantAutorise("compagnie_professionnelle_mensuel", request.resource.data.montant, 10000)
               && request.resource.data.dureeMois == abonnementChamp("compagnie_professionnelle_mensuel", "duree", 1))
             || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Annuel"
               && abonnementAutorise("compagnie_professionnelle_annuel")
-              && request.resource.data.montant <= abonnementChamp("compagnie_professionnelle_annuel", "prix", 100000)
+              && abonnementMontantAutorise("compagnie_professionnelle_annuel", request.resource.data.montant, 100000)
               && request.resource.data.dureeMois == abonnementChamp("compagnie_professionnelle_annuel", "duree", 12))
           )
           && request.resource.data.moyenPaiement in ["Wave","Orange Money"]
@@ -691,7 +697,7 @@ service cloud.firestore {
           && abonnementAutorise("petites_annonces")
           && request.resource.data.montantRenouvellement is int
           && request.resource.data.montantRenouvellement > 0
-          && request.resource.data.montantRenouvellement <= abonnementChamp("petites_annonces", "prix", 500)
+          && abonnementMontantAutorise("petites_annonces", request.resource.data.montantRenouvellement, 500)
           && request.resource.data.dureeRenouvellementJours == dureeEnJours("petites_annonces", 30)
           && request.resource.data.paiementStatut == "a_verifier"
           && request.resource.data.demandeRenouvellementLe == request.time);
@@ -727,11 +733,11 @@ service cloud.firestore {
               && request.resource.data.montantAbonnement > 0
               && (
                 (abonnementAutorise("boutiques_15j")
-                  && request.resource.data.montantAbonnement <= abonnementChamp("boutiques_15j", "prix", 4000)
+                  && abonnementMontantAutorise("boutiques_15j", request.resource.data.montantAbonnement, 4000)
                   && request.resource.data.dureeAbonnementJours == dureeEnJours("boutiques_15j", 15))
                 ||
                 (abonnementAutorise("boutiques_30j")
-                  && request.resource.data.montantAbonnement <= abonnementChamp("boutiques_30j", "prix", 7000)
+                  && abonnementMontantAutorise("boutiques_30j", request.resource.data.montantAbonnement, 7000)
                   && request.resource.data.dureeAbonnementJours == dureeEnJours("boutiques_30j", 30))
               )
             && request.resource.data.paiementStatut == "a_verifier"))
@@ -805,7 +811,7 @@ service cloud.firestore {
         && abonnementAutorise("automobiliste")
         && request.resource.data.montantFCFA is int
         && request.resource.data.montantFCFA > 0
-        && request.resource.data.montantFCFA <= abonnementChamp("automobiliste", "prix", 1000)
+        && abonnementMontantAutorise("automobiliste", request.resource.data.montantFCFA, 1000)
         && request.resource.data.dureeMois == abonnementChamp("automobiliste", "duree", 12)
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time;
