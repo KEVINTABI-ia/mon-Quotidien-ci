@@ -4014,6 +4014,10 @@ const CONFIG_ABONNEMENTS_DEFAUT={
  boutiques_15j:{libelle:"Boutiques — formule 15 jours",actif:true,prix:4000,duree:15,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques_30j:{libelle:"Boutiques — formule 30 jours",actif:true,prix:7000,duree:30,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  partenaires_colis:{libelle:"Livreurs indépendants et représentants de gare",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ compagnie_essentielle_mensuel:{libelle:"Compagnie de voyage — Essentielle mensuelle",actif:true,prix:5000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ compagnie_essentielle_annuel:{libelle:"Compagnie de voyage — Essentielle annuelle",actif:true,prix:50000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ compagnie_professionnelle_mensuel:{libelle:"Compagnie de voyage — Professionnelle mensuelle",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ compagnie_professionnelle_annuel:{libelle:"Compagnie de voyage — Professionnelle annuelle",actif:true,prix:100000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  ramassage:{libelle:"Compagnies de ramassage",actif:true,prix:0,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
 };
 let configurationAbonnementsCachee={};
@@ -5682,8 +5686,11 @@ async function envoyerInscriptionCompagnie(){
       return {ville,prix,service:services[s]};
     });
   }catch(e){statut.textContent=e.message;return;}
-  const montant=tarifsAbonnements[formule]?.[periodicite];
-  if(!montant){statut.textContent="Formule d’abonnement invalide.";return;}
+  let cfgCompagnie;
+  try{cfgCompagnie=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));}catch(e){statut.textContent=e.message;return;}
+  if(!cfgCompagnie.actif){statut.textContent="Cette formule de compagnie est temporairement suspendue.";return;}
+  const montant=tarifAbonnementEffectif(cfgCompagnie),dureeMois=Number(cfgCompagnie.duree);
+  if(!montant||!dureeMois){statut.textContent="Tarif ou durée non configuré.";return;}
   statut.textContent="Création du compte et envoi du dossier...";
   try{
     let credential;
@@ -5693,7 +5700,7 @@ async function envoyerInscriptionCompagnie(){
     const fichier=document.getElementById("partCompagnieLogo")?.files?.[0];
     if(fichier){logo=await compresserImage(fichier);if(logo.length>300000)throw new Error("Le logo est trop volumineux après compression. Choisissez une image plus légère.");}
     await db.collection("compagnies").add({
-      uid:credential.user.uid,nom,agence,localisation,telephone,email,logo,destinations,formule,periodicite,montant,
+      uid:credential.user.uid,nom,agence,localisation,telephone,email,logo,destinations,formule,periodicite,montant,dureeMois,
       moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",
       dateCreation:firebase.firestore.FieldValue.serverTimestamp(),dateDebut:null,dateExpiration:null
     });
@@ -9125,32 +9132,18 @@ function afficherReseauNational(){
   });
 }
 // GESTION DES COMPAGNIES DE VOYAGE
-const tarifsAbonnements = {
-  Essentielle: { Mensuel: 5000, Annuel: 50000 },
-  Professionnelle: { Mensuel: 10000, Annuel: 100000 },
-};
-
-function actualiserPrixCompagnie() {
-  const formule = document.getElementById("compagnieFormule").value;
-  const periodicite = document.getElementById("compagniePeriodicite").value;
-
-  const tarifs = {
-    Essentielle: { Mensuel: 5000, Annuel: 50000 },
-    Professionnelle: { Mensuel: 10000, Annuel: 100000 },
-    };
-
-  const prix = tarifs[formule][periodicite];
-
-  document.getElementById("compagniePrix").textContent =
-    "Tarif : " + prix.toLocaleString("fr-FR") +
-    " FCFA / " + periodicite.toLowerCase();
+const tarifsAbonnements = {Essentielle:{Mensuel:5000,Annuel:50000},Professionnelle:{Mensuel:10000,Annuel:100000}};
+function cleConfigurationCompagnie(formule,periodicite){return "compagnie_"+(formule==="Professionnelle"?"professionnelle":"essentielle")+"_"+(periodicite==="Annuel"?"annuel":"mensuel");}
+async function actualiserPrixCompagnie(){
+ const formule=document.getElementById("compagnieFormule")?.value||"Essentielle",periodicite=document.getElementById("compagniePeriodicite")?.value||"Mensuel",zone=document.getElementById("compagniePrix");if(!zone)return;
+ try{const c=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));zone.textContent=!c.actif?"Souscriptions suspendues": "Tarif : "+tarifAbonnementEffectif(c).toLocaleString("fr-FR")+" FCFA / "+c.duree+" mois";}
+ catch(e){zone.textContent="Tarif indisponible.";}
 }
-
-document.getElementById("compagnieFormule")
-  .addEventListener("change", actualiserPrixCompagnie);
-
-document.getElementById("compagniePeriodicite")
-  .addEventListener("change", actualiserPrixCompagnie);
+async function actualiserPrixInscriptionCompagnie(){
+ const formule=document.getElementById("partCompagnieFormule")?.value||"Essentielle",periodicite=document.getElementById("partCompagniePeriodicite")?.value||"Mensuel",zone=document.getElementById("partCompagniePrix");if(!zone)return;
+ try{const c=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));zone.textContent=!c.actif?"Souscriptions suspendues":"Tarif : "+tarifAbonnementEffectif(c).toLocaleString("fr-FR")+" FCFA / "+c.duree+" mois";}
+ catch(e){zone.textContent="Tarif indisponible.";}
+}
 
 function echapperTexteCompagnie(texte) {
   return String(texte || "").replace(/[&<>"']/g, caractere => ({
@@ -9262,7 +9255,10 @@ async function enregistrerCompagnie() {
       return { ville, prix, service };
     });
 
-    const montant = tarifsAbonnements[formule][periodicite];
+    const cfgCompagnie=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));
+  if(!cfgCompagnie.actif)throw new Error("Cette formule de compagnie est temporairement suspendue.");
+  const montant=tarifAbonnementEffectif(cfgCompagnie),dureeMois=Number(cfgCompagnie.duree);
+  if(montant<=0||dureeMois<=0)throw new Error("Le tarif ou la durée de cette formule n’est pas correctement configuré.");
 
     let logo = "";
 
@@ -9283,6 +9279,7 @@ async function enregistrerCompagnie() {
       formule,
       periodicite,
       montant,
+      dureeMois,
       statutAbonnement: "En attente",
       dateCreation: firebase.firestore.FieldValue.serverTimestamp(),
       dateDebut: null,
@@ -9607,11 +9604,7 @@ const dateDebut =
 
 const dateExpiration = new Date(dateDebut);
 
-    if (compagnie.periodicite === "Annuel") {
-      dateExpiration.setFullYear(dateExpiration.getFullYear() + 1);
-    } else {
-      dateExpiration.setMonth(dateExpiration.getMonth() + 1);
-    }
+    dateExpiration.setMonth(dateExpiration.getMonth()+Number(compagnie.dureeMois||(compagnie.periodicite==="Annuel"?12:1)));
 
     await reference.update({
       statutAbonnement: "Actif",
@@ -9654,11 +9647,11 @@ async function demanderRenouvellementCompagnie(id) {
   return;
 }
 
-    await reference.update({
-      statutAbonnement: "En attente",
-      dateDemandeRenouvellement:
-        firebase.firestore.FieldValue.serverTimestamp()
-    });
+    const cfg=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(compagnie.formule||"Essentielle",compagnie.periodicite||"Mensuel"));
+    if(!cfg.actif)return alert("Les nouvelles souscriptions et renouvellements de cette formule sont suspendus.");
+    const montant=tarifAbonnementEffectif(cfg),dureeMois=Number(cfg.duree);
+    if(montant<=0||dureeMois<=0)return alert("Tarif ou durée non configuré.");
+    await reference.update({statutAbonnement:"En attente",montant,dureeMois,dateDemandeRenouvellement:firebase.firestore.FieldValue.serverTimestamp()});
 
     alert("Demande enregistrée. Vérifie le paiement avant validation.");
     chargerCompagniesAdmin();
