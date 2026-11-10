@@ -4057,7 +4057,7 @@ async function initialiserFormulaireAbonnementBoutique(){
  const select=document.getElementById("nsDureeAbonnement");if(!select)return;
  try{
   const formules=await Promise.all(["boutiques_1mois","boutiques_2mois","boutiques_3mois"].map(async id=>({id,c:await obtenirConfigurationAbonnement(id)})));
-  const options=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&dureeAbonnementEnJours(x.c)>0).map(x=>{const jours=dureeAbonnementEnJours(x.c),prix=tarifAbonnementEffectif(x.c);return '<option value="'+jours+'" data-montant="'+prix+'" data-config="'+x.id+'">'+jours+' jours — '+prix.toLocaleString("fr-FR")+' FCFA'+(prix<x.c.prix?' (promotion)':'')+'</option>';});
+  const options=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&dureeAbonnementEnJours(x.c)>0).map(x=>{const jours=dureeAbonnementEnJours(x.c),prix=tarifAbonnementEffectif(x.c);return '<option value="'+jours+'" data-montant="'+prix+'" data-config="'+x.id+'">'+Number(x.c.duree)+' mois — '+prix.toLocaleString("fr-FR")+' FCFA'+(prix<x.c.prix?' (promotion)':'')+'</option>';});
   select.innerHTML=options.length?options.join(""):'<option value="">Souscriptions temporairement suspendues ou formules non configurées</option>';
   select.disabled=!options.length;
  }catch(e){console.error(e);select.disabled=true;}
