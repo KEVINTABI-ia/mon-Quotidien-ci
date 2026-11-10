@@ -4021,6 +4021,20 @@ const CONFIG_ABONNEMENTS_DEFAUT={
 };
 const NUMERO_PAIEMENT_MQCI="0757522319";
 const BENEFICIAIRE_PAIEMENT_MQCI="TA BI SERGE KEVIN";
+let coordonneesPaiementMQCI={numero:NUMERO_PAIEMENT_MQCI,beneficiaire:BENEFICIAIRE_PAIEMENT_MQCI};
+window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
+window.chargerCoordonneesPaiementMQCI=async function(forcer=false){
+ try{
+  const snap=await db.collection("configuration_abonnements").doc("globale").get(forcer?{source:"server"}:undefined);
+  const p=snap.exists?(snap.data().paiement||{}):{};
+  const numero=String(p.numero||NUMERO_PAIEMENT_MQCI).trim();
+  const beneficiaire=String(p.beneficiaire||BENEFICIAIRE_PAIEMENT_MQCI).trim();
+  if(!/^[+0-9 .()-]{8,24}$/.test(numero)||beneficiaire.length<2||beneficiaire.length>100)throw new Error("Coordonnées de paiement invalides.");
+  coordonneesPaiementMQCI={numero,beneficiaire};
+  window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
+  return coordonneesPaiementMQCI;
+ }catch(e){console.warn("Coordonnées de paiement : configuration par défaut conservée.",e);return coordonneesPaiementMQCI;}
+};
 let configurationAbonnementsCachee={};
 let configurationAbonnementsPromise=null;
 async function obtenirConfigurationAbonnement(id,forcerLectureServeur=false){
@@ -4060,7 +4074,16 @@ async function chargerConfigurationAbonnementsAdmin(){
  try{
   const snap=await db.collection("configuration_abonnements").doc("globale").get();
   configurationAbonnementsCachee=snap.exists?(snap.data().services||{}):{};
+  const paiement=snap.exists?(snap.data().paiement||{}):{};
+  coordonneesPaiementMQCI={
+   numero:String(paiement.numero||NUMERO_PAIEMENT_MQCI),
+   beneficiaire:String(paiement.beneficiaire||BENEFICIAIRE_PAIEMENT_MQCI)
+  };
+  window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
   zone.innerHTML="";
+  const paiementCard=document.createElement("section");paiementCard.className="card";paiementCard.style.cssText="padding:14px;margin:12px 0;border:2px solid #16834A;border-radius:12px";
+  paiementCard.innerHTML='<h4>Coordonnées communes de réception des paiements</h4><p>Ces coordonnées seront affichées dans les rubriques payantes de Mon Quotidien CI. Les tarifs de chaque service restent indépendants.</p><label>Numéro Wave et Orange Money</label><input id="cfgPaiementNumero" type="tel" maxlength="24" value="'+coordonneesPaiementMQCI.numero.replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"><label>Nom du bénéficiaire</label><input id="cfgPaiementBeneficiaire" maxlength="100" value="'+coordonneesPaiementMQCI.beneficiaire.replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'">';
+  zone.appendChild(paiementCard);
   Object.keys(CONFIG_ABONNEMENTS_DEFAUT).forEach(id=>{
    const c={...CONFIG_ABONNEMENTS_DEFAUT[id],...(configurationAbonnementsCachee[id]||{})};
    const card=document.createElement("section");card.className="card";card.style.cssText="padding:14px;margin:12px 0;border:1px solid #ddd;border-radius:12px";
@@ -4084,6 +4107,9 @@ async function chargerConfigurationAbonnementsAdmin(){
 async function sauvegarderConfigurationAbonnementsAdmin(){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
  const services={};
+ const numeroPaiement=document.getElementById("cfgPaiementNumero")?.value.trim()||"";
+ const beneficiairePaiement=document.getElementById("cfgPaiementBeneficiaire")?.value.trim()||"";
+ if(!/^[+0-9 .()-]{8,24}$/.test(numeroPaiement)||beneficiairePaiement.length<2||beneficiairePaiement.length>100)return alert("Vérifie le numéro de paiement et le nom du bénéficiaire.");
  for(const id of Object.keys(CONFIG_ABONNEMENTS_DEFAUT)){
   const lire=suffixe=>document.getElementById('cfg_'+id+'_'+suffixe);
   const prix=Number(lire('prix').value),duree=Number(lire('duree').value),essai=Number(lire('essai').value),promotionPrix=Number(lire('promoPrix').value);
@@ -4095,8 +4121,8 @@ async function sauvegarderConfigurationAbonnementsAdmin(){
   services[id]={libelle:CONFIG_ABONNEMENTS_DEFAUT[id].libelle,actif:lire('actif').checked,prix,duree,unite,essai,promotionActive:lire('promo').checked,promotionPrix,promotionDebut:debut,promotionFin:fin,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
  }
  try{
-  await db.collection("configuration_abonnements").doc("globale").set({services,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.uid},{merge:true});
-  configurationAbonnementsCachee=services;configurationAbonnementsPromise=null;alert("Paramètres enregistrés. Ils sont conservés dans Firestore.");await chargerConfigurationAbonnementsAdmin();
+  await db.collection("configuration_abonnements").doc("globale").set({services,paiement:{numero:numeroPaiement,beneficiaire:beneficiairePaiement},updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.uid},{merge:true});
+  configurationAbonnementsCachee=services;configurationAbonnementsPromise=null;coordonneesPaiementMQCI={numero:numeroPaiement,beneficiaire:beneficiairePaiement};window.MQCI_PAIEMENT=coordonneesPaiementMQCI;alert("Paramètres enregistrés. Les coordonnées de paiement sont également mises à jour.");await chargerConfigurationAbonnementsAdmin();
  }catch(e){console.error(e);alert("Enregistrement impossible : "+e.message+" Vérifie les règles Firestore.");}
 }
 
