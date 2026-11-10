@@ -4013,6 +4013,7 @@ const CONFIG_ABONNEMENTS_DEFAUT={
  automobiliste:{libelle:"Abonnement automobiliste",actif:true,prix:1000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques:{libelle:"Boutiques",actif:true,prix:4000,duree:15,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  partenaires_colis:{libelle:"Livreurs indépendants et représentants de gare",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ ramassage:{libelle:"Compagnies de ramassage",actif:true,prix:0,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
 };
 let configurationAbonnementsCachee={};
 let configurationAbonnementsPromise=null;
@@ -4077,6 +4078,7 @@ async function sauvegarderConfigurationAbonnementsAdmin(){
   const prix=Number(lire('prix').value),duree=Number(lire('duree').value),essai=Number(lire('essai').value),promotionPrix=Number(lire('promoPrix').value);
   const unite=lire('unite').value, debut=lire('promoDebut').value,fin=lire('promoFin').value;
   if(!Number.isFinite(prix)||prix<0||!Number.isInteger(prix)||!Number.isFinite(duree)||duree<1||!Number.isInteger(duree)||!Number.isInteger(essai)||essai<0||!Number.isInteger(promotionPrix)||promotionPrix<0)return alert("Vérifie les prix, durées et périodes gratuites : nombres entiers positifs uniquement.");
+  if(id==="petites_annonces"&&essai<1)return alert("Le parcours de paiement du premier abonnement des petites annonces n’est pas encore disponible : conserve au moins un jour de période gratuite.");
   if(lire('promo').checked&&(!promotionPrix||promotionPrix>prix||!debut||!fin||fin<debut))return alert("Chaque promotion active doit avoir un prix inférieur ou égal au prix normal, ainsi qu'une date de début et de fin valides.");
   services[id]={libelle:CONFIG_ABONNEMENTS_DEFAUT[id].libelle,actif:lire('actif').checked,prix,duree,unite,essai,promotionActive:lire('promo').checked,promotionPrix,promotionDebut:debut,promotionFin:fin,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
  }
@@ -7391,9 +7393,7 @@ async function modifierStatutCompagnieRamassage(uid,statut){
 }
 async function activerAbonnementCompagnieRamassage(uid){
   if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
-  if(!confirm("Confirme-tu que le paiement mensuel de cette compagnie a bien été reçu ?"))return;
-  const expiration=new Date(Date.now()+30*24*60*60*1000);
-  try{await db.collection("comptes_ramassage").doc(uid).update({statut:"approuve",abonnement:"actif",dateExpirationAbonnement:firebase.firestore.Timestamp.fromDate(expiration)});alert("Abonnement activé pour 30 jours.");await chargerCompagniesRamassageAdmin();}
+  try{const cfg=await obtenirConfigurationAbonnement("ramassage");if(!cfg.actif)return alert("Les nouvelles souscriptions des compagnies de ramassage sont suspendues.");const jours=dureeAbonnementEnJours(cfg),montant=tarifAbonnementEffectif(cfg);if(montant<=0||jours<=0)return alert("Configure d'abord un prix supérieur à zéro et une durée dans Gestion générale des abonnements.");if(!confirm("Confirmer la réception de "+montant.toLocaleString("fr-FR")+" FCFA pour "+jours+" jours ?"))return;const expiration=new Date(Date.now()+jours*86400000);await db.collection("comptes_ramassage").doc(uid).update({statut:"approuve",abonnement:"actif",montantAbonnement:montant,dureeAbonnementJours:jours,dateExpirationAbonnement:firebase.firestore.Timestamp.fromDate(expiration)});alert("Abonnement activé pour "+jours+" jours.");await chargerCompagniesRamassageAdmin();}
   catch(e){alert("Activation impossible : "+e.message);}
 }
 
