@@ -3472,7 +3472,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
  ${type==="annonce"?'<div id="zoneAbonnementPetitesAnnonces" style="margin:12px 0;"><button type="button" onclick="ouvrirGestionAbonnementPetitesAnnonces()">Consulter mon abonnement / renouveler</button></div>':""}
- ${type==="commerce"&&!modePartenaire?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="15" data-montant="4000">15 jours — 4 000 FCFA</option><option value="30" data-montant="7000">30 jours — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p>Wave : <strong>0757522319</strong><br>Orange Money : <strong>0757522319</strong><br>Titulaire : <strong>TA BI SERGE KEVIN</strong></p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
+ ${type==="commerce"&&!modePartenaire?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="15" data-montant="4000">15 jours — 4 000 FCFA</option><option value="30" data-montant="7000">30 jours — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p>Wave : <strong>'+NUMERO_PAIEMENT_MQCI+'</strong><br>Orange Money : <strong>'+NUMERO_PAIEMENT_MQCI+'</strong><br>Titulaire : <strong>'+BENEFICIAIRE_PAIEMENT_MQCI+'</strong></p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
  <button class="primary" type="button" onclick="envoyerNouveauService()">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
  </div>`;
@@ -3584,7 +3584,7 @@ async function ouvrirGestionAbonnementPetitesAnnonces(){
   const d=snap.data(),fin=d.dateExpiration?.toDate?.(),actif=!!fin&&fin.getTime()>Date.now();
   if(actif){zone.innerHTML='<p class="notice">Abonnement actif jusqu’au '+fin.toLocaleDateString("fr-FR")+'. Plusieurs annonces sont autorisées pendant cette période.</p>';return;}
   if(d.paiementStatut==="a_verifier"){zone.innerHTML='<p class="notice">Votre paiement est en attente de vérification. La publication de nouvelles annonces sera débloquée après confirmation.</p>';return;}
-  const cfg=await obtenirConfigurationAbonnement("petites_annonces");if(!cfg.actif){zone.innerHTML='<p class="notice">Les renouvellements sont temporairement suspendus.</p>';return;}const montant=tarifAbonnementEffectif(cfg),jours=dureeAbonnementEnJours(cfg);zone.innerHTML='<div class="card" style="padding:12px;"><strong>Renouvellement : '+montant.toLocaleString("fr-FR")+' FCFA pour '+jours+' jours</strong><p>Wave : <strong>07 57 52 23 19</strong><br>Orange Money : <strong>07 57 52 23 19</strong><br>Titulaire : <strong>TA BI SERGE KEVIN</strong></p><label>Moyen de paiement</label><select id="nsRenouvellementMoyen"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select><label>Référence de transaction</label><input id="nsRenouvellementReference" maxlength="80" placeholder="Référence reçue après paiement"><button type="button" class="primary" onclick="envoyerRenouvellementPetitesAnnonces()">Envoyer pour vérification</button></div>';
+  const cfg=await obtenirConfigurationAbonnement("petites_annonces");if(!cfg.actif){zone.innerHTML='<p class="notice">Les renouvellements sont temporairement suspendus.</p>';return;}const montant=tarifAbonnementEffectif(cfg),jours=dureeAbonnementEnJours(cfg);zone.innerHTML='<div class="card" style="padding:12px;"><strong>Renouvellement : '+montant.toLocaleString("fr-FR")+' FCFA pour '+jours+' jours</strong><p>Wave : <strong>'+NUMERO_PAIEMENT_MQCI+'</strong><br>Orange Money : <strong>'+NUMERO_PAIEMENT_MQCI+'</strong><br>Titulaire : <strong>'+BENEFICIAIRE_PAIEMENT_MQCI+'</strong></p><label>Moyen de paiement</label><select id="nsRenouvellementMoyen"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select><label>Référence de transaction</label><input id="nsRenouvellementReference" maxlength="80" placeholder="Référence reçue après paiement"><button type="button" class="primary" onclick="envoyerRenouvellementPetitesAnnonces()">Envoyer pour vérification</button></div>';
  }catch(e){zone.textContent="Consultation impossible : "+(e.message||"réessayez.");}
 }
 async function envoyerRenouvellementPetitesAnnonces(){
@@ -4019,6 +4019,8 @@ const CONFIG_ABONNEMENTS_DEFAUT={
  compagnie_professionnelle_annuel:{libelle:"Compagnie de voyage — Professionnelle annuelle",actif:true,prix:100000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  ramassage:{libelle:"Compagnies de ramassage",actif:true,prix:0,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
 };
+const NUMERO_PAIEMENT_MQCI="0757522319";
+const BENEFICIAIRE_PAIEMENT_MQCI="TA BI SERGE KEVIN";
 let configurationAbonnementsCachee={};
 let configurationAbonnementsPromise=null;
 async function obtenirConfigurationAbonnement(id,forcerLectureServeur=false){
@@ -5663,7 +5665,7 @@ function afficherFormulaireInscriptionCompagnie(zone){
       <p id="partCompagniePrix" class="notice">Tarif : 5 000 FCFA / mois</p>
       <label>Moyen de paiement</label><select id="partCompagniePaiement"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select>
       <label>Référence de paiement</label><input id="partCompagnieReference" maxlength="80" placeholder="Référence de la transaction" required>
-      <p class="notice">Le tarif et la durée sont déterminés par la formule choisie et les paramètres en vigueur. Paiement Wave ou Orange Money au 0757522319. L’activation intervient après vérification par l’administration.</p>
+      <p class="notice">Le tarif et la durée sont déterminés par la formule choisie et les paramètres en vigueur. Paiement Wave ou Orange Money au ${NUMERO_PAIEMENT_MQCI}. Bénéficiaire : ${BENEFICIAIRE_PAIEMENT_MQCI}. L’activation intervient après vérification par l’administration.</p>
       <button type="button" class="primary" onclick="envoyerInscriptionCompagnie()">Envoyer mon dossier</button>
       <p id="partCompagnieStatut" class="notice" aria-live="polite"></p>
     </div>`;
@@ -7021,9 +7023,9 @@ async function actualiserTarifPublicAutomobiliste(){
     if(!cfg.actif){zone.innerHTML="<strong>Les nouvelles souscriptions sont temporairement suspendues.</strong>";return;}
     const montant=tarifAbonnementEffectif(cfg),duree=Number(cfg.duree),unite=cfg.unite==="mois"?"mois":"jours";
     zone.innerHTML="<strong>Tarif actuel : "+montant.toLocaleString("fr-FR")+" FCFA / "+duree+" "+unite+"</strong>"+
-      '<p style="margin:8px 0 4px;">Wave : <strong>0757522319</strong></p>'+
-      '<p style="margin:4px 0;">Orange Money : <strong>0757522319</strong></p>'+
-      '<p style="margin:4px 0;">Titulaire : <strong>TA BI SERGE KEVIN</strong></p>'+
+      '<p style="margin:8px 0 4px;">Wave : <strong>'+NUMERO_PAIEMENT_MQCI+'</strong></p>'+
+      '<p style="margin:4px 0;">Orange Money : <strong>'+NUMERO_PAIEMENT_MQCI+'</strong></p>'+
+      '<p style="margin:4px 0;">Titulaire : <strong>'+BENEFICIAIRE_PAIEMENT_MQCI+'</strong></p>'+
       '<p style="font-size:13px;margin-bottom:0;">Effectuez le transfert du montant indiqué, puis saisissez la référence de la transaction. L’accès sera activé après vérification manuelle.</p>';
   }catch(e){
     console.error("Lecture du tarif automobiliste impossible :",e);
