@@ -3375,7 +3375,7 @@ async function envoyerInscriptionAnnuaire(){
  if(!titre||!categorie||!commune||!telephone||!description||!email||password.length<6){statut.textContent="Complétez les champs obligatoires. Mot de passe : 6 caractères minimum.";return;}
  statut.textContent="Envoi du dossier...";
  try{
-  if(estBoutique){const cfg=await obtenirConfigurationAbonnement("boutiques");if(!cfg.actif)throw new Error("Les nouvelles souscriptions boutique sont temporairement suspendues.");if(!document.getElementById("nsDureeAbonnement")?.value)throw new Error("Aucune formule boutique n’est actuellement disponible.");}
+  if(estBoutique){const choix=document.getElementById("nsDureeAbonnement")?.selectedOptions[0],idConfig=choix?.dataset.config;if(!idConfig)throw new Error("Aucune formule boutique n’est actuellement disponible.");const cfg=await obtenirConfigurationAbonnement(idConfig);if(!cfg.actif||Number(choix.dataset.montant)!==tarifAbonnementEffectif(cfg)||Number(choix.value)!==dureeAbonnementEnJours(cfg))throw new Error("La formule boutique a changé. Actualisez la page et réessayez.");}
   let user=auth.currentUser;if(user&&user.email!==email){await auth.signOut();user=null;}
   if(!user){try{user=(await auth.createUserWithEmailAndPassword(email,password)).user;}catch(e){if(e.code==="auth/email-already-in-use")user=(await auth.signInWithEmailAndPassword(email,password)).user;else throw e;}}
   await db.collection("demandes_nouveaux_services").add({uid:user.uid,type:"annuaire",rubrique:annuaireRubriqueActive,titre,categorie,commune,quartier,telephone,description,email,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
@@ -4011,7 +4011,8 @@ async function traiterReclamationObjet(id,statut){
 const CONFIG_ABONNEMENTS_DEFAUT={
  petites_annonces:{libelle:"Petites annonces de ma commune",actif:true,prix:500,duree:30,unite:"jours",essai:30,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  automobiliste:{libelle:"Abonnement automobiliste",actif:true,prix:1000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
- boutiques:{libelle:"Boutiques",actif:true,prix:4000,duree:15,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ boutiques_15j:{libelle:"Boutiques — formule 15 jours",actif:true,prix:4000,duree:15,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ boutiques_30j:{libelle:"Boutiques — formule 30 jours",actif:true,prix:7000,duree:30,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  partenaires_colis:{libelle:"Livreurs indépendants et représentants de gare",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  ramassage:{libelle:"Compagnies de ramassage",actif:true,prix:0,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
 };
@@ -4032,9 +4033,12 @@ function tarifAbonnementEffectif(c){
 function dureeAbonnementEnJours(c){const n=Number(c.duree||1);return c.unite==="mois"?Math.round(n*30):n;}
 async function initialiserFormulaireAbonnementBoutique(){
  const select=document.getElementById("nsDureeAbonnement");if(!select)return;
- try{const c=await obtenirConfigurationAbonnement("boutiques");if(!c.actif){select.innerHTML='<option value="">Souscriptions temporairement suspendues</option>';select.disabled=true;return;}
- const jours=dureeAbonnementEnJours(c),prix=tarifAbonnementEffectif(c);if(prix<=0||jours<=0){select.innerHTML='<option value="">Formule non configurée</option>';select.disabled=true;return;}select.innerHTML='<option value="'+jours+'" data-montant="'+prix+'">'+jours+' jours — '+prix.toLocaleString("fr-FR")+' FCFA'+(c.promotionActive&&prix<c.prix?' (promotion)':'')+'</option>';select.disabled=false;
- }catch(e){console.error(e);}
+ try{
+  const formules=await Promise.all(["boutiques_15j","boutiques_30j"].map(async id=>({id,c:await obtenirConfigurationAbonnement(id)})));
+  const options=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&dureeAbonnementEnJours(x.c)>0).map(x=>{const jours=dureeAbonnementEnJours(x.c),prix=tarifAbonnementEffectif(x.c);return '<option value="'+jours+'" data-montant="'+prix+'" data-config="'+x.id+'">'+jours+' jours — '+prix.toLocaleString("fr-FR")+' FCFA'+(prix<x.c.prix?' (promotion)':'')+'</option>';});
+  select.innerHTML=options.length?options.join(""):'<option value="">Souscriptions temporairement suspendues ou formules non configurées</option>';
+  select.disabled=!options.length;
+ }catch(e){console.error(e);select.disabled=true;}
 }
 
 function valeurConfigAbonnement(id,champ){
