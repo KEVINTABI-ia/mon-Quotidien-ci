@@ -4086,7 +4086,8 @@ async function chargerConfigurationAbonnementsAdmin(){
   window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
   zone.innerHTML="";
   const paiementCard=document.createElement("section");paiementCard.className="card";paiementCard.style.cssText="padding:14px;margin:12px 0;border:2px solid #16834A;border-radius:12px";
-  paiementCard.innerHTML='<h4>Coordonnées communes de réception des paiements</h4><p>Ces coordonnées seront affichées dans les rubriques payantes de Mon Quotidien CI. Les tarifs de chaque service restent indépendants.</p><label>Numéro Wave et Orange Money</label><input id="cfgPaiementNumero" type="tel" maxlength="24" value="'+coordonneesPaiementMQCI.numero.replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"><label>Nom du bénéficiaire</label><input id="cfgPaiementBeneficiaire" maxlength="100" value="'+coordonneesPaiementMQCI.beneficiaire.replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'">';
+  const echapperAttributPaiement=v=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  paiementCard.innerHTML='<h4>Coordonnées communes de réception des paiements</h4><p>Ces coordonnées seront affichées dans les rubriques payantes de Mon Quotidien CI. Les tarifs de chaque service restent indépendants.</p><label>Numéro Wave et Orange Money</label><input id="cfgPaiementNumero" type="tel" maxlength="24" value="'+echapperAttributPaiement(coordonneesPaiementMQCI.numero)+'"><label>Nom du bénéficiaire</label><input id="cfgPaiementBeneficiaire" maxlength="100" value="'+echapperAttributPaiement(coordonneesPaiementMQCI.beneficiaire)+'">';
   zone.appendChild(paiementCard);
   Object.keys(CONFIG_ABONNEMENTS_DEFAUT).forEach(id=>{
    const c={...CONFIG_ABONNEMENTS_DEFAUT[id],...(configurationAbonnementsCachee[id]||{})};
