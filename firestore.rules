@@ -709,11 +709,17 @@ service cloud.firestore {
             && request.resource.data.paiementReference is string
             && request.resource.data.paiementReference.size() >= 4
             && request.resource.data.paiementReference.size() <= 80
-            && (abonnementAutorise("boutiques")
-              && request.resource.data.montantAbonnement is int
+            && request.resource.data.montantAbonnement is int
               && request.resource.data.montantAbonnement > 0
-              && request.resource.data.montantAbonnement <= abonnementChamp("boutiques", "prix", 4000)
-              && request.resource.data.dureeAbonnementJours == dureeEnJours("boutiques", 15))
+              && (
+                (abonnementAutorise("boutiques_15j")
+                  && request.resource.data.montantAbonnement <= abonnementChamp("boutiques_15j", "prix", 4000)
+                  && request.resource.data.dureeAbonnementJours == dureeEnJours("boutiques_15j", 15))
+                ||
+                (abonnementAutorise("boutiques_30j")
+                  && request.resource.data.montantAbonnement <= abonnementChamp("boutiques_30j", "prix", 7000)
+                  && request.resource.data.dureeAbonnementJours == dureeEnJours("boutiques_30j", 30))
+              )
             && request.resource.data.paiementStatut == "a_verifier"))
         && request.resource.data.titre is string && request.resource.data.titre.size() > 0 && request.resource.data.titre.size() <= 100
         && request.resource.data.categorie is string && request.resource.data.categorie.size() <= 80
