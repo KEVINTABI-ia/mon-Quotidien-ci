@@ -3587,7 +3587,7 @@ async function ouvrirGestionAbonnementPetitesAnnonces(){
   const d=snap.data(),fin=d.dateExpiration?.toDate?.(),actif=!!fin&&fin.getTime()>Date.now();
   if(actif){zone.innerHTML='<p class="notice">Abonnement actif jusqu’au '+fin.toLocaleDateString("fr-FR")+'. Plusieurs annonces sont autorisées pendant cette période.</p>';return;}
   if(d.paiementStatut==="a_verifier"){zone.innerHTML='<p class="notice">Votre paiement est en attente de vérification. La publication de nouvelles annonces sera débloquée après confirmation.</p>';return;}
-  const cfg=await obtenirConfigurationAbonnement("petites_annonces");if(!cfg.actif){zone.innerHTML='<p class="notice">Les renouvellements sont temporairement suspendus.</p>';return;}const paiement=await window.chargerCoordonneesPaiementMQCI();const montant=tarifAbonnementEffectif(cfg),jours=dureeAbonnementEnJours(cfg);zone.innerHTML='<div class="card" style="padding:12px;"><strong>Renouvellement : '+montant.toLocaleString("fr-FR")+' FCFA pour '+jours+' jours</strong><p>Wave : <strong>'+echapperTextePublicite(paiement.numero)+'</strong><br>Orange Money : <strong>'+paiement.numero+'</strong><br>Titulaire : <strong>'+echapperTextePublicite(paiement.beneficiaire)+'</strong></p><label>Moyen de paiement</label><select id="nsRenouvellementMoyen"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select><label>Référence de transaction</label><input id="nsRenouvellementReference" maxlength="80" placeholder="Référence reçue après paiement"><button type="button" class="primary" onclick="envoyerRenouvellementPetitesAnnonces()">Envoyer pour vérification</button></div>';
+  const cfg=await obtenirConfigurationAbonnement("petites_annonces");if(!cfg.actif){zone.innerHTML='<p class="notice">Les renouvellements sont temporairement suspendus.</p>';return;}const paiement=await window.chargerCoordonneesPaiementMQCI();const montant=tarifAbonnementEffectif(cfg),jours=dureeAbonnementEnJours(cfg);zone.innerHTML='<div class="card" style="padding:12px;"><strong>Renouvellement : '+montant.toLocaleString("fr-FR")+' FCFA pour '+jours+' jours</strong><p>Wave : <strong>'+echapperTextePublicite(paiement.numero)+'</strong><br>Orange Money : <strong>'+echapperTextePublicite(paiement.numero)+'</strong><br>Titulaire : <strong>'+echapperTextePublicite(paiement.beneficiaire)+'</strong></p><label>Moyen de paiement</label><select id="nsRenouvellementMoyen"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select><label>Référence de transaction</label><input id="nsRenouvellementReference" maxlength="80" placeholder="Référence reçue après paiement"><button type="button" class="primary" onclick="envoyerRenouvellementPetitesAnnonces()">Envoyer pour vérification</button></div>';
  }catch(e){zone.textContent="Consultation impossible : "+(e.message||"réessayez.");}
 }
 async function envoyerRenouvellementPetitesAnnonces(){
@@ -7056,9 +7056,9 @@ async function actualiserTarifPublicAutomobiliste(){
     const paiement=await window.chargerCoordonneesPaiementMQCI();
     const montant=tarifAbonnementEffectif(cfg),duree=Number(cfg.duree),unite=cfg.unite==="mois"?"mois":"jours";
     zone.innerHTML="<strong>Tarif actuel : "+montant.toLocaleString("fr-FR")+" FCFA / "+duree+" "+unite+"</strong>"+
-      '<p style="margin:8px 0 4px;">Wave : <strong>'+paiement.numero+'</strong></p>'+
+      '<p style="margin:8px 0 4px;">Wave : <strong>'+echapperTextePublicite(paiement.numero)+'</strong></p>'+
       '<p style="margin:4px 0;">Orange Money : <strong>'+paiement.numero+'</strong></p>'+
-      '<p style="margin:4px 0;">Titulaire : <strong>'+paiement.beneficiaire+'</strong></p>'+
+      '<p style="margin:4px 0;">Titulaire : <strong>'+echapperTextePublicite(paiement.beneficiaire)+'</strong></p>'+
       '<p style="font-size:13px;margin-bottom:0;">Effectuez le transfert du montant indiqué, puis saisissez la référence de la transaction. L’accès sera activé après vérification manuelle.</p>';
   }catch(e){
     console.error("Lecture du tarif automobiliste impossible :",e);
