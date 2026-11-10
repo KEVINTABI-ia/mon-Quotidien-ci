@@ -3375,6 +3375,7 @@ async function envoyerInscriptionAnnuaire(){
  if(!titre||!categorie||!commune||!telephone||!description||!email||password.length<6){statut.textContent="Complétez les champs obligatoires. Mot de passe : 6 caractères minimum.";return;}
  statut.textContent="Envoi du dossier...";
  try{
+  if(estBoutique){const cfg=await obtenirConfigurationAbonnement("boutiques");if(!cfg.actif)throw new Error("Les nouvelles souscriptions boutique sont temporairement suspendues.");if(!document.getElementById("nsDureeAbonnement")?.value)throw new Error("Aucune formule boutique n’est actuellement disponible.");}
   let user=auth.currentUser;if(user&&user.email!==email){await auth.signOut();user=null;}
   if(!user){try{user=(await auth.createUserWithEmailAndPassword(email,password)).user;}catch(e){if(e.code==="auth/email-already-in-use")user=(await auth.signInWithEmailAndPassword(email,password)).user;else throw e;}}
   await db.collection("demandes_nouveaux_services").add({uid:user.uid,type:"annuaire",rubrique:annuaireRubriqueActive,titre,categorie,commune,quartier,telephone,description,email,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
@@ -3479,6 +3480,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <button class="primary" type="button" onclick="envoyerNouveauService()">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
  </div>`;
+ if(type==="commerce"&&!modePartenaire)initialiserFormulaireAbonnementBoutique();
  chargerNouveauxServicesPublics(type);
 }
 function previsualiserPhotoNouveauService(event){
@@ -3552,8 +3554,9 @@ async function envoyerNouveauService(){
    await db.runTransaction(async transaction=>{
     const abonnement=await transaction.get(abonnementRef);
     if(!abonnement.exists){
-     const debut=Date.now();
-     transaction.set(abonnementRef,{uid:user.uid,email:user.email||email,statut:"actif",essaiGratuitUtilise:true,dateDebut:firebase.firestore.FieldValue.serverTimestamp(),dateExpiration:firebase.firestore.Timestamp.fromMillis(debut+30*86400000),paiementStatut:"gratuit",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+     const cfg=await obtenirConfigurationAbonnement("petites_annonces");if(!cfg.actif)throw new Error("Les nouvelles souscriptions de petites annonces sont temporairement suspendues.");
+     const debut=Date.now(),essaiJours=Number(cfg.essai||0);if(essaiJours<=0)throw new Error("La période gratuite est désactivée. Contactez l’administration pour connaître les conditions d’accès.");
+     transaction.set(abonnementRef,{uid:user.uid,email:user.email||email,statut:"actif",essaiGratuitUtilise:true,dateDebut:firebase.firestore.FieldValue.serverTimestamp(),dateExpiration:firebase.firestore.Timestamp.fromMillis(debut+essaiJours*86400000),paiementStatut:"gratuit",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     }else{
      const data=abonnement.data();
      if(!data.dateExpiration||data.dateExpiration.toDate().getTime()<=Date.now()){
@@ -3589,12 +3592,14 @@ async function ouvrirGestionAbonnementPetitesAnnonces(){
  }catch(e){zone.textContent="Consultation impossible : "+(e.message||"réessayez.");}
 }
 async function envoyerRenouvellementPetitesAnnonces(){
+ const cfg=await obtenirConfigurationAbonnement("petites_annonces");
  const user=auth.currentUser,zone=document.getElementById("zoneAbonnementPetitesAnnonces"),moyen=document.getElementById("nsRenouvellementMoyen")?.value||"",reference=document.getElementById("nsRenouvellementReference")?.value.trim()||"";
+ if(!cfg.actif)return alert("Les nouvelles souscriptions et renouvellements de petites annonces sont temporairement suspendus.");
  if(!user||!["Wave","Orange Money"].includes(moyen)||reference.length<4)return alert("Choisissez un moyen de paiement et saisissez une référence valide.");
  try{
   const ref=db.collection("abonnements_petites_annonces").doc(user.uid),snap=await ref.get();
   if(!snap.exists||snap.data().dateExpiration?.toDate?.().getTime()>Date.now())return alert("Le renouvellement n’est pas nécessaire pour le moment.");
-  await ref.update({paiementMoyen:moyen,paiementReference:reference,montantRenouvellement:500,paiementStatut:"a_verifier",demandeRenouvellementLe:firebase.firestore.FieldValue.serverTimestamp()});
+  await ref.update({paiementMoyen:moyen,paiementReference:reference,montantRenouvellement:tarifAbonnementEffectif(cfg),dureeRenouvellementJours:dureeAbonnementEnJours(cfg),paiementStatut:"a_verifier",demandeRenouvellementLe:firebase.firestore.FieldValue.serverTimestamp()});
   zone.innerHTML='<p class="notice">Demande reçue. Le renouvellement sera activé après vérification manuelle du paiement.</p>';
  }catch(e){console.error(e);alert("Envoi impossible : "+e.message);}
 }
@@ -3613,9 +3618,9 @@ async function confirmerRenouvellementAnnonce(uid){
  const ref=db.collection("abonnements_petites_annonces").doc(uid);
  try{
   const snap=await ref.get();if(!snap.exists||snap.data().paiementStatut!=="a_verifier")return alert("Demande introuvable ou déjà traitée.");
-  const d=snap.data();if(!confirm("Confirmer la réception de 500 FCFA et activer 30 jours ?"))return;
+  const d=snap.data();if(!confirm("Confirmer la réception de "+Number(d.montantRenouvellement||500).toLocaleString("fr-FR")+" FCFA et activer "+Number(d.dureeRenouvellementJours||30)+" jours ?"))return;
   const debut=Math.max(Date.now(),d.dateExpiration?.toDate?.().getTime()||0);
-  await ref.update({statut:"actif",paiementStatut:"confirme",dateExpiration:firebase.firestore.Timestamp.fromMillis(debut+30*86400000),dateConfirmationPaiement:firebase.firestore.FieldValue.serverTimestamp(),confirmePar:auth.currentUser.uid});
+  await ref.update({statut:"actif",paiementStatut:"confirme",dateExpiration:firebase.firestore.Timestamp.fromMillis(debut+Number(d.dureeRenouvellementJours||30)*86400000),dateConfirmationPaiement:firebase.firestore.FieldValue.serverTimestamp(),confirmePar:auth.currentUser.uid});
   await chargerPaiementsAnnoncesAdmin();
  }catch(e){console.error(e);alert("Activation impossible : "+e.message);}
 }
@@ -4008,10 +4013,29 @@ const CONFIG_ABONNEMENTS_DEFAUT={
  automobiliste:{libelle:"Abonnement automobiliste",actif:true,prix:1000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques:{libelle:"Boutiques",actif:true,prix:4000,duree:15,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  partenaires_colis:{libelle:"Livreurs indépendants et représentants de gare",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
- ramassage:{libelle:"Compagnies de ramassage",actif:true,prix:0,duree:30,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
- compagnies_voyage:{libelle:"Compagnies de voyage",actif:true,prix:5000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""}
 };
 let configurationAbonnementsCachee={};
+let configurationAbonnementsPromise=null;
+async function obtenirConfigurationAbonnement(id){
+ if(!CONFIG_ABONNEMENTS_DEFAUT[id])throw new Error("Service d'abonnement non configuré.");
+ if(!configurationAbonnementsPromise){
+  configurationAbonnementsPromise=db.collection("configuration_abonnements").doc("globale").get().then(s=>s.exists?(s.data().services||{}):{}).catch(e=>{console.warn("Configuration abonnements indisponible, valeurs par défaut utilisées.",e);return {};});
+ }
+ const services=await configurationAbonnementsPromise;
+ return {...CONFIG_ABONNEMENTS_DEFAUT[id],...(services[id]||{})};
+}
+function tarifAbonnementEffectif(c){
+ const maintenant=new Date(),debut=c.promotionDebut?new Date(c.promotionDebut+"T00:00:00"):null,fin=c.promotionFin?new Date(c.promotionFin+"T23:59:59"):null;
+ return c.promotionActive&&c.promotionPrix>0&&c.promotionPrix<=c.prix&&debut&&fin&&maintenant>=debut&&maintenant<=fin?Number(c.promotionPrix):Number(c.prix);
+}
+function dureeAbonnementEnJours(c){const n=Number(c.duree||1);return c.unite==="mois"?Math.round(n*30.4375):n;}
+async function initialiserFormulaireAbonnementBoutique(){
+ const select=document.getElementById("nsDureeAbonnement");if(!select)return;
+ try{const c=await obtenirConfigurationAbonnement("boutiques");if(!c.actif){select.innerHTML='<option value="">Souscriptions temporairement suspendues</option>';select.disabled=true;return;}
+ const jours=dureeAbonnementEnJours(c),prix=tarifAbonnementEffectif(c);select.innerHTML='<option value="'+jours+'" data-montant="'+prix+'">'+jours+' jours — '+prix.toLocaleString("fr-FR")+' FCFA'+(c.promotionActive&&prix<c.prix?' (promotion)':'')+'</option>';select.disabled=false;
+ }catch(e){console.error(e);}
+}
+
 function valeurConfigAbonnement(id,champ){
  const cfg=configurationAbonnementsCachee[id]||CONFIG_ABONNEMENTS_DEFAUT[id];
  return cfg&&cfg[champ]!==undefined?cfg[champ]:CONFIG_ABONNEMENTS_DEFAUT[id]?.[champ];
@@ -7073,9 +7097,10 @@ async function envoyerDemandeAbonnementAuto(){
   const operateur=document.getElementById("operateurAbonnementAuto").value;
   const nomPayeur=document.getElementById("nomPayeurAbonnementAuto").value.trim();
   try{
+    const cfg=await obtenirConfigurationAbonnement("automobiliste");if(!cfg.actif)return alert("Les nouvelles souscriptions automobilistes sont temporairement suspendues.");if(cfg.unite!=="mois")return alert("La durée doit être configurée en mois.");const montant=tarifAbonnementEffectif(cfg);
     await db.collection("demandes_abonnement_automobiliste").add({
       uid:user.uid,email:user.email||"",operateur,referencePaiement:reference,nomPayeur,
-      montantFCFA:1000,dureeMois:12,statut:"en_attente",
+      montantFCFA:montant,dureeMois:Number(cfg.duree),statut:"en_attente",
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
     document.getElementById("referenceAbonnementAuto").value="";
@@ -7105,9 +7130,9 @@ async function traiterDemandeAbonnementAutomobiliste(id,approuver){
     if(!snap.exists||snap.data().statut!=="en_attente")return alert("Cette demande n'est plus en attente.");
     const d=snap.data(),batch=db.batch();
     if(approuver){
-      const debut=new Date(),fin=new Date(debut.getTime()+365*24*60*60*1000);
+      const debut=new Date(),fin=new Date(debut.getTime()+Number(d.dureeMois||12)*30.4375*24*60*60*1000);
       batch.set(db.collection("abonnements_automobiliste").doc(d.uid),{
-        uid:d.uid,statut:"actif",montantFCFA:1000,dureeMois:12,
+        uid:d.uid,statut:"actif",montantFCFA:Number(d.montantFCFA||1000),dureeMois:Number(d.dureeMois||12),
         dateActivation:firebase.firestore.Timestamp.fromDate(debut),
         dateExpiration:firebase.firestore.Timestamp.fromDate(fin),
         demandeId:id,activePar:auth.currentUser.uid
