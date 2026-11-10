@@ -3610,7 +3610,7 @@ async function chargerPaiementsAnnoncesAdmin(){
  try{
   const snap=await db.collection("abonnements_petites_annonces").where("paiementStatut","==","a_verifier").limit(100).get();
   if(snap.empty){zone.innerHTML='<p class="notice">Aucun renouvellement en attente.</p>';return;}
-  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();return '<article class="card" style="padding:12px;margin:8px 0;"><strong>Compte : '+echapperTextePublicite(d.email||d.uid)+'</strong><p>500 FCFA / 30 jours · '+echapperTextePublicite(d.paiementMoyen||"")+' · Référence : '+echapperTextePublicite(d.paiementReference||"")+'</p><button type="button" class="primary" onclick="confirmerRenouvellementAnnonce(\''+doc.id+'\')">Confirmer le paiement et activer 30 jours</button></article>';}).join("");
+  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();const montant=Number(d.montantRenouvellement||500),jours=Number(d.dureeRenouvellementJours||30);return '<article class="card" style="padding:12px;margin:8px 0;"><strong>Compte : '+echapperTextePublicite(d.email||d.uid)+'</strong><p>'+montant.toLocaleString("fr-FR")+' FCFA / '+jours+' jours · '+echapperTextePublicite(d.paiementMoyen||"")+' · Référence : '+echapperTextePublicite(d.paiementReference||"")+'</p><button type="button" class="primary" onclick="confirmerRenouvellementAnnonce(\''+doc.id+'\')">Confirmer le paiement et activer '+jours+' jours</button></article>';}).join("");
  }catch(e){console.error(e);zone.textContent="Erreur : "+e.message;}
 }
 async function confirmerRenouvellementAnnonce(uid){
@@ -7115,7 +7115,7 @@ async function traiterDemandeAbonnementAutomobiliste(id,approuver){
       batch.update(ref,{statut:"approuve",traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});
     }else batch.update(ref,{statut:"refuse",traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});
     await batch.commit();await chargerDemandesAbonnementAutomobilisteAdmin();
-    alert(approuver?"Abonnement activé pour 12 mois.":"Demande refusée.");
+    alert(approuver?"Abonnement activé pour "+Number(d.dureeMois||12)+" mois.":"Demande refusée.");
   }catch(e){console.error(e);alert("Traitement impossible : "+e.message);}
 }
 
@@ -7396,7 +7396,7 @@ async function chargerCompagniesRamassageAdmin(){
       const title=document.createElement("strong");title.textContent=d.nom||"Compagnie sans nom";
       const detail=document.createElement("p");detail.textContent=(d.email||"")+" · "+(d.telephone||"")+" · Dossier : "+(d.statut||"inconnu")+" · Abonnement : "+(d.abonnement||"inactif");
       const approve=document.createElement("button");approve.type="button";approve.textContent="Approuver le dossier";approve.onclick=()=>modifierStatutCompagnieRamassage(doc.id,"approuve");
-      const activate=document.createElement("button");activate.type="button";activate.textContent="Activer 1 mois (après vérification du paiement)";activate.style.marginTop="8px";activate.onclick=()=>activerAbonnementCompagnieRamassage(doc.id);
+      const activate=document.createElement("button");activate.type="button";activate.textContent="Activer l’abonnement (après vérification du paiement)";activate.style.marginTop="8px";activate.onclick=()=>activerAbonnementCompagnieRamassage(doc.id);
       card.append(title,detail,approve,activate);zone.appendChild(card);
     });
   }catch(e){zone.textContent="Impossible de charger les compagnies : "+e.message;}
