@@ -3332,7 +3332,7 @@ const NOUVEAUX_SERVICES = {
 };
 let nouveauServiceActif="depannage";
 let filtrePublicCommerce="tout";
-function ouvrirAnnuaireCommerce(type){if(!["commerce","boutique"].includes(type))return;filtrePublicCommerce=type;ouvrirSectionPleinEcran("nouveauxServices",type==="boutique"?"Boutiques":"Commerces");choisirNouveauService("commerce");const c=document.getElementById("nsCategorie");if(c){if(type==="boutique"){c.value="Boutique";c.disabled=true;}else c.disabled=false;}chargerNouveauxServicesPublics("commerce");}
+function ouvrirAnnuaireCommerce(type){if(!["commerce","boutique"].includes(type))return;filtrePublicCommerce=type;ouvrirSectionPleinEcran("nouveauxServices",type==="boutique"?"Boutiques":"Commerces");choisirNouveauService("commerce");const c=document.getElementById("nsCategorie");if(c){if(type==="boutique")c.value="Boutique";c.disabled=false;}chargerNouveauxServicesPublics("commerce");}
 
 // ANNUAIRES INTERNES DE MON QUOTIDIEN CI
 const CATEGORIES_ANNUAIRE={
@@ -5685,7 +5685,7 @@ function afficherFormulairePartenaire(type){
     const categorie=type==="mecanicien"?"Mécanicien":type==="depannage"?"Dépannage général":type==="vendeur_pieces"?"Pièces détachées":"Autre commerce";
     choisirNouveauService(service,categorie,true,"partenaireFormulaireChoisi");
     const select=document.getElementById("nsCategorie");
-    if(select){select.value=categorie;select.disabled=true;}
+    if(select){select.value=categorie;select.disabled=false;}
     const titre=document.getElementById("nsTitre");
     if(titre) titre.placeholder=type==="vendeur_pieces"?"Nom du magasin ou vendeur de pièces détachées":"Nom de votre activité ou établissement";
     const description=document.getElementById("nsDescription");
