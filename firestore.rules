@@ -743,7 +743,7 @@ service cloud.firestore {
         && request.resource.data.email is string && request.resource.data.email.size() <= 120
         && (!request.resource.data.keys().hasAny(["photoUrl"]) || (request.resource.data.photoUrl is string && request.resource.data.photoUrl.size() <= 400000 && request.resource.data.photoUrl.matches("^data:image/jpeg;base64,.*$")))
         && (request.resource.data.type != "annonce"
-          || (abonnementAutorise("petites_annonces") && existsAfter(/databases/$(database)/documents/abonnements_petites_annonces/$(request.auth.uid))
+          || (existsAfter(/databases/$(database)/documents/abonnements_petites_annonces/$(request.auth.uid))
             && getAfter(/databases/$(database)/documents/abonnements_petites_annonces/$(request.auth.uid)).data.dateExpiration is timestamp
             && getAfter(/databases/$(database)/documents/abonnements_petites_annonces/$(request.auth.uid)).data.dateExpiration > request.time))
         && request.resource.data.statut == "en_attente"
