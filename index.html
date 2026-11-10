@@ -7057,7 +7057,7 @@ async function actualiserTarifPublicAutomobiliste(){
     const montant=tarifAbonnementEffectif(cfg),duree=Number(cfg.duree),unite=cfg.unite==="mois"?"mois":"jours";
     zone.innerHTML="<strong>Tarif actuel : "+montant.toLocaleString("fr-FR")+" FCFA / "+duree+" "+unite+"</strong>"+
       '<p style="margin:8px 0 4px;">Wave : <strong>'+echapperTextePublicite(paiement.numero)+'</strong></p>'+
-      '<p style="margin:4px 0;">Orange Money : <strong>'+paiement.numero+'</strong></p>'+
+      '<p style="margin:4px 0;">Orange Money : <strong>'+echapperTextePublicite(paiement.numero)+'</strong></p>'+
       '<p style="margin:4px 0;">Titulaire : <strong>'+echapperTextePublicite(paiement.beneficiaire)+'</strong></p>'+
       '<p style="font-size:13px;margin-bottom:0;">Effectuez le transfert du montant indiqué, puis saisissez la référence de la transaction. L’accès sera activé après vérification manuelle.</p>';
   }catch(e){
