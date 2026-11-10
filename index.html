@@ -4013,7 +4013,10 @@ const CONFIG_ABONNEMENTS_DEFAUT={
  automobiliste:{libelle:"Abonnement automobiliste",actif:true,prix:1000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques_15j:{libelle:"Boutiques — formule 15 jours",actif:true,prix:4000,duree:15,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques_30j:{libelle:"Boutiques — formule 30 jours",actif:true,prix:7000,duree:30,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
- partenaires_colis:{libelle:"Livreurs indépendants et représentants de gare",actif:true,prix:10000,duree:1,unite:"mois",essai:21,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ partenaires_colis:{libelle:"Partenaires colis — période d’essai",actif:true,prix:0,duree:21,unite:"jours",essai:21,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ partenaires_colis_1mois:{libelle:"Partenaires colis — abonnement 1 mois",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ partenaires_colis_3mois:{libelle:"Partenaires colis — abonnement 3 mois",actif:true,prix:27000,duree:3,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ partenaires_colis_6mois:{libelle:"Partenaires colis — abonnement 6 mois",actif:true,prix:55000,duree:6,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  compagnie_essentielle_mensuel:{libelle:"Compagnie de voyage — Essentielle mensuelle",actif:true,prix:5000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  compagnie_essentielle_annuel:{libelle:"Compagnie de voyage — Essentielle annuelle",actif:true,prix:50000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  compagnie_professionnelle_mensuel:{libelle:"Compagnie de voyage — Professionnelle mensuelle",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
@@ -6530,23 +6533,24 @@ async function demarrerEssaiPartenaire(id) {
 }
 
 async function activerAbonnementPartenaire(id) {
-  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return alert("Accès réservé à l'administrateur.");
-  try {
-    const cfg=await obtenirConfigurationAbonnement("partenaires_colis");
-    if(!cfg.actif)return alert("Les nouvelles souscriptions partenaires sont temporairement suspendues.");
-    const jours=dureeAbonnementEnJours(cfg),montant=tarifAbonnementEffectif(cfg);
-    if(montant<=0||jours<=0)return alert("Configure d'abord un prix et une durée valides dans Gestion générale des abonnements.");
-    if(!confirm("Confirmer la réception de "+montant.toLocaleString("fr-FR")+" FCFA pour "+jours+" jours ?"))return;
-    const reference=db.collection("partenaires").doc(id),document=await reference.get();
-    if(!document.exists)return alert("Partenaire introuvable.");
-    const partenaire=document.data(),maintenant=new Date();
-    const ancienneFin=partenaire.dateExpirationAbonnement&&partenaire.dateExpirationAbonnement.toDate?partenaire.dateExpirationAbonnement.toDate():(partenaire.dateExpirationAbonnement?new Date(partenaire.dateExpirationAbonnement):null);
-    const base=ancienneFin&&ancienneFin>maintenant?ancienneFin:maintenant,expiration=new Date(base);
-    expiration.setDate(expiration.getDate()+jours);
-    const libelle=cfg.duree+" "+cfg.unite;
-    await reference.update({statutAbonnementPartenaire:"Actif",formuleAbonnementPartenaire:libelle,montantAbonnementPartenaire:montant,dateDebutAbonnement:firebase.firestore.Timestamp.fromDate(maintenant),dateExpirationAbonnement:firebase.firestore.Timestamp.fromDate(expiration),historiqueAbonnements:firebase.firestore.FieldValue.arrayUnion({formule:libelle,montant,dateValidation:firebase.firestore.Timestamp.fromDate(maintenant),dateExpiration:firebase.firestore.Timestamp.fromDate(expiration),validePar:auth.currentUser.uid})});
-    alert("Abonnement activé jusqu'au "+expiration.toLocaleDateString("fr-FR")+".");chargerPartenairesAdmin();
-  }catch(erreur){alert("Erreur lors de l'activation : "+erreur.message);}
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
+ try{
+  const ids=["partenaires_colis_1mois","partenaires_colis_3mois","partenaires_colis_6mois"];
+  const formules=await Promise.all(ids.map(async key=>({key,c:await obtenirConfigurationAbonnement(key)})));
+  const disponibles=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&x.c.unite==="mois");
+  if(!disponibles.length)return alert("Aucune formule partenaire n'est actuellement disponible.");
+  const lignes=disponibles.map((x,i)=>(i+1)+" = "+x.c.duree+" mois : "+tarifAbonnementEffectif(x.c).toLocaleString("fr-FR")+" FCFA").join("\n");
+  const choix=prompt("Choisis la formule après vérification du paiement :\n"+lignes,"1");if(choix===null)return;
+  const formule=disponibles[Number(choix.trim())-1];if(!formule)return alert("Choix invalide.");
+  const montant=tarifAbonnementEffectif(formule.c),mois=Number(formule.c.duree);
+  if(!confirm("Confirmer la réception de "+montant.toLocaleString("fr-FR")+" FCFA pour "+mois+" mois ?"))return;
+  const reference=db.collection("partenaires").doc(id),document=await reference.get();if(!document.exists)return alert("Partenaire introuvable.");
+  const partenaire=document.data(),maintenant=new Date(),ancienneFin=partenaire.dateExpirationAbonnement&&partenaire.dateExpirationAbonnement.toDate?partenaire.dateExpirationAbonnement.toDate():(partenaire.dateExpirationAbonnement?new Date(partenaire.dateExpirationAbonnement):null);
+  const base=ancienneFin&&ancienneFin>maintenant?ancienneFin:maintenant,expiration=new Date(base);expiration.setMonth(expiration.getMonth()+mois);
+  const libelle=mois+" mois";
+  await reference.update({statutAbonnementPartenaire:"Actif",formuleAbonnementPartenaire:libelle,montantAbonnementPartenaire:montant,dateDebutAbonnement:firebase.firestore.Timestamp.fromDate(maintenant),dateExpirationAbonnement:firebase.firestore.Timestamp.fromDate(expiration),historiqueAbonnements:firebase.firestore.FieldValue.arrayUnion({formule:libelle,montant,dateValidation:firebase.firestore.Timestamp.fromDate(maintenant),dateExpiration:firebase.firestore.Timestamp.fromDate(expiration),validePar:auth.currentUser.uid})});
+  alert("Abonnement activé jusqu'au "+expiration.toLocaleDateString("fr-FR")+".");chargerPartenairesAdmin();
+ }catch(erreur){alert("Erreur lors de l'activation : "+erreur.message);}
 }
 
 async function refuserPartenaire(id) {
