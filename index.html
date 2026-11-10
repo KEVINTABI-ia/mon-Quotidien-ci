@@ -1843,12 +1843,6 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
   <div id="gestionVisibiliteMenus" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>👁️ Affichage et masquage des menus</h3><p class="notice">Choisis les rubriques visibles par les utilisateurs. Un menu masqué disparaît de l’application sans supprimer ses données.</p><div id="listeVisibiliteMenusAdmin"><p class="notice">Chargement des menus...</p></div></div>
   <button id="adminDeconnexion" type="button" onclick="deconnexionAdmin()" style="display:none;width:100%;margin:12px 0;">Se déconnecter</button>
 <div id="gestionAbonnementsRamassage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🚌 Validation des compagnies de ramassage</h3><p class="notice">Vérifie les dossiers et les paiements avant d’approuver une compagnie ou d’activer son forfait mensuel.</p><div id="listeCompagniesRamassageAdmin">Chargement...</div></div>
-<div id="gestionGeneraleAbonnements" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;">
-<h3>⚙️ Gestion générale des abonnements</h3>
-<p class="notice">Configure les prix, durées, périodes gratuites et promotions des services payants. Les annuaires professionnels sont exclus et conservent leurs règles actuelles. Désactiver un service bloque les nouvelles souscriptions ; les abonnements déjà actifs restent valables jusqu’à leur expiration.</p>
-<div id="configurationAbonnementsAdmin"><p class="notice">Chargement des paramètres...</p></div>
-<button type="button" class="primary" onclick="chargerConfigurationAbonnementsAdmin()">Actualiser les paramètres</button>
-</div>
 <div id="gestionAbonnementsAutomobiliste" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🚘 Validation des abonnements automobiles</h3><p class="notice">Vérifie le moyen de paiement et la référence avant d'activer 12 mois d'accès. Ne valide qu'après réception effective des 1 000 FCFA.</p><div id="listeAbonnementsAutomobilisteAdmin">Chargement...</div></div>
 <div id="gestionValidationDepannage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🔧 Validation des dépannages</h3><p class="notice">Examine séparément les demandes des professionnels du dépannage automobile.</p><div id="listeValidationDepannageAdmin">Chargement...</div></div>
 <div id="gestionValidationCommerce" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🏪 Validation des commerces</h3><p class="notice">Vérifie les établissements commerciaux hors boutiques.</p><div id="listeValidationCommerceAdmin">Chargement...</div></div>
@@ -4135,7 +4129,6 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionGares",groupe:"Transport",icone:"📍",image:"gare",titre:"Gares et terminus",description:"Créer, positionner et gérer les gares."},
   {id:"gestionRoutes",groupe:"Transport",icone:"🛣️",titre:"Itinéraires et tarifs",description:"Gérer les lignes, arrêts et prix."},
   {id:"gestionCompagnies",groupe:"Transport",icone:"🚍",image:"compagnies",titre:"Compagnies de voyage",description:"Gérer les agences et leurs dessertes."},
-  {id:"gestionGeneraleAbonnements",groupe:"Contrôle et paramètres",icone:"⚙️",titre:"Gestion générale des abonnements",description:"Configurer les tarifs, durées et promotions des services payants."},
   {id:"gestionAbonnementsRamassage",groupe:"Professionnels",icone:"🚌",titre:"Compagnies de ramassage",description:"Valider les dossiers et abonnements."},
   {id:"gestionValidationAnnuaires",groupe:"Professionnels",icone:"📒",titre:"Annuaires professionnels",description:"Valider les inscriptions avant publication.",notification:"annuaire"},
   {id:"gestionPartenaires",groupe:"Professionnels",icone:"👥",titre:"Partenaires",description:"Gérer les partenaires de services."},
