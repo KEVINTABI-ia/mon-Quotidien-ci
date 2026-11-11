@@ -133,7 +133,7 @@ service cloud.firestore {
       allow create: if estAdmin()
         || (estConnecte()
           && request.resource.data.uid == request.auth.uid
-          && request.resource.data.email == request.auth.token.email
+          && request.resource.data.email == request.auth.token.get("email", "")
           && request.resource.data.keys().hasAll([
             "uid","nom","agence","localisation","telephone","email","destinations",
             "photoGarePrincipale","telephoneGarePrincipale","telephoneServiceCourrier",
