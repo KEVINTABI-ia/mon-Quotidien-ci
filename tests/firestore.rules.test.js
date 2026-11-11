@@ -96,6 +96,17 @@ describe("Mon Transport CI — règles Firestore", function () {
   });
 
 
+  it("autorise un utilisateur authentifié à créer et lire uniquement son profil général", async () => {
+    const {doc,setDoc,getDoc,serverTimestamp}=require("firebase/firestore");
+    const db=testEnv.authenticatedContext(CLIENT_UID,{phone_number:"+2250700000000"}).firestore();
+    const profile={uid:CLIENT_UID,nom:"Utilisateur test",telephone:"+2250700000000",email:"",modeConnexion:"telephone",createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+    await assertSucceeds(setDoc(doc(db,"utilisateurs",CLIENT_UID),profile));
+    await assertSucceeds(getDoc(doc(db,"utilisateurs",CLIENT_UID)));
+    const other=testEnv.authenticatedContext(OTHER_UID).firestore();
+    await assertFails(getDoc(doc(other,"utilisateurs",CLIENT_UID)));
+    await assertFails(setDoc(doc(db,"utilisateurs",OTHER_UID),{...profile,uid:OTHER_UID}));
+  });
+
   it("autorise un utilisateur à créer son profil de ramassage mais pas à s'auto-attribuer un abonnement compagnie", async () => {
     const db = testEnv.authenticatedContext(CLIENT_UID, {email:"client@example.test"}).firestore();
     const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
