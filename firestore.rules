@@ -35,11 +35,16 @@ service cloud.firestore {
     }
 
     function estAbonneAutomobiliste() {
-      return estConnecte()
-        && exists(/databases/$(database)/documents/abonnements_automobiliste/$(request.auth.uid))
-        && get(/databases/$(database)/documents/abonnements_automobiliste/$(request.auth.uid)).data.statut == "actif"
-        && get(/databases/$(database)/documents/abonnements_automobiliste/$(request.auth.uid)).data.dateExpiration is timestamp
-        && get(/databases/$(database)/documents/abonnements_automobiliste/$(request.auth.uid)).data.dateExpiration > request.time;
+      return estConnecte() && (
+        (exists(/databases/$(database)/documents/abonnements_automobiliste/$(request.auth.uid))
+          && get(/databases/$(database)/documents/abonnements_automobiliste/$(request.auth.uid)).data.statut == "actif"
+          && get(/databases/$(database)/documents/abonnements_automobiliste/$(request.auth.uid)).data.dateExpiration is timestamp
+          && get(/databases/$(database)/documents/abonnements_automobiliste/$(request.auth.uid)).data.dateExpiration > request.time)
+        ||
+        (exists(/databases/$(database)/documents/utilisateurs/$(request.auth.uid))
+          && get(/databases/$(database)/documents/utilisateurs/$(request.auth.uid)).data.createdAt is timestamp
+          && get(/databases/$(database)/documents/utilisateurs/$(request.auth.uid)).data.createdAt + duration.value(30, "d") > request.time)
+      );
     }
 
     function partenaire(uid) {
