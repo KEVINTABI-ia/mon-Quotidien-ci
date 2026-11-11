@@ -11728,7 +11728,7 @@ async function envoyerInscriptionCompagnie(){
   const cfg=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));if(!cfg.actif||cfg.unite!=="mois")throw new Error("Formule indisponible.");
   const montant=tarifAbonnementEffectif(cfg),dureeMois=Number(cfg.duree);
   const photoGarePrincipale=await compresserImage(photoFile);if(photoGarePrincipale.length>700000)throw new Error("Photo trop volumineuse.");
-  let logo="";const logoFile=document.getElementById("partCompagnieLogo").files[0];if(logoFile)logo=await compresserImage(logoFile);
+  let logo="";const logoFile=document.getElementById("partCompagnieLogo").files[0];if(logoFile){logo=await compresserImage(logoFile);if(logo.length>300000)throw new Error("Le logo est trop volumineux après compression.");}
   await db.collection("compagnies").add({uid:user.uid,nom,agence,localisation,telephone,telephoneGarePrincipale:telephoneGare,telephoneServiceCourrier:courrier,email:user.email||"",logo,photoGarePrincipale,destinations,formule,periodicite,montant,dureeMois,moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",dateCreation:firebase.firestore.FieldValue.serverTimestamp(),dateDebut:null,dateExpiration:null});
   status.textContent="Dossier transmis. La validation du paiement reste nécessaire avant activation.";
  }catch(e){status.textContent="Erreur : "+e.message;}
