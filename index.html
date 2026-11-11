@@ -7462,7 +7462,7 @@ async function soumettreInscriptionLivreur(bouton) {
   bouton.textContent = "Vérification en cours…";
   afficher("Vérification des informations et préparation de la demande…");
   try {
-    await creerComptePartenaire("livreur_independant", {
+    const resultat = await creerComptePartenaire("livreur_independant", {
       nom: document.getElementById("livreurNom")?.value || "",
       telephone: document.getElementById("livreurTelephone")?.value || "",
       email: document.getElementById("livreurEmail")?.value || "",
@@ -7473,6 +7473,7 @@ async function soumettreInscriptionLivreur(bouton) {
       numeroIdentite: document.getElementById("livreurNumeroIdentite")?.value.trim() || "",
       numeroPermis: document.getElementById("livreurNumeroPermis")?.value.trim() || ""
     });
+    if (resultat === false) afficher("La demande n’a pas été envoyée. Corrigez les champs signalés puis réessayez.", true);
   } catch (erreur) {
     console.error("Inscription livreur :", erreur);
     afficher("Une erreur empêche l’envoi : " + (erreur.message || "réessayez."), true);
@@ -7484,23 +7485,23 @@ async function soumettreInscriptionLivreur(bouton) {
 
 async function creerComptePartenaire(type, donnees) {
   const user=auth.currentUser;
-  if(!user){alert("Connectez-vous d’abord à votre compte utilisateur pour déposer une demande partenaire.");return;}
+  if(!user){alert("Connectez-vous d’abord à votre compte utilisateur pour déposer une demande partenaire.");return false;}
   const telephoneId=type==="livreur_independant"?"livreurTelephone":"gareTelephone";
   const erreurTelephone=type==="livreur_independant"?"erreurLivreurTelephone":"erreurGareTelephone";
   const champTelephone=document.getElementById(telephoneId);
-  if(!validerTelephone(champTelephone,erreurTelephone)){champTelephone.focus();return;}
+  if(!validerTelephone(champTelephone,erreurTelephone)){champTelephone.focus();return false;}
   donnees.telephone=champTelephone.value;
   const idId=type==="livreur_independant"?"livreurNumeroIdentite":"gareNumeroIdentite";
   const erreurId=type==="livreur_independant"?"erreurLivreurIdentite":"erreurGareIdentite";
   const champId=document.getElementById(idId);
-  if(!validerNumeroIdentite(champId,erreurId)){champId.focus();return;}
+  if(!validerNumeroIdentite(champId,erreurId)){champId.focus();return false;}
   donnees.numeroIdentite=champId.value;
   const photoId=type==="livreur_independant"?"livreurPhotoProfil":"garePhotoProfil";
   const fichier=document.getElementById(photoId)?.files?.[0];
-  if(!fichier){alert("Ajoutez une photo de profil avant d’envoyer votre demande.");return;}
+  if(!fichier){alert("Ajoutez une photo de profil avant d’envoyer votre demande.");return false;}
   let photoProfil;
-  try{photoProfil=await convertirImageEnJpegCompressee(fichier);}catch(e){alert(e.message);return;}
-  if(!donnees.nom||!donnees.commune){alert("Complétez votre nom et votre commune.");return;}
+  try{photoProfil=await convertirImageEnJpegCompressee(fichier);}catch(e){alert(e.message);return false;}
+  if(!donnees.nom||!donnees.commune){alert("Complétez votre nom et votre commune.");return false;}
   const dossier={uid:user.uid,type,nom:donnees.nom,telephone:donnees.telephone,commune:donnees.commune,email:user.email||"",dateNaissance:donnees.dateNaissance,lieuNaissance:donnees.lieuNaissance,numeroIdentite:donnees.numeroIdentite,photoProfil,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
   if(type==="livreur_independant"){dossier.quartiers=donnees.quartiers;dossier.numeroPermis=donnees.numeroPermis;}
   if(type==="representant_gare"){dossier.nomGare=donnees.nomGare;dossier.posteOccupe=donnees.posteOccupe;}
@@ -7509,11 +7510,13 @@ async function creerComptePartenaire(type, donnees) {
     const statutLivreur=document.getElementById("statutInscriptionLivreur");
     if(statutLivreur){statutLivreur.textContent="Demande envoyée avec succès. Votre dossier est en attente de validation.";statutLivreur.style.color="#16834a";}
     alert("Demande envoyée avec votre compte utilisateur. Votre session reste active. Votre dossier est en attente de validation.");
+    return true;
   } catch(e) {
     console.error("Demande partenaire:",e);
     const statutLivreur=document.getElementById("statutInscriptionLivreur");
     if(statutLivreur){statutLivreur.textContent="Envoi impossible : "+(e.message||"réessayez.");statutLivreur.style.color="#b42318";}
     alert("Envoi impossible : "+(e.message||"réessayez."));
+    return false;
   }
 }
 
