@@ -3726,8 +3726,11 @@ function compresserPhotoNouveauService(file){
 window.envoyerNouveauService = async function envoyerNouveauService(){
  const statut=document.getElementById("nsStatut");
  const valeur=id=>document.getElementById(id)?.value.trim()||"";
- const titre=valeur("nsTitre"),commune=valeur("nsCommune"),telephone=valeur("nsTelephone"),description=valeur("nsDescription"),email=valeur("nsEmail"),password=document.getElementById("nsPassword")?.value||"";
  const modePartenaire=!!document.querySelector("#devenirPartenaire [data-mode-partenaire=\"1\"]");
+ const titre=valeur("nsTitre"),commune=valeur("nsCommune"),telephone=valeur("nsTelephone"),description=valeur("nsDescription"),email=valeur("nsEmail"),password=document.getElementById("nsPassword")?.value||"";
+ const comptePartenaire=modePartenaire?auth.currentUser:null;
+ if(modePartenaire&&!comptePartenaire){statut.textContent="Connectez-vous à votre compte utilisateur avant de déposer une demande partenaire.";return;}
+ if(modePartenaire&&comptePartenaire.email&&email&&comptePartenaire.email.toLowerCase()!==email.toLowerCase()){statut.textContent="L’adresse e-mail doit correspondre au compte utilisateur connecté.";return;}
  const estBoutique=nouveauServiceActif==="commerce";
  const paiementMoyen=estBoutique?(document.getElementById("nsPaiementMoyen")?.value||""):"";
  const paiementReference=estBoutique?(document.getElementById("nsPaiementReference")?.value.trim()||""):"";
@@ -3739,11 +3742,11 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
  if(estBoutique&&!adresseBoutique){statut.textContent="Renseignez l’adresse précise de récupération de votre établissement.";return;}
  if(estBoutique&&(!paiementMoyen||!paiementReference)){statut.textContent="Effectuez le paiement, choisissez Wave ou Orange Money et saisissez la référence de la transaction.";return;}
  if(estBoutique&&(!dureeSelect||!dureeOption||!Number.isInteger(montantAbonnement)||montantAbonnement<=0||!Number.isInteger(dureeAbonnementJours)||dureeAbonnementJours<=0)){statut.textContent="Choisissez une formule d’abonnement disponible avant de continuer.";return;}
- if(!titre||!commune||!telephone||!description||!email||password.length<6){statut.textContent="Remplissez tous les champs obligatoires. Le mot de passe doit contenir au moins 6 caractères.";return;}
+ if(!titre||!commune||!telephone||!description||!(modePartenaire?(comptePartenaire?.email||email):email)||(!modePartenaire&&password.length<6)){statut.textContent="Remplissez tous les champs obligatoires."+(modePartenaire?"":" Le mot de passe doit contenir au moins 6 caractères.");return;}
  statut.textContent="Envoi du dossier...";
  try{
   let user=auth.currentUser;
-  if(user&&user.email!==email){await auth.signOut();user=null;}
+  if(!modePartenaire&&user&&user.email!==email){await auth.signOut();user=null;}
   if(!user){
    try{const cred=await auth.createUserWithEmailAndPassword(email,password);user=cred.user;}
    catch(e){if(e.code==="auth/email-already-in-use"){const cred=await auth.signInWithEmailAndPassword(email,password);user=cred.user;}else throw e;}
@@ -5979,16 +5982,9 @@ function ouvrirInscriptionLivreur(){
   onblur="validerTelephone(this, 'erreurLivreurTelephone')" required>
 <span id="erreurLivreurTelephone" style="color:red;"></span>
 
-    <label>Adresse e-mail</label>
-    <input type="email" id="livreurEmail"
-  onblur="validerEmail(this, 'erreurLivreurEmail')" required>
-<span id="erreurLivreurEmail" style="color:red;"></span>
-
-    <label>Mot de passe (6 caractères minimum)</label>
-<input type="password" id="livreurMotDePasse"
-  onblur="validerMotDePasse(this, 'erreurLivreurMotDePasse')"
-  minlength="6" required>
-<span id="erreurLivreurMotDePasse" style="color:red;"></span>
+    <label>Adresse e-mail du compte connecté</label>
+    <input type="email" id="livreurEmail" readonly>
+    <p class="notice">La demande sera rattachée à votre compte utilisateur actuel.</p>
 
     <label>Commune desservie</label>
     <input type="text" id="livreurCommune" required>
@@ -6046,10 +6042,8 @@ numeroPermis: document.getElementById('livreurNumeroPermis').value.trim(),
     </button>
   `;
 
-  zone.scrollIntoView({
-    behavior: "smooth",
-    block: "start"
-  });
+  const emailLivreur=document.getElementById("livreurEmail");if(emailLivreur)emailLivreur.value=auth.currentUser?.email||"";
+  zone.scrollIntoView({behavior:"smooth",block:"start"});
 }
 function retourChoixPartenaire(){
   const select=document.getElementById("typePartenaireSouhaite");
@@ -6131,46 +6125,28 @@ function actualiserPrixInscriptionCompagnie(){
   if(zone&&prix)zone.textContent="Tarif : "+prix.toLocaleString("fr-FR")+" FCFA / "+periodicite.toLowerCase();
 }
 async function envoyerInscriptionCompagnie(){
+  const user=auth.currentUser;
   const val=id=>document.getElementById(id)?.value.trim()||"";
   const statut=document.getElementById("partCompagnieStatut");
-  const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),email=val("partCompagnieEmail"),password=document.getElementById("partCompagniePassword")?.value||"",texte=val("partCompagnieDestinations"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite"),paiement=val("partCompagniePaiement"),reference=val("partCompagnieReference");
-  if(!nom||!agence||!localisation||!telephone||!email||password.length<6||!texte||!paiement||reference.length<4){statut.textContent="Complétez tous les champs obligatoires. Le mot de passe doit contenir au moins 6 caractères.";return;}
+  if(!user){statut.textContent="Connectez-vous à votre compte utilisateur avant de déposer une demande partenaire.";return;}
+  const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),email=user.email||"",texte=val("partCompagnieDestinations"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite"),paiement=val("partCompagniePaiement"),reference=val("partCompagnieReference");
   let destinations;
-  try{
-    destinations=texte.split("\n").map(ligne=>{
-      const p=ligne.split("|"),ville=(p[0]||"").trim(),prix=Number((p[1]||"").trim()),s=(p[2]||"").trim().toLowerCase(),services={premium:"Premium",express:"Express",standard:"Standard"};
-      if(!ville||p.length<3||!Number.isFinite(prix)||prix<=0||!services[s])throw new Error("Format incorrect : Destination | Prix | Premium, Express ou Standard.");
-      return {ville,prix,service:services[s]};
-    });
-  }catch(e){statut.textContent=e.message;return;}
-  let cfgCompagnie;
-  try{cfgCompagnie=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));}catch(e){statut.textContent=e.message;return;}
-  if(!cfgCompagnie.actif){statut.textContent="Cette formule de compagnie est temporairement suspendue.";return;}
-  if(cfgCompagnie.unite!=="mois"){statut.textContent="La durée doit être configurée en mois.";return;}
-  const montant=tarifAbonnementEffectif(cfgCompagnie),dureeMois=Number(cfgCompagnie.duree);
+  try{destinations=texte.split("\n").map(ligne=>{const p=ligne.split("|"),ville=(p[0]||"").trim(),prix=Number((p[1]||"").trim()),service=(p[2]||"").trim().toLowerCase(),services={premium:"Premium",express:"Express",standard:"Standard"};if(!ville||p.length<3||!Number.isFinite(prix)||prix<=0||!services[service])throw new Error("Format incorrect : Destination | Prix | Premium, Express ou Standard.");return {ville,prix,service:services[service]};});}
+  catch(e){statut.textContent=e.message;return;}
+  if(!nom||!agence||!localisation||!telephone||!email||!texte||!paiement||reference.length<4){statut.textContent="Complétez tous les champs obligatoires et la référence de paiement.";return;}
+  let cfg;
+  try{cfg=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));}catch(e){statut.textContent=e.message;return;}
+  if(!cfg.actif||cfg.unite!=="mois"){statut.textContent="Cette formule est temporairement indisponible.";return;}
+  const montant=tarifAbonnementEffectif(cfg),dureeMois=Number(cfg.duree);
   if(!montant||!dureeMois){statut.textContent="Tarif ou durée non configuré.";return;}
-  statut.textContent="Création du compte et envoi du dossier...";
+  statut.textContent="Envoi de votre demande...";
   try{
-    let credential;
-    try{credential=await auth.createUserWithEmailAndPassword(email,password);}
-    catch(e){if(e.code!=="auth/email-already-in-use")throw e;credential=await auth.signInWithEmailAndPassword(email,password);}
-    let logo="";
-    const fichier=document.getElementById("partCompagnieLogo")?.files?.[0];
-    if(fichier){logo=await compresserImage(fichier);if(logo.length>300000)throw new Error("Le logo est trop volumineux après compression. Choisissez une image plus légère.");}
-    await db.collection("compagnies").add({
-      uid:credential.user.uid,nom,agence,localisation,telephone,email,logo,destinations,formule,periodicite,montant,dureeMois,
-      moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",
-      dateCreation:firebase.firestore.FieldValue.serverTimestamp(),dateDebut:null,dateExpiration:null
-    });
-    await auth.signOut();
-    statut.textContent="Dossier envoyé. La compagnie sera activée après vérification du paiement par l’administration.";
-  }catch(e){
-    if(auth.currentUser)await auth.signOut();
-    console.error("Inscription compagnie :",e);
-    statut.textContent="Envoi impossible : "+(e.message||"réessayez.");
-  }
+    let logo="";const fichier=document.getElementById("partCompagnieLogo")?.files?.[0];
+    if(fichier){logo=await compresserImage(fichier);if(logo.length>300000)throw new Error("Le logo est trop volumineux après compression.");}
+    await db.collection("compagnies").add({uid:user.uid,nom,agence,localisation,telephone,email,logo,destinations,formule,periodicite,montant,dureeMois,moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",dateCreation:firebase.firestore.FieldValue.serverTimestamp(),dateDebut:null,dateExpiration:null});
+    statut.textContent="Demande envoyée avec votre compte utilisateur. Votre session reste active. Activation après vérification du paiement.";
+  }catch(e){console.error("Demande compagnie:",e);statut.textContent="Envoi impossible : "+(e.message||"réessayez.");}
 }
-
 function validerMotDePasse(champ, idErreur) {
   const motDePasse = champ.value;
   const message = document.getElementById(idErreur);
@@ -6207,16 +6183,9 @@ function ouvrirInscriptionGare(){
   onblur="validerTelephone(this, 'erreurGareTelephone')" required>
 <span id="erreurGareTelephone" style="color:red;"></span>
 
-    <label>Adresse e-mail</label>
- <input type="email" id="gareEmail"
-  onblur="validerEmail(this, 'erreurGareEmail')" required>
-<span id="erreurGareEmail" style="color:red;"></span>
-
-    <label>Mot de passe (6 caractères minimum)</label>
-<input type="password" id="gareMotDePasse"
-  onblur="validerMotDePasse(this, 'erreurGareMotDePasse')"
-  minlength="6" required>
-<span id="erreurGareMotDePasse" style="color:red;"></span>
+    <label>Adresse e-mail du compte connecté</label>
+    <input type="email" id="gareEmail" readonly>
+    <p class="notice">La demande sera rattachée à votre compte utilisateur actuel.</p>
 
     <label>Nom de la gare</label>
     <input type="text" id="gareNomStation" required>
@@ -6275,6 +6244,7 @@ posteOccupe: document.getElementById('garePosteOccupe').value.trim(),
     </button>
   `;
 
+  const emailGare=document.getElementById("gareEmail");if(emailGare)emailGare.value=auth.currentUser?.email||"";
   zone.scrollIntoView({behavior:"smooth", block:"start"});
 }
 function ouvrirConnexionPartenaire(){
@@ -7265,172 +7235,30 @@ async function envoyerFichierCloudflare(
   return resultat.key;
 }
 async function creerComptePartenaire(type, donnees) {
-  const telephoneChampId = type === "livreur_independant"
-  ? "livreurTelephone"
-  : "gareTelephone";
-
-const telephoneErreurId = type === "livreur_independant"
-  ? "erreurLivreurTelephone"
-  : "erreurGareTelephone";
-
-const champTelephone = document.getElementById(telephoneChampId);
-
-if (!validerTelephone(champTelephone, telephoneErreurId)) {
-  champTelephone.focus();
-  return;
+  const user=auth.currentUser;
+  if(!user){alert("Connectez-vous d’abord à votre compte utilisateur pour déposer une demande partenaire.");return;}
+  const telephoneId=type==="livreur_independant"?"livreurTelephone":"gareTelephone";
+  const erreurTelephone=type==="livreur_independant"?"erreurLivreurTelephone":"erreurGareTelephone";
+  const champTelephone=document.getElementById(telephoneId);
+  if(!validerTelephone(champTelephone,erreurTelephone)){champTelephone.focus();return;}
+  donnees.telephone=champTelephone.value;
+  const idId=type==="livreur_independant"?"livreurNumeroIdentite":"gareNumeroIdentite";
+  const erreurId=type==="livreur_independant"?"erreurLivreurIdentite":"erreurGareIdentite";
+  const champId=document.getElementById(idId);
+  if(!validerNumeroIdentite(champId,erreurId)){champId.focus();return;}
+  donnees.numeroIdentite=champId.value;
+  const photoId=type==="livreur_independant"?"livreurPhotoProfil":"garePhotoProfil";
+  const fichier=document.getElementById(photoId)?.files?.[0];
+  if(!fichier){alert("Ajoutez une photo de profil avant d’envoyer votre demande.");return;}
+  let photoProfil;
+  try{photoProfil=await convertirImageEnJpegCompressee(fichier);}catch(e){alert(e.message);return;}
+  if(!donnees.nom||!donnees.commune){alert("Complétez votre nom et votre commune.");return;}
+  const dossier={uid:user.uid,type,nom:donnees.nom,telephone:donnees.telephone,commune:donnees.commune,email:user.email||"",dateNaissance:donnees.dateNaissance,lieuNaissance:donnees.lieuNaissance,numeroIdentite:donnees.numeroIdentite,photoProfil,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+  if(type==="livreur_independant"){dossier.quartiers=donnees.quartiers;dossier.numeroPermis=donnees.numeroPermis;}
+  if(type==="representant_gare"){dossier.nomGare=donnees.nomGare;dossier.posteOccupe=donnees.posteOccupe;}
+  try{await db.collection("partenaires").doc(user.uid).set(dossier);alert("Demande envoyée avec votre compte utilisateur. Votre session reste active. Votre dossier est en attente de validation.");}
+  catch(e){console.error("Demande partenaire:",e);alert("Envoi impossible : "+(e.message||"réessayez."));}
 }
-
-donnees.telephone = champTelephone.value;
-  const email = donnees.email.trim();
-  const emailChampId = type === "livreur_independant"
-  ? "livreurEmail"
-  : "gareEmail";
-
-const emailErreurId = type === "livreur_independant"
-  ? "erreurLivreurEmail"
-  : "erreurGareEmail";
-
-const champEmail = document.getElementById(emailChampId);
-
-if (!validerEmail(champEmail, emailErreurId)) {
-  champEmail.focus();
-  return;
-}
-
-donnees.email = champEmail.value;
-  const motDePasse = donnees.motDePasse;
-  const motDePasseChampId = type === "livreur_independant"
-  ? "livreurMotDePasse"
-  : "gareMotDePasse";
-
-const motDePasseErreurId = type === "livreur_independant"
-  ? "erreurLivreurMotDePasse"
-  : "erreurGareMotDePasse";
-
-const champMotDePasse = document.getElementById(motDePasseChampId);
-
-if (!validerMotDePasse(champMotDePasse, motDePasseErreurId)) {
-  champMotDePasse.focus();
-  return;
-}
-const idChamp = type === "livreur_independant"
-  ? "livreurNumeroIdentite"
-  : "gareNumeroIdentite";
-
-const idErreur = type === "livreur_independant"
-  ? "erreurLivreurIdentite"
-  : "erreurGareIdentite";
-
-const champIdentite = document.getElementById(idChamp);
-
-if (!validerNumeroIdentite(champIdentite, idErreur)) {
-  champIdentite.focus();
-  return;
-}
-
-donnees.numeroIdentite = champIdentite.value;
-const champPhotoId = type === "livreur_independant"
-  ? "livreurPhotoProfil"
-  : "garePhotoProfil";
-
-const champPhoto = document.getElementById(champPhotoId);
-const fichierPhoto = champPhoto && champPhoto.files
-  ? champPhoto.files[0]
-  : null;
-
-if (!fichierPhoto) {
-  alert("Ajoute une photo de profil avant de créer ton compte.");
-  return;
-}
-
-let photoProfil;
-
-try {
-  photoProfil = await convertirImageEnJpegCompressee(fichierPhoto);
-} catch (erreurPhoto) {
-  alert(erreurPhoto.message);
-  return;
-}
-  if (!email || !motDePasse || motDePasse.length < 6) {
-    alert("Vérifie ton adresse e-mail et ton mot de passe (6 caractères minimum).");
-    return;
-  }
-const fichiers = {};
-
-  try {
-    let resultat;
-
-    try {
-      resultat = await auth.createUserWithEmailAndPassword(
-        email,
-        motDePasse
-      );
-    } catch (erreurCreation) {
-      if (erreurCreation.code !== "auth/email-already-in-use") {
-        throw erreurCreation;
-      }
-
-      try {
-        resultat = await auth.signInWithEmailAndPassword(
-          email,
-          motDePasse
-        );
-      } catch (erreurConnexion) {
-        if (
-          erreurConnexion.code === "auth/invalid-credential" ||
-          erreurConnexion.code === "auth/wrong-password" ||
-          erreurConnexion.code === "auth/user-not-found"
-        ) {
-          throw new Error(
-            "Cette adresse e-mail possède déjà un compte, mais le mot de passe saisi ne correspond pas. Connectez-vous avec le mot de passe de ce compte ou utilisez une autre adresse e-mail."
-          );
-        }
-        throw erreurConnexion;
-      }
-    }
-    
-    const uid = resultat.user.uid;
-
-    const dossier = {
-      uid: uid,
-      type: type,
-      nom: donnees.nom,
-      telephone: donnees.telephone,
-      commune: donnees.commune,
-      email: email,
-      dateNaissance: donnees.dateNaissance,
-lieuNaissance: donnees.lieuNaissance,
-numeroIdentite: donnees.numeroIdentite,
-photoProfil: photoProfil,
-      statut: "en_attente",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    if (type === "livreur_independant") {
-      dossier.quartiers = donnees.quartiers;
-      dossier.numeroPermis = donnees.numeroPermis;
-    }
-
-    if (type === "representant_gare") {
-      dossier.nomGare = donnees.nomGare;
-      dossier.posteOccupe = donnees.posteOccupe;
-    }
-
-    await db.collection("partenaires").doc(uid).set(dossier);
-
-    await auth.signOut();
-
-alert("Inscription réussie. Ton dossier est en attente de validation.");
-
-  } catch (erreur) {
-    if (auth.currentUser) {
-      await auth.signOut();
-    }
-
-    alert("Erreur lors de la création : " + erreur.message);
-  }
-}
-
 
 // Gestion commune : les formulaires des rubriques quittées se referment sans effacer les saisies.
 function mqciFermerFormulairesDans(conteneur){
