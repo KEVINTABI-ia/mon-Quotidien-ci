@@ -3665,6 +3665,45 @@ async function chargerNouveauxServicesPublics(type){
   }).join("");
  }catch(e){console.error(e);zone.innerHTML='<p class="notice">Impossible de charger les résultats. Vérifiez les règles Firestore.</p>';}
 }
+
+async function ouvrirFormulaireArticleBoutique(id){
+ const z=document.getElementById("formArticleBoutique_"+id);if(!z)return;
+ z.innerHTML='<div class="card" style="padding:12px"><h4>Ajouter un article</h4><label>Nom</label><input id="artNom_'+id+'" maxlength="100"><label>Catégorie</label><input id="artCat_'+id+'" maxlength="70"><label>Prix FCFA</label><input id="artPrix_'+id+'" type="number" min="1"><label>Description</label><textarea id="artDesc_'+id+'" maxlength="700"></textarea><label>Photo JPG, PNG ou WEBP (3 Mo max.)</label><input id="artPhoto_'+id+'" type="file" accept="image/jpeg,image/png,image/webp"><label>Disponibilité</label><select id="artDispo_'+id+'"><option value="true">Disponible</option><option value="false">Indisponible</option></select><button type="button" class="primary" onclick="enregistrerArticleBoutique(\''+id+'\')">Envoyer pour validation</button><p id="artStatut_'+id+'" class="notice"></p></div>';
+}
+async function enregistrerArticleBoutique(id){
+ const u=auth.currentUser;if(!u)return alert("Connectez-vous à votre boutique.");
+ const val=x=>document.getElementById(x+id)?.value.trim()||"";
+ const nom=val("artNom_"),categorie=val("artCat_"),prix=Number(val("artPrix_")),description=val("artDesc_"),disponible=val("artDispo_")==="true",photo=document.getElementById("artPhoto_"+id)?.files?.[0],status=document.getElementById("artStatut_"+id);
+ if(!nom||!categorie||!Number.isInteger(prix)||prix<=0){status.textContent="Vérifiez le nom, la catégorie et le prix.";return;}
+ try{
+  const b=await db.collection("demandes_nouveaux_services").doc(id).get();
+  if(!b.exists||b.data().uid!==u.uid||b.data().statut!=="approuve"||!b.data().abonnementFin?.toDate||b.data().abonnementFin.toDate().getTime()<=Date.now())throw new Error("Boutique approuvée avec abonnement actif obligatoire.");
+  if(!photo||!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>3*1024*1024)throw new Error("Ajoutez une photo JPG, PNG ou WEBP de 3 Mo maximum.");
+  status.textContent="Compression et envoi de la photo...";
+  const photoUrl=await compresserPhotoNouveauService(photo);
+  await db.collection("articles_boutiques").add({boutiqueId:id,boutiqueUid:u.uid,boutiqueNom:b.data().titre,nom,categorie,prix,description,photoUrl,disponible,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  status.textContent="Article envoyé. Il sera visible après validation de l’administration.";
+  await chargerMesArticlesBoutique(id);
+ }catch(e){console.error(e);status.textContent="Envoi impossible : "+e.message;}
+}
+async function chargerMesArticlesBoutique(id){
+ const z=document.getElementById("mesArticlesBoutique_"+id);if(!z||!auth.currentUser)return;
+ try{const q=await db.collection("articles_boutiques").where("boutiqueId","==",id).where("boutiqueUid","==",auth.currentUser.uid).get();z.innerHTML=q.empty?'<p class="notice">Aucun article pour le moment.</p>':q.docs.map(d=>'<article class="stop"><img src="'+d.data().photoUrl+'" style="width:110px;height:90px;object-fit:cover;border-radius:8px"><strong>'+echapperTextePublicite(d.data().nom)+'</strong><p>'+Number(d.data().prix).toLocaleString("fr-FR")+' FCFA · '+(d.data().statut==="approuve"?"Publié":"En attente de validation")+'</p></article>').join("");}catch(e){z.textContent="Erreur : "+e.message;}
+}
+async function chargerArticlesPublicsBoutique(id){
+ const z=document.getElementById("articlesBoutiquePublic_"+id);if(!z)return;
+ try{const q=await db.collection("articles_boutiques").where("boutiqueId","==",id).where("statut","==","approuve").get();const ds=q.docs.filter(d=>d.data().disponible!==false);if(!ds.length)return;z.innerHTML='<h4>Articles de la boutique</h4><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px">'+ds.map(d=>'<article class="card" style="padding:8px"><img src="'+d.data().photoUrl+'" style="width:100%;height:120px;object-fit:cover;border-radius:8px"><strong>'+echapperTextePublicite(d.data().nom)+'</strong><p>'+Number(d.data().prix).toLocaleString("fr-FR")+' FCFA</p><p>'+echapperTextePublicite(d.data().description||"")+'</p></article>').join("")+'</div>';}catch(e){console.error(e);}
+}
+async function chargerArticlesBoutiquesAdmin(){
+ const z=document.getElementById("listeValidationArticlesBoutiquesAdmin");if(!z||!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;
+ try{const q=await db.collection("articles_boutiques").where("statut","==","en_attente").get();z.innerHTML=q.empty?'<p class="notice">Aucun article en attente.</p>':q.docs.map(d=>'<article class="card" style="padding:12px"><img src="'+d.data().photoUrl+'" style="width:160px;height:120px;object-fit:cover"><strong>'+echapperTextePublicite(d.data().nom)+'</strong><p>'+echapperTextePublicite(d.data().boutiqueNom)+' · '+Number(d.data().prix).toLocaleString("fr-FR")+' FCFA</p><button onclick="traiterArticleBoutiqueAdmin(\''+d.id+'\',\'approuve\')">Approuver et publier</button><button onclick="traiterArticleBoutiqueAdmin(\''+d.id+'\',\'refuse\')">Refuser</button></article>').join("");}catch(e){z.textContent="Erreur : "+e.message;}
+}
+async function traiterArticleBoutiqueAdmin(id,statut){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ if(!["approuve","refuse"].includes(statut))return;
+ try{await db.collection("articles_boutiques").doc(id).update({statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});await chargerArticlesBoutiquesAdmin();}catch(e){alert("Traitement impossible : "+e.message);}
+}
+
 async function connecterCompteBoutique(){
  const email=document.getElementById("connexionBoutiqueEmail")?.value.trim()||"";
  const motDePasse=document.getElementById("connexionBoutiqueMotDePasse")?.value||"";
