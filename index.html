@@ -3333,7 +3333,7 @@ let mqciCodeEnvoye=false;
 function mqciAuthMode(mode){
   mqciAuthModeActuel=mode==="login"?"login":"register";
   const inscription=mqciAuthModeActuel==="register";
-  document.getElementById("mqci-auth-register-fields").hidden=!inscription;
+  document.getElementById("mqci-auth-register-fields").hidden=!(inscription||document.getElementById("mqci-auth-method").value==="phone");
   document.getElementById("mqci-auth-tab-register").classList.toggle("active",inscription);
   document.getElementById("mqci-auth-tab-login").classList.toggle("active",!inscription);
   document.getElementById("mqci-auth-password").autocomplete=inscription?"new-password":"current-password";
@@ -3344,6 +3344,7 @@ function mqciAuthMethodChanged(){
   document.getElementById("mqci-auth-phone-fields").hidden=!telephone;
   document.getElementById("mqci-auth-email-fields").hidden=telephone;
   document.getElementById("mqci-auth-submit").hidden=telephone;
+  document.getElementById("mqci-auth-register-fields").hidden=!(mqciAuthModeActuel==="register"||telephone);
 }
 function mqciAuthStatut(message,erreur=false){
   const zone=document.getElementById("mqci-auth-status");
@@ -3376,46 +3377,55 @@ async function mqciSoumettreEmail(){
   if(password.length<6){mqciAuthStatut("Le mot de passe doit contenir au moins 6 caractères.",true);return;}
   const bouton=document.getElementById("mqci-auth-submit");bouton.disabled=true;mqciAuthStatut("Connexion en cours...");
   try{
+    if(mqciAuthModeActuel==="register")window.__mqciAuthFlowInProgress=true;
     let credential;
     if(mqciAuthModeActuel==="register")credential=await auth.createUserWithEmailAndPassword(email,password);
     else credential=await auth.signInWithEmailAndPassword(email,password);
     if(mqciAuthModeActuel==="register")await credential.user.updateProfile({displayName:nom});
     await mqciEnregistrerProfil(credential.user,nom);
+    window.__mqciAuthFlowInProgress=false;
+    document.getElementById("mqci-auth-gate").hidden=true;
     mqciAuthStatut("Compte vérifié. Bienvenue sur Mon Quotidien CI.");
   }catch(e){
     const messages={"auth/email-already-in-use":"Cette adresse e-mail possède déjà un compte. Choisissez « Se connecter ».","auth/invalid-credential":"Adresse e-mail ou mot de passe incorrect.","auth/weak-password":"Choisissez un mot de passe d'au moins 6 caractères.","auth/invalid-email":"Adresse e-mail invalide.","auth/network-request-failed":"Connexion réseau impossible. Réessayez."};
     mqciAuthStatut(messages[e.code]||("Opération impossible : "+(e.message||"réessayez.")),true);
-  }finally{bouton.disabled=false;}
+  }finally{if(!auth.currentUser)window.__mqciAuthFlowInProgress=false;bouton.disabled=false;}
 }
 async function mqciEnvoyerCodeSMS(){
   try{
     const phone=mqciNormaliserTelephoneAuth(document.getElementById("mqci-auth-phone").value);
     const btn=document.getElementById("mqci-auth-send-code");btn.disabled=true;mqciAuthStatut("Préparation de la vérification SMS...");
+    window.__mqciAuthFlowInProgress=true;
     if(!mqciRecaptchaVerifier)mqciRecaptchaVerifier=new firebase.auth.RecaptchaVerifier("mqci-recaptcha-container",{size:"normal",callback:()=>{}, "expired-callback":()=>{mqciAuthStatut("La vérification a expiré. Recommencez.",true);}});
     mqciConfirmationSMS=await auth.signInWithPhoneNumber(phone,mqciRecaptchaVerifier);
     mqciCodeEnvoye=true;mqciAuthStatut("Code envoyé. Consultez vos SMS puis saisissez le code reçu.");
     document.getElementById("mqci-auth-code").focus();
   }catch(e){mqciAuthStatut("Envoi du SMS impossible : "+(e.message||"vérifiez le numéro et réessayez."),true);if(mqciRecaptchaVerifier){try{await mqciRecaptchaVerifier.clear();}catch(_){}mqciRecaptchaVerifier=null;}}
-  finally{document.getElementById("mqci-auth-send-code").disabled=false;}
+  finally{if(!mqciConfirmationSMS)window.__mqciAuthFlowInProgress=false;document.getElementById("mqci-auth-send-code").disabled=false;}
 }
 async function mqciVerifierCodeSMS(){
   const code=document.getElementById("mqci-auth-code").value.trim();
   if(!mqciCodeEnvoye||!mqciConfirmationSMS){mqciAuthStatut("Demandez d'abord un code SMS.",true);return;}
   if(!/^[0-9]{6}$/.test(code)){mqciAuthStatut("Saisissez le code à 6 chiffres reçu par SMS.",true);return;}
   const nom=document.getElementById("mqci-auth-name").value.trim();
-  if(mqciAuthModeActuel==="register"&&nom.length<2){mqciAuthStatut("Saisissez votre nom complet.",true);return;}
   const btn=document.getElementById("mqci-auth-verify-code");btn.disabled=true;mqciAuthStatut("Vérification du code...");
   try{
     const credential=await mqciConfirmationSMS.confirm(code);
-    if(mqciAuthModeActuel==="register"&&nom)await credential.user.updateProfile({displayName:nom});
+    const profilExistant=await db.collection("utilisateurs").doc(credential.user.uid).get();
+    if(!profilExistant.exists&&nom.length<2)throw new Error("Saisissez votre nom complet pour terminer la création du compte.");
+    if(!profilExistant.exists&&nom)await credential.user.updateProfile({displayName:nom});
     await mqciEnregistrerProfil(credential.user,nom);
+    window.__mqciAuthFlowInProgress=false;
+    document.getElementById("mqci-auth-gate").hidden=true;
     mqciAuthStatut("Numéro vérifié. Bienvenue sur Mon Quotidien CI.");
   }catch(e){mqciAuthStatut("Code incorrect ou expiré : "+(e.message||"demandez un nouveau code."),true);}
   finally{btn.disabled=false;}
 }
 auth.onAuthStateChanged(function(user){
   const gate=document.getElementById("mqci-auth-gate");
-  if(gate)gate.hidden=!!user;
+  if(!gate)return;
+  if(user&&window.__mqciAuthFlowInProgress)return;
+  gate.hidden=!!user;
 });
 
 
