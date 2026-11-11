@@ -3665,8 +3665,9 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
  ${type==="annonce"?'<div id="zoneAbonnementPetitesAnnonces" style="margin:12px 0;"><button type="button" onclick="ouvrirGestionAbonnementPetitesAnnonces()">Consulter mon abonnement / renouveler</button></div>':""}
- ${type==="commerce"?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="30" data-montant="2500">1 mois — 2 500 FCFA</option><option value="60" data-montant="4500">2 mois — 4 500 FCFA</option><option value="90" data-montant="7000">3 mois — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p id="coordonneesPaiementBoutique">Chargement des coordonnées de paiement...</p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
- <button id="nsEnvoyerValidation" class="primary" type="button">${type==="commerce"?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
+ ${type==="commerce"&&!modePartenaire?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="30" data-montant="2500">1 mois — 2 500 FCFA</option><option value="60" data-montant="4500">2 mois — 4 500 FCFA</option><option value="90" data-montant="7000">3 mois — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p id="coordonneesPaiementBoutique">Chargement des coordonnées de paiement...</p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
+ ${type==="commerce"&&modePartenaire?'<p class="notice">Inscription partenaire gratuite. Après approbation par l’administration, votre boutique bénéficiera de 30 jours de visibilité gratuite. Un abonnement sera nécessaire pour continuer après cette période.</p>':''}
+ <button id="nsEnvoyerValidation" class="primary" type="button">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
  </div>`;
  const boutonEnvoi=zone.querySelector("#nsEnvoyerValidation");
@@ -3689,7 +3690,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
    }
   });
  }
- if(type==="commerce"){
+ if(type==="commerce"&&!modePartenaire){
   initialiserFormulaireAbonnementBoutique();
   window.chargerCoordonneesPaiementMQCI().then(p=>{const el=document.getElementById("coordonneesPaiementBoutique");if(el)el.textContent="Wave : "+p.numero+" · Orange Money : "+p.numero+" · Bénéficiaire : "+p.beneficiaire;});
  }
@@ -3732,16 +3733,17 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
  if(modePartenaire&&!comptePartenaire){statut.textContent="Connectez-vous à votre compte utilisateur avant de déposer une demande partenaire.";return;}
  if(modePartenaire&&comptePartenaire.email&&email&&comptePartenaire.email.toLowerCase()!==email.toLowerCase()){statut.textContent="L’adresse e-mail doit correspondre au compte utilisateur connecté.";return;}
  const estBoutique=nouveauServiceActif==="commerce";
- const paiementMoyen=estBoutique?(document.getElementById("nsPaiementMoyen")?.value||""):"";
- const paiementReference=estBoutique?(document.getElementById("nsPaiementReference")?.value.trim()||""):"";
- const dureeSelect=estBoutique?document.getElementById("nsDureeAbonnement"):null;
+ const boutiquePartenaire=estBoutique&&modePartenaire;
+ const paiementMoyen=estBoutique&&!boutiquePartenaire?(document.getElementById("nsPaiementMoyen")?.value||""):"";
+ const paiementReference=estBoutique&&!boutiquePartenaire?(document.getElementById("nsPaiementReference")?.value.trim()||""):"";
+ const dureeSelect=estBoutique&&!boutiquePartenaire?document.getElementById("nsDureeAbonnement"):null;
  const dureeOption=dureeSelect?.selectedOptions?.[0]||null;
- const montantAbonnement=estBoutique?Number(dureeOption?.dataset?.montant||0):0;
- const dureeAbonnementJours=estBoutique?Number(dureeSelect?.value||0):0;
+ const montantAbonnement=estBoutique&&!boutiquePartenaire?Number(dureeOption?.dataset?.montant||0):0;
+ const dureeAbonnementJours=estBoutique&&!boutiquePartenaire?Number(dureeSelect?.value||0):0;
  const adresseBoutique=estBoutique?(document.getElementById("nsAdresseBoutique")?.value.trim()||""):"";
  if(estBoutique&&!adresseBoutique){statut.textContent="Renseignez l’adresse précise de récupération de votre établissement.";return;}
- if(estBoutique&&(!paiementMoyen||!paiementReference)){statut.textContent="Effectuez le paiement, choisissez Wave ou Orange Money et saisissez la référence de la transaction.";return;}
- if(estBoutique&&(!dureeSelect||!dureeOption||!Number.isInteger(montantAbonnement)||montantAbonnement<=0||!Number.isInteger(dureeAbonnementJours)||dureeAbonnementJours<=0)){statut.textContent="Choisissez une formule d’abonnement disponible avant de continuer.";return;}
+ if(estBoutique&&!boutiquePartenaire&&(!paiementMoyen||!paiementReference)){statut.textContent="Effectuez le paiement, choisissez Wave ou Orange Money et saisissez la référence de la transaction.";return;}
+ if(estBoutique&&!boutiquePartenaire&&(!dureeSelect||!dureeOption||!Number.isInteger(montantAbonnement)||montantAbonnement<=0||!Number.isInteger(dureeAbonnementJours)||dureeAbonnementJours<=0)){statut.textContent="Choisissez une formule d’abonnement disponible avant de continuer.";return;}
  if(!titre||!commune||!telephone||!description||!(modePartenaire?(comptePartenaire?.email||email):email)||(!modePartenaire&&password.length<6)){statut.textContent="Remplissez tous les champs obligatoires."+(modePartenaire?"":" Le mot de passe doit contenir au moins 6 caractères.");return;}
  statut.textContent="Envoi du dossier...";
  try{
@@ -3762,7 +3764,8 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
    uid:user.uid,type:nouveauServiceActif,titre,categorie:valeur("nsCategorie"),commune,telephone,description,email,
    ...(modePartenaire?{modePartenaire:true}:{}),
    ...(photoUrl?{photoUrl}:{}),
-   ...(estBoutique?{adresseBoutique,paiementMoyen,paiementReference,montantAbonnement,dureeAbonnementJours,paiementStatut:"a_verifier"}:{}),
+   ...(estBoutique?{adresseBoutique}:{}),
+   ...(estBoutique&&!boutiquePartenaire?{paiementMoyen,paiementReference,montantAbonnement,dureeAbonnementJours,paiementStatut:"a_verifier"}:{}),
    statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()
   };
   if(nouveauServiceActif==="annonce"){
@@ -3852,7 +3855,7 @@ async function chargerNouveauxServicesPublics(type){
   if(type==="annuaire")requete=requete.where("abonnementFin",">",firebase.firestore.Timestamp.now());
   const snap=await requete.limit(100).get();
   const maintenant=Date.now();
-  const documents=snap.docs.filter(doc=>{const d=doc.data();if(type!=="commerce")return true;const estBoutique=String(d.categorie||"").toLowerCase()==="boutique"&&!d.modePartenaire;if(filtrePublicCommerce==="boutique"&&!estBoutique)return false;if(filtrePublicCommerce==="commerce"&&estBoutique)return false;if(d.modePartenaire===true)return d.visibleManuellement!==false;return d.visibleManuellement!==false&&d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;});
+  const documents=snap.docs.filter(doc=>{const d=doc.data();if(type!=="commerce")return true;const estBoutique=String(d.categorie||"").toLowerCase()==="boutique"&&!d.modePartenaire;if(filtrePublicCommerce==="boutique"&&!estBoutique)return false;if(filtrePublicCommerce==="commerce"&&estBoutique)return false;if(d.modePartenaire===true)return d.visibleManuellement!==false&&d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;return d.visibleManuellement!==false&&d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;});
   if(!documents.length){zone.innerHTML='<p class="notice">'+(type==="commerce"?"Aucune boutique avec un abonnement actif pour le moment.":"Aucun résultat publié dans cette rubrique pour le moment.")+'</p>';return;}
   zone.innerHTML=documents.map(doc=>{
    const d=doc.data();
@@ -4104,7 +4107,7 @@ async function chargerNouveauxServicesAdmin(typeFiltre){
   const snap=await db.collection("demandes_nouveaux_services").orderBy("createdAt","desc").limit(150).get();
   const dossiers=snap.docs.filter(doc=>{const d=doc.data();return typeFiltre==="boutique"?(d.type==="commerce"&&String(d.categorie||"").toLowerCase()==="boutique"):typeFiltre==="commerce"?(d.type==="commerce"&&String(d.categorie||"").toLowerCase()!=="boutique"):d.type===typeFiltre;});
   if(dossiers.length===0){zone.innerHTML='<p class="notice">Aucun dossier de cette catégorie pour le moment.</p>';return;}
-  zone.innerHTML=dossiers.map(doc=>{const d=doc.data();const type=NOUVEAUX_SERVICES[d.type]?.titre||d.type;const date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date en cours";const expire=d.abonnementFin?.toDate?d.abonnementFin.toDate().getTime()<=Date.now():false;const paiement=d.type==="commerce"?'<p><strong>Abonnement boutique : '+Number(d.montantAbonnement||0).toLocaleString("fr-FR")+' FCFA / '+Number(d.dureeAbonnementJours||0)+' jours</strong></p><p>Paiement : '+echapperTextePublicite(d.paiementMoyen||"Non indiqué")+' · Référence : '+echapperTextePublicite(d.paiementReference||"Non fournie")+' · Statut : '+echapperTextePublicite(d.paiementStatut||"à vérifier")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée automatiquement — abonnement expiré":d.visibleManuellement===false?"Masquée manuellement":"Visible si abonnement actif")+'</p>':"";const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'approuve\')">'+(d.type==="commerce"?"Confirmer paiement et activer l’abonnement":"Approuver et publier")+'</button><button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'refuse\')">Refuser</button>': '<span class="notice">Dossier '+echapperTextePublicite(d.statut)+(d.abonnementFin&&d.abonnementFin.toDate?" · Fin abonnement : "+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"")+'</span>';const controle=d.type==="commerce"&&String(d.categorie||"").toLowerCase()==="boutique"&&d.statut==="approuve"?'<p><strong>Abonnement :</strong> '+(d.abonnementFin?.toDate&&d.abonnementFin.toDate().getTime()>Date.now()?"Actif jusqu’au "+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"Expiré ou non activé")+'</p><button type="button" class="primary" onclick="renouvelerAbonnementBoutiqueAdmin(\''+doc.id+'\')">Confirmer un renouvellement</button><button type="button" onclick="basculerVisibiliteBoutiqueAdmin(\''+doc.id+'\','+(d.visibleManuellement===false?'true':'false')+')">'+(d.visibleManuellement===false?"Afficher manuellement la boutique":"Masquer manuellement la boutique")+'</button><button type="button" onclick="chargerAvisBoutiqueAdmin(\''+doc.id+'\')">⭐ Consulter les avis clients</button><div id="avisAdminBoutique_'+doc.id+'"></div>':"";return '<article class="card" style="padding:14px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo proposée" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':"")+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(type)+' · '+echapperTextePublicite(d.categorie)+'</p><p>'+echapperTextePublicite(d.commune)+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+' · '+date+'</p>'+paiement+actions+controle+'</article>';}).join("");
+  zone.innerHTML=dossiers.map(doc=>{const d=doc.data();const type=NOUVEAUX_SERVICES[d.type]?.titre||d.type;const date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date en cours";const expire=d.abonnementFin?.toDate?d.abonnementFin.toDate().getTime()<=Date.now():false;const paiement=d.type==="commerce"?'<p><strong>Abonnement boutique : '+Number(d.montantAbonnement||0).toLocaleString("fr-FR")+' FCFA / '+Number(d.dureeAbonnementJours||0)+' jours</strong></p><p>Paiement : '+echapperTextePublicite(d.paiementMoyen||"Non indiqué")+' · Référence : '+echapperTextePublicite(d.paiementReference||"Non fournie")+' · Statut : '+echapperTextePublicite(d.paiementStatut||"à vérifier")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée automatiquement — abonnement expiré":d.visibleManuellement===false?"Masquée manuellement":"Visible si abonnement actif")+'</p>':"";const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'approuve\')">'+(d.type==="commerce"?"Confirmer paiement et activer l’abonnement":"Approuver et publier")+'</button><button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'refuse\')">Refuser</button>': '<span class="notice">Dossier '+echapperTextePublicite(d.statut)+(d.abonnementFin&&d.abonnementFin.toDate?" · Fin abonnement : "+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"")+'</span>';const controle=d.type==="commerce"&&(String(d.categorie||"").toLowerCase()==="boutique"||d.modePartenaire===true)&&d.statut==="approuve"?'<p><strong>Abonnement :</strong> '+(d.abonnementFin?.toDate&&d.abonnementFin.toDate().getTime()>Date.now()?(d.modePartenaire?"Essai gratuit jusqu’au ":"Actif jusqu’au ")+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"Expiré ou non activé")+'</p><button type="button" class="primary" onclick="renouvelerAbonnementBoutiqueAdmin(\''+doc.id+'\')">Confirmer un renouvellement</button><button type="button" onclick="basculerVisibiliteBoutiqueAdmin(\''+doc.id+'\','+(d.visibleManuellement===false?'true':'false')+')">'+(d.visibleManuellement===false?"Afficher manuellement la boutique":"Masquer manuellement la boutique")+'</button>'+(String(d.categorie||"").toLowerCase()==="boutique"?'<button type="button" onclick="chargerAvisBoutiqueAdmin(\''+doc.id+'\')">⭐ Consulter les avis clients</button><div id="avisAdminBoutique_'+doc.id+'"></div>':""):"";return '<article class="card" style="padding:14px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo proposée" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':"")+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(type)+' · '+echapperTextePublicite(d.categorie)+'</p><p>'+echapperTextePublicite(d.commune)+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+' · '+date+'</p>'+paiement+actions+controle+'</article>';}).join("");
  }catch(e){console.error(e);zone.innerHTML='<p class="notice">Erreur de chargement. Vérifiez les règles Firestore.</p>';}
 }
 async function renouvelerAbonnementBoutiqueAdmin(id){
@@ -4113,15 +4116,25 @@ async function renouvelerAbonnementBoutiqueAdmin(id){
   const ref=db.collection("demandes_nouveaux_services").doc(id),snap=await ref.get();
   if(!snap.exists)return alert("Boutique introuvable.");
   const d=snap.data();
-  if(d.type!=="commerce"||String(d.categorie||"").toLowerCase()!=="boutique"||d.statut!=="approuve")return alert("Cette boutique n’est pas approuvée.");
-  const montant=Number(d.montantAbonnement||0),jours=Number(d.dureeAbonnementJours||0);
-  if(!Number.isInteger(montant)||montant<=0||!Number.isInteger(jours)||jours<=0)return alert("Forfait enregistré incomplet. Vérifiez le dossier de la boutique avant le renouvellement.");
-  if(!d.paiementMoyen||!d.paiementReference)return alert("Informations de paiement manquantes. Contactez le propriétaire avant toute activation.");
-  if(!confirm("Confirmer la réception effective de "+montant.toLocaleString("fr-FR")+" FCFA par "+d.paiementMoyen+" ? L’abonnement sera prolongé de "+jours+" jours."))return;
+  if(d.type!=="commerce"||(String(d.categorie||"").toLowerCase()!=="boutique"&&d.modePartenaire!==true)||d.statut!=="approuve")return alert("Ce dossier partenaire ou boutique n’est pas approuvé.");
+  let montant=Number(d.montantAbonnement||0),jours=Number(d.dureeAbonnementJours||0);
+  if(d.modePartenaire===true){
+   const montantSaisi=prompt("Montant du renouvellement reçu (en FCFA) :",montant>0?String(montant):"");
+   if(montantSaisi===null)return;
+   montant=Number(montantSaisi);
+   const joursSaisis=prompt("Durée du renouvellement (en jours) :",jours>0?String(jours):"30");
+   if(joursSaisis===null)return;
+   jours=Number(joursSaisis);
+  }else{
+   if(!Number.isInteger(montant)||montant<=0||!Number.isInteger(jours)||jours<=0)return alert("Forfait enregistré incomplet. Vérifiez le dossier de la boutique avant le renouvellement.");
+   if(!d.paiementMoyen||!d.paiementReference)return alert("Informations de paiement manquantes. Contactez le propriétaire avant toute activation.");
+  }
+  if(!Number.isInteger(montant)||montant<=0||!Number.isInteger(jours)||jours<=0)return alert("Montant ou durée invalide.");
+  if(!confirm("Confirmer que le paiement de "+montant.toLocaleString("fr-FR")+" FCFA a bien été reçu ? La visibilité sera prolongée de "+jours+" jours."))return;
   const maintenant=new Date(),ancienneFin=d.abonnementFin?.toDate?d.abonnementFin.toDate():maintenant;
   const debut=ancienneFin>maintenant?ancienneFin:maintenant,fin=new Date(debut.getTime()+jours*86400000);
-  await ref.update({abonnementDebut:firebase.firestore.Timestamp.fromDate(debut),abonnementFin:firebase.firestore.Timestamp.fromDate(fin),paiementStatut:"confirme",dernierPaiementFCFA:montant,dernierPaiementConfirmeLe:firebase.firestore.FieldValue.serverTimestamp()});
-  await chargerNouveauxServicesAdmin("boutique");
+  await ref.update({abonnementDebut:firebase.firestore.Timestamp.fromDate(debut),abonnementFin:firebase.firestore.Timestamp.fromDate(fin),abonnementStatut:"actif",paiementStatut:"confirme",montantAbonnement:montant,dureeAbonnementJours:jours,dernierPaiementFCFA:montant,dernierPaiementConfirmeLe:firebase.firestore.FieldValue.serverTimestamp()});
+  await chargerNouveauxServicesAdmin(String(d.categorie||"").toLowerCase()==="boutique"?"boutique":"commerce");
  }catch(e){console.error(e);alert("Renouvellement impossible : "+(e.message||"erreur Firestore"));}
 }
 
@@ -4152,7 +4165,7 @@ async function chargerAvisBoutiqueAdmin(boutiqueId){
 async function traiterNouveauService(id,statut){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
  if(!["approuve","refuse"].includes(statut))return;
- try{const ref=db.collection("demandes_nouveaux_services").doc(id);const doc=await ref.get();if(!doc.exists)return alert("Dossier introuvable.");const data=doc.data();const maj={statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()};if(statut==="approuve"&&data.type==="commerce"){if(!data.paiementMoyen||!data.paiementReference)return alert("Impossible d’activer : informations de paiement manquantes.");const montantAttendu=Number(data.montantAbonnement||0),dureeJours=Number(data.dureeAbonnementJours||0);if(!Number.isInteger(montantAttendu)||montantAttendu<=0||!Number.isInteger(dureeJours)||dureeJours<=0)return alert("Forfait boutique invalide. Vérifiez le montant et la durée enregistrés.");if(!confirm("Confirmer la réception de "+montantAttendu.toLocaleString("fr-FR")+" FCFA ? L’abonnement sera activé pour "+dureeJours+" jours."))return;const debut=new Date();const fin=new Date(debut.getTime()+dureeJours*24*60*60*1000);maj.paiementStatut="confirme";maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);}await ref.update(maj);await chargerNouveauxServicesAdmin(data.type==="commerce"?(String(data.categorie||"").toLowerCase()==="boutique"?"boutique":"commerce"):data.type);}
+ try{const ref=db.collection("demandes_nouveaux_services").doc(id);const doc=await ref.get();if(!doc.exists)return alert("Dossier introuvable.");const data=doc.data();const maj={statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()};if(statut==="approuve"&&data.type==="commerce"){const debut=new Date();if(data.modePartenaire===true){const fin=new Date(debut.getTime()+30*24*60*60*1000);maj.abonnementStatut="essai_gratuit";maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);maj.paiementStatut="gratuit";}else{if(!data.paiementMoyen||!data.paiementReference)return alert("Impossible d’activer : informations de paiement manquantes.");const montantAttendu=Number(data.montantAbonnement||0),dureeJours=Number(data.dureeAbonnementJours||0);if(!Number.isInteger(montantAttendu)||montantAttendu<=0||!Number.isInteger(dureeJours)||dureeJours<=0)return alert("Forfait boutique invalide. Vérifiez le montant et la durée enregistrés.");if(!confirm("Confirmer la réception de "+montantAttendu.toLocaleString("fr-FR")+" FCFA ? L’abonnement sera activé pour "+dureeJours+" jours."))return;const fin=new Date(debut.getTime()+dureeJours*24*60*60*1000);maj.paiementStatut="confirme";maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);}}await ref.update(maj);await chargerNouveauxServicesAdmin(data.type==="commerce"?(String(data.categorie||"").toLowerCase()==="boutique"?"boutique":"commerce"):data.type);}
  catch(e){console.error(e);alert("Impossible de modifier ce dossier. Vérifiez les règles Firestore.");}
 }
 
