@@ -3260,9 +3260,7 @@ function actualiserEtatNotificationsApplication(){const z=document.getElementByI
 async function activerNotificationsApplication(){
  if(!('Notification'in window)){alert('Ce navigateur ne prend pas en charge les notifications.');return;}
  if(!window.isSecureContext){alert('Les notifications nécessitent une connexion sécurisée HTTPS.');return;}
- try
-
-try{
+ try{
   let permission=Notification.permission;
   if(permission!=='granted') permission=await Notification.requestPermission();
   actualiserEtatNotificationsApplication();
