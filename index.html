@@ -3396,7 +3396,7 @@ async function mqciEnvoyerCodeSMS(){
     const btn=document.getElementById("mqci-auth-send-code");btn.disabled=true;mqciAuthStatut("Préparation de la vérification SMS...");
     window.__mqciAuthFlowInProgress=true;
     if(!window.mqciRecaptchaVerifier){
-      window.mqciRecaptchaVerifier=new firebase.auth.RecaptchaVerifier("mqci-recaptcha-container",{size:"normal",callback:()=>{mqciAuthStatut("Vérification reCAPTCHA validée. Envoi du SMS...");}, "expired-callback":()=>{mqciAuthStatut("La vérification a expiré. Cochez à nouveau la case reCAPTCHA.",true);}},auth);
+      window.mqciRecaptchaVerifier=new firebase.auth.RecaptchaVerifier("mqci-recaptcha-container",{size:"normal",callback:()=>{mqciAuthStatut("Vérification reCAPTCHA validée. Envoi du SMS...");}, "expired-callback":()=>{mqciAuthStatut("La vérification a expiré. Cochez à nouveau la case reCAPTCHA.",true);}});
       await window.mqciRecaptchaVerifier.render();
     }
     mqciConfirmationSMS=await auth.signInWithPhoneNumber(phone,window.mqciRecaptchaVerifier);
