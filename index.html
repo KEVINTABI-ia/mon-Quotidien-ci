@@ -1235,6 +1235,24 @@ header{padding:22px 18px 24px!important}
 #demarchesJudiciaires .judiciaire-guides-boutons{display:flex;flex-wrap:wrap;gap:7px}
 #demarchesJudiciaires .judiciaire-guides-boutons button{border:1px solid #C9D8CE;border-radius:20px;background:#fff;color:#174B40;padding:8px 10px;font-size:11px;font-weight:700}
 
+/* Portail d'authentification général */
+#mqci-auth-gate{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:22px 14px;background:linear-gradient(145deg,#102D35,#087C62);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+#mqci-auth-gate[hidden]{display:none!important}
+#mqci-auth-gate .mqci-auth-panel{width:min(100%,440px);max-height:calc(100dvh - 28px);overflow-y:auto;background:#fff;color:#263A35;border-radius:22px;padding:24px 20px;box-shadow:0 18px 60px #0004}
+#mqci-auth-gate .mqci-auth-logo{display:block;width:78px;height:78px;object-fit:contain;margin:0 auto 8px}
+#mqci-auth-gate .mqci-auth-eyebrow{text-align:center;color:#087C62;font-weight:800;letter-spacing:2px;font-size:11px;margin:0}
+#mqci-auth-gate h1{text-align:center;font-size:23px;line-height:1.2;margin:7px 0}
+#mqci-auth-gate .mqci-auth-panel>p:not(.mqci-auth-eyebrow){text-align:center;font-size:13px;color:#63736c}
+#mqci-auth-gate label{display:block;font-weight:700;font-size:13px;margin:12px 0 5px}
+#mqci-auth-gate input,#mqci-auth-gate select{width:100%;min-height:44px;padding:10px 12px;border:1px solid #d5e0d9;border-radius:10px;background:#fff;color:#263A35;font-size:16px}
+#mqci-auth-gate .mqci-auth-tabs{display:flex;gap:8px;margin:18px 0 14px}
+#mqci-auth-gate .mqci-auth-tabs button{flex:1;border:1px solid #087C62;border-radius:10px;padding:10px 6px;background:#fff;color:#087C62;font-weight:700}
+#mqci-auth-gate .mqci-auth-tabs button.active{background:#087C62;color:#fff}
+#mqci-auth-gate .mqci-auth-primary{width:100%;border:0;border-radius:10px;padding:12px;margin-top:12px;background:#087C62;color:#fff;font-weight:800;font-size:15px}
+#mqci-auth-gate #mqci-auth-status{min-height:22px;font-size:13px;font-weight:600;margin:10px 0}
+#mqci-auth-gate .mqci-auth-legal{font-size:11px!important;margin-bottom:0}
+#mqci-auth-gate #mqci-recaptcha-container{margin-top:10px}
+
 </style>
 
 <style>
@@ -1685,6 +1703,48 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 
 </head>
 <body>
+
+
+<!-- Accès obligatoire aux utilisateurs de Mon Quotidien CI -->
+<section id="mqci-auth-gate" role="dialog" aria-modal="true" aria-labelledby="mqci-auth-title">
+  <div class="mqci-auth-panel">
+    <img src="./logo-mon-quotidien-ci.svg" alt="Mon Quotidien CI" class="mqci-auth-logo">
+    <p class="mqci-auth-eyebrow">BIENVENUE</p>
+    <h1 id="mqci-auth-title">Votre quotidien, en toute simplicité</h1>
+    <p>Créez votre compte ou connectez-vous pour accéder aux services de Mon Quotidien CI.</p>
+    <div class="mqci-auth-tabs">
+      <button type="button" id="mqci-auth-tab-register" class="active" onclick="mqciAuthMode('register')">Créer mon compte</button>
+      <button type="button" id="mqci-auth-tab-login" onclick="mqciAuthMode('login')">Se connecter</button>
+    </div>
+    <div id="mqci-auth-register-fields">
+      <label for="mqci-auth-name">Nom complet</label>
+      <input id="mqci-auth-name" type="text" autocomplete="name" placeholder="Votre nom complet">
+    </div>
+    <label for="mqci-auth-method">Méthode de connexion</label>
+    <select id="mqci-auth-method" onchange="mqciAuthMethodChanged()">
+      <option value="email">Adresse e-mail et mot de passe</option>
+      <option value="phone">Numéro de téléphone (code SMS)</option>
+    </select>
+    <div id="mqci-auth-email-fields">
+      <label for="mqci-auth-email">Adresse e-mail</label>
+      <input id="mqci-auth-email" type="email" autocomplete="email" placeholder="exemple@email.com">
+      <label for="mqci-auth-password">Mot de passe</label>
+      <input id="mqci-auth-password" type="password" autocomplete="current-password" placeholder="6 caractères minimum">
+    </div>
+    <div id="mqci-auth-phone-fields" hidden>
+      <label for="mqci-auth-phone">Téléphone (+225)</label>
+      <input id="mqci-auth-phone" type="tel" autocomplete="tel" placeholder="+225 07 00 00 00 00">
+      <div id="mqci-recaptcha-container"></div>
+      <button type="button" id="mqci-auth-send-code" class="mqci-auth-primary" onclick="mqciEnvoyerCodeSMS()">Recevoir le code SMS</button>
+      <label for="mqci-auth-code">Code reçu par SMS</label>
+      <input id="mqci-auth-code" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Code de vérification" maxlength="6">
+      <button type="button" id="mqci-auth-verify-code" class="mqci-auth-primary" onclick="mqciVerifierCodeSMS()">Vérifier et continuer</button>
+    </div>
+    <button type="button" id="mqci-auth-submit" class="mqci-auth-primary" onclick="mqciSoumettreEmail()">Continuer</button>
+    <p id="mqci-auth-status" role="status" aria-live="polite"></p>
+    <p class="mqci-auth-legal">En continuant, vous acceptez que votre compte soit utilisé pour sécuriser vos accès aux services.</p>
+  </div>
+</section>
 
 <div id="mqci-splash-screen" role="status" aria-label="Chargement de Mon Quotidien CI">
 <img src="./logo-mon-quotidien-ci.svg" alt="Mon Quotidien CI — Tous les services utiles, au même endroit.">
@@ -3200,7 +3260,109 @@ function actualiserEtatNotificationsApplication(){const z=document.getElementByI
 async function activerNotificationsApplication(){
  if(!('Notification'in window)){alert('Ce navigateur ne prend pas en charge les notifications.');return;}
  if(!window.isSecureContext){alert('Les notifications nécessitent une connexion sécurisée HTTPS.');return;}
- try{
+ try
+
+/* Authentification générale obligatoire — e-mail ou téléphone */
+auth.useDeviceLanguage();
+let mqciAuthModeActuel="register";
+let mqciConfirmationSMS=null;
+let mqciRecaptchaVerifier=null;
+let mqciCodeEnvoye=false;
+function mqciAuthMode(mode){
+  mqciAuthModeActuel=mode==="login"?"login":"register";
+  const inscription=mqciAuthModeActuel==="register";
+  document.getElementById("mqci-auth-register-fields").hidden=!inscription;
+  document.getElementById("mqci-auth-tab-register").classList.toggle("active",inscription);
+  document.getElementById("mqci-auth-tab-login").classList.toggle("active",!inscription);
+  document.getElementById("mqci-auth-password").autocomplete=inscription?"new-password":"current-password";
+  document.getElementById("mqci-auth-status").textContent="";
+}
+function mqciAuthMethodChanged(){
+  const telephone=document.getElementById("mqci-auth-method").value==="phone";
+  document.getElementById("mqci-auth-phone-fields").hidden=!telephone;
+  document.getElementById("mqci-auth-email-fields").hidden=telephone;
+  document.getElementById("mqci-auth-submit").hidden=telephone;
+}
+function mqciAuthStatut(message,erreur=false){
+  const zone=document.getElementById("mqci-auth-status");
+  if(zone){zone.textContent=message;zone.style.color=erreur?"#b42318":"#087C62";}
+}
+function mqciNormaliserTelephoneAuth(value){
+  let n=(value||"").replace(/[\s().-]/g,"");
+  if(/^0[0-9]{9}$/.test(n))n="+225"+n.slice(1);
+  else if(/^[0-9]{10}$/.test(n))n="+225"+n;
+  if(!/^\+225[0-9]{10}$/.test(n))throw new Error("Saisissez un numéro ivoirien valide avec 10 chiffres, par exemple 07 00 00 00 00.");
+  return n;
+}
+async function mqciEnregistrerProfil(user,nomSaisi){
+  const ref=db.collection("utilisateurs").doc(user.uid);
+  const snap=await ref.get();
+  if(!snap.exists){
+    const nom=(nomSaisi||user.displayName||"").trim();
+    if(!nom)throw new Error("Votre compte est authentifié. Saisissez votre nom complet pour terminer votre inscription.");
+    await ref.set({uid:user.uid,nom:nom.slice(0,100),telephone:user.phoneNumber||"",email:user.email||"",modeConnexion:user.phoneNumber?"telephone":"email",createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  }else if(nomSaisi&&nomSaisi.trim()){
+    await ref.update({nom:nomSaisi.trim().slice(0,100),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  }
+}
+async function mqciSoumettreEmail(){
+  const email=document.getElementById("mqci-auth-email").value.trim().toLowerCase();
+  const password=document.getElementById("mqci-auth-password").value;
+  const nom=document.getElementById("mqci-auth-name").value.trim();
+  if(!email||!password){mqciAuthStatut("Saisissez votre e-mail et votre mot de passe.",true);return;}
+  if(mqciAuthModeActuel==="register"&&nom.length<2){mqciAuthStatut("Saisissez votre nom complet.",true);return;}
+  if(password.length<6){mqciAuthStatut("Le mot de passe doit contenir au moins 6 caractères.",true);return;}
+  const bouton=document.getElementById("mqci-auth-submit");bouton.disabled=true;mqciAuthStatut("Connexion en cours...");
+  try{
+    let credential;
+    if(mqciAuthModeActuel==="register")credential=await auth.createUserWithEmailAndPassword(email,password);
+    else credential=await auth.signInWithEmailAndPassword(email,password);
+    if(mqciAuthModeActuel==="register")await credential.user.updateProfile({displayName:nom});
+    await mqciEnregistrerProfil(credential.user,nom);
+    mqciAuthStatut("Compte vérifié. Bienvenue sur Mon Quotidien CI.");
+  }catch(e){
+    const messages={"auth/email-already-in-use":"Cette adresse e-mail possède déjà un compte. Choisissez « Se connecter ».","auth/invalid-credential":"Adresse e-mail ou mot de passe incorrect.","auth/weak-password":"Choisissez un mot de passe d'au moins 6 caractères.","auth/invalid-email":"Adresse e-mail invalide.","auth/network-request-failed":"Connexion réseau impossible. Réessayez."};
+    mqciAuthStatut(messages[e.code]||("Opération impossible : "+(e.message||"réessayez.")),true);
+  }finally{bouton.disabled=false;}
+}
+async function mqciEnvoyerCodeSMS(){
+  try{
+    const phone=mqciNormaliserTelephoneAuth(document.getElementById("mqci-auth-phone").value);
+    const btn=document.getElementById("mqci-auth-send-code");btn.disabled=true;mqciAuthStatut("Préparation de la vérification SMS...");
+    if(!mqciRecaptchaVerifier)mqciRecaptchaVerifier=new firebase.auth.RecaptchaVerifier("mqci-recaptcha-container",{size:"normal",callback:()=>{}, "expired-callback":()=>{mqciAuthStatut("La vérification a expiré. Recommencez.",true);}});
+    mqciConfirmationSMS=await auth.signInWithPhoneNumber(phone,mqciRecaptchaVerifier);
+    mqciCodeEnvoye=true;mqciAuthStatut("Code envoyé. Consultez vos SMS puis saisissez le code reçu.");
+    document.getElementById("mqci-auth-code").focus();
+  }catch(e){mqciAuthStatut("Envoi du SMS impossible : "+(e.message||"vérifiez le numéro et réessayez."),true);if(mqciRecaptchaVerifier){try{await mqciRecaptchaVerifier.clear();}catch(_){}mqciRecaptchaVerifier=null;}}
+  finally{document.getElementById("mqci-auth-send-code").disabled=false;}
+}
+async function mqciVerifierCodeSMS(){
+  const code=document.getElementById("mqci-auth-code").value.trim();
+  if(!mqciCodeEnvoye||!mqciConfirmationSMS){mqciAuthStatut("Demandez d'abord un code SMS.",true);return;}
+  if(!/^[0-9]{6}$/.test(code)){mqciAuthStatut("Saisissez le code à 6 chiffres reçu par SMS.",true);return;}
+  const nom=document.getElementById("mqci-auth-name").value.trim();
+  if(mqciAuthModeActuel==="register"&&nom.length<2){mqciAuthStatut("Saisissez votre nom complet.",true);return;}
+  const btn=document.getElementById("mqci-auth-verify-code");btn.disabled=true;mqciAuthStatut("Vérification du code...");
+  try{
+    const credential=await mqciConfirmationSMS.confirm(code);
+    if(mqciAuthModeActuel==="register"&&nom)await credential.user.updateProfile({displayName:nom});
+    await mqciEnregistrerProfil(credential.user,nom);
+    mqciAuthStatut("Numéro vérifié. Bienvenue sur Mon Quotidien CI.");
+  }catch(e){mqciAuthStatut("Code incorrect ou expiré : "+(e.message||"demandez un nouveau code."),true);}
+  finally{btn.disabled=false;}
+}
+auth.onAuthStateChanged(async function(user){
+  const gate=document.getElementById("mqci-auth-gate");if(!gate)return;
+  if(!user){gate.hidden=false;return;}
+  try{
+    if(user.uid!==ADMIN_UID)await mqciEnregistrerProfil(user,user.displayName||"");
+    gate.hidden=true;
+  }catch(e){
+    gate.hidden=false;
+    mqciAuthStatut(e.message||"Impossible de charger votre profil.",true);
+  }
+});
+{
   let permission=Notification.permission;
   if(permission!=='granted') permission=await Notification.requestPermission();
   actualiserEtatNotificationsApplication();
