@@ -3899,6 +3899,42 @@ async function chargerArticlesPublicsBoutique(id){
   z.querySelectorAll("[data-article-id]").forEach(btn=>btn.addEventListener("click",()=>ouvrirCommandeBoutique(id,btn.dataset.articleId)));
  }catch(e){console.error(e);}
 }
+let mqciCatalogueBoutiquesActuel={boutiques:[],articles:[]};
+function filtrerCatalogueBoutiques(){
+ const recherche=(document.getElementById("rechercheArticlesBoutiques")?.value||"").trim().toLocaleLowerCase("fr");
+ const boutiqueChoisie=document.getElementById("filtreBoutiqueCatalogue")?.value||"";
+ const zone=document.getElementById("resultatsCatalogueBoutiques");if(!zone)return;
+ const articles=mqciCatalogueBoutiquesActuel.articles.filter(p=>{
+  if(boutiqueChoisie&&p.boutiqueId!==boutiqueChoisie)return false;
+  const texte=[p.nom,p.categorie,p.description,p.boutiqueNom].join(" ").toLocaleLowerCase("fr");
+  return !recherche||texte.includes(recherche);
+ });
+ if(!articles.length){zone.innerHTML='<p class="notice">Aucun article ne correspond à votre recherche.</p>';return;}
+ zone.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;">'+articles.map((p,i)=>'<article class="card" style="padding:9px;margin:0;">'+(p.photoUrl?'<img src="'+p.photoUrl+'" alt="'+echapperTextePublicite(p.nom)+'" style="width:100%;height:125px;object-fit:cover;border-radius:9px;">':'<div style="height:125px;display:grid;place-items:center;background:#F0F7F1;border-radius:9px;font-size:32px;">🛍️</div>')+'<strong style="display:block;margin-top:7px;">'+echapperTextePublicite(p.nom)+'</strong><p style="margin:5px 0;font-weight:700;">'+Number(p.prix||0).toLocaleString("fr-FR")+' FCFA</p><p class="notice" style="margin:4px 0;">'+echapperTextePublicite(p.boutiqueNom)+'</p><button type="button" class="primary" data-catalogue-commander="'+i+'" style="width:100%;">Commander</button></article>').join("")+'</div>';
+ zone.querySelectorAll("[data-catalogue-commander]").forEach(btn=>btn.addEventListener("click",()=>{const p=articles[Number(btn.dataset.catalogueCommander)];if(p)ouvrirCommandeBoutique(p.boutiqueId,p.index);}));
+}
+async function chargerCatalogueBoutiques(){
+ const zone=document.getElementById("nouveauxServicesPublics");if(!zone)return;
+ zone.innerHTML='<p class="notice">Chargement des boutiques et des articles publiés…</p>';
+ try{
+  const maintenant=Date.now();
+  const [boutiquesSnap,articlesSnap]=await Promise.all([
+   db.collection("demandes_nouveaux_services").where("type","==","commerce").where("statut","==","approuve").limit(200).get(),
+   db.collection("articles_boutiques").where("statut","==","approuve").limit(500).get()
+  ]);
+  const boutiques=boutiquesSnap.docs.filter(doc=>{const d=doc.data();return d.modePartenaire!==true&&d.visibleManuellement!==false&&String(d.categorie||"").toLocaleLowerCase("fr")==="boutique"&&d.abonnementFin&&typeof d.abonnementFin.toDate==="function"&&d.abonnementFin.toDate().getTime()>maintenant;}).map(doc=>({id:doc.id,...doc.data()}));
+  const parId=new Map(boutiques.map(b=>[b.id,b])),articles=[];
+  boutiques.forEach(b=>(Array.isArray(b.produits)?b.produits:[]).forEach((p,index)=>{const nom=String(p.nom||"").trim(),prix=Number(p.prix);if(nom&&Number.isFinite(prix)&&prix>0)articles.push({boutiqueId:b.id,index,nom,prix,boutiqueNom:b.titre||"Boutique",categorie:"",description:"",photoUrl:""});}));
+  articlesSnap.docs.forEach(doc=>{const p=doc.data(),b=parId.get(p.boutiqueId);if(!b||p.disponible===false)return;articles.push({boutiqueId:b.id,index:doc.id,nom:p.nom||"Article",prix:Number(p.prix||0),categorie:p.categorie||"",description:p.description||"",photoUrl:p.photoUrl||"",boutiqueNom:b.titre||p.boutiqueNom||"Boutique"});});
+  mqciCatalogueBoutiquesActuel={boutiques,articles};
+  if(!boutiques.length){zone.innerHTML='<p class="notice">Aucune boutique n’est actuellement publiée avec un abonnement actif.</p>';return;}
+  zone.innerHTML='<h3>🏪 Boutiques</h3><div id="rubanBoutiquesCatalogue" style="display:flex;gap:12px;overflow-x:auto;padding:8px 2px 14px;scroll-snap-type:x proximity;">'+boutiques.map(b=>'<button type="button" data-boutique-filtre="'+echapperTextePublicite(b.id)+'" style="flex:0 0 112px;width:112px;padding:7px;background:#fff;color:#174B32;border:1px solid #DCE8DF;border-radius:12px;scroll-snap-align:start;">'+(b.photoUrl?'<img src="'+b.photoUrl+'" alt="" style="width:96px;height:82px;object-fit:cover;border-radius:9px;display:block;margin:0 auto 7px;">':'<span aria-hidden="true" style="width:96px;height:82px;display:grid;place-items:center;background:#F0F7F1;border-radius:9px;margin:0 auto 7px;font-size:28px;">🏪</span>')+'<span style="display:block;text-align:center;font-size:13px;font-weight:700;line-height:1.25;">'+echapperTextePublicite(b.titre||"Boutique")+'</span></button>').join("")+'</div><label for="rechercheArticlesBoutiques">🔎 Rechercher un article</label><input id="rechercheArticlesBoutiques" type="search" placeholder="Ex. : riz, huile, chaussures…" oninput="filtrerCatalogueBoutiques()" autocomplete="off"><label for="filtreBoutiqueCatalogue">Filtrer par boutique</label><select id="filtreBoutiqueCatalogue" onchange="filtrerCatalogueBoutiques()"><option value="">Toutes les boutiques</option>'+boutiques.map(b=>'<option value="'+echapperTextePublicite(b.id)+'">'+echapperTextePublicite(b.titre||"Boutique")+'</option>').join("")+'</select><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 0;"><strong>🛍️ Tous les articles publiés</strong><button type="button" onclick="document.getElementById(\'filtreBoutiqueCatalogue\').value=\'\';document.getElementById(\'rechercheArticlesBoutiques\').value=\'\';filtrerCatalogueBoutiques()">Tout afficher</button></div><div id="resultatsCatalogueBoutiques" aria-live="polite"></div><div id="commandeBoutiqueZoneCatalogue"></div>';
+  zone.querySelectorAll("[data-boutique-filtre]").forEach(btn=>btn.addEventListener("click",()=>{const select=document.getElementById("filtreBoutiqueCatalogue");if(select){select.value=btn.dataset.boutiqueFiltre;filtrerCatalogueBoutiques();}}));
+  filtrerCatalogueBoutiques();
+  if(!articles.length){const resultats=document.getElementById("resultatsCatalogueBoutiques");if(resultats)resultats.innerHTML='<p class="notice">Les boutiques sont affichées, mais aucun article n’est encore publié. Les articles apparaîtront ici après validation par l’administration.</p>';}
+ }catch(e){console.error("Catalogue des boutiques :",e);zone.innerHTML='<p class="notice">Impossible de charger le catalogue. Vérifiez votre connexion et les règles Firestore des boutiques et des articles publiés.</p>';}
+}
+
 async function chargerArticlesBoutiquesAdmin(){
  const z=document.getElementById("listeValidationArticlesBoutiquesAdmin");if(!z||!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;
  try{const q=await db.collection("articles_boutiques").where("statut","==","en_attente").get();z.innerHTML=q.empty?'<p class="notice">Aucun article en attente.</p>':q.docs.map(d=>'<article class="card" style="padding:12px"><img src="'+d.data().photoUrl+'" style="width:160px;height:120px;object-fit:cover"><strong>'+echapperTextePublicite(d.data().nom)+'</strong><p>'+echapperTextePublicite(d.data().boutiqueNom)+' · '+Number(d.data().prix).toLocaleString("fr-FR")+' FCFA</p><button onclick="traiterArticleBoutiqueAdmin(\''+d.id+'\',\'approuve\')">Approuver et publier</button><button onclick="traiterArticleBoutiqueAdmin(\''+d.id+'\',\'refuse\')">Refuser</button></article>').join("");}catch(e){z.textContent="Erreur : "+e.message;}
@@ -3966,12 +4002,25 @@ async function declencherLivraisonBoutique(commandeId){
 async function ouvrirCommandeBoutique(boutiqueId,index){
  const user=auth.currentUser;
  if(!user){alert("Connectez-vous d'abord à votre compte client pour commander.");if(typeof afficherConnexionClient==="function")afficherConnexionClient();return;}
- const profil=await db.collection("clients").doc(user.uid).get();
- if(!profil.exists){alert("Cette commande nécessite un compte client. Connectez-vous avec votre compte client.");if(typeof afficherConnexionClient==="function")afficherConnexionClient();return;}
+ let profil=await db.collection("clients").doc(user.uid).get();
+ if(!profil.exists){
+  try{
+   const profilGeneral=await db.collection("utilisateurs").doc(user.uid).get();
+   const donnees=profilGeneral.exists?profilGeneral.data():{};
+   const nom=String(donnees.nom||user.displayName||"Client").trim()||"Client";
+   const telephone=String(donnees.telephone||user.phoneNumber||"");
+   await db.collection("clients").doc(user.uid).set({uid:user.uid,nom,telephone,email:user.email||"",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+   profil=await db.collection("clients").doc(user.uid).get();
+  }catch(erreurProfil){
+   console.error("Création du profil client depuis le compte général :",erreurProfil);
+   alert("Impossible de préparer votre profil client. Vérifiez que vous êtes connecté avec votre compte Mon Quotidien CI puis réessayez.");
+   return;
+  }
+ }
  const snap=await db.collection("demandes_nouveaux_services").doc(boutiqueId).get();
  if(!snap.exists)return alert("Boutique introuvable.");
  const b=snap.data();let p=b.produits?.[index];if(!p&&typeof index==="string"){const article=await db.collection("articles_boutiques").doc(index).get();if(article.exists&&article.data().boutiqueId===boutiqueId&&article.data().statut==="approuve")p=article.data();}if(!p)return alert("Produit introuvable.");
- const zone=document.getElementById("commandeBoutiqueZone_"+boutiqueId);if(!zone)return;
+ const zone=document.getElementById("commandeBoutiqueZone_"+boutiqueId)||document.getElementById("commandeBoutiqueZoneCatalogue");if(!zone)return;
  zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><h4>Commander : '+echapperTextePublicite(p.nom)+'</h4><p>Prix unitaire : '+Number(p.prix).toLocaleString("fr-FR")+' FCFA</p><label>Quantité</label><input type="number" id="qteBoutique_'+boutiqueId+'" min="1" max="99" value="1"><label>Adresse de livraison</label><input id="adresseClientBoutique_'+boutiqueId+'" maxlength="220" placeholder="Quartier, rue, repère, commune"><label>Votre numéro de téléphone</label><input id="telClientBoutique_'+boutiqueId+'" type="tel" maxlength="20" value="'+echapperTextePublicite(profil.data().telephone||"")+'"><label>Commentaire pour la boutique</label><textarea id="commentaireClientBoutique_'+boutiqueId+'" maxlength="500" rows="3" placeholder="Précision sur votre commande (facultatif)"></textarea><p>Frais de livraison : <strong>'+Number(b.tarifLivraisonBoutique||1000).toLocaleString("fr-FR")+' FCFA</strong></p><button type="button" class="primary" onclick="enregistrerCommandeBoutique(\''+boutiqueId+'\',\''+String(index)+'\')">Confirmer ma commande</button><p id="statutCommandeBoutique_'+boutiqueId+'" class="notice"></p></div>';
 }
 async function geocoderAdresseBoutique(adresse){
@@ -9281,17 +9330,14 @@ async function rechercherSupermarchesCommune(){
     zone.innerHTML="<p class='notice'>Impossible de charger le répertoire depuis Firebase. Vérifie la connexion et les règles Firestore.</p>";
   }
 }
-function ouvrirMenuTourBoutique(){
-  const resultat=document.getElementById("resultatRechercheGares");if(!resultat)return;
-  resultat.innerHTML="<strong>🛍️ Découvrez les commerces</strong><p>Explorez les boutiques en ligne et leurs articles.</p><button type='button' class='primary' style='width:100%;' onclick='ouvrirTourBoutiques()'>🛍️ Faire un tour en boutique</button><button type='button' style='width:100%;margin-top:9px;background:#F0F7F1;color:#17663D;' onclick='afficherMarchesCommune()'>← Retour</button>";
-}
+function ouvrirMenuTourBoutique(){ ouvrirTourBoutiques(); }
 function ouvrirMenuProprietaireBoutique(){
   const resultat=document.getElementById("resultatRechercheGares");if(!resultat)return;
   resultat.innerHTML="<strong>🔐 Espace propriétaire boutique</strong><p>Accédez à votre compte ou inscrivez une nouvelle boutique.</p><button type='button' class='primary' style='width:100%;' onclick='ouvrirEspaceProprietaireBoutique()'>Connexion / Inscription boutique</button><button type='button' style='width:100%;margin-top:9px;background:#F0F7F1;color:#17663D;' onclick='afficherMarchesCommune()'>← Retour</button>";
 }
 function ouvrirTourBoutiques(){
   ouvrirSectionPleinEcran("nouveauxServices","Un tour en boutique");
-  choisirNouveauService("commerce");
+  nouveauServiceActif="commerce";
   const connexion=document.getElementById("connexionBoutiqueZone");
   const formulaire=document.getElementById("nouveauServiceFormZone");
   const liste=document.getElementById("nouveauxServicesPublics");
@@ -9300,8 +9346,11 @@ function ouvrirTourBoutiques(){
   if(liste)liste.style.display="block";
   const titre=document.getElementById("nouveauxServicesTitre");
   const description=document.getElementById("nouveauxServicesDescription");
-  if(titre)titre.textContent="🛍️ Un tour en boutique";
-  if(description)description.textContent="Découvrez les boutiques, les commerces et les articles proposés. Vous pouvez passer commande directement auprès d’une boutique.";
+  const titreListe=document.getElementById("nouveauxServicesListeTitre");
+  if(titre)titre.textContent="🛍️ Tous les articles des boutiques";
+  if(description)description.textContent="Parcourez les articles publiés, recherchez un produit ou filtrez les articles par boutique.";
+  if(titreListe)titreListe.textContent="Catalogue des articles disponibles";
+  chargerCatalogueBoutiques();
 }
 function ouvrirEspaceProprietaireBoutique(){
   ouvrirSectionPleinEcran("nouveauxServices","Espace propriétaire boutique et commerce");
