@@ -1786,27 +1786,49 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
   <h1 class="transport-colis-connexion-titre">ESPACE DE CONNEXION</h1>
   <div class="colis-choix">
     <button type="button" class="colis-choix-bouton colis-client" onclick="ouvrirEspaceClient()">👤 Espace client</button>
-    <button type="button" class="colis-choix-bouton colis-partenaire" onclick="ouvrirConnexionPartenaire()">🤝 Espace partenaire</button>
   </div>
   <div id="zoneMenuColisClient"><div id="zoneEspaceClient"></div></div>
-  <div id="zoneMenuColisPartenaire" style="display:none;"><div id="connexionPartenaire"></div></div>
 </section>
 
 <section class="card" id="devenirPartenaire" style="display:none;">
-  <h2>🤝 Devenir partenaire de Mon Quotidien CI</h2>
-  <p>Rejoignez notre réseau professionnel. Choisissez votre activité pour afficher le formulaire correspondant. Chaque dossier est soumis à vérification avant activation ou publication.</p>
-  <label for="typePartenaireSouhaite"><strong>Quel type de partenaire souhaitez-vous être ?</strong></label>
-  <select id="typePartenaireSouhaite" onchange="afficherFormulairePartenaire(this.value)" style="width:100%;padding:14px;border:1px solid #D5E2D9;border-radius:12px;margin:8px 0 14px;">
-    <option value="">— Sélectionnez votre activité —</option>
-    <option value="mecanicien">🔧 Mécanicien</option>
-    <option value="depannage">🚗 Service de dépannage</option>
-    <option value="vendeur_pieces">🧰 Vendeur de pièces détachées</option>
-    <option value="livreur">📦 Livreur indépendant</option>
-    <option value="representant_gare">🏢 Représentant de gare</option>
-    <option value="commercant">🏪 Commerçant(e)</option>
-    <option value="compagnie">🚌 Compagnie de voyage</option>
-  </select>
-  <div id="partenaireFormulaireChoisi" aria-live="polite"></div>
+  <h2>🤝 Espace partenaire – Mon Quotidien CI</h2>
+  <p>Tous les accès professionnels sont regroupés ici. Les demandes et les comptes restent soumis aux validations et conditions propres à chaque activité.</p>
+  <div id="zoneChoixPartenaire" class="card" style="padding:14px;margin:14px 0;">
+    <h3>Que souhaitez-vous faire ?</h3>
+    <button type="button" class="primary" style="width:100%;margin:6px 0;" onclick="ouvrirEspacePartenaire('inscription')">➕ Devenir partenaire</button>
+    <button type="button" class="primary" style="width:100%;margin:6px 0;" onclick="ouvrirEspacePartenaire('connexion')">🔐 Connexion à mon espace partenaire</button>
+  </div>
+  <div id="zoneInscriptionPartenaire" style="display:none;">
+    <button type="button" onclick="ouvrirEspacePartenaire('accueil')">← Retour à l’espace partenaire</button>
+    <h3>Créer un espace partenaire</h3>
+    <p>Choisissez votre activité. Les formulaires existants et leurs règles de validation sont conservés.</p>
+    <label for="typePartenaireSouhaite"><strong>Quel type de partenaire souhaitez-vous être ?</strong></label>
+    <select id="typePartenaireSouhaite" onchange="afficherFormulairePartenaire(this.value)" style="width:100%;padding:14px;border:1px solid #D5E2D9;border-radius:12px;margin:8px 0 14px;">
+      <option value="">— Sélectionnez votre activité —</option>
+      <option value="mecanicien">🔧 Mécanicien</option>
+      <option value="depannage">🚗 Service de dépannage</option>
+      <option value="vendeur_pieces">🧰 Vendeur de pièces détachées</option>
+      <option value="livreur">📦 Livreur indépendant</option>
+      <option value="representant_gare">🏢 Représentant de gare</option>
+      <option value="commercant">🏪 Commerçant / boutique</option>
+      <option value="compagnie">🚌 Compagnie de voyage</option>
+      <option value="compagnie_ramassage">🚐 Compagnie de cars de ramassage</option>
+      <option value="annuaire">📒 Professionnel de l’annuaire</option>
+    </select>
+    <div id="partenaireFormulaireChoisi" aria-live="polite"></div>
+    <div id="zoneInscriptionAnnuairePartenaire"></div>
+  </div>
+  <div id="zoneConnexionPartenaire" style="display:none;">
+    <button type="button" onclick="ouvrirEspacePartenaire('accueil')">← Retour à l’espace partenaire</button>
+    <h3>Connexion à mon espace partenaire</h3>
+    <p>Choisissez le type de compte utilisé lors de votre inscription. L’accès reste soumis à l’approbation administrative et, si nécessaire, à un abonnement actif.</p>
+    <div id="choixTypeConnexionPartenaire">
+      <button type="button" class="primary" style="width:100%;margin:5px 0;" onclick="ouvrirConnexionPartenaireType('classique')">Partenaire / compagnie de voyage / livreur / gare</button>
+      <button type="button" class="primary" style="width:100%;margin:5px 0;" onclick="ouvrirConnexionPartenaireType('ramassage')">Compagnie de cars de ramassage</button>
+      <button type="button" class="primary" style="width:100%;margin:5px 0;" onclick="ouvrirConnexionPartenaireType('boutique')">Propriétaire de boutique / commerce</button>
+    </div>
+    <div id="zoneConnexionPartenaireDetails"></div>
+  </div>
 </section>
 
 
@@ -1817,7 +1839,7 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
   </div>
   <div class="ramassage-tabs">
     <button type="button" id="tabRamassageUsager" class="active" onclick="afficherOngletRamassage('usager')">👤 Je cherche un car</button>
-    <button type="button" id="tabRamassageCompagnie" onclick="afficherOngletRamassage('compagnie')">🚌 Je suis une compagnie</button>
+    <button type="button" onclick="ouvrirEspacePartenaire('inscription','compagnie_ramassage')">🚌 Espace compagnie</button>
   </div>
   <div id="ramassageUsager" class="ramassage-panel">
     <h3>👤 Espace utilisateur</h3>
@@ -2930,7 +2952,7 @@ function chargerPublicitesAccueil() {
   </div>
 </section>
 
-<section class="card" id="annuaireInterne" style="display:none;"><h2 id="annuaireInterneTitre">📒 Annuaire des professionnels</h2><p>Consultez les professionnels référencés dans Mon Quotidien CI. Les fiches affichées ont été validées par l’administration.</p><label>Rechercher un nom ou un service</label><input id="annuaireRecherche" maxlength="100" placeholder="Ex. plombier, école, traiteur" oninput="chargerAnnuaireInterne()"><div class="modes"><div><label>Catégorie</label><select id="annuaireFiltreCategorie" onchange="chargerAnnuaireInterne()"><option value="">Toutes les catégories</option></select></div><div><label>Commune</label><input id="annuaireFiltreCommune" placeholder="Ex. Cocody" oninput="chargerAnnuaireInterne()"></div></div><button type="button" class="primary" onclick="afficherInscriptionAnnuaire()">➕ Inscrire gratuitement mon activité</button><div id="annuaireInscriptionZone" style="display:none"></div><h3>Professionnels validés</h3><div id="annuaireResultats"></div></section><section class="card" id="educationFormation" style="display:none;">
+<section class="card" id="annuaireInterne" style="display:none;"><h2 id="annuaireInterneTitre">📒 Annuaire des professionnels</h2><p>Consultez les professionnels référencés dans Mon Quotidien CI. Les fiches affichées ont été validées par l’administration.</p><label>Rechercher un nom ou un service</label><input id="annuaireRecherche" maxlength="100" placeholder="Ex. plombier, école, traiteur" oninput="chargerAnnuaireInterne()"><div class="modes"><div><label>Catégorie</label><select id="annuaireFiltreCategorie" onchange="chargerAnnuaireInterne()"><option value="">Toutes les catégories</option></select></div><div><label>Commune</label><input id="annuaireFiltreCommune" placeholder="Ex. Cocody" oninput="chargerAnnuaireInterne()"></div></div><div id="annuaireInscriptionZone" style="display:none"></div><h3>Professionnels validés</h3><div id="annuaireResultats"></div></section><section class="card" id="educationFormation" style="display:none;">
   <h2>🎓 Éducation et formation</h2>
   <p>Accédez rapidement aux établissements et organismes de formation autour de vous.</p>
   <div class="modes">
@@ -3556,8 +3578,10 @@ function ouvrirAnnuaireInterne(rubrique,categorie){
  chargerAnnuaireInterne();
 }
 function afficherInscriptionAnnuaire(){
- const z=document.getElementById("annuaireInscriptionZone");z.style.display="block";
- z.innerHTML='<div class="card" style="padding:14px"><h3>Inscrire gratuitement mon activité</h3><p class="notice">Premier mois gratuit à compter de l’approbation administrative. Ensuite, abonnement obligatoire de 1 000 FCFA par mois pour rester visible dans l’annuaire.</p><label>Nom de l’établissement / professionnel</label><input id="annTitre" maxlength="100"><label>Catégorie</label><select id="annCategorie">'+CATEGORIES_ANNUAIRE[annuaireRubriqueActive].map(c=>'<option>'+c+'</option>').join("")+'</select><label>Commune</label><input id="annCommune" maxlength="60"><label>Quartier / adresse</label><input id="annQuartier" maxlength="120"><label>Téléphone / WhatsApp</label><input id="annTelephone" type="tel" maxlength="20"><label>Description</label><textarea id="annDescription" rows="4" maxlength="1000"></textarea><label>E-mail</label><input id="annEmail" type="email" maxlength="120"><label>Mot de passe (6 caractères minimum)</label><input id="annPassword" type="password" minlength="6"><button type="button" class="primary" onclick="envoyerInscriptionAnnuaire()">Envoyer mon inscription gratuite</button><p id="annStatut" class="notice"></p></div>';
+ const z=document.getElementById("zoneInscriptionAnnuairePartenaire")||document.getElementById("annuaireInscriptionZone");if(!z)return;z.style.display="block";
+ const noms={educationFormation:"Éducation et formation",logementImmobilier:"Logement et immobilier",depannageDomicile:"Dépannage à domicile",agricultureElevage:"Agriculture et élevage",evenementsPrestations:"Événements et prestations",artisansProfessionnels:"Artisans et professionnels"};
+ const choixRubrique=Object.keys(CATEGORIES_ANNUAIRE).map(k=>'<option value="'+k+'"'+(k===annuaireRubriqueActive?' selected':'')+'>'+noms[k]+'</option>').join("");
+ z.innerHTML='<div class="card" style="padding:14px"><h3>Inscrire gratuitement mon activité</h3><p class="notice">Premier mois gratuit à compter de l’approbation administrative. Ensuite, abonnement obligatoire de 1 000 FCFA par mois pour rester visible dans l’annuaire.</p><label>Type d’activité professionnelle</label><select id="annuaireRubriquePartenaire" onchange="annuaireRubriqueActive=this.value;afficherInscriptionAnnuaire()">'+choixRubrique+'</select><label>Nom de l’établissement / professionnel</label><input id="annTitre" maxlength="100"><label>Catégorie</label><select id="annCategorie">'+CATEGORIES_ANNUAIRE[annuaireRubriqueActive].map(c=>'<option>'+c+'</option>').join("")+'</select><label>Commune</label><input id="annCommune" maxlength="60"><label>Quartier / adresse</label><input id="annQuartier" maxlength="120"><label>Téléphone / WhatsApp</label><input id="annTelephone" type="tel" maxlength="20"><label>Description</label><textarea id="annDescription" rows="4" maxlength="1000"></textarea><label>E-mail</label><input id="annEmail" type="email" maxlength="120"><label>Mot de passe (6 caractères minimum)</label><input id="annPassword" type="password" minlength="6"><button type="button" class="primary" onclick="envoyerInscriptionAnnuaire()">Envoyer mon inscription gratuite</button><p id="annStatut" class="notice"></p></div>';
 }
 async function envoyerInscriptionAnnuaire(){
  const v=id=>document.getElementById(id)?.value.trim()||"",titre=v("annTitre"),categorie=v("annCategorie"),commune=v("annCommune"),quartier=v("annQuartier"),telephone=v("annTelephone"),description=v("annDescription"),email=v("annEmail"),password=document.getElementById("annPassword")?.value||"",statut=document.getElementById("annStatut");
@@ -3629,7 +3653,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  nouveauServiceActif=type;
  const cfg=NOUVEAUX_SERVICES[type];
  const connexionBoutique=document.getElementById("connexionBoutiqueZone");
- if(connexionBoutique)connexionBoutique.style.display=type==="commerce"?"block":"none";
+ if(connexionBoutique)connexionBoutique.style.display="none";
  const titre=document.getElementById("nouveauxServicesTitre");
  const description=document.getElementById("nouveauxServicesDescription");
  const titreListe=document.getElementById("nouveauxServicesListeTitre");
@@ -6154,8 +6178,10 @@ numeroPermis: document.getElementById('livreurNumeroPermis').value.trim(),
 function retourChoixPartenaire(){
   const select=document.getElementById("typePartenaireSouhaite");
   const zone=document.getElementById("partenaireFormulaireChoisi");
+  const annuaire=document.getElementById("zoneInscriptionAnnuairePartenaire");
   if(select)select.value="";
   if(zone)zone.replaceChildren();
+  if(annuaire)annuaire.replaceChildren();
   document.getElementById("devenirPartenaire")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
 function afficherFormulairePartenaire(type){
@@ -6163,6 +6189,25 @@ function afficherFormulairePartenaire(type){
   if(!zone)return;
   zone.replaceChildren();
   if(!type){zone.style.display="none";return;}
+  if(type==="annuaire"){
+    const select=document.getElementById("typePartenaireSouhaite");
+    const cible=document.getElementById("zoneInscriptionAnnuairePartenaire");
+    if(cible){cible.replaceChildren();afficherInscriptionAnnuaire();}
+    return;
+  }
+  if(type==="compagnie_ramassage"){
+    const authZone=document.getElementById("ramassageCompagnieAuth");
+    if(authZone){
+      zone.appendChild(authZone);
+      authZone.style.display="block";
+      authZone.querySelectorAll("button").forEach(b=>{
+        if(b.getAttribute("onclick")?.includes("connecterCompteRamassage"))b.style.display="none";
+        if(b.getAttribute("onclick")?.includes("inscrireCompteRamassage")){b.style.display="inline-block";b.textContent="Envoyer ma demande d’inscription";}
+      });
+    }
+    zone.style.display="block";
+    return;
+  }
   // Ce conteneur peut avoir été masqué lors de l'ouverture d'une autre rubrique.
   // Le réafficher avant de générer le formulaire partenaire.
   zone.style.display="block";
@@ -6353,35 +6398,89 @@ posteOccupe: document.getElementById('garePosteOccupe').value.trim(),
   const emailGare=document.getElementById("gareEmail");if(emailGare)emailGare.value=auth.currentUser?.email||"";
   zone.scrollIntoView({behavior:"smooth", block:"start"});
 }
-function ouvrirConnexionPartenaire(){
-  const section = document.getElementById("transportColis");
-  afficherSousMenuColis("partenaire");
-  let zone = document.getElementById("connexionPartenaire");
-
-  if(!zone){
-    zone = document.createElement("div");
-    zone.id = "connexionPartenaire";
-    document.getElementById("zoneMenuColisPartenaire").appendChild(zone);
+function ouvrirEspacePartenaire(mode="accueil",typeInitial=null){
+  const section=document.getElementById("devenirPartenaire");
+  if(!section)return;
+  if(!vuePleinEcranActive||vuePleinEcranActive.element!==section){
+    ouvrirSectionPleinEcran("devenirPartenaire","Espace partenaire");
   }
-
-  zone.innerHTML = `
-    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('connexionPartenaire')">← Retour à Transport Colis</button>
-    <hr>
+  const accueil=document.getElementById("zoneChoixPartenaire");
+  const inscription=document.getElementById("zoneInscriptionPartenaire");
+  const connexion=document.getElementById("zoneConnexionPartenaire");
+  if(accueil)accueil.style.display=mode==="accueil"?"block":"none";
+  if(inscription)inscription.style.display=mode==="inscription"?"block":"none";
+  if(connexion)connexion.style.display=mode==="connexion"?"block":"none";
+  if(mode==="inscription"&&typeInitial){
+    const select=document.getElementById("typePartenaireSouhaite");
+    if(select){select.value=typeInitial;afficherFormulairePartenaire(typeInitial);}
+  }
+  if(mode==="connexion"&&typeInitial)ouvrirConnexionPartenaireType(typeInitial);
+  section.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function ouvrirConnexionPartenaireType(type){
+  const details=document.getElementById("zoneConnexionPartenaireDetails");
+  const choix=document.getElementById("choixTypeConnexionPartenaire");
+  if(!details)return;
+  details.replaceChildren();
+  if(choix)choix.style.display="none";
+  const retour=document.createElement("button");
+  retour.type="button";
+  retour.textContent="← Choisir un autre type de compte";
+  retour.onclick=()=>{
+    details.replaceChildren();
+    if(choix)choix.style.display="block";
+  };
+  details.appendChild(retour);
+  if(type==="classique"){
+    ouvrirConnexionPartenaire();
+    return;
+  }
+  if(type==="ramassage"){
+    const authZone=document.getElementById("ramassageCompagnieAuth");
+    if(authZone){
+      details.appendChild(authZone);
+      authZone.style.display="block";
+      const boutons=authZone.querySelectorAll("button");
+      boutons.forEach(b=>{
+        const inscription=b.getAttribute("onclick")?.includes("inscrireCompteRamassage");
+        const connexion=b.getAttribute("onclick")?.includes("connecterCompteRamassage");
+        if(inscription)b.style.display="none";
+        if(connexion){b.style.display="inline-block";b.textContent="Se connecter à mon espace compagnie";}
+      });
+    }
+    return;
+  }
+  if(type==="boutique"){
+    const boutique=document.getElementById("connexionBoutiqueZone");
+    if(boutique){
+      details.appendChild(boutique);
+      boutique.style.display="block";
+      const titre=boutique.querySelector("h3");
+      if(titre)titre.textContent="🔐 Connexion propriétaire boutique / commerce";
+    }
+  }
+}
+function ouvrirConnexionPartenaire(){
+  const details=document.getElementById("zoneConnexionPartenaireDetails");
+  if(!details)return;
+  let zone=document.getElementById("connexionPartenaire");
+  if(!zone){
+    zone=document.createElement("div");
+    zone.id="connexionPartenaire";
+  }
+  details.appendChild(zone);
+  zone.innerHTML=`
     <h3>🔐 Connexion partenaire</h3>
-
     <div id="champsConnexionPartenaire">
       <label>Adresse e-mail</label>
-      <input type="email" id="partenaireEmail" placeholder="Votre adresse e-mail">
-
+      <input type="email" id="partenaireEmail" placeholder="Votre adresse e-mail" autocomplete="username">
       <label>Mot de passe</label>
-      <input type="password" id="partenaireMotDePasse" placeholder="Votre mot de passe">
+      <input type="password" id="partenaireMotDePasse" placeholder="Votre mot de passe" autocomplete="current-password">
     </div>
     <button id="boutonConnexionPartenaire" type="button" class="primary" onclick="connecterPartenaire()">Se connecter</button>
-
     <p id="statutConnexionPartenaire" class="notice"></p>
   `;
-
-  zone.scrollIntoView({behavior:"smooth", block:"start"});
+  zone.scrollIntoView({behavior:"smooth",block:"start"});
 }
 
 async function connecterPartenaire(){
@@ -7732,8 +7831,10 @@ function afficherOngletRamassage(role){
   const user = role === "usager";
   document.getElementById("ramassageUsager").style.display = user ? "block" : "none";
   document.getElementById("ramassageCompagnie").style.display = user ? "none" : "block";
-  document.getElementById("tabRamassageUsager").classList.toggle("active",user);
-  document.getElementById("tabRamassageCompagnie").classList.toggle("active",!user);
+  const tabUser=document.getElementById("tabRamassageUsager");
+  const tabCompany=document.getElementById("tabRamassageCompagnie");
+  if(tabUser)tabUser.classList.toggle("active",user);
+  if(tabCompany)tabCompany.classList.toggle("active",!user);
 }
 async function inscrireCompteRamassage(role){
   const compagnie = role === "compagnie";
@@ -7753,6 +7854,7 @@ async function inscrireCompteRamassage(role){
     });
     ramassageRoleActif=role;
     await afficherEspaceRamassage(credential.user);
+    if(compagnie){afficherOngletRamassage("compagnie");ouvrirSectionPleinEcran("serviceRamassage","Espace compagnie de cars de ramassage");}
     alert(compagnie?"Demande d'inscription envoyée. Votre compagnie sera vérifiée par l'administration avant activation de l'abonnement.":"Compte créé. Vous pouvez maintenant publier votre recherche de ramassage.");
   }catch(e){alert("Inscription impossible : "+e.message);}
 }
@@ -7767,6 +7869,7 @@ async function connecterCompteRamassage(role){
     if(!snap.exists||snap.data().role!==role){await auth.signOut();throw new Error("Ce compte n'est pas inscrit dans cet espace.");}
     ramassageRoleActif=role;
     await afficherEspaceRamassage(credential.user,snap.data());
+    if(compagnie){afficherOngletRamassage("compagnie");ouvrirSectionPleinEcran("serviceRamassage","Espace compagnie de cars de ramassage");}
   }catch(e){alert("Connexion impossible : "+e.message);}
 }
 async function afficherEspaceRamassage(user,profil=null){
@@ -7877,9 +7980,16 @@ async function activerAbonnementCompagnieRamassage(uid){
 }
 
 async function deconnecterRamassage(){
+  const etaitCompagnie=ramassageRoleActif==="compagnie";
   await auth.signOut();ramassageRoleActif=null;
-  ["ramassageUsagerAuth","ramassageCompagnieAuth"].forEach(id=>document.getElementById(id).style.display="block");
-  ["ramassageUsagerEspace","ramassageCompagnieEspace"].forEach(id=>document.getElementById(id).style.display="none");
+  ["ramassageUsagerAuth","ramassageUsagerEspace","ramassageCompagnieEspace"].forEach(id=>{
+    const element=document.getElementById(id);if(element)element.style.display=id==="ramassageUsagerAuth"?"block":"none";
+  });
+  if(etaitCompagnie){
+    ouvrirEspacePartenaire("connexion","ramassage");
+  }else{
+    const authUsager=document.getElementById("ramassageUsagerAuth");if(authUsager)authUsager.style.display="block";
+  }
   alert("Vous êtes déconnecté.");
 }
 
@@ -9065,7 +9175,7 @@ function afficherMarchesCommune(){
     "<button type='button' class='tuile-services' style='width:100%;margin:8px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirSupermarchesCommune()'>🧭 2. Supermarchés les plus proches</button>"+
     "<h3 style='margin:22px 0 8px;'>🛍️ 3. Découvrez les commerces</h3>"+
     "<button type='button' class='primary' style='width:100%;margin:7px 0;' onclick='ouvrirMenuTourBoutique()'>🛍️ Faire un tour en boutique</button>"+
-    "<button type='button' style='width:100%;margin:7px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirMenuProprietaireBoutique()'>🔐 Espace propriétaire boutique</button>";
+    "";
   if(vuePleinEcranActive&&vuePleinEcranActive.element===resultat)document.getElementById("vuePleinEcranContenu").scrollTop=0;
   else resultat.scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -9338,8 +9448,7 @@ async function rechercherSupermarchesCommune(){
 }
 function ouvrirMenuTourBoutique(){ ouvrirTourBoutiques(); }
 function ouvrirMenuProprietaireBoutique(){
-  const resultat=document.getElementById("resultatRechercheGares");if(!resultat)return;
-  resultat.innerHTML="<strong>🔐 Espace propriétaire boutique</strong><p>Accédez à votre compte ou inscrivez une nouvelle boutique.</p><button type='button' class='primary' style='width:100%;' onclick='ouvrirEspaceProprietaireBoutique()'>Connexion / Inscription boutique</button><button type='button' style='width:100%;margin-top:9px;background:#F0F7F1;color:#17663D;' onclick='afficherMarchesCommune()'>← Retour</button>";
+  ouvrirEspacePartenaire("connexion","boutique");
 }
 function ouvrirTourBoutiques(){
   ouvrirSectionPleinEcran("nouveauxServices","Un tour en boutique");
@@ -9359,47 +9468,9 @@ function ouvrirTourBoutiques(){
   chargerCatalogueBoutiques();
 }
 function ouvrirEspaceProprietaireBoutique(){
-  ouvrirSectionPleinEcran("nouveauxServices","Espace propriétaire boutique et commerce");
-  // Ne pas créer le formulaire public caché : l'inscription partenaire crée son propre formulaire.
-  nouveauServiceActif="commerce";
-  const connexion=document.getElementById("connexionBoutiqueZone");
-  const formulaire=document.getElementById("nouveauServiceFormZone");
-  const liste=document.getElementById("nouveauxServicesPublics");
-  if(connexion)connexion.style.display="block";
-  if(formulaire)formulaire.style.display="none";
-  if(liste)liste.style.display="none";
-  const titre=document.getElementById("nouveauxServicesTitre");
-  const description=document.getElementById("nouveauxServicesDescription");
-  if(titre)titre.textContent="🔐 Espace propriétaire";
-  if(description)description.textContent="Connectez-vous à votre espace ou inscrivez votre boutique ou commerce. L’inscription est soumise à l’abonnement en vigueur.";
-  if(connexion && !document.getElementById("boutiqueInscriptionToggle")){
-    const creerBoutonInscription=(id,libelle,categorie)=>{
-      const bouton=document.createElement("button");
-      bouton.type="button";
-      bouton.id=id;
-      bouton.className="primary";
-      bouton.style.marginTop="12px";
-      bouton.textContent=libelle;
-      bouton.onclick=()=>{
-        ouvrirSectionPleinEcran("devenirPartenaire","Devenir partenaire");
-        const choix=document.getElementById("typePartenaireSouhaite");
-        if(choix){
-          choix.value="commercant";
-          afficherFormulairePartenaire("commercant");
-        }
-        const categorieSelect=document.getElementById("nsCategorie");
-        if(categorieSelect){
-          categorieSelect.value=categorie;
-          categorieSelect.disabled=false;
-        }
-        document.getElementById("devenirPartenaire")?.scrollIntoView({behavior:"smooth",block:"start"});
-      };
-      connexion.appendChild(bouton);
-    };
-    creerBoutonInscription("boutiqueInscriptionToggle","🛍️ Inscrire une boutique","Boutique");
-    creerBoutonInscription("commerceInscriptionToggle","🏪 Inscrire un commerce","Autre commerce");
-  }
+  ouvrirEspacePartenaire("connexion","boutique");
 }
+
 function filtrerMarchesCommune(){
   const champ = document.getElementById("rechercheCommuneMarche");
   const zone = document.getElementById("listeMarchesCommune");
@@ -11377,7 +11448,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       <button type="button" onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur'); fermerMenuBasDroite()">🔐 Espace administrateur</button>
       <button type="button" onclick="ouvrirSectionPleinEcran('parametresApplication','Paramètres de l’application'); fermerMenuBasDroite()">⚙️ Paramètres</button>
       <button type="button" onclick="ouvrirEspaceSolidarite(); fermerMenuBasDroite()">🤝 Dons et solidarité</button>
-      <button type="button" onclick="ouvrirSectionPleinEcran('devenirPartenaire','Devenir partenaire'); fermerMenuBasDroite()">🤝 Devenir partenaire</button>
+      <button type="button" onclick="ouvrirEspacePartenaire('accueil'); fermerMenuBasDroite()">🤝 Espace partenaire</button>
       <button type="button" onclick="signalerProblemeGeneral(); fermerMenuBasDroite()">⚠️ Signaler un problème</button>`;
     document.body.appendChild(menuBas);
 
