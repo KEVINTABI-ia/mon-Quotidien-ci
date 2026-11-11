@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#075B35">
 <link rel="manifest" href="./app.webmanifest">
-<link rel="icon" href="./logo-mon-quotidien-ci.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="./logo-mon-quotidien-ci.svg">
+<link rel="icon" href="./E806C6C4-A1B3-469C-9D73-7EC9FBC1899C.png" type="image/png">
+<link rel="apple-touch-icon" href="./E806C6C4-A1B3-469C-9D73-7EC9FBC1899C.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mon Quotidien CI">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1708,7 +1708,7 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 <!-- Accès obligatoire aux utilisateurs de Mon Quotidien CI -->
 <section id="mqci-auth-gate" role="dialog" aria-modal="true" aria-labelledby="mqci-auth-title">
   <div class="mqci-auth-panel">
-    <img src="./logo-mon-quotidien-ci.svg" alt="Mon Quotidien CI" class="mqci-auth-logo">
+    <img src="./E806C6C4-A1B3-469C-9D73-7EC9FBC1899C.png" alt="Mon Quotidien CI" class="mqci-auth-logo">
     <p class="mqci-auth-eyebrow">BIENVENUE</p>
     <h1 id="mqci-auth-title">Votre quotidien, en toute simplicité</h1>
     <p>Créez votre compte ou connectez-vous pour accéder aux services de Mon Quotidien CI.</p>
@@ -1745,7 +1745,7 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 </section>
 
 <div id="mqci-splash-screen" role="status" aria-label="Chargement de Mon Quotidien CI">
-<img src="./logo-mon-quotidien-ci.svg" alt="Mon Quotidien CI — Tous les services utiles, au même endroit.">
+<img src="./E806C6C4-A1B3-469C-9D73-7EC9FBC1899C.png" alt="Mon Quotidien CI — Tous les services utiles, au même endroit.">
 </div>
 <script id="mqci-splash-screen-script">
 (function(){var splash=document.getElementById("mqci-splash-screen");if(!splash)return;window.setTimeout(function(){splash.classList.add("is-leaving");window.setTimeout(function(){if(splash.parentNode)splash.parentNode.removeChild(splash);},320);},3000);})();
@@ -1760,7 +1760,7 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
   <div class="mqci-header-orbit mqci-header-orbit-two" aria-hidden="true"></div>
   <div class="mqci-brand-lockup">
     <div class="mqci-brand-mark">
-      <img src="./logo-mon-quotidien-ci.svg" alt="Logo de Mon Quotidien CI">
+      <img src="./E806C6C4-A1B3-469C-9D73-7EC9FBC1899C.png" alt="Logo de Mon Quotidien CI">
     </div>
     <div class="mqci-brand-copy">
       <span class="mqci-brand-eyebrow">LA CÔTE D’IVOIRE À PORTÉE DE MAIN</span>
@@ -3311,7 +3311,7 @@ async function activerNotificationsApplication(){
   if(!window.__mqciFcmForegroundReady){
    messagerie.onMessage(async payload=>{
     const titre=(payload.notification&&payload.notification.title)||'Mon Quotidien CI';
-    const options={body:(payload.notification&&payload.notification.body)||'Une nouvelle information vous attend.',icon:'./icon-transport-ci.svg',data:payload.data||{}};
+    const options={body:(payload.notification&&payload.notification.body)||'Une nouvelle information vous attend.',icon:'./E806C6C4-A1B3-469C-9D73-7EC9FBC1899C.png',data:payload.data||{}};
     const sw=await navigator.serviceWorker.ready;
     await sw.showNotification(titre,options);
    });
