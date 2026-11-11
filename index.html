@@ -6729,16 +6729,16 @@ function ecouterNouvellesCommandesPartenaire(uid, partenaire, missionActive) {
 
 async function chargerCommandesPartenaire() {
   const zone = document.getElementById("listeCommandesPartenaire");
-  const user = auth.currentUser;
+  const user = partnerAuth.currentUser;
   if (!zone) return;
   if (!user) {
-    zone.textContent = "Veuillez vous reconnecter.";
+    zone.textContent = "Veuillez vous reconnecter à votre espace partenaire.";
     return;
   }
 
   zone.innerHTML = "<p>Chargement de vos commandes...</p>";
   try {
-    const partenaireDoc = await db.collection("partenaires").doc(user.uid).get();
+    const partenaireDoc = await partnerDb.collection("partenaires").doc(user.uid).get();
     if (!partenaireDoc.exists) {
       zone.textContent = "Dossier partenaire introuvable.";
       return;
@@ -6759,7 +6759,7 @@ async function chargerCommandesPartenaire() {
       return;
     }
 
-    const resultat = await db.collection("commandes_colis")
+    const resultat = await partnerDb.collection("commandes_colis")
       .where("partenaireId", "==", user.uid)
       .get();
 
