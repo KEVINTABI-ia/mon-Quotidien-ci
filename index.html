@@ -3985,7 +3985,7 @@ async function connecterCompteBoutique(){
 function afficherFormulaireRenouvellementBoutique(id){
  const zone=document.getElementById("formRenouvellementBoutique_"+id);if(!zone)return;
  const prefix="renouvBoutique_"+id;
- zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><h4>Renouveler mon abonnement</h4><p>Choisissez une formule et effectuez le paiement avec les coordonnées habituelles.</p>'+genererFormulairePaiementCommun(prefix,{duree:true,coordId:"coordonneesRenouvellementBoutique_"+id})+'<button type="button" class="primary" onclick="envoyerDemandeRenouvellementBoutique(\\''+id+'\\')">Envoyer à l’administrateur</button><p id="statutRenouvBoutique_'+id+'" class="notice"></p></div>';
+ zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><h4>Renouveler mon abonnement</h4><p>Choisissez une formule et effectuez le paiement avec les coordonnées habituelles.</p>'+genererFormulairePaiementCommun(prefix,{duree:true,coordId:"coordonneesRenouvellementBoutique_"+id})+'<button type="button" class="primary" data-boutique-id="'+echapperTextePublicite(id)+'" onclick="envoyerDemandeRenouvellementBoutique(this.dataset.boutiqueId)">Envoyer à l’administrateur</button><p id="statutRenouvBoutique_'+id+'" class="notice"></p></div>';
  initialiserFormulairePaiementCommun(prefix,["boutiques_1mois","boutiques_2mois","boutiques_3mois"],"coordonneesRenouvellementBoutique_"+id);
 }
 async function envoyerDemandeRenouvellementBoutique(id){
