@@ -11812,8 +11812,13 @@ async function afficherDetailCompagnie(id,c){
 }
 async function afficherCompagniesPubliques(){
  const z=document.getElementById("listeCompagniesPubliques");if(!z)return;z.innerHTML="<p>Chargement...</p>";
- try{const s=await db.collection("compagnies").where("statutAbonnement","==","Actif").get();if(s.empty){z.innerHTML="<p class='notice'>Aucune compagnie active.</p>";return;}
- window.__compagniesMQCI={};z.innerHTML=s.docs.map(d=>{window.__compagniesMQCI[d.id]=d.data();return '<article class="stop"><strong>'+echapperTexteCompagnie(d.data().nom)+'</strong><p>'+echapperTexteCompagnie(d.data().agence)+'</p><button class="primary" onclick="document.getElementById(\'detailCompagnie_'+d.id+'\').style.display=\'block\';afficherDetailCompagnie(\''+d.id+'\',window.__compagniesMQCI[\''+d.id+'\'])">Voir les gares et informations</button><div id="detailCompagnie_'+d.id+'" style="display:none"></div></article>';}).join("");
+ try{
+  const s=await db.collection("compagnies").where("statutAbonnement","==","Actif").get();
+  window.__compagniesMQCI={};
+  const active=s.docs.map(d=>{window.__compagniesMQCI[d.id]=d.data();return '<article class="stop"><strong>'+echapperTexteCompagnie(d.data().nom)+'</strong><p>Agence : '+echapperTexteCompagnie(d.data().agence)+'</p><p>Localisation : '+echapperTexteCompagnie(d.data().localisation)+'</p><button class="primary" onclick="document.getElementById(\'detailCompagnie_'+d.id+'\').style.display=\'block\';afficherDetailCompagnie(\''+d.id+'\',window.__compagniesMQCI[\''+d.id+'\'])">Voir les gares et informations</button><div id="detailCompagnie_'+d.id+'" style="display:none"></div></article>';}).join("");
+  const noms=new Set(s.docs.map(d=>String(d.data().nom||"").toLocaleLowerCase("fr")));
+  const catalogue=CATALOGUE_COMPAGNIES_INTERURBAINES.filter(n=>!noms.has(n.toLocaleLowerCase("fr"))).map(n=>'<li>'+echapperTexteCompagnie(n)+' <small>(annuaire de référence, non partenaire vérifié)</small></li>').join("");
+  z.innerHTML='<h3>Compagnies partenaires actives</h3>'+(active||'<p class="notice">Aucun partenaire actif pour le moment.</p>')+'<details class="stop"><summary>Autres compagnies répertoriées</summary><p class="notice">Ces compagnies sont mentionnées dans l’annuaire de référence. Leurs gares, tarifs et horaires ne sont pas encore vérifiés dans Mon Quotidien CI.</p><ul>'+catalogue+'</ul></details>';
  }catch(e){z.textContent="Erreur : "+e.message;}
 }
 async function modererGareCompagnie(id,statut){
