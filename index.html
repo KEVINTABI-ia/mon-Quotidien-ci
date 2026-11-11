@@ -11818,15 +11818,36 @@ async function afficherDetailCompagnie(id,c){
  z.innerHTML=html;await chargerAvisCompagnie(id,false);
 }
 async function afficherCompagniesPubliques(){
- const z=document.getElementById("listeCompagniesPubliques");if(!z)return;z.innerHTML="<p>Chargement...</p>";
+ const zone=document.getElementById("listeCompagniesPubliques");
+ if(!zone)return;
+ const nomRecherche=(document.getElementById("rechercheCompagnieNationale")?.value||"").trim().toLocaleLowerCase("fr");
+ const villeChoisie=document.getElementById("filtreVilleNationale")?.value||"Toutes les villes";
+ zone.innerHTML="<p class='notice'>Chargement de l’annuaire national...</p>";
  try{
-  const s=await db.collection("compagnies").where("statutAbonnement","==","Actif").get();
+  const snap=await db.collection("compagnies").where("statutAbonnement","==","Actif").get();
   window.__compagniesMQCI={};
-  const active=s.docs.map(d=>{window.__compagniesMQCI[d.id]=d.data();return '<article class="stop"><strong>'+echapperTexteCompagnie(d.data().nom)+'</strong><p>Agence : '+echapperTexteCompagnie(d.data().agence)+'</p><p>Localisation : '+echapperTexteCompagnie(d.data().localisation)+'</p><button class="primary" onclick="document.getElementById(\'detailCompagnie_'+d.id+'\').style.display=\'block\';afficherDetailCompagnie(\''+d.id+'\',window.__compagniesMQCI[\''+d.id+'\'])">Voir les gares et informations</button><div id="detailCompagnie_'+d.id+'" style="display:none"></div></article>';}).join("");
-  const noms=new Set(s.docs.map(d=>String(d.data().nom||"").toLocaleLowerCase("fr")));
-  const catalogue=CATALOGUE_COMPAGNIES_INTERURBAINES.filter(n=>!noms.has(n.toLocaleLowerCase("fr"))).map(n=>'<li>'+echapperTexteCompagnie(n)+' <small>(annuaire de référence, non partenaire vérifié)</small></li>').join("");
-  z.innerHTML='<h3>Compagnies partenaires actives</h3>'+(active||'<p class="notice">Aucun partenaire actif pour le moment.</p>')+'<details class="stop"><summary>Autres compagnies répertoriées</summary><p class="notice">Ces compagnies sont mentionnées dans l’annuaire de référence. Leurs gares, tarifs et horaires ne sont pas encore vérifiés dans Mon Quotidien CI.</p><ul>'+catalogue+'</ul></details>';
- }catch(e){z.textContent="Erreur : "+e.message;}
+  const actifs=snap.docs.map(d=>{window.__compagniesMQCI[d.id]=d.data();return {id:d.id,fiche:d.data()};});
+  const catalogue=CATALOGUE_COMPAGNIES_INTERURBAINES.map(n=>({nom:n,actif:false}));
+  actifs.forEach(x=>{
+   const nom=String(x.fiche.nom||"").trim();
+   if(nom&&!catalogue.some(c=>c.nom.toLocaleLowerCase("fr")===nom.toLocaleLowerCase("fr")))catalogue.unshift({nom,actif:true,...x});
+   else {const exist=catalogue.find(c=>c.nom.toLocaleLowerCase("fr")===nom.toLocaleLowerCase("fr"));if(exist)Object.assign(exist,{actif:true,...x});}
+  });
+  const filtrees=catalogue.filter(c=>{
+   const matchNom=!nomRecherche||c.nom.toLocaleLowerCase("fr").includes(nomRecherche);
+   const dests=c.fiche?.destinations||[];
+   const matchVille=villeChoisie==="Toutes les villes"||!villeChoisie||dests.some(d=>String(d.ville||d.nom||d.destination||"").toLocaleLowerCase("fr")===villeChoisie.toLocaleLowerCase("fr"));
+   return matchNom&&matchVille;
+  });
+  const cartes=filtrees.map(c=>{
+   if(!c.actif)return '<article class="stop"><strong>'+echapperTexteCompagnie(c.nom)+'</strong><p class="notice">Référencée dans l’annuaire public — partenaire non vérifié sur Mon Quotidien CI. Contactez la compagnie pour confirmer ses agences, tarifs et horaires.</p></article>';
+   const f=c.fiche||{};
+   const id=c.id;
+   return '<article class="stop"><strong>'+echapperTexteCompagnie(c.nom)+'</strong><p>Partenaire actif sur Mon Quotidien CI</p><p>Agence : '+echapperTexteCompagnie(f.agence||"Non renseignée")+'</p><p>Localisation : '+echapperTexteCompagnie(f.localisation||"Non renseignée")+'</p><p>Contact : '+echapperTexteCompagnie(f.telephone||f.telephoneGarePrincipale||"Non renseigné")+'</p><button class="primary" onclick="const z=document.getElementById(\'detailCompagnie_'+id+'\');z.style.display=z.style.display===\'block\'?\'none\':\'block\';if(z.dataset.loaded!==\'1\'){afficherDetailCompagnie(\''+id+'\',window.__compagniesMQCI[\''+id+'\']);z.dataset.loaded=\'1\';}">Voir les gares, destinations et avis</button><div id="detailCompagnie_'+id+'" style="display:none"></div></article>';
+  }).join("");
+  const prixHTML=TARIFS_INTERURBAINS_INDICATIFS.filter(t=>villeChoisie==="Toutes les villes"||!villeChoisie||t.ville===villeChoisie).map(t=>'<li><strong>'+echapperTexteCompagnie(t.depart)+' → '+echapperTexteCompagnie(t.ville)+'</strong> : dès '+t.prix.toLocaleString("fr-FR")+' FCFA <small>(indicatif, non attribué à une compagnie précise)</small></li>').join("");
+  zone.innerHTML='<div class="card" style="padding:14px"><p><strong>Annuaire national — '+catalogue.length+' compagnies référencées</strong></p><label for="rechercheCompagnieNationale">Rechercher une compagnie</label><input id="rechercheCompagnieNationale" placeholder="Ex. UTB, AVS, TSR..." value="'+echapperTexteCompagnie(nomRecherche)+'" onchange="afficherCompagniesPubliques()"><label for="filtreVilleNationale">Filtrer par ville desservie</label><select id="filtreVilleNationale" onchange="afficherCompagniesPubliques()"><option '+(villeChoisie==="Toutes les villes"?"selected":"")+'>Toutes les villes</option>'+VILLES_INTERURBAINES_DOCUMENTEES.map(v=>'<option '+(villeChoisie===v?'selected':'')+'>'+echapperTexteCompagnie(v)+'</option>').join("")+'</select><p class="notice">Les compagnies répertoriées ne sont pas nécessairement partenaires. Les tarifs indicatifs doivent être confirmés au guichet.</p></div><h3>Tarifs indicatifs au départ d’Abidjan</h3><ul>'+(prixHTML||'<li>Aucun tarif indicatif pour cette ville.</li>')+'</ul><h3>Compagnies</h3>'+(cartes||'<p class="notice">Aucun résultat pour cette recherche.</p>');
+ }catch(e){zone.textContent="Erreur de chargement : "+e.message;}
 }
 async function modererGareCompagnie(id,statut){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
