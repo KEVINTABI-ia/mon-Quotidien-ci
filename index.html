@@ -3716,7 +3716,8 @@ async function connecterCompteBoutique(){
   const boutique=snap.docs.find(x=>{const d=x.data();return d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>Date.now();});
   if(!boutique){await auth.signOut();statut.textContent="Aucune boutique approuvée avec un abonnement actif n'est liée à ce compte.";return;}
   statut.textContent="Connexion réussie.";
-  const zone=document.getElementById("boutiqueCompteConnecte");if(zone)zone.innerHTML='<p>Connecté à : <strong>'+echapperTextePublicite(boutique.data().titre)+'</strong></p><button type="button" onclick="chargerCommandesBoutique(\''+boutique.id+'\')">📦 Ouvrir mes commandes</button><div id="commandesBoutique_'+boutique.id+'"></div>';
+  const zone=document.getElementById("boutiqueCompteConnecte");if(zone)zone.innerHTML='<p>Connecté à : <strong>'+echapperTextePublicite(boutique.data().titre)+'</strong></p><button type="button" class="primary" onclick="ouvrirFormulaireArticleBoutique(\''+boutique.id+'\')">➕ Ajouter un article</button><div id="formArticleBoutique_'+boutique.id+'"></div><h4>Mes articles</h4><div id="mesArticlesBoutique_'+boutique.id+'"></div><button type="button" onclick="chargerCommandesBoutique(\''+boutique.id+'\')">📦 Ouvrir mes commandes</button><div id="commandesBoutique_'+boutique.id+'"></div>';
+  chargerMesArticlesBoutique(boutique.id);
   chargerCommandesBoutique(boutique.id);
  }catch(e){console.error(e);statut.textContent="Connexion impossible : "+(e.message||"vérifiez vos identifiants.");}
 }
@@ -3765,7 +3766,7 @@ async function ouvrirCommandeBoutique(boutiqueId,index){
  if(!profil.exists){alert("Cette commande nécessite un compte client. Connectez-vous avec votre compte client.");if(typeof afficherConnexionClient==="function")afficherConnexionClient();return;}
  const snap=await db.collection("demandes_nouveaux_services").doc(boutiqueId).get();
  if(!snap.exists)return alert("Boutique introuvable.");
- const b=snap.data(),p=b.produits?.[index];if(!p)return alert("Produit introuvable.");
+ const b=snap.data();let p=b.produits?.[index];if(!p&&typeof index==="string"){const article=await db.collection("articles_boutiques").doc(index).get();if(article.exists&&article.data().boutiqueId===boutiqueId&&article.data().statut==="approuve")p=article.data();}if(!p)return alert("Produit introuvable.");
  const zone=document.getElementById("commandeBoutiqueZone_"+boutiqueId);if(!zone)return;
  zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><h4>Commander : '+echapperTextePublicite(p.nom)+'</h4><p>Prix unitaire : '+Number(p.prix).toLocaleString("fr-FR")+' FCFA</p><label>Quantité</label><input type="number" id="qteBoutique_'+boutiqueId+'" min="1" max="99" value="1"><label>Adresse de livraison</label><input id="adresseClientBoutique_'+boutiqueId+'" maxlength="220" placeholder="Quartier, rue, repère, commune"><label>Votre numéro de téléphone</label><input id="telClientBoutique_'+boutiqueId+'" type="tel" maxlength="20" value="'+echapperTextePublicite(profil.data().telephone||"")+'"><label>Commentaire pour la boutique</label><textarea id="commentaireClientBoutique_'+boutiqueId+'" maxlength="500" rows="3" placeholder="Précision sur votre commande (facultatif)"></textarea><p>Frais de livraison : <strong>'+Number(b.tarifLivraisonBoutique||1000).toLocaleString("fr-FR")+' FCFA</strong></p><button type="button" class="primary" onclick="enregistrerCommandeBoutique(\''+boutiqueId+'\','+index+')">Confirmer ma commande</button><p id="statutCommandeBoutique_'+boutiqueId+'" class="notice"></p></div>';
 }
@@ -3781,7 +3782,7 @@ async function enregistrerCommandeBoutique(boutiqueId,index){
  const user=auth.currentUser;if(!user)return alert("Connectez-vous comme client.");
  const profilSnap=await db.collection("clients").doc(user.uid).get();if(!profilSnap.exists)return alert("Compte client introuvable.");
  const shopSnap=await db.collection("demandes_nouveaux_services").doc(boutiqueId).get();if(!shopSnap.exists)return alert("Boutique introuvable.");
- const b=shopSnap.data(),p=b.produits?.[index];if(!p)return alert("Produit introuvable.");if(b.visibleManuellement===false)return alert("Cette boutique est temporairement masquée par l’administration.");
+ const b=shopSnap.data();let p=b.produits?.[index];if(!p&&typeof index==="string"){const article=await db.collection("articles_boutiques").doc(index).get();if(article.exists&&article.data().boutiqueId===boutiqueId&&article.data().statut==="approuve")p=article.data();}if(!p)return alert("Produit introuvable.");if(b.visibleManuellement===false)return alert("Cette boutique est temporairement masquée par l’administration.");
  const qte=Number(document.getElementById("qteBoutique_"+boutiqueId)?.value||0),adresse=document.getElementById("adresseClientBoutique_"+boutiqueId)?.value.trim()||"",tel=document.getElementById("telClientBoutique_"+boutiqueId)?.value.trim()||"",commentaire=document.getElementById("commentaireClientBoutique_"+boutiqueId)?.value.trim()||"";
  const statut=document.getElementById("statutCommandeBoutique_"+boutiqueId);
  const telOk=n=>{let v=n.replace(/\D/g,"");if(v.startsWith("225")&&v.length===13)v=v.substring(3);return /^(01|05|07)\d{8}$/.test(v);};
