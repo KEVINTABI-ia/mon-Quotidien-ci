@@ -7317,9 +7317,16 @@ async function verifierAbonnementAutomobiliste(){
   const user=auth.currentUser;
   if(!user){abonnementAutomobilisteValide=false;return false;}
   try{
-    const snap=await db.collection("abonnements_automobiliste").doc(user.uid).get();
+    const [snap,profil]=await Promise.all([
+      db.collection("abonnements_automobiliste").doc(user.uid).get(),
+      db.collection("utilisateurs").doc(user.uid).get()
+    ]);
     const d=snap.exists?snap.data():null;
-    abonnementAutomobilisteValide=!!d && d.statut==="actif" && d.dateExpiration && d.dateExpiration.toDate && d.dateExpiration.toDate()>new Date();
+    const expiration=d&&d.dateExpiration&&d.dateExpiration.toDate?d.dateExpiration.toDate():null;
+    const abonnementActif=!!d&&d.statut==="actif"&&expiration&&expiration>new Date();
+    const created=profil.exists&&profil.data().createdAt&&profil.data().createdAt.toDate?profil.data().createdAt.toDate():null;
+    const essaiGratuitActif=!!created&&(Date.now()-created.getTime()<30*24*60*60*1000);
+    abonnementAutomobilisteValide=!!(abonnementActif||essaiGratuitActif);
     return abonnementAutomobilisteValide;
   }catch(e){console.error("Vérification abonnement automobile:",e);abonnementAutomobilisteValide=false;return false;}
 }
