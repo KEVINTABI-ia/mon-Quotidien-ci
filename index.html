@@ -11788,7 +11788,7 @@ async function chargerAvisCompagnie(id,espace){
  try{
   const q=await db.collection("avis_compagnies").where("compagnieId","==",id).where("statut","==","publie").get();
   let html=q.empty?"<p class='notice'>Aucun avis publié.</p>":q.docs.map(d=>{const a=d.data();return '<article class="stop"><strong>'+echapperTexteCompagnie(a.nomVoyageur)+'</strong> · '+a.note+'/5<p>'+echapperTexteCompagnie(a.commentaire)+'</p></article>';}).join("");
-  if(espace){const p=await db.collection("avis_compagnies").where("compagnieId","==",id).where("compagnieUid","==",auth.currentUser.uid).where("statut","==","en_attente").get();if(!p.empty)html+='<p class="notice">Avis en attente de validation : '+p.size+'</p>';}
+  if(espace){const p=await db.collection("avis_compagnies").where("compagnieId","==",id).where("compagnieUid","==",auth.currentUser.uid).where("statut","==","en_attente").get();if(!p.empty){html+='<h5>Avis en attente de validation</h5>';p.forEach(d=>{const a=d.data();html+='<article class="stop"><strong>'+echapperTexteCompagnie(a.nomVoyageur)+'</strong> · '+a.note+'/5 · En attente<p>'+echapperTexteCompagnie(a.commentaire)+'</p></article>';});}}
   z.innerHTML=html;
  }catch(e){z.textContent="Avis indisponibles : "+e.message;}
 }
@@ -11801,7 +11801,7 @@ async function envoyerAvisCompagnie(id,uid){
 }
 async function afficherDetailCompagnie(id,c){
  const z=document.getElementById("detailCompagnie_"+id);if(!z)return;
- let html='<h4>Gare principale – '+echapperTexteCompagnie(c.agence)+'</h4><img src="'+echapperTexteCompagnie(c.photoGarePrincipale||"")+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px"><p>Localisation : '+echapperTexteCompagnie(c.localisation)+'</p><p>Contact gare : '+echapperTexteCompagnie(c.telephoneGarePrincipale||c.telephone||"")+'</p><p>Service courrier : '+echapperTexteCompagnie(c.telephoneServiceCourrier||"")+'</p><button onclick="ouvrirMapGareCompagnie(\''+echapperTexteCompagnie(c.localisation).replace(/'/g,"&#39;")+'\')">🗺️ Map – Gare principale</button><h4>Gares annexes</h4>';
+ let html='<h4>Gare principale – '+echapperTexteCompagnie(c.agence)+'</h4><img src="'+echapperTexteCompagnie(c.photoGarePrincipale||"")+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px"><p>Localisation : '+echapperTexteCompagnie(c.localisation)+'</p><p>Contact gare : '+echapperTexteCompagnie(c.telephoneGarePrincipale||c.telephone||"")+'</p><p>Service courrier : '+echapperTexteCompagnie(c.telephoneServiceCourrier||"")+'</p><p><strong>Destinations, prix et heures :</strong></p><ul>'+(c.destinations||[]).map(x=>'<li>'+echapperTexteCompagnie(x.ville)+' : '+Number(x.prix).toLocaleString("fr-FR")+' FCFA · Départs : '+echapperTexteCompagnie((x.heures||[]).join(", "))+'</li>').join("")+'</ul><button onclick="ouvrirMapGareCompagnie(\''+echapperTexteCompagnie(c.localisation).replace(/'/g,"&#39;")+'\')">🗺️ Map – Gare principale</button><h4>Gares annexes</h4>';
  try{
   const s=await db.collection("gares_compagnies").where("compagnieId","==",id).where("statut","==","publiee").get();
   if(s.empty)html+="<p class='notice'>Aucune gare annexe publiée.</p>";
