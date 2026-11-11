@@ -811,6 +811,31 @@ service cloud.firestore {
       allow update, delete: if estAdmin();
     }
 
+    match /demandes_renouvellement_boutiques/{demandeId} {
+      allow create: if estConnecte()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasAll(["boutiqueId","uid","email","operateur","referencePaiement","nomPayeur","montantFCFA","dureeJours","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["boutiqueId","uid","email","operateur","referencePaiement","nomPayeur","montantFCFA","dureeJours","statut","createdAt"])
+        && exists(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId))
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.uid == request.auth.uid
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.type == "commerce"
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.modePartenaire == true
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.statut == "approuve"
+        && request.resource.data.operateur in ["Wave","Orange Money"]
+        && request.resource.data.referencePaiement is string
+        && request.resource.data.referencePaiement.size() >= 4
+        && request.resource.data.referencePaiement.size() <= 80
+        && request.resource.data.montantFCFA is int
+        && request.resource.data.montantFCFA > 0
+        && request.resource.data.dureeJours is int
+        && request.resource.data.dureeJours >= 1
+        && request.resource.data.dureeJours <= 365
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update, delete: if estAdmin();
+    }
+
     match /avis_boutiques/{avisId} {
       allow create: if request.resource.data.keys().hasAll([
           "boutiqueId","boutiqueUid","nom","produit","commentaire",
