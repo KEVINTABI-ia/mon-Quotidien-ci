@@ -1904,7 +1904,7 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 <div id="gestionAbonnementsAutomobiliste" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🚘 Validation des abonnements automobiles</h3><p class="notice">Vérifie le moyen de paiement et la référence avant d'activer 12 mois d'accès. Ne valide qu'après réception effective des 1 000 FCFA.</p><div id="listeAbonnementsAutomobilisteAdmin">Chargement...</div></div>
 <div id="gestionValidationDepannage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🔧 Validation des dépannages</h3><p class="notice">Examine séparément les demandes des professionnels du dépannage automobile.</p><div id="listeValidationDepannageAdmin">Chargement...</div></div>
 <div id="gestionValidationCommerce" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🏪 Validation des commerces</h3><p class="notice">Vérifie les établissements commerciaux hors boutiques.</p><div id="listeValidationCommerceAdmin">Chargement...</div></div>
-<div id="gestionValidationBoutiques" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🛍️ Validation des boutiques</h3><p class="notice">Vérifie les boutiques, les paiements d’abonnement et leur visibilité.</p><div id="listeValidationBoutiquesAdmin">Chargement...</div><h4>📦 Articles soumis par les vendeurs</h4><p class="notice">Les articles restent invisibles au public jusqu’à leur approbation.</p><div id="listeValidationArticlesBoutiquesAdmin">Chargement...</div></div>
+<div id="gestionValidationBoutiques" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🛍️ Validation des boutiques</h3><p class="notice">Vérifie les boutiques, les paiements d’abonnement et leur visibilité.</p><div id="listeValidationBoutiquesAdmin">Chargement...</div><h4>🔄 Demandes de renouvellement des partenaires commerçants</h4><div id="listeRenouvellementsBoutiquesAdmin">Chargement...</div><h4>📦 Articles soumis par les vendeurs</h4><p class="notice">Les articles restent invisibles au public jusqu’à leur approbation.</p><div id="listeValidationArticlesBoutiquesAdmin">Chargement...</div></div>
 <div id="gestionDonsSolidarite" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🤝 Dons et demandes d’aide</h3><p class="notice">Les coordonnées des personnes sont privées et visibles uniquement ici.</p><div id="listeDonsSolidariteAdmin">Chargement...</div></div>
 <div id="gestionServicesProximite" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📍 Services de proximité</h3><p class="notice">Gère les stations-service, banques, hôtels et supermarchés de la plateforme.</p><button type="button" class="primary" onclick="importerServicesQuotidiensOSM()">⬇️ Importer / actualiser stations, banques et hôtels</button><p id="statutGestionServicesProximite" class="notice"></p><div id="resumeGestionServicesProximite">Chargement...</div></div>
 <div id="gestionValidationAnnuaires" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📒 Validation des annuaires professionnels</h3><p class="notice">Vérifie les coordonnées et l’activité avant publication.</p><div id="listeValidationAnnuairesAdmin">Chargement...</div></div>
@@ -3963,14 +3963,65 @@ async function connecterCompteBoutique(){
  if(!email||!motDePasse){statut.textContent="Saisissez votre e-mail et votre mot de passe.";return;}
  try{
   const resultat=await auth.signInWithEmailAndPassword(email,motDePasse);
-  const snap=await db.collection("demandes_nouveaux_services").where("uid","==",resultat.user.uid).where("type","==","commerce").where("statut","==","approuve").limit(5).get();
-  const boutique=snap.docs.find(x=>{const d=x.data();return d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>Date.now();});
-  if(!boutique){await auth.signOut();statut.textContent="Aucune boutique approuvée avec un abonnement actif n'est liée à ce compte.";return;}
-  statut.textContent="Connexion réussie.";
-  const zone=document.getElementById("boutiqueCompteConnecte");if(zone)zone.innerHTML='<p>Connecté à : <strong>'+echapperTextePublicite(boutique.data().titre)+'</strong></p><button type="button" class="primary" onclick="ouvrirFormulaireArticleBoutique(\''+boutique.id+'\')">➕ Ajouter un article</button><div id="formArticleBoutique_'+boutique.id+'"></div><h4>Mes articles</h4><div id="mesArticlesBoutique_'+boutique.id+'"></div><button type="button" onclick="chargerCommandesBoutique(\''+boutique.id+'\')">📦 Ouvrir mes commandes</button><div id="commandesBoutique_'+boutique.id+'"></div>';
-  chargerMesArticlesBoutique(boutique.id);
-  chargerCommandesBoutique(boutique.id);
+  const snap=await db.collection("demandes_nouveaux_services").where("uid","==",resultat.user.uid).where("type","==","commerce").where("statut","==","approuve").limit(10).get();
+  const boutique=snap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0))[0];
+  if(!boutique){await auth.signOut();statut.textContent="Aucune boutique approuvée n'est liée à ce compte.";return;}
+  const d=boutique.data(),fin=d.abonnementFin&&d.abonnementFin.toDate?d.abonnementFin.toDate():null,actif=!!fin&&fin.getTime()>Date.now();
+  statut.textContent=actif?"Connexion réussie.":"Votre période gratuite ou votre abonnement est terminé. Votre boutique n'est plus visible.";
+  const zone=document.getElementById("boutiqueCompteConnecte");
+  if(zone){
+   let contenu='<p>Connecté à : <strong>'+echapperTextePublicite(d.titre)+'</strong></p>';
+   if(actif){
+    contenu+='<button type="button" class="primary" onclick="ouvrirFormulaireArticleBoutique(\''+boutique.id+'\')">➕ Ajouter un article</button><div id="formArticleBoutique_'+boutique.id+'"></div><h4>Mes articles</h4><div id="mesArticlesBoutique_'+boutique.id+'"></div><button type="button" onclick="chargerCommandesBoutique(\''+boutique.id+'\')">📦 Ouvrir mes commandes</button><div id="commandesBoutique_'+boutique.id+'"></div>';
+   }else{
+    contenu+='<div class="notice"><strong>Abonnement expiré</strong><p>Votre boutique n’est plus visible par les utilisateurs. Pour la rendre à nouveau visible, renouvelez votre abonnement.</p><button type="button" class="primary" onclick="afficherFormulaireRenouvellementBoutique(\''+boutique.id+'\')">Renouveler mon abonnement</button><div id="formRenouvellementBoutique_'+boutique.id+'"></div></div>';
+   }
+   zone.innerHTML=contenu;
+  }
+  if(actif){chargerMesArticlesBoutique(boutique.id);chargerCommandesBoutique(boutique.id);}
  }catch(e){console.error(e);statut.textContent="Connexion impossible : "+(e.message||"vérifiez vos identifiants.");}
+}
+function afficherFormulaireRenouvellementBoutique(id){
+ const zone=document.getElementById("formRenouvellementBoutique_"+id);if(!zone)return;
+ zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><h4>Renouveler mon abonnement</h4><p>Effectuez votre paiement avec les coordonnées habituelles, puis transmettez la référence pour vérification.</p><div id="coordonneesRenouvellementBoutique_'+id+'">Chargement...</div><label>Moyen de paiement</label><select id="renouvBoutiqueOperateur_'+id+'"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select><label>Référence de transaction</label><input id="renouvBoutiqueReference_'+id+'" maxlength="80"><label>Nom du payeur</label><input id="renouvBoutiquePayeur_'+id+'" maxlength="80"><label>Montant payé (FCFA)</label><input id="renouvBoutiqueMontant_'+id+'" type="number" min="1" step="1"><label>Durée souhaitée (jours)</label><input id="renouvBoutiqueDuree_'+id+'" type="number" min="1" max="365" value="30"><button type="button" class="primary" onclick="envoyerDemandeRenouvellementBoutique(\''+id+'\')">Envoyer à l’administrateur</button><p id="statutRenouvBoutique_'+id+'" class="notice"></p></div>';
+ window.chargerCoordonneesPaiementMQCI().then(p=>{const z=document.getElementById("coordonneesRenouvellementBoutique_"+id);if(z)z.textContent="Wave / Orange Money : "+p.numero+" · Bénéficiaire : "+p.beneficiaire;}).catch(()=>{const z=document.getElementById("coordonneesRenouvellementBoutique_"+id);if(z)z.textContent="Coordonnées de paiement indisponibles.";});
+}
+async function envoyerDemandeRenouvellementBoutique(id){
+ const user=auth.currentUser;if(!user)return alert("Connectez-vous au compte de votre boutique.");
+ const op=document.getElementById("renouvBoutiqueOperateur_"+id).value,ref=document.getElementById("renouvBoutiqueReference_"+id).value.trim(),payeur=document.getElementById("renouvBoutiquePayeur_"+id).value.trim(),montant=Number(document.getElementById("renouvBoutiqueMontant_"+id).value),jours=Number(document.getElementById("renouvBoutiqueDuree_"+id).value),zone=document.getElementById("statutRenouvBoutique_"+id);
+ if(!["Wave","Orange Money"].includes(op)||ref.length<4||!Number.isInteger(montant)||montant<1||!Number.isInteger(jours)||jours<1||jours>365){zone.textContent="Vérifiez le moyen de paiement, la référence, le montant et la durée.";return;}
+ zone.textContent="Envoi de la demande...";
+ try{
+  const b=await db.collection("demandes_nouveaux_services").doc(id).get();if(!b.exists||b.data().uid!==user.uid||b.data().modePartenaire!==true)throw new Error("Dossier partenaire introuvable.");
+  const enAttente=await db.collection("demandes_renouvellement_boutiques").where("boutiqueId","==",id).where("statut","==","en_attente").limit(1).get();if(!enAttente.empty)throw new Error("Une demande est déjà en attente de vérification.");
+  await db.collection("demandes_renouvellement_boutiques").add({boutiqueId:id,uid:user.uid,email:user.email||"",operateur:op,referencePaiement:ref,nomPayeur:payeur,montantFCFA:montant,dureeJours:jours,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  zone.textContent="Demande envoyée. Votre boutique restera invisible jusqu’à la vérification et la validation de l’administrateur.";
+ }catch(e){console.error(e);zone.textContent="Envoi impossible : "+(e.message||"vérifiez les règles Firestore.");}
+}
+async function chargerDemandesRenouvellementBoutiquesAdmin(){
+ const zone=document.getElementById("listeRenouvellementsBoutiquesAdmin");if(!zone)return;
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){zone.textContent="Accès administrateur requis.";return;}
+ zone.textContent="Chargement...";
+ try{
+  const snap=await db.collection("demandes_renouvellement_boutiques").orderBy("createdAt","desc").limit(100).get();
+  if(snap.empty){zone.innerHTML='<p class="notice">Aucune demande de renouvellement.</p>';return;}
+  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data(),date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"";const actions=d.statut==="en_attente"?'<button type="button" class="primary" onclick="traiterRenouvellementBoutiqueAdmin(\''+doc.id+'\',true)">Valider le paiement</button> <button type="button" onclick="traiterRenouvellementBoutiqueAdmin(\''+doc.id+'\',false)">Refuser</button>':'<p class="notice">Demande '+echapperTextePublicite(d.statut)+'</p>';return '<article class="card" style="padding:12px;margin:8px 0;"><strong>'+echapperTextePublicite(d.email||"Partenaire")+'</strong><p>'+Number(d.montantFCFA||0).toLocaleString("fr-FR")+' FCFA · '+Number(d.dureeJours||0)+' jours</p><p>'+echapperTextePublicite(d.operateur)+' · Référence : <strong>'+echapperTextePublicite(d.referencePaiement)+'</strong></p><p>Payeur : '+echapperTextePublicite(d.nomPayeur||"Non indiqué")+' · '+date+'</p>'+actions+'</article>';}).join("");
+ }catch(e){console.error(e);zone.textContent="Erreur de chargement : "+e.message;}
+}
+async function traiterRenouvellementBoutiqueAdmin(id,approuver){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ try{
+  const req=db.collection("demandes_renouvellement_boutiques").doc(id),snap=await req.get();if(!snap.exists||snap.data().statut!=="en_attente")return alert("Demande déjà traitée.");
+  const d=snap.data(),bref=db.collection("demandes_nouveaux_services").doc(d.boutiqueId),bs=await bref.get();if(!bs.exists||bs.data().uid!==d.uid||bs.data().statut!=="approuve")throw new Error("Boutique introuvable.");
+  const batch=db.batch();
+  if(approuver){
+   const montant=Number(d.montantFCFA),jours=Number(d.dureeJours);if(!Number.isInteger(montant)||montant<1||!Number.isInteger(jours)||jours<1||jours>365)throw new Error("Montant ou durée invalide.");
+   const ancienne=bs.data().abonnementFin?.toDate?bs.data().abonnementFin.toDate():new Date(),debut=ancienne.getTime()>Date.now()?ancienne:new Date(),fin=new Date(debut.getTime()+jours*86400000);
+   batch.update(bref,{abonnementDebut:firebase.firestore.Timestamp.fromDate(debut),abonnementFin:firebase.firestore.Timestamp.fromDate(fin),abonnementStatut:"actif",paiementStatut:"confirme",montantAbonnement:montant,dureeAbonnementJours:jours,dernierPaiementFCFA:montant,dernierPaiementConfirmeLe:firebase.firestore.FieldValue.serverTimestamp()});
+  }
+  batch.update(req,{statut:approuver?"approuve":"refuse",traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});
+  await batch.commit();await chargerDemandesRenouvellementBoutiquesAdmin();alert(approuver?"Paiement validé. La boutique peut redevenir visible.":"Demande refusée.");
+ }catch(e){console.error(e);alert("Traitement impossible : "+e.message);}
 }
 async function chargerCommandesBoutique(boutiqueId){
  const zone=document.getElementById("commandesBoutique_"+boutiqueId);if(!zone)return;
@@ -4548,7 +4599,7 @@ function ouvrirRubriqueAdmin(id){
   if(!cible)return;
   if(id==="gestionValidationDepannage") chargerNouveauxServicesAdmin("depannage");
   if(id==="gestionValidationCommerce") chargerNouveauxServicesAdmin("commerce");
-  if(id==="gestionValidationBoutiques"){chargerNouveauxServicesAdmin("boutique");chargerArticlesBoutiquesAdmin();}
+  if(id==="gestionValidationBoutiques"){chargerNouveauxServicesAdmin("boutique");chargerArticlesBoutiquesAdmin();chargerDemandesRenouvellementBoutiquesAdmin();}
   if(id==="gestionDonsSolidarite") chargerDonsSolidariteAdmin();
   if(id==="gestionServicesProximite") chargerGestionServicesProximiteAdmin();
   if(id==="gestionValidationAnnonces") chargerNouveauxServicesAdmin("annonce");
