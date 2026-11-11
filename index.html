@@ -3248,6 +3248,7 @@ function chargerPublicitesAccueil() {
 <div class="setting-row"><h3>🔠 Taille du texte</h3><p>Adaptez la lecture à votre confort.</p><button type="button" onclick="changerTailleTexteApplication('normal')">Standard</button><button type="button" onclick="changerTailleTexteApplication('grand')">Grand</button><button type="button" onclick="changerTailleTexteApplication('tres-grand')">Très grand</button></div>
 <div class="setting-row"><h3>🔔 Notifications</h3><p>Recevoir, uniquement si vous l’autorisez, les alertes concernant les informations de l’administrateur, les offres d’emploi et annonces, les objets trouvés validés, les messages Gbairai et le suivi des livraisons (acceptation du livreur et livraison terminée).</p><p id="etatNotificationsApplication">Vérification de l’autorisation de notification…</p><button type="button" class="primary" id="boutonNotificationsApplication" onclick="activerNotificationsApplication()">Autoriser les notifications</button><small>Votre choix peut être modifié dans les réglages de votre appareil. Aucune demande d’autorisation n’est affichée sans votre action.</small></div>
 <div class="setting-row"><h3>🌙 Mode sombre</h3><p>Choisissez votre confort d’affichage. Le mode sombre ne s’active qu’après votre choix.</p><p id="etatModeSombreApplication">Mode clair activé.</p><button type="button" id="boutonModeSombreApplication" onclick="basculerModeSombreApplication()" aria-pressed="false">Activer le mode sombre</button></div>
+<div class="setting-row" id="mqci-user-session-setting" hidden><h3>👤 Mon compte</h3><p>Déconnectez-vous de votre compte utilisateur sur cet appareil. Vos informations enregistrées restent conservées.</p><button type="button" class="primary" id="mqci-user-signout" onclick="mqciDeconnexionUtilisateur()">Se déconnecter</button><p id="mqci-user-signout-status" class="notice" aria-live="polite"></p></div>
 <div class="setting-row"><h3>🔒 Confidentialité</h3><p>Les informations personnelles transmises dans les formulaires sont utilisées pour traiter les demandes correspondantes. Les espaces privés restent soumis à leurs contrôles d’accès.</p></div>
 <div class="setting-row"><h3>ℹ️ À propos</h3><p><strong>Mon Quotidien CI</strong><br>Tous les services utiles, au même endroit.<br>Version de l’application : 1.0</p></div>
 <div class="setting-row"><button type="button" onclick="signalerProblemeGeneral()">⚠️ Signaler un problème</button></div>
@@ -4484,6 +4485,29 @@ function connexionAdmin() {
       statut.textContent = "Connexion impossible : " + erreur.message;
     });
 }
+
+function mqciDeconnexionUtilisateur() {
+  const user = auth.currentUser;
+  const statut = document.getElementById("mqci-user-signout-status");
+  if (!user) {
+    if (statut) statut.textContent = "Aucun compte utilisateur n’est actuellement connecté.";
+    return;
+  }
+  if (user.uid === ADMIN_UID) {
+    if (statut) statut.textContent = "Pour protéger l’accès administrateur, utilisez la déconnexion de l’espace administrateur.";
+    return;
+  }
+  if (!window.confirm("Voulez-vous vraiment vous déconnecter de Mon Quotidien CI ?")) return;
+  auth.signOut().catch((erreur) => {
+    console.error("Déconnexion utilisateur impossible :", erreur);
+    if (statut) statut.textContent = "Déconnexion impossible : " + (erreur.message || "réessayez.");
+  });
+}
+
+auth.onAuthStateChanged((user) => {
+  const zone = document.getElementById("mqci-user-session-setting");
+  if (zone) zone.hidden = !user || user.uid === ADMIN_UID;
+});
 
 function deconnexionAdmin() {
   auth.signOut()
