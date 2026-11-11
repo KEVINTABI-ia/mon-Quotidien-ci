@@ -17,14 +17,14 @@ messaging.onBackgroundMessage(payload => {
   const title = notification.title || "Mon Quotidien CI";
   const options = {
     body: notification.body || "Une nouvelle information vous attend.",
-    icon: "./icon-transport-ci.svg",
-    badge: "./icon-transport-ci.svg",
+    icon: "./E806C6C4-A1B3-469C-9D73-7EC9FBC1899C.png",
+    badge: "./E806C6C4-A1B3-469C-9D73-7EC9FBC1899C.png",
     data: payload.data || {}
   };
   return self.registration.showNotification(title, options);
 });
 
-const CACHE_NAME = "mon-transport-ci-shell-v28";
+const CACHE_NAME = "mon-quotidien-ci-shell-v29";
 const APP_SHELL = "./";
 
 self.addEventListener("install", event => {
