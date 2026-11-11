@@ -4000,7 +4000,7 @@ async function envoyerDemandeRenouvellementBoutique(id){
   if(!cfg.actif||tarifAbonnementEffectif(cfg)!==montant||dureeAbonnementEnJours(cfg)!==jours)throw new Error("La formule a changé. Rechargez le formulaire pour vérifier le tarif.");
   const b=await db.collection("demandes_nouveaux_services").doc(id).get();if(!b.exists||b.data().uid!==user.uid||b.data().modePartenaire!==true)throw new Error("Dossier partenaire introuvable.");
   const enAttente=await db.collection("demandes_renouvellement_boutiques").where("boutiqueId","==",id).where("statut","==","en_attente").limit(1).get();if(!enAttente.empty)throw new Error("Une demande est déjà en attente de vérification.");
-  await db.collection("demandes_renouvellement_boutiques").add({boutiqueId:id,uid:user.uid,email:user.email||"",operateur:op,referencePaiement:ref,nomPayeur:"",montantFCFA:montant,dureeJours:jours,formule,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  await db.collection("demandes_renouvellement_boutiques").add({boutiqueId:id,uid:user.uid,email:user.email||"",operateur:op,referencePaiement:ref,nomPayeur:"",montantFCFA:montant,dureeJours:jours,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
   zone.textContent="Demande envoyée. Votre boutique restera invisible jusqu’à la vérification et la validation de l’administrateur.";
  }catch(e){console.error(e);zone.textContent="Envoi impossible : "+(e.message||"vérifiez les règles Firestore.");}
 }
