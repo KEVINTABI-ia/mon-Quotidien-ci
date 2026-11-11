@@ -4092,7 +4092,7 @@ async function chargerCommandesBoutique(boutiqueId){
  }catch(e){console.error(e);zone.textContent="Impossible de charger les commandes : "+e.message;}
 }
 async function declencherLivraisonBoutique(commandeId){
- const user=auth.currentUser;if(!user)return alert("Connectez-vous au compte boutique.");
+ const authBoutique=boutiqueSessionPartenaire?partnerAuth:auth,dbBoutique=boutiqueSessionPartenaire?partnerDb:db;const user=authBoutique.currentUser;if(!user)return alert("Connectez-vous au compte boutique.");
  const saisie=prompt("Fixez les frais de livraison de cette commande en FCFA. Ce montant sera communiqué au livreur avant son acceptation.","");
  if(saisie===null)return;
  const montant=Number(String(saisie).replace(/[\s.]/g,"").replace(",","."));
@@ -7996,7 +7996,7 @@ async function activerAbonnementCompagnieRamassage(uid){
 
 async function deconnecterRamassage(){
   const etaitCompagnie=ramassageRoleActif==="compagnie";
-  await auth.signOut();ramassageRoleActif=null;
+  if(etaitCompagnie)await partnerAuth.signOut();else await auth.signOut();ramassageRoleActif=null;
   ["ramassageUsagerAuth","ramassageUsagerEspace","ramassageCompagnieEspace"].forEach(id=>{
     const element=document.getElementById(id);if(element)element.style.display=id==="ramassageUsagerAuth"?"block":"none";
   });
