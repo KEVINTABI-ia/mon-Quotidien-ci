@@ -3146,7 +3146,7 @@ async function activerNotificationsApplication(){
   if(!window.__mqciFcmForegroundReady){
    messagerie.onMessage(async payload=>{
     const titre=(payload.notification&&payload.notification.title)||'Mon Quotidien CI';
-    const options={body:(payload.notification&&payload.notification.body)||'Une nouvelle information vous attend.',icon:'./icon-transport-ci.svg',data:payload.data||{}};
+    const options={body:(payload.notification&&payload.notification.body)||'Une nouvelle information vous attend.',icon:'./E806C6C4-A1B3-469C-9D73-7EC9FBC1899C.png',data:payload.data||{}};
     const sw=await navigator.serviceWorker.ready;
     await sw.showNotification(titre,options);
    });
