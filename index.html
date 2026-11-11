@@ -6062,7 +6062,10 @@ function afficherFormulairePartenaire(type){
   const zone=document.getElementById("partenaireFormulaireChoisi");
   if(!zone)return;
   zone.replaceChildren();
-  if(!type)return;
+  if(!type){zone.style.display="none";return;}
+  // Ce conteneur peut avoir été masqué lors de l'ouverture d'une autre rubrique.
+  // Le réafficher avant de générer le formulaire partenaire.
+  zone.style.display="block";
   if(type==="livreur"){
     ouvrirInscriptionLivreur();
     const f=document.getElementById("formulaireLivreur");
