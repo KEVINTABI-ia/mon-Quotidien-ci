@@ -3726,11 +3726,11 @@ function compresserPhotoNouveauService(file){
 window.envoyerNouveauService = async function envoyerNouveauService(){
  const statut=document.getElementById("nsStatut");
  const valeur=id=>document.getElementById(id)?.value.trim()||"";
+ const modePartenaire=!!document.querySelector("#devenirPartenaire [data-mode-partenaire=\"1\"]");
  const titre=valeur("nsTitre"),commune=valeur("nsCommune"),telephone=valeur("nsTelephone"),description=valeur("nsDescription"),email=valeur("nsEmail"),password=document.getElementById("nsPassword")?.value||"";
  const comptePartenaire=modePartenaire?auth.currentUser:null;
  if(modePartenaire&&!comptePartenaire){statut.textContent="Connectez-vous à votre compte utilisateur avant de déposer une demande partenaire.";return;}
  if(modePartenaire&&comptePartenaire.email&&email&&comptePartenaire.email.toLowerCase()!==email.toLowerCase()){statut.textContent="L’adresse e-mail doit correspondre au compte utilisateur connecté.";return;}
- const modePartenaire=!!document.querySelector("#devenirPartenaire [data-mode-partenaire=\"1\"]");
  const estBoutique=nouveauServiceActif==="commerce";
  const paiementMoyen=estBoutique?(document.getElementById("nsPaiementMoyen")?.value||""):"";
  const paiementReference=estBoutique?(document.getElementById("nsPaiementReference")?.value.trim()||""):"";
