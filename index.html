@@ -1904,7 +1904,7 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 <div id="gestionAbonnementsAutomobiliste" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🚘 Validation des abonnements automobiles</h3><p class="notice">Vérifie le moyen de paiement et la référence avant d'activer 12 mois d'accès. Ne valide qu'après réception effective des 1 000 FCFA.</p><div id="listeAbonnementsAutomobilisteAdmin">Chargement...</div></div>
 <div id="gestionValidationDepannage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🔧 Validation des dépannages</h3><p class="notice">Examine séparément les demandes des professionnels du dépannage automobile.</p><div id="listeValidationDepannageAdmin">Chargement...</div></div>
 <div id="gestionValidationCommerce" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🏪 Validation des commerces</h3><p class="notice">Vérifie les établissements commerciaux hors boutiques.</p><div id="listeValidationCommerceAdmin">Chargement...</div></div>
-<div id="gestionValidationBoutiques" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🛍️ Validation des boutiques</h3><p class="notice">Vérifie les boutiques, les paiements d’abonnement et leur visibilité.</p><div id="listeValidationBoutiquesAdmin">Chargement...</div><h4>📦 Articles soumis par les vendeurs</h4><p class="notice">Les articles restent invisibles au public jusqu’à leur approbation.</p><div id="listeValidationArticlesBoutiquesAdmin">Chargement...</div></div>
+<div id="gestionValidationBoutiques" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🛍️ Validation des boutiques</h3><p class="notice">Vérifie les boutiques, les paiements d’abonnement et leur visibilité.</p><div id="listeValidationBoutiquesAdmin">Chargement...</div><h4>🔄 Demandes de renouvellement des partenaires commerçants</h4><div id="listeRenouvellementsBoutiquesAdmin">Chargement...</div><h4>📦 Articles soumis par les vendeurs</h4><p class="notice">Les articles restent invisibles au public jusqu’à leur approbation.</p><div id="listeValidationArticlesBoutiquesAdmin">Chargement...</div></div>
 <div id="gestionDonsSolidarite" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🤝 Dons et demandes d’aide</h3><p class="notice">Les coordonnées des personnes sont privées et visibles uniquement ici.</p><div id="listeDonsSolidariteAdmin">Chargement...</div></div>
 <div id="gestionServicesProximite" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📍 Services de proximité</h3><p class="notice">Gère les stations-service, banques, hôtels et supermarchés de la plateforme.</p><button type="button" class="primary" onclick="importerServicesQuotidiensOSM()">⬇️ Importer / actualiser stations, banques et hôtels</button><p id="statutGestionServicesProximite" class="notice"></p><div id="resumeGestionServicesProximite">Chargement...</div></div>
 <div id="gestionValidationAnnuaires" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📒 Validation des annuaires professionnels</h3><p class="notice">Vérifie les coordonnées et l’activité avant publication.</p><div id="listeValidationAnnuairesAdmin">Chargement...</div></div>
@@ -3665,7 +3665,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
  ${type==="annonce"?'<div id="zoneAbonnementPetitesAnnonces" style="margin:12px 0;"><button type="button" onclick="ouvrirGestionAbonnementPetitesAnnonces()">Consulter mon abonnement / renouveler</button></div>':""}
- ${type==="commerce"&&!modePartenaire?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="30" data-montant="2500">1 mois — 2 500 FCFA</option><option value="60" data-montant="4500">2 mois — 4 500 FCFA</option><option value="90" data-montant="7000">3 mois — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p id="coordonneesPaiementBoutique">Chargement des coordonnées de paiement...</p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
+ ${type==="commerce"&&!modePartenaire?genererFormulairePaiementCommun("ns",{duree:true,coordId:"coordonneesPaiementBoutique",titre:"Choisissez votre abonnement boutique"}):''}
  ${type==="commerce"&&modePartenaire?'<p class="notice">Inscription partenaire gratuite. Après approbation par l’administration, votre boutique bénéficiera de 30 jours de visibilité gratuite. Un abonnement sera nécessaire pour continuer après cette période.</p>':''}
  <button id="nsEnvoyerValidation" class="primary" type="button">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
@@ -3963,14 +3963,71 @@ async function connecterCompteBoutique(){
  if(!email||!motDePasse){statut.textContent="Saisissez votre e-mail et votre mot de passe.";return;}
  try{
   const resultat=await auth.signInWithEmailAndPassword(email,motDePasse);
-  const snap=await db.collection("demandes_nouveaux_services").where("uid","==",resultat.user.uid).where("type","==","commerce").where("statut","==","approuve").limit(5).get();
-  const boutique=snap.docs.find(x=>{const d=x.data();return d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>Date.now();});
-  if(!boutique){await auth.signOut();statut.textContent="Aucune boutique approuvée avec un abonnement actif n'est liée à ce compte.";return;}
-  statut.textContent="Connexion réussie.";
-  const zone=document.getElementById("boutiqueCompteConnecte");if(zone)zone.innerHTML='<p>Connecté à : <strong>'+echapperTextePublicite(boutique.data().titre)+'</strong></p><button type="button" class="primary" onclick="ouvrirFormulaireArticleBoutique(\''+boutique.id+'\')">➕ Ajouter un article</button><div id="formArticleBoutique_'+boutique.id+'"></div><h4>Mes articles</h4><div id="mesArticlesBoutique_'+boutique.id+'"></div><button type="button" onclick="chargerCommandesBoutique(\''+boutique.id+'\')">📦 Ouvrir mes commandes</button><div id="commandesBoutique_'+boutique.id+'"></div>';
-  chargerMesArticlesBoutique(boutique.id);
-  chargerCommandesBoutique(boutique.id);
+  const snap=await db.collection("demandes_nouveaux_services").where("uid","==",resultat.user.uid).where("type","==","commerce").where("statut","==","approuve").limit(10).get();
+  const boutique=snap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0))[0];
+  if(!boutique){await auth.signOut();statut.textContent="Aucune boutique approuvée n'est liée à ce compte.";return;}
+  const d=boutique.data(),fin=d.abonnementFin&&d.abonnementFin.toDate?d.abonnementFin.toDate():null,actif=!!fin&&fin.getTime()>Date.now();
+  if(!actif&&d.modePartenaire!==true){await auth.signOut();statut.textContent="Aucune boutique approuvée avec un abonnement actif n'est liée à ce compte.";return;}
+  statut.textContent=actif?"Connexion réussie.":"Votre période gratuite ou votre abonnement est terminé. Votre boutique n'est plus visible.";
+  const zone=document.getElementById("boutiqueCompteConnecte");
+  if(zone){
+   let contenu='<p>Connecté à : <strong>'+echapperTextePublicite(d.titre)+'</strong></p>';
+   if(actif){
+    contenu+='<button type="button" class="primary" onclick="ouvrirFormulaireArticleBoutique(\''+boutique.id+'\')">➕ Ajouter un article</button><div id="formArticleBoutique_'+boutique.id+'"></div><h4>Mes articles</h4><div id="mesArticlesBoutique_'+boutique.id+'"></div><button type="button" onclick="chargerCommandesBoutique(\''+boutique.id+'\')">📦 Ouvrir mes commandes</button><div id="commandesBoutique_'+boutique.id+'"></div>';
+   }else{
+    contenu+='<div class="notice"><strong>Abonnement expiré</strong><p>Votre boutique n’est plus visible par les utilisateurs. Pour la rendre à nouveau visible, renouvelez votre abonnement.</p><button type="button" class="primary" onclick="afficherFormulaireRenouvellementBoutique(\''+boutique.id+'\')">Renouveler mon abonnement</button><div id="formRenouvellementBoutique_'+boutique.id+'"></div></div>';
+   }
+   zone.innerHTML=contenu;
+  }
+  if(actif){chargerMesArticlesBoutique(boutique.id);chargerCommandesBoutique(boutique.id);}
  }catch(e){console.error(e);statut.textContent="Connexion impossible : "+(e.message||"vérifiez vos identifiants.");}
+}
+function afficherFormulaireRenouvellementBoutique(id){
+ const zone=document.getElementById("formRenouvellementBoutique_"+id);if(!zone)return;
+ const prefix="renouvBoutique_"+id;
+ zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><h4>Renouveler mon abonnement</h4><p>Choisissez une formule et effectuez le paiement avec les coordonnées habituelles.</p>'+genererFormulairePaiementCommun(prefix,{duree:true,coordId:"coordonneesRenouvellementBoutique_"+id})+'<button type="button" class="primary" data-boutique-id="'+echapperTextePublicite(id)+'" onclick="envoyerDemandeRenouvellementBoutique(this.dataset.boutiqueId)">Envoyer à l’administrateur</button><p id="statutRenouvBoutique_'+id+'" class="notice"></p></div>';
+ initialiserFormulairePaiementCommun(prefix,["boutiques_1mois","boutiques_2mois","boutiques_3mois"],"coordonneesRenouvellementBoutique_"+id);
+}
+async function envoyerDemandeRenouvellementBoutique(id){
+ const user=auth.currentUser;if(!user)return alert("Connectez-vous au compte de votre boutique.");
+ const prefix="renouvBoutique_"+id,op=document.getElementById(prefix+"PaiementMoyen")?.value||"",ref=document.getElementById(prefix+"PaiementReference")?.value.trim()||"",select=document.getElementById(prefix+"DureeAbonnement"),option=select?.selectedOptions?.[0],montant=Number(option?.dataset?.montant||0),jours=Number(select?.value||0),zone=document.getElementById("statutRenouvBoutique_"+id);
+ if(!zone)return;
+ if(!["Wave","Orange Money"].includes(op)||ref.length<4||ref.length>80||!Number.isInteger(montant)||montant<1||!Number.isInteger(jours)||jours<1||jours>365){zone.textContent="Choisissez une formule disponible, un moyen de paiement et saisissez une référence valide.";return;}
+ zone.textContent="Envoi de la demande...";
+ try{
+  const formule=option?.dataset?.config;if(!["boutiques_1mois","boutiques_2mois","boutiques_3mois"].includes(formule))throw new Error("Formule de renouvellement invalide.");
+  const cfg=await obtenirConfigurationAbonnement(formule,true);
+  if(!cfg.actif||tarifAbonnementEffectif(cfg)!==montant||dureeAbonnementEnJours(cfg)!==jours)throw new Error("La formule a changé. Rechargez le formulaire pour vérifier le tarif.");
+  const b=await db.collection("demandes_nouveaux_services").doc(id).get();if(!b.exists||b.data().uid!==user.uid||b.data().modePartenaire!==true)throw new Error("Dossier partenaire introuvable.");
+  const enAttente=await db.collection("demandes_renouvellement_boutiques").where("boutiqueId","==",id).where("statut","==","en_attente").limit(1).get();if(!enAttente.empty)throw new Error("Une demande est déjà en attente de vérification.");
+  await db.collection("demandes_renouvellement_boutiques").add({boutiqueId:id,uid:user.uid,email:user.email||"",operateur:op,referencePaiement:ref,nomPayeur:"",montantFCFA:montant,dureeJours:jours,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  zone.textContent="Demande envoyée. Votre boutique restera invisible jusqu’à la vérification et la validation de l’administrateur.";
+ }catch(e){console.error(e);zone.textContent="Envoi impossible : "+(e.message||"vérifiez les règles Firestore.");}
+}
+async function chargerDemandesRenouvellementBoutiquesAdmin(){
+ const zone=document.getElementById("listeRenouvellementsBoutiquesAdmin");if(!zone)return;
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){zone.textContent="Accès administrateur requis.";return;}
+ zone.textContent="Chargement...";
+ try{
+  const snap=await db.collection("demandes_renouvellement_boutiques").orderBy("createdAt","desc").limit(100).get();
+  if(snap.empty){zone.innerHTML='<p class="notice">Aucune demande de renouvellement.</p>';return;}
+  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data(),date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"";const actions=d.statut==="en_attente"?'<button type="button" class="primary" onclick="traiterRenouvellementBoutiqueAdmin(\''+doc.id+'\',true)">Valider le paiement</button> <button type="button" onclick="traiterRenouvellementBoutiqueAdmin(\''+doc.id+'\',false)">Refuser</button>':'<p class="notice">Demande '+echapperTextePublicite(d.statut)+'</p>';return '<article class="card" style="padding:12px;margin:8px 0;"><strong>'+echapperTextePublicite(d.email||"Partenaire")+'</strong><p>'+Number(d.montantFCFA||0).toLocaleString("fr-FR")+' FCFA · '+Number(d.dureeJours||0)+' jours</p><p>'+echapperTextePublicite(d.operateur)+' · Référence : <strong>'+echapperTextePublicite(d.referencePaiement)+'</strong></p><p>Payeur : '+echapperTextePublicite(d.nomPayeur||"Non indiqué")+' · '+date+'</p>'+actions+'</article>';}).join("");
+ }catch(e){console.error(e);zone.textContent="Erreur de chargement : "+e.message;}
+}
+async function traiterRenouvellementBoutiqueAdmin(id,approuver){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ try{
+  const req=db.collection("demandes_renouvellement_boutiques").doc(id),snap=await req.get();if(!snap.exists||snap.data().statut!=="en_attente")return alert("Demande déjà traitée.");
+  const d=snap.data(),bref=db.collection("demandes_nouveaux_services").doc(d.boutiqueId),bs=await bref.get();if(!bs.exists||bs.data().uid!==d.uid||bs.data().statut!=="approuve")throw new Error("Boutique introuvable.");
+  const batch=db.batch();
+  if(approuver){
+   const montant=Number(d.montantFCFA),jours=Number(d.dureeJours);if(!Number.isInteger(montant)||montant<1||!Number.isInteger(jours)||jours<1||jours>365)throw new Error("Montant ou durée invalide.");
+   const ancienne=bs.data().abonnementFin?.toDate?bs.data().abonnementFin.toDate():new Date(),debut=ancienne.getTime()>Date.now()?ancienne:new Date(),fin=new Date(debut.getTime()+jours*86400000);
+   batch.update(bref,{abonnementDebut:firebase.firestore.Timestamp.fromDate(debut),abonnementFin:firebase.firestore.Timestamp.fromDate(fin),abonnementStatut:"actif",paiementStatut:"confirme",montantAbonnement:montant,dureeAbonnementJours:jours,dernierPaiementFCFA:montant,dernierPaiementConfirmeLe:firebase.firestore.FieldValue.serverTimestamp()});
+  }
+  batch.update(req,{statut:approuver?"approuve":"refuse",traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});
+  await batch.commit();await chargerDemandesRenouvellementBoutiquesAdmin();alert(approuver?"Paiement validé. La boutique peut redevenir visible.":"Demande refusée.");
+ }catch(e){console.error(e);alert("Traitement impossible : "+e.message);}
 }
 async function chargerCommandesBoutique(boutiqueId){
  const zone=document.getElementById("commandesBoutique_"+boutiqueId);if(!zone)return;
@@ -4418,14 +4475,28 @@ function tarifAbonnementEffectif(c){
  return c.promotionActive&&c.promotionPrix>0&&c.promotionPrix<=c.prix&&debut&&fin&&maintenant>=debut&&maintenant<=fin?Number(c.promotionPrix):Number(c.prix);
 }
 function dureeAbonnementEnJours(c){const n=Number(c.duree||1);return c.unite==="mois"?Math.round(n*30):n;}
-async function initialiserFormulaireAbonnementBoutique(){
- const select=document.getElementById("nsDureeAbonnement");if(!select)return;
+function genererFormulairePaiementCommun(prefix,options={}){
+ const duree=options.duree!==false,coordId=options.coordId||("coordonneesPaiement_"+prefix);
+ return '<div style="padding:12px;background:#F0F7F1;border:1px solid #DCEBDD;border-radius:10px;margin:12px 0;">'+
+  (options.titre?'<strong>'+options.titre+'</strong>':'')+
+  (duree?'<label for="'+prefix+'DureeAbonnement">Formule / durée</label><select id="'+prefix+'DureeAbonnement" required><option value="">Chargement des formules...</option></select>':'')+
+  '<p id="'+coordId+'">Chargement des coordonnées de paiement...</p>'+
+  '<label for="'+prefix+'PaiementMoyen">Moyen de paiement</label><select id="'+prefix+'PaiementMoyen" required><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select>'+
+  '<label for="'+prefix+'PaiementReference">Référence de la transaction</label><input id="'+prefix+'PaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required>'+
+  '<small>Votre demande sera transmise à l’administration. La visibilité sera rétablie uniquement après vérification du paiement.</small></div>';
+}
+async function initialiserFormulairePaiementCommun(prefix,ids,coordId){
  try{
-  const formules=await Promise.all(["boutiques_1mois","boutiques_2mois","boutiques_3mois"].map(async id=>({id,c:await obtenirConfigurationAbonnement(id)})));
-  const options=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&dureeAbonnementEnJours(x.c)>0).map(x=>{const jours=dureeAbonnementEnJours(x.c),prix=tarifAbonnementEffectif(x.c);return '<option value="'+jours+'" data-montant="'+prix+'" data-config="'+x.id+'">'+Number(x.c.duree)+' mois — '+prix.toLocaleString("fr-FR")+' FCFA'+(prix<x.c.prix?' (promotion)':'')+'</option>';});
-  select.innerHTML=options.length?options.join(""):'<option value="">Souscriptions temporairement suspendues ou formules non configurées</option>';
-  select.disabled=!options.length;
- }catch(e){console.error(e);select.disabled=true;}
+  const paiement=await window.chargerCoordonneesPaiementMQCI(),zone=document.getElementById(coordId||("coordonneesPaiement_"+prefix));
+  if(zone)zone.textContent="Wave : "+paiement.numero+" · Orange Money : "+paiement.numero+" · Titulaire : "+paiement.beneficiaire;
+  const select=document.getElementById(prefix+"DureeAbonnement");if(!select)return;
+  const formules=await Promise.all(ids.map(async id=>({id,c:await obtenirConfigurationAbonnement(id)})));
+  const options=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&dureeAbonnementEnJours(x.c)>0).map(x=>{const jours=dureeAbonnementEnJours(x.c),prix=tarifAbonnementEffectif(x.c);return '<option value="'+jours+'" data-montant="'+prix+'" data-config="'+x.id+'">'+Number(x.c.duree)+' '+(x.c.unite==="mois"?"mois":"jours")+' — '+prix.toLocaleString("fr-FR")+' FCFA'+(prix<x.c.prix?' (promotion)':'')+'</option>';});
+  select.innerHTML=options.length?'<option value="">Choisir une formule</option>'+options.join(""):'<option value="">Formules indisponibles</option>';select.disabled=!options.length;
+ }catch(e){console.error("Formulaire de paiement commun",e);const select=document.getElementById(prefix+"DureeAbonnement");if(select)select.disabled=true;const zone=document.getElementById(coordId||("coordonneesPaiement_"+prefix));if(zone)zone.textContent="Coordonnées ou formules de paiement indisponibles.";}
+}
+async function initialiserFormulaireAbonnementBoutique(){
+ await initialiserFormulairePaiementCommun("ns",["boutiques_1mois","boutiques_2mois","boutiques_3mois"],"coordonneesPaiementBoutique");
 }
 
 function valeurConfigAbonnement(id,champ){
@@ -4548,7 +4619,7 @@ function ouvrirRubriqueAdmin(id){
   if(!cible)return;
   if(id==="gestionValidationDepannage") chargerNouveauxServicesAdmin("depannage");
   if(id==="gestionValidationCommerce") chargerNouveauxServicesAdmin("commerce");
-  if(id==="gestionValidationBoutiques"){chargerNouveauxServicesAdmin("boutique");chargerArticlesBoutiquesAdmin();}
+  if(id==="gestionValidationBoutiques"){chargerNouveauxServicesAdmin("boutique");chargerArticlesBoutiquesAdmin();chargerDemandesRenouvellementBoutiquesAdmin();}
   if(id==="gestionDonsSolidarite") chargerDonsSolidariteAdmin();
   if(id==="gestionServicesProximite") chargerGestionServicesProximiteAdmin();
   if(id==="gestionValidationAnnonces") chargerNouveauxServicesAdmin("annonce");
@@ -7317,9 +7388,16 @@ async function verifierAbonnementAutomobiliste(){
   const user=auth.currentUser;
   if(!user){abonnementAutomobilisteValide=false;return false;}
   try{
-    const snap=await db.collection("abonnements_automobiliste").doc(user.uid).get();
+    const [snap,profil]=await Promise.all([
+      db.collection("abonnements_automobiliste").doc(user.uid).get(),
+      db.collection("utilisateurs").doc(user.uid).get()
+    ]);
     const d=snap.exists?snap.data():null;
-    abonnementAutomobilisteValide=!!d && d.statut==="actif" && d.dateExpiration && d.dateExpiration.toDate && d.dateExpiration.toDate()>new Date();
+    const expiration=d&&d.dateExpiration&&d.dateExpiration.toDate?d.dateExpiration.toDate():null;
+    const abonnementActif=!!d&&d.statut==="actif"&&expiration&&expiration>new Date();
+    const created=profil.exists&&profil.data().createdAt&&profil.data().createdAt.toDate?profil.data().createdAt.toDate():null;
+    const essaiGratuitActif=!!created&&(Date.now()-created.getTime()<30*24*60*60*1000);
+    abonnementAutomobilisteValide=!!(abonnementActif||essaiGratuitActif);
     return abonnementAutomobilisteValide;
   }catch(e){console.error("Vérification abonnement automobile:",e);abonnementAutomobilisteValide=false;return false;}
 }
@@ -7359,7 +7437,25 @@ async function actualiserEtatAbonnementAutomobiliste(){
   if(!auth.currentUser){zone.textContent="Connectez-vous ou créez un compte pour demander l'activation.";return;}
   zone.textContent="Vérification de votre abonnement...";
   const actif=await verifierAbonnementAutomobiliste();
-  if(actif){zone.textContent="Votre abonnement est actif jusqu'au "+(await db.collection("abonnements_automobiliste").doc(auth.currentUser.uid).get()).data().dateExpiration.toDate().toLocaleDateString("fr-FR")+". Vous pouvez accéder aux services.";return;}
+  if(actif){
+    const [abonnement,profil]=await Promise.all([
+      db.collection("abonnements_automobiliste").doc(auth.currentUser.uid).get(),
+      db.collection("utilisateurs").doc(auth.currentUser.uid).get()
+    ]);
+    const expiration=abonnement.exists&&abonnement.data().dateExpiration&&abonnement.data().dateExpiration.toDate?abonnement.data().dateExpiration.toDate():null;
+    if(expiration){
+      zone.textContent="Votre abonnement est actif jusqu'au "+expiration.toLocaleDateString("fr-FR")+". Vous pouvez accéder aux services.";
+    }else{
+      const creation=profil.exists&&profil.data().createdAt&&profil.data().createdAt.toDate?profil.data().createdAt.toDate():null;
+      if(!creation){zone.textContent="Votre accès est actif. La date de création du compte est en cours de vérification.";return;}
+      const finEssai=new Date(creation.getTime()+30*24*60*60*1000);
+      zone.textContent="Votre accès gratuit est actif jusqu'au "+finEssai.toLocaleDateString("fr-FR")+". Vous pouvez utiliser les services de l'espace automobiliste.";
+    }
+    document.getElementById("operateurAbonnementAuto").disabled=true;
+    document.getElementById("referenceAbonnementAuto").disabled=true;
+    document.getElementById("nomPayeurAbonnementAuto").disabled=true;
+    return;
+  }
   const demandes=await db.collection("demandes_abonnement_automobiliste").where("uid","==",auth.currentUser.uid).get();
   const derniereDemande=demandes.docs.slice().sort((a,b)=>{
     const dateA=a.data().createdAt?.toMillis?.()||0;
@@ -7390,8 +7486,14 @@ async function connecterCompteAbonnementAuto(){
 async function creerCompteAbonnementAuto(){
   const email=document.getElementById("emailAbonnementAuto").value.trim(),mot=document.getElementById("motPasseAbonnementAuto").value;
   if(!email||mot.length<6)return alert("Renseignez un e-mail valide et un mot de passe d'au moins 6 caractères.");
-  try{await auth.createUserWithEmailAndPassword(email,mot);document.getElementById("connexionAbonnementAuto").style.display="none";document.getElementById("formulaireDemandeAbonnementAuto").style.display="block";await actualiserEtatAbonnementAutomobiliste();}
-  catch(e){alert("Création du compte impossible : "+e.message);}
+  try{
+    const credential=await auth.createUserWithEmailAndPassword(email,mot);
+    const nom=(email.split("@")[0]||"Utilisateur").slice(0,100);
+    await mqciEnregistrerProfil(credential.user,nom);
+    document.getElementById("connexionAbonnementAuto").style.display="none";
+    document.getElementById("formulaireDemandeAbonnementAuto").style.display="block";
+    await actualiserEtatAbonnementAutomobiliste();
+  }catch(e){alert("Création du compte impossible : "+e.message);}
 }
 async function deconnecterCompteAbonnementAuto(){await auth.signOut();abonnementAutomobilisteValide=false;document.getElementById("formulaireDemandeAbonnementAuto").style.display="none";document.getElementById("connexionAbonnementAuto").style.display="block";}
 
