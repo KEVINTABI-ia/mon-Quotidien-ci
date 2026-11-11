@@ -7418,7 +7418,25 @@ async function actualiserEtatAbonnementAutomobiliste(){
   if(!auth.currentUser){zone.textContent="Connectez-vous ou créez un compte pour demander l'activation.";return;}
   zone.textContent="Vérification de votre abonnement...";
   const actif=await verifierAbonnementAutomobiliste();
-  if(actif){zone.textContent="Votre abonnement est actif jusqu'au "+(await db.collection("abonnements_automobiliste").doc(auth.currentUser.uid).get()).data().dateExpiration.toDate().toLocaleDateString("fr-FR")+". Vous pouvez accéder aux services.";return;}
+  if(actif){
+    const [abonnement,profil]=await Promise.all([
+      db.collection("abonnements_automobiliste").doc(auth.currentUser.uid).get(),
+      db.collection("utilisateurs").doc(auth.currentUser.uid).get()
+    ]);
+    const expiration=abonnement.exists&&abonnement.data().dateExpiration&&abonnement.data().dateExpiration.toDate?abonnement.data().dateExpiration.toDate():null;
+    if(expiration){
+      zone.textContent="Votre abonnement est actif jusqu'au "+expiration.toLocaleDateString("fr-FR")+". Vous pouvez accéder aux services.";
+    }else{
+      const creation=profil.exists&&profil.data().createdAt&&profil.data().createdAt.toDate?profil.data().createdAt.toDate():null;
+      if(!creation){zone.textContent="Votre accès est actif. La date de création du compte est en cours de vérification.";return;}
+      const finEssai=new Date(creation.getTime()+30*24*60*60*1000);
+      zone.textContent="Votre accès gratuit est actif jusqu'au "+finEssai.toLocaleDateString("fr-FR")+". Vous pouvez utiliser les services de l'espace automobiliste.";
+    }
+    document.getElementById("operateurAbonnementAuto").disabled=true;
+    document.getElementById("referenceAbonnementAuto").disabled=true;
+    document.getElementById("nomPayeurAbonnementAuto").disabled=true;
+    return;
+  }
   const demandes=await db.collection("demandes_abonnement_automobiliste").where("uid","==",auth.currentUser.uid).get();
   const derniereDemande=demandes.docs.slice().sort((a,b)=>{
     const dateA=a.data().createdAt?.toMillis?.()||0;
