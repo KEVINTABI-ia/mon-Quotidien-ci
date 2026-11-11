@@ -6164,23 +6164,10 @@ function ouvrirInscriptionLivreur(){
     Tes informations seront vérifiées avant validation.
     </p>
 
-    <button type="button" class="primary"
-      onclick="
-        creerComptePartenaire('livreur_independant', {
-          nom: document.getElementById('livreurNom').value,
-          telephone: document.getElementById('livreurTelephone').value,
-          email: document.getElementById('livreurEmail').value,
-          commune: document.getElementById('livreurCommune').value,
-          quartiers: document.getElementById('livreurQuartiers').value,
-          dateNaissance: document.getElementById('livreurDateNaissance').value,
-lieuNaissance: document.getElementById('livreurLieuNaissance').value,
-numeroIdentite: document.getElementById('livreurNumeroIdentite').value.trim(),
-numeroPermis: document.getElementById('livreurNumeroPermis').value.trim(),
-          
-        })
-      ">
+    <button type="button" class="primary" onclick="soumettreInscriptionLivreur(this)">
       Créer mon compte
     </button>
+    <p id="statutInscriptionLivreur" role="status" aria-live="polite" style="margin-top:10px;font-weight:600;"></p>
   `;
 
   const emailLivreur=document.getElementById("livreurEmail");if(emailLivreur)emailLivreur.value=auth.currentUser?.email||"";
@@ -7461,6 +7448,40 @@ async function envoyerFichierCloudflare(
 
   return resultat.key;
 }
+async function soumettreInscriptionLivreur(bouton) {
+  const statut = document.getElementById("statutInscriptionLivreur");
+  const afficher = (message, erreur=false) => {
+    if (statut) {
+      statut.textContent = message;
+      statut.style.color = erreur ? "#b42318" : "#16834a";
+    }
+  };
+  if (bouton.disabled) return;
+  bouton.disabled = true;
+  const texteInitial = bouton.textContent;
+  bouton.textContent = "Vérification en cours…";
+  afficher("Vérification des informations et préparation de la demande…");
+  try {
+    await creerComptePartenaire("livreur_independant", {
+      nom: document.getElementById("livreurNom")?.value || "",
+      telephone: document.getElementById("livreurTelephone")?.value || "",
+      email: document.getElementById("livreurEmail")?.value || "",
+      commune: document.getElementById("livreurCommune")?.value || "",
+      quartiers: document.getElementById("livreurQuartiers")?.value || "",
+      dateNaissance: document.getElementById("livreurDateNaissance")?.value || "",
+      lieuNaissance: document.getElementById("livreurLieuNaissance")?.value || "",
+      numeroIdentite: document.getElementById("livreurNumeroIdentite")?.value.trim() || "",
+      numeroPermis: document.getElementById("livreurNumeroPermis")?.value.trim() || ""
+    });
+  } catch (erreur) {
+    console.error("Inscription livreur :", erreur);
+    afficher("Une erreur empêche l’envoi : " + (erreur.message || "réessayez."), true);
+  } finally {
+    bouton.disabled = false;
+    bouton.textContent = texteInitial;
+  }
+}
+
 async function creerComptePartenaire(type, donnees) {
   const user=auth.currentUser;
   if(!user){alert("Connectez-vous d’abord à votre compte utilisateur pour déposer une demande partenaire.");return;}
@@ -7483,8 +7504,17 @@ async function creerComptePartenaire(type, donnees) {
   const dossier={uid:user.uid,type,nom:donnees.nom,telephone:donnees.telephone,commune:donnees.commune,email:user.email||"",dateNaissance:donnees.dateNaissance,lieuNaissance:donnees.lieuNaissance,numeroIdentite:donnees.numeroIdentite,photoProfil,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
   if(type==="livreur_independant"){dossier.quartiers=donnees.quartiers;dossier.numeroPermis=donnees.numeroPermis;}
   if(type==="representant_gare"){dossier.nomGare=donnees.nomGare;dossier.posteOccupe=donnees.posteOccupe;}
-  try{await db.collection("partenaires").doc(user.uid).set(dossier);alert("Demande envoyée avec votre compte utilisateur. Votre session reste active. Votre dossier est en attente de validation.");}
-  catch(e){console.error("Demande partenaire:",e);alert("Envoi impossible : "+(e.message||"réessayez."));}
+  try{
+    await db.collection("partenaires").doc(user.uid).set(dossier);
+    const statutLivreur=document.getElementById("statutInscriptionLivreur");
+    if(statutLivreur){statutLivreur.textContent="Demande envoyée avec succès. Votre dossier est en attente de validation.";statutLivreur.style.color="#16834a";}
+    alert("Demande envoyée avec votre compte utilisateur. Votre session reste active. Votre dossier est en attente de validation.");
+  } catch(e) {
+    console.error("Demande partenaire:",e);
+    const statutLivreur=document.getElementById("statutInscriptionLivreur");
+    if(statutLivreur){statutLivreur.textContent="Envoi impossible : "+(e.message||"réessayez.");statutLivreur.style.color="#b42318";}
+    alert("Envoi impossible : "+(e.message||"réessayez."));
+  }
 }
 
 // Gestion commune : les formulaires des rubriques quittées se referment sans effacer les saisies.
