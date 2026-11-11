@@ -11780,7 +11780,7 @@ async function ajouterGareAnnexeCompagnie(id){
 async function chargerGaresAnnexesCompagnie(id){
  const z=document.getElementById("listeGaresAnnexesCompagnie");if(!z)return;
  try{const s=await db.collection("gares_compagnies").where("compagnieUid","==",auth.currentUser.uid).where("compagnieId","==",id).get();
- z.innerHTML=s.empty?"<p class='notice'>Aucune gare annexe.</p>":s.docs.map(d=>{const g=d.data();return '<article class="stop"><img src="'+echapperTexteCompagnie(g.photo)+'" style="width:100%;max-height:130px;object-fit:cover"><strong>'+echapperTexteCompagnie(g.nom)+'</strong><p>'+echapperTexteCompagnie(g.localisation)+'</p><p>Statut : '+echapperTexteCompagnie(g.statut)+'</p><p class="notice">Le téléphone du représentant est réservé à l'administrateur.</p></article>';}).join("");
+ z.innerHTML=s.empty?"<p class='notice'>Aucune gare annexe.</p>":s.docs.map(d=>{const g=d.data();return '<article class="stop"><img src="'+echapperTexteCompagnie(g.photo)+'" style="width:100%;max-height:130px;object-fit:cover"><strong>'+echapperTexteCompagnie(g.nom)+'</strong><p>'+echapperTexteCompagnie(g.localisation)+'</p><p>Statut : '+echapperTexteCompagnie(g.statut)+'</p><p class="notice">Le téléphone du représentant est réservé à l’administration.</p></article>';}).join("");
  }catch(e){z.textContent="Erreur : "+e.message;}
 }
 async function chargerAvisCompagnie(id,espace){
@@ -11788,7 +11788,7 @@ async function chargerAvisCompagnie(id,espace){
  try{
   const q=await db.collection("avis_compagnies").where("compagnieId","==",id).where("statut","==","publie").get();
   let html=q.empty?"<p class='notice'>Aucun avis publié.</p>":q.docs.map(d=>{const a=d.data();return '<article class="stop"><strong>'+echapperTexteCompagnie(a.nomVoyageur)+'</strong> · '+a.note+'/5<p>'+echapperTexteCompagnie(a.commentaire)+'</p></article>';}).join("");
-  if(espace){const p=await db.collection("avis_compagnies").where("compagnieId","==",id).where("statut","==","en_attente").get();if(!p.empty)html+='<p class="notice">Avis en attente de validation : '+p.size+'</p>';}
+  if(espace){const p=await db.collection("avis_compagnies").where("compagnieId","==",id).where("compagnieUid","==",auth.currentUser.uid).where("statut","==","en_attente").get();if(!p.empty)html+='<p class="notice">Avis en attente de validation : '+p.size+'</p>';}
   z.innerHTML=html;
  }catch(e){z.textContent="Avis indisponibles : "+e.message;}
 }
