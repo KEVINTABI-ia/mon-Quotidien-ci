@@ -3997,7 +3997,7 @@ async function connecterCompteBoutique(){
   const boutique=snap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0))[0];
   if(!boutique){await partnerAuth.signOut();boutiqueSessionPartenaire=false;statut.textContent="Aucune boutique approuvée n'est liée à ce compte.";return;}
   const d=boutique.data(),fin=d.abonnementFin&&d.abonnementFin.toDate?d.abonnementFin.toDate():null,actif=!!fin&&fin.getTime()>Date.now();
-  if(!actif&&d.modePartenaire!==true){await partnerAuth.signOut();statut.textContent="Aucune boutique approuvée avec un abonnement actif n'est liée à ce compte.";return;}
+  if(!actif&&d.modePartenaire!==true){await partnerAuth.signOut();boutiqueSessionPartenaire=false;statut.textContent="Aucune boutique approuvée avec un abonnement actif n'est liée à ce compte.";return;}
   statut.textContent=actif?"Connexion réussie.":"Votre période gratuite ou votre abonnement est terminé. Votre boutique n'est plus visible.";
   const zone=document.getElementById("boutiqueCompteConnecte");
   if(zone){
@@ -6518,7 +6518,7 @@ async function connecterPartenaire(){
       await afficherEspaceCompagnie(docCompagnie.id,docCompagnie.data());
       return;
     }
-    const documentPartenaire = await db
+    const documentPartenaire = await partnerDb
       .collection("partenaires")
       .doc(uid)
       .get();
@@ -7919,13 +7919,13 @@ async function publierDemandeRamassage(){
   }catch(e){alert("Publication impossible : "+e.message);}
 }
 async function publierOffreRamassage(){
-  const user=auth.currentUser;if(!user)return alert("Connectez-vous à votre compte compagnie.");
+  const user=partnerAuth.currentUser;if(!user)return alert("Connectez-vous à votre compte compagnie.");
   const val=id=>document.getElementById(id).value.trim();
   const commune=val("offreRamassageCommune"),points=val("offreRamassagePoints"),destination=val("offreRamassageDestination"),jours=val("offreRamassageJours"),heure=val("offreRamassageHeure"),places=Number(val("offreRamassagePlaces")),tarif=val("offreRamassageTarif");
   if(!commune||!points||!destination||!jours||!heure||!Number.isInteger(places)||places<1||places>100)return alert("Vérifiez les informations du trajet et les places disponibles.");
-  const profil=await db.collection("comptes_ramassage").doc(user.uid).get();if(!profil.exists)return alert("Profil compagnie introuvable.");
+  const profil=await partnerDb.collection("comptes_ramassage").doc(user.uid).get();if(!profil.exists)return alert("Profil compagnie introuvable.");
   try{
-    await db.collection("offres_ramassage").add({compagnieId:user.uid,compagnieNom:profil.data().nom,telephone:profil.data().telephone||"",communeDepart:commune,points:points,destination:destination,jours:jours,heure:heure,placesDisponibles:places,tarif:tarif?Number(tarif):null,statut:"publiee",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    await partnerDb.collection("offres_ramassage").add({compagnieId:user.uid,compagnieNom:profil.data().nom,telephone:profil.data().telephone||"",communeDepart:commune,points:points,destination:destination,jours:jours,heure:heure,placesDisponibles:places,tarif:tarif?Number(tarif):null,statut:"publiee",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     alert("Votre trajet est publié.");
     await chargerOffresRamassage();
   }catch(e){alert("Publication impossible : "+e.message);}
@@ -7950,7 +7950,7 @@ async function chargerDemandesRamassage(){
   const zone=document.getElementById("listeDemandesRamassage");if(!zone)return;
   zone.innerHTML="<p class='notice'>Chargement des recherches...</p>";
   try{
-    const snap=await db.collection("demandes_ramassage").where("statut","==","ouverte").get();
+    const snap=await partnerDb.collection("demandes_ramassage").where("statut","==","ouverte").get();
     if(snap.empty){zone.innerHTML="<p class='notice'>Aucune recherche ouverte pour le moment.</p>";return;}
     zone.innerHTML="";
     snap.forEach(doc=>{
