@@ -3901,7 +3901,7 @@ function ouvrirFicheCommerceCatalogue(id){
  const zone=document.getElementById("ficheCommerceCatalogue");if(!zone)return;
  const tel=String(b.telephone||"").replace(/[^+0-9]/g,"");
  const wa=tel.replace(/^\+/,"").replace(/^0/,"225");
- zone.innerHTML='<article class="card" style="padding:15px;margin:12px 0;border-left:4px solid #F28C28;">'+(b.photoUrl?'<img src="'+b.photoUrl+'" alt="Photo de '+echapperTextePublicite(b.titre)+'" style="width:100%;max-width:220px;height:150px;object-fit:cover;border-radius:12px;margin-bottom:10px;">':'')+'<h3>'+echapperTextePublicite(b.titre||"Commerce")+'</h3><p><strong>Catégorie :</strong> '+echapperTextePublicite(b.categorie||"Commerce")+'</p><p><strong>Commune :</strong> '+echapperTextePublicite(b.commune||"Non précisée")+'</p><p><strong>Adresse :</strong> '+echapperTextePublicite(b.adresseBoutique||b.commune||"À confirmer auprès du commerce")+'</p><p style="white-space:pre-wrap;">'+echapperTextePublicite(b.description||"")+'</p><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">'+(tel?'<a class="primary" style="display:inline-block;text-decoration:none;" href="tel:'+tel+'">📞 Appeler</a><a class="primary" style="display:inline-block;text-decoration:none;" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+wa+'">WhatsApp</a>':'<span class="notice">Coordonnées de contact non renseignées.</span>')+'</div></article>';
+ zone.innerHTML='<article class="card" style="padding:15px;margin:12px 0;border-left:4px solid #F28C28;">'+(b.photoUrl?'<img src="'+b.photoUrl+'" alt="Photo de '+echapperTextePublicite(b.titre)+'" style="width:100%;max-width:220px;height:150px;object-fit:cover;border-radius:12px;margin-bottom:10px;">':'')+'<h3>'+echapperTextePublicite(b.titre||"Commerce")+'</h3><p><strong>Catégorie :</strong> '+echapperTextePublicite(b.categorie||"Commerce")+'</p><p><strong>Commune :</strong> '+echapperTextePublicite(b.commune||"Non précisée")+'</p><p><strong>Adresse :</strong> '+echapperTextePublicite(b.adresseBoutique||b.commune||"À confirmer auprès du commerce")+'</p><p style="white-space:pre-wrap;">'+echapperTextePublicite(b.description||"")+'</p><div class="fiche-commerce-actions">'+(tel?'<a class="primary" href="tel:'+tel+'">📞 Appeler</a><a class="primary" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+wa+'">WhatsApp</a>':'<span class="notice">Coordonnées de contact non renseignées.</span>')+'</div></article>';
  zone.scrollIntoView({behavior:"smooth",block:"nearest"});
 }
 function filtrerCatalogueBoutiques(){
@@ -11702,5 +11702,11 @@ html.mqci-dark-mode .home-welcome{filter:brightness(.88)}
 })();
 </script>
 
+
+<style>
+/* Alignement des boutons de contact dans la fiche boutique */
+.fiche-commerce-actions{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px;margin-top:12px}
+.fiche-commerce-actions .primary{display:inline-flex!important;align-items:center;justify-content:center;width:auto!important;min-width:140px;max-width:190px;flex:0 1 190px;margin:0!important;text-align:center!important;text-decoration:none!important}
+</style>
 </body>
 </html>
