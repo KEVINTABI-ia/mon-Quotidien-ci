@@ -3408,6 +3408,7 @@ async function mqciVerifierCodeSMS(){
   if(!mqciCodeEnvoye||!mqciConfirmationSMS){mqciAuthStatut("Demandez d'abord un code SMS.",true);return;}
   if(!/^[0-9]{6}$/.test(code)){mqciAuthStatut("Saisissez le code à 6 chiffres reçu par SMS.",true);return;}
   const nom=document.getElementById("mqci-auth-name").value.trim();
+  if(nom.length<2){mqciAuthStatut("Saisissez votre nom complet avant de vérifier le code.",true);return;}
   const btn=document.getElementById("mqci-auth-verify-code");btn.disabled=true;mqciAuthStatut("Vérification du code...");
   try{
     const credential=await mqciConfirmationSMS.confirm(code);
