@@ -3060,6 +3060,25 @@ function chargerPublicitesAccueil() {
   <a href="https://www.google.com/maps/search/?api=1&query=commissariat+de+police+près+de+moi" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;background:#087C62;color:#fff;padding:13px 16px;border-radius:12px;font-weight:700;margin:0;">📍 Trouver le commissariat le plus proche</a>
 </section>
 
+<section id="mqci-home-account" class="card" style="margin:14px 16px;padding:0;overflow:hidden;" hidden>
+  <button type="button" id="mqci-home-account-toggle" aria-expanded="false" onclick="mqciAfficherMonCompte()" style="width:100%;text-align:left;background:#fff;color:#18352A;padding:17px 18px;display:flex;align-items:center;justify-content:space-between;">
+    <span>👤 Mon compte</span><span aria-hidden="true">⌄</span>
+  </button>
+  <div id="mqci-home-account-panel" style="display:none;padding:0 18px 18px;">
+    <div style="display:flex;align-items:center;gap:14px;padding:14px 0;">
+      <img id="mqci-home-account-photo" alt="Photo de profil" src="" style="width:68px;height:68px;border-radius:50%;object-fit:cover;background:#E8F0EA;border:2px solid #16834A;display:none;">
+      <div id="mqci-home-account-avatar" aria-hidden="true" style="width:68px;height:68px;border-radius:50%;background:#E8F0EA;color:#16834A;display:flex;align-items:center;justify-content:center;font-size:28px;">👤</div>
+      <div style="min-width:0;"><strong id="mqci-home-account-name" style="display:block;font-size:17px;">Chargement du profil…</strong><span class="notice">Votre profil personnel</span></div>
+    </div>
+    <label for="mqci-home-account-photo-input">Ajouter ou modifier ma photo selfie</label>
+    <input id="mqci-home-account-photo-input" type="file" accept="image/jpeg,image/png,image/webp" capture="user" onchange="mqciEnregistrerPhotoProfil(this)" style="padding:10px;">
+    <p class="notice">Choisissez une photo de vous. Elle sera enregistrée dans votre profil privé et visible uniquement par vous et l’administrateur.</p>
+    <p id="mqci-home-account-status" class="notice" aria-live="polite"></p>
+    <button type="button" class="primary" id="mqci-user-signout" onclick="mqciDeconnexionUtilisateur()">Se déconnecter</button>
+    <p id="mqci-user-signout-status" class="notice" aria-live="polite"></p>
+  </div>
+</section>
+
 <section class="card" id="pharmaciesProches" style="display:none;">
   <h2>💊 Pharmacie la plus proche</h2>
   <p>Trouvez une pharmacie autour de votre position ou consultez les pharmacies de garde.</p>
@@ -3248,7 +3267,7 @@ function chargerPublicitesAccueil() {
 <details class="setting-row"><summary>🔠 Taille du texte</summary><div class="setting-content"><p>Adaptez la lecture à votre confort.</p><button type="button" onclick="changerTailleTexteApplication('normal')">Standard</button><button type="button" onclick="changerTailleTexteApplication('grand')">Grand</button><button type="button" onclick="changerTailleTexteApplication('tres-grand')">Très grand</button></div></details>
 <details class="setting-row"><summary>🔔 Notifications</summary><div class="setting-content"><p>Recevoir, uniquement si vous l’autorisez, les alertes concernant les informations de l’administrateur, les offres d’emploi et annonces, les objets trouvés validés, les messages Gbairai et le suivi des livraisons (acceptation du livreur et livraison terminée).</p><p id="etatNotificationsApplication">Vérification de l’autorisation de notification…</p><button type="button" class="primary" id="boutonNotificationsApplication" onclick="activerNotificationsApplication()">Autoriser les notifications</button><small>Votre choix peut être modifié dans les réglages de votre appareil. Aucune demande d’autorisation n’est affichée sans votre action.</small></div></details>
 <details class="setting-row"><summary>🌙 Mode sombre</summary><div class="setting-content"><p>Choisissez votre confort d’affichage. Le mode sombre ne s’active qu’après votre choix.</p><p id="etatModeSombreApplication">Mode clair activé.</p><button type="button" id="boutonModeSombreApplication" onclick="basculerModeSombreApplication()" aria-pressed="false">Activer le mode sombre</button></div></details>
-<details class="setting-row" id="mqci-user-session-setting" hidden><summary>👤 Mon compte</summary><div class="setting-content"><p>Déconnectez-vous de votre compte utilisateur sur cet appareil. Vos informations enregistrées restent conservées.</p><button type="button" class="primary" id="mqci-user-signout" onclick="mqciDeconnexionUtilisateur()">Se déconnecter</button><p id="mqci-user-signout-status" class="notice" aria-live="polite"></p></div></details>
+
 <details class="setting-row"><summary>🔒 Confidentialité</summary><div class="setting-content"><p>Les informations personnelles transmises dans les formulaires sont utilisées pour traiter les demandes correspondantes. Les espaces privés restent soumis à leurs contrôles d’accès.</p></div></details>
 <details class="setting-row"><summary>ℹ️ À propos</summary><div class="setting-content"><p><strong>Mon Quotidien CI</strong><br>Tous les services utiles, au même endroit.<br>Version de l’application : 1.0</p></div></details>
 <details class="setting-row"><summary>⚠️ Signaler un problème</summary><div class="setting-content"><p>Signalez un dysfonctionnement ou une difficulté rencontrée dans l’application.</p><button type="button" onclick="signalerProblemeGeneral()">Signaler un problème</button></div></details>
@@ -4515,10 +4534,62 @@ function mqciDeconnexionUtilisateur() {
   });
 }
 
-auth.onAuthStateChanged((user) => {
-  const zone = document.getElementById("mqci-user-session-setting");
-  if (zone) zone.hidden = !user;
+
+// Affichage du compte personnel sur l’accueil.
+auth.onAuthStateChanged(async (user) => {
+  const zone=document.getElementById("mqci-home-account");
+  const nom=document.getElementById("mqci-home-account-name");
+  const photo=document.getElementById("mqci-home-account-photo");
+  const avatar=document.getElementById("mqci-home-account-avatar");
+  if(zone) zone.hidden=!user;
+  if(!user) return;
+  if(nom) nom.textContent=user.displayName||user.email||"Mon compte";
+  if(photo){photo.removeAttribute("src");photo.style.display="none";}
+  if(avatar) avatar.style.display="flex";
+  try{
+    const snap=await db.collection("utilisateurs").doc(user.uid).get();
+    if(!auth.currentUser||auth.currentUser.uid!==user.uid)return;
+    const profil=snap.exists?snap.data():{};
+    if(nom)nom.textContent=profil.nom||user.displayName||user.email||"Mon compte";
+    if(profil.photoProfil&&photo&&avatar){photo.src=profil.photoProfil;photo.style.display="block";avatar.style.display="none";}
+  }catch(e){if(nom)nom.textContent=user.displayName||user.email||"Mon compte";console.warn("Chargement du profil utilisateur impossible",e);}
 });
+function mqciAfficherMonCompte(){
+  const panneau=document.getElementById("mqci-home-account-panel");
+  const bouton=document.getElementById("mqci-home-account-toggle");
+  if(!panneau||!bouton)return;
+  const ouvrir=panneau.style.display==="none";
+  panneau.style.display=ouvrir?"block":"none";
+  bouton.setAttribute("aria-expanded",String(ouvrir));
+}
+async function mqciEnregistrerPhotoProfil(input){
+  const user=auth.currentUser,statut=document.getElementById("mqci-home-account-status");
+  const fichier=input&&input.files&&input.files[0];
+  if(!user||!fichier)return;
+  if(!["image/jpeg","image/png","image/webp"].includes(fichier.type)){statut.textContent="Choisissez une photo JPG, PNG ou WEBP.";input.value="";return;}
+  if(fichier.size>8*1024*1024){statut.textContent="La photo doit faire 8 Mo maximum.";input.value="";return;}
+  statut.textContent="Préparation de votre photo…";
+  try{
+    const dataUrl=await new Promise((resolve,reject)=>{
+      const lecteur=new FileReader();lecteur.onerror=()=>reject(new Error("Lecture de la photo impossible."));lecteur.onload=()=>resolve(lecteur.result);lecteur.readAsDataURL(fichier);
+    });
+    const image=await new Promise((resolve,reject)=>{
+      const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error("Image illisible."));img.src=dataUrl;
+    });
+    const canvas=document.createElement("canvas"),max=480,ratio=Math.min(1,max/Math.max(image.width,image.height));
+    canvas.width=Math.round(image.width*ratio);canvas.height=Math.round(image.height*ratio);
+    canvas.getContext("2d").drawImage(image,0,0,canvas.width,canvas.height);
+    let qualite=.78,photoData=canvas.toDataURL("image/jpeg",qualite);
+    while(photoData.length>185000&&qualite>.35){qualite-=.08;photoData=canvas.toDataURL("image/jpeg",qualite);}
+    if(photoData.length>190000)throw new Error("Cette photo reste trop volumineuse. Choisissez une image plus légère.");
+    await db.collection("utilisateurs").doc(user.uid).update({photoProfil:photoData,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    const img=document.getElementById("mqci-home-account-photo"),avatar=document.getElementById("mqci-home-account-avatar");
+    if(img&&avatar){img.src=photoData;img.style.display="block";avatar.style.display="none";}
+    statut.textContent="Votre photo de profil a été enregistrée.";
+  }catch(e){statut.textContent="Enregistrement impossible : "+(e.message||"réessayez.");}
+  finally{input.value="";}
+}
+
 
 function deconnexionAdmin() {
   auth.signOut()
