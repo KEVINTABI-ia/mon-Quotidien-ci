@@ -141,6 +141,7 @@ service cloud.firestore {
           ])
           && request.resource.data.keys().hasOnly([
             "uid","nom","agence","localisation","telephone","email","logo","destinations",
+            "photoGarePrincipale","telephoneGarePrincipale","telephoneServiceCourrier",
             "formule","periodicite","montant","dureeMois","moyenPaiement","referencePaiement",
             "statutAbonnement","dateCreation","dateDebut","dateExpiration"
           ])
@@ -183,7 +184,88 @@ service cloud.firestore {
           && request.resource.data.dateExpiration == null
           && (!request.resource.data.keys().hasAny(["logo"])
             || (request.resource.data.logo is string && request.resource.data.logo.size() <= 300000 && (request.resource.data.logo == "" || request.resource.data.logo.matches("^data:image/jpeg;base64,.*$"))))
+          && (!request.resource.data.keys().hasAny(["photoGarePrincipale"])
+            || (request.resource.data.photoGarePrincipale is string && request.resource.data.photoGarePrincipale.size() <= 700000 && request.resource.data.photoGarePrincipale.matches("^data:image/jpeg;base64,.*$")))
+          && (!request.resource.data.keys().hasAny(["telephoneGarePrincipale"])
+            || (request.resource.data.telephoneGarePrincipale is string && request.resource.data.telephoneGarePrincipale.size() >= 6 && request.resource.data.telephoneGarePrincipale.size() <= 25))
+          && (!request.resource.data.keys().hasAny(["telephoneServiceCourrier"])
+            || (request.resource.data.telephoneServiceCourrier is string && request.resource.data.telephoneServiceCourrier.size() >= 6 && request.resource.data.telephoneServiceCourrier.size() <= 25))
         );
+      allow update, delete: if estAdmin();
+    }
+
+
+    // Gares des compagnies : seules les gares approuvées sont visibles publiquement.
+    // Le numéro du représentant est isolé dans une sous-collection strictement privée.
+    match /gares_compagnies/{gareId} {
+      function compagnieProprietaire(compagnieId, uid) {
+        return estConnecte()
+          && uid == request.auth.uid
+          && exists(/databases/$(database)/documents/compagnies/$(compagnieId))
+          && get(/databases/$(database)/documents/compagnies/$(compagnieId)).data.uid == request.auth.uid;
+      }
+      allow read: if estAdmin() || resource.data.statut == "publiee";
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["compagnieId","compagnieUid","type","nom","photo","localisation","telephonePublic","telephoneServiceCourrier","destinations","statut","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["compagnieId","compagnieUid","type","nom","photo","localisation","telephonePublic","telephoneServiceCourrier","destinations","statut","createdAt","updatedAt"])
+        && request.resource.data.compagnieUid == request.auth.uid
+        && compagnieProprietaire(request.resource.data.compagnieId, request.resource.data.compagnieUid)
+        && request.resource.data.type == "annexe"
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 2 && request.resource.data.nom.size() <= 100
+        && request.resource.data.photo is string && request.resource.data.photo.size() <= 700000 && request.resource.data.photo.matches("^data:image/jpeg;base64,.*$")
+        && request.resource.data.localisation is string && request.resource.data.localisation.size() >= 5 && request.resource.data.localisation.size() <= 300
+        && request.resource.data.telephonePublic is string && request.resource.data.telephonePublic.size() >= 6 && request.resource.data.telephonePublic.size() <= 25
+        && request.resource.data.telephoneServiceCourrier is string && request.resource.data.telephoneServiceCourrier.size() >= 6 && request.resource.data.telephoneServiceCourrier.size() <= 25
+        && request.resource.data.destinations is list && request.resource.data.destinations.size() > 0 && request.resource.data.destinations.size() <= 100
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if estAdmin()
+        || (estConnecte() && resource.data.compagnieUid == request.auth.uid
+          && resource.data.statut == "en_attente" && request.resource.data.statut == "en_attente"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nom","photo","localisation","telephonePublic","telephoneServiceCourrier","destinations","updatedAt"]));
+      allow delete: if estAdmin()
+        || (estConnecte() && resource.data.compagnieUid == request.auth.uid && resource.data.statut == "en_attente");
+
+      match /informations_privees/{privateId} {
+        allow read: if estAdmin();
+        allow create: if estConnecte() && privateId == "representant"
+          && request.resource.data.keys().hasAll(["uid","telephoneResponsable","createdAt"])
+          && request.resource.data.keys().hasOnly(["uid","telephoneResponsable","createdAt"])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.telephoneResponsable is string
+          && request.resource.data.telephoneResponsable.size() >= 6
+          && request.resource.data.telephoneResponsable.size() <= 25
+          && request.resource.data.createdAt == request.time
+          && existsAfter(/databases/$(database)/documents/gares_compagnies/$(gareId))
+          && getAfter(/databases/$(database)/documents/gares_compagnies/$(gareId)).data.compagnieUid == request.auth.uid;
+        allow update: if estConnecte() && privateId == "representant"
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(["uid","telephoneResponsable","createdAt"])
+          && request.resource.data.telephoneResponsable is string
+          && request.resource.data.telephoneResponsable.size() >= 6
+          && request.resource.data.telephoneResponsable.size() <= 25;
+        allow delete: if estAdmin();
+      }
+    }
+
+    // Avis voyageurs : création authentifiée, publication après modération.
+    match /avis_compagnies/{avisId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["compagnieId","compagnieUid","uid","nomVoyageur","note","commentaire","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["compagnieId","compagnieUid","uid","nomVoyageur","note","commentaire","statut","createdAt"])
+        && request.resource.data.compagnieId is string
+        && exists(/databases/$(database)/documents/compagnies/$(request.resource.data.compagnieId))
+        && get(/databases/$(database)/documents/compagnies/$(request.resource.data.compagnieId)).data.statutAbonnement == "Actif"
+        && request.resource.data.compagnieUid == get(/databases/$(database)/documents/compagnies/$(request.resource.data.compagnieId)).data.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.nomVoyageur is string && request.resource.data.nomVoyageur.size() >= 2 && request.resource.data.nomVoyageur.size() <= 80
+        && request.resource.data.note is int && request.resource.data.note >= 1 && request.resource.data.note <= 5
+        && request.resource.data.commentaire is string && request.resource.data.commentaire.size() >= 5 && request.resource.data.commentaire.size() <= 1200
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || resource.data.statut == "publie"
+        || (estConnecte() && resource.data.compagnieUid == request.auth.uid);
       allow update, delete: if estAdmin();
     }
 
