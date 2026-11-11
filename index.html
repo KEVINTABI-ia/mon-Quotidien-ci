@@ -11748,6 +11748,7 @@ async function afficherEspaceCompagnie(id,c){
  '<label>Localisation précise</label><input id="espaceCompagnieLocalisation" value="'+echapperTexteCompagnie(c.localisation||"")+'">'+
  '<label>Contact public gare</label><input id="espaceCompagnieTelGare" value="'+echapperTexteCompagnie(c.telephoneGarePrincipale||"")+'">'+
  '<label>Contact public service courrier</label><input id="espaceCompagnieTelCourrier" value="'+echapperTexteCompagnie(c.telephoneServiceCourrier||"")+'">'+
+ '<label>Numéro privé du responsable (administrateur uniquement)</label><input id="espaceCompagnieTelResponsable" type="tel" placeholder="Saisir pour modifier le numéro privé">'+
  '<label>Nouvelle photo de la gare principale</label><input id="espaceCompagniePhoto" type="file" accept="image/*">'+
  '<button class="primary" onclick="enregistrerGarePrincipaleCompagnie(\''+id+'\')">Enregistrer la gare principale</button>'+
  '<h4>Ajouter une gare annexe</h4><label>Nom de la gare</label><input id="annexeNom">'+
@@ -11764,10 +11765,10 @@ async function afficherEspaceCompagnie(id,c){
 async function enregistrerGarePrincipaleCompagnie(id){
  const status=document.getElementById("statutEspaceCompagnie");try{
   const ref=db.collection("compagnies").doc(id),snap=await ref.get();if(!snap.exists||snap.data().uid!==auth.currentUser.uid)throw new Error("Dossier non autorisé.");
-  const localisation=document.getElementById("espaceCompagnieLocalisation").value.trim(),telephoneGare=document.getElementById("espaceCompagnieTelGare").value.trim(),courrier=document.getElementById("espaceCompagnieTelCourrier").value.trim(),f=document.getElementById("espaceCompagniePhoto").files[0];
+  const localisation=document.getElementById("espaceCompagnieLocalisation").value.trim(),telephoneGare=document.getElementById("espaceCompagnieTelGare").value.trim(),courrier=document.getElementById("espaceCompagnieTelCourrier").value.trim(),telephoneResponsable=document.getElementById("espaceCompagnieTelResponsable").value.trim(),f=document.getElementById("espaceCompagniePhoto").files[0];
   const maj={localisation,telephoneGarePrincipale:telephoneGare,telephoneServiceCourrier:courrier};if(f){maj.photoGarePrincipale=await compresserImage(f);if(maj.photoGarePrincipale.length>700000)throw new Error("Photo trop volumineuse.");}
   if(!localisation||!telephoneGare||!courrier||(!f&&!snap.data().photoGarePrincipale))throw new Error("Localisation, photo et contacts publics requis.");
-  await ref.update(maj);status.textContent="Gare principale mise à jour.";
+  await ref.update(maj);if(telephoneResponsable){if(telephoneResponsable.length<6||telephoneResponsable.length>25)throw new Error("Le numéro privé doit contenir entre 6 et 25 caractères.");await ref.collection("informations_privees").doc("gare_principale").update({telephoneResponsable});}status.textContent="Gare principale mise à jour.";
  }catch(e){status.textContent="Erreur : "+e.message;}
 }
 async function ajouterGareAnnexeCompagnie(id){
