@@ -7358,14 +7358,12 @@ function mqciFermerFormulairesDans(conteneur){
   if(!conteneur || !conteneur.querySelectorAll) return;
   conteneur.querySelectorAll('form[id], div[id*="formulaire" i], [data-mqci-formulaire="true"]').forEach(function(formulaire){
     formulaire.style.display = "none";
-    formulaire.setAttribute("aria-hidden","true");
   });
 }
 function mqciFermerFormulairesHors(conteneurActif){
   document.querySelectorAll('form[id], div[id*="formulaire" i], [data-mqci-formulaire="true"]').forEach(function(formulaire){
     if(conteneurActif && conteneurActif.contains(formulaire)) return;
     formulaire.style.display = "none";
-    formulaire.setAttribute("aria-hidden","true");
   });
 }
 
