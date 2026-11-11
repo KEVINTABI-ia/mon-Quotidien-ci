@@ -269,6 +269,34 @@ service cloud.firestore {
       }
     }
 
+    // Profil général des utilisateurs : chaque compte ne gère que ses propres informations.
+    match /utilisateurs/{userId} {
+      allow create: if estConnecte()
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && request.resource.data.keys().hasAll(["uid","nom","telephone","email","modeConnexion","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["uid","nom","telephone","email","modeConnexion","createdAt","updatedAt"])
+        && request.resource.data.nom is string
+        && request.resource.data.nom.size() >= 2
+        && request.resource.data.nom.size() <= 100
+        && request.resource.data.telephone is string
+        && request.resource.data.telephone.size() <= 20
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 120
+        && request.resource.data.modeConnexion in ["email","telephone"]
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == userId);
+      allow update: if estConnecte()
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nom","telephone","email","updatedAt"])
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.nom is string
+        && request.resource.data.nom.size() >= 2
+        && request.resource.data.nom.size() <= 100;
+      allow delete: if estAdmin();
+    }
+
     match /clients/{clientId} {
       allow create: if estConnecte()
         && request.auth.uid == clientId
