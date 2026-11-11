@@ -204,6 +204,27 @@ service cloud.firestore {
           && request.resource.data.telephoneServiceCourrier is string && request.resource.data.telephoneServiceCourrier.size() >= 6 && request.resource.data.telephoneServiceCourrier.size() <= 25
           && request.resource.data.localisation is string && request.resource.data.localisation.size() >= 5 && request.resource.data.localisation.size() <= 300);
       allow delete: if estAdmin();
+      match /informations_privees/{privateId} {
+        allow read: if estAdmin();
+        allow create: if estConnecte() && privateId == "gare_principale"
+          && request.resource.data.keys().hasAll(["uid","telephoneResponsable","createdAt"])
+          && request.resource.data.keys().hasOnly(["uid","telephoneResponsable","createdAt"])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.telephoneResponsable is string
+          && request.resource.data.telephoneResponsable.size() >= 6
+          && request.resource.data.telephoneResponsable.size() <= 25
+          && request.resource.data.createdAt == request.time
+          && existsAfter(/databases/$(database)/documents/compagnies/$(compagnieId))
+          && getAfter(/databases/$(database)/documents/compagnies/$(compagnieId)).data.uid == request.auth.uid;
+        allow update: if estConnecte() && privateId == "gare_principale"
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(["uid","telephoneResponsable","createdAt"])
+          && request.resource.data.telephoneResponsable is string
+          && request.resource.data.telephoneResponsable.size() >= 6
+          && request.resource.data.telephoneResponsable.size() <= 25;
+        allow delete: if estAdmin();
+      }
     }
 
 
