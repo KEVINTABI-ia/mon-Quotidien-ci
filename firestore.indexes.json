@@ -91,6 +91,66 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "gares_compagnies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "compagnieUid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "compagnieId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "gares_compagnies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "compagnieId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "statut",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "avis_compagnies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "compagnieId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "statut",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "avis_compagnies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "compagnieId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "compagnieUid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "statut",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
