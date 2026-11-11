@@ -204,7 +204,7 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/compagnies/$(compagnieId))
           && get(/databases/$(database)/documents/compagnies/$(compagnieId)).data.uid == request.auth.uid;
       }
-      allow read: if estAdmin() || resource.data.statut == "publiee";
+      allow read: if estAdmin() || resource.data.statut == "publiee" || (estConnecte() && resource.data.compagnieUid == request.auth.uid);
       allow create: if estConnecte()
         && request.resource.data.keys().hasAll(["compagnieId","compagnieUid","type","nom","photo","localisation","telephonePublic","telephoneServiceCourrier","destinations","statut","createdAt","updatedAt"])
         && request.resource.data.keys().hasOnly(["compagnieId","compagnieUid","type","nom","photo","localisation","telephonePublic","telephoneServiceCourrier","destinations","statut","createdAt","updatedAt"])
