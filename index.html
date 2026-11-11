@@ -3578,7 +3578,7 @@ function ouvrirAnnuaireInterne(rubrique,categorie){
  chargerAnnuaireInterne();
 }
 function afficherInscriptionAnnuaire(){
- const z=document.getElementById("annuaireInscriptionZone");z.style.display="block";
+ const z=document.getElementById("zoneInscriptionAnnuairePartenaire")||document.getElementById("annuaireInscriptionZone");if(!z)return;z.style.display="block";
  z.innerHTML='<div class="card" style="padding:14px"><h3>Inscrire gratuitement mon activité</h3><p class="notice">Premier mois gratuit à compter de l’approbation administrative. Ensuite, abonnement obligatoire de 1 000 FCFA par mois pour rester visible dans l’annuaire.</p><label>Nom de l’établissement / professionnel</label><input id="annTitre" maxlength="100"><label>Catégorie</label><select id="annCategorie">'+CATEGORIES_ANNUAIRE[annuaireRubriqueActive].map(c=>'<option>'+c+'</option>').join("")+'</select><label>Commune</label><input id="annCommune" maxlength="60"><label>Quartier / adresse</label><input id="annQuartier" maxlength="120"><label>Téléphone / WhatsApp</label><input id="annTelephone" type="tel" maxlength="20"><label>Description</label><textarea id="annDescription" rows="4" maxlength="1000"></textarea><label>E-mail</label><input id="annEmail" type="email" maxlength="120"><label>Mot de passe (6 caractères minimum)</label><input id="annPassword" type="password" minlength="6"><button type="button" class="primary" onclick="envoyerInscriptionAnnuaire()">Envoyer mon inscription gratuite</button><p id="annStatut" class="notice"></p></div>';
 }
 async function envoyerInscriptionAnnuaire(){
@@ -6185,6 +6185,25 @@ function afficherFormulairePartenaire(type){
   if(!zone)return;
   zone.replaceChildren();
   if(!type){zone.style.display="none";return;}
+  if(type==="annuaire"){
+    const select=document.getElementById("typePartenaireSouhaite");
+    const cible=document.getElementById("zoneInscriptionAnnuairePartenaire");
+    if(cible){cible.replaceChildren();afficherInscriptionAnnuaire();}
+    return;
+  }
+  if(type==="compagnie_ramassage"){
+    const authZone=document.getElementById("ramassageCompagnieAuth");
+    if(authZone){
+      zone.appendChild(authZone);
+      authZone.style.display="block";
+      authZone.querySelectorAll("button").forEach(b=>{
+        if(b.getAttribute("onclick")?.includes("connecterCompteRamassage"))b.style.display="none";
+        if(b.getAttribute("onclick")?.includes("inscrireCompteRamassage")){b.style.display="inline-block";b.textContent="Envoyer ma demande d’inscription";}
+      });
+    }
+    zone.style.display="block";
+    return;
+  }
   // Ce conteneur peut avoir été masqué lors de l'ouverture d'une autre rubrique.
   // Le réafficher avant de générer le formulaire partenaire.
   zone.style.display="block";
@@ -6375,35 +6394,89 @@ posteOccupe: document.getElementById('garePosteOccupe').value.trim(),
   const emailGare=document.getElementById("gareEmail");if(emailGare)emailGare.value=auth.currentUser?.email||"";
   zone.scrollIntoView({behavior:"smooth", block:"start"});
 }
-function ouvrirConnexionPartenaire(){
-  const section = document.getElementById("transportColis");
-  afficherSousMenuColis("partenaire");
-  let zone = document.getElementById("connexionPartenaire");
-
-  if(!zone){
-    zone = document.createElement("div");
-    zone.id = "connexionPartenaire";
-    document.getElementById("zoneMenuColisPartenaire").appendChild(zone);
+function ouvrirEspacePartenaire(mode="accueil",typeInitial=null){
+  const section=document.getElementById("devenirPartenaire");
+  if(!section)return;
+  if(!vuePleinEcranActive||vuePleinEcranActive.element!==section){
+    ouvrirSectionPleinEcran("devenirPartenaire","Espace partenaire");
   }
-
-  zone.innerHTML = `
-    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('connexionPartenaire')">← Retour à Transport Colis</button>
-    <hr>
+  const accueil=document.getElementById("zoneChoixPartenaire");
+  const inscription=document.getElementById("zoneInscriptionPartenaire");
+  const connexion=document.getElementById("zoneConnexionPartenaire");
+  if(accueil)accueil.style.display=mode==="accueil"?"block":"none";
+  if(inscription)inscription.style.display=mode==="inscription"?"block":"none";
+  if(connexion)connexion.style.display=mode==="connexion"?"block":"none";
+  if(mode==="inscription"&&typeInitial){
+    const select=document.getElementById("typePartenaireSouhaite");
+    if(select){select.value=typeInitial;afficherFormulairePartenaire(typeInitial);}
+  }
+  if(mode==="connexion"&&typeInitial)ouvrirConnexionPartenaireType(typeInitial);
+  section.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function ouvrirConnexionPartenaireType(type){
+  const details=document.getElementById("zoneConnexionPartenaireDetails");
+  const choix=document.getElementById("choixTypeConnexionPartenaire");
+  if(!details)return;
+  details.replaceChildren();
+  if(choix)choix.style.display="none";
+  const retour=document.createElement("button");
+  retour.type="button";
+  retour.textContent="← Choisir un autre type de compte";
+  retour.onclick=()=>{
+    details.replaceChildren();
+    if(choix)choix.style.display="block";
+  };
+  details.appendChild(retour);
+  if(type==="classique"){
+    ouvrirConnexionPartenaire();
+    return;
+  }
+  if(type==="ramassage"){
+    const authZone=document.getElementById("ramassageCompagnieAuth");
+    if(authZone){
+      details.appendChild(authZone);
+      authZone.style.display="block";
+      const boutons=authZone.querySelectorAll("button");
+      boutons.forEach(b=>{
+        const inscription=b.getAttribute("onclick")?.includes("inscrireCompteRamassage");
+        const connexion=b.getAttribute("onclick")?.includes("connecterCompteRamassage");
+        if(inscription)b.style.display="none";
+        if(connexion){b.style.display="inline-block";b.textContent="Se connecter à mon espace compagnie";}
+      });
+    }
+    return;
+  }
+  if(type==="boutique"){
+    const boutique=document.getElementById("connexionBoutiqueZone");
+    if(boutique){
+      details.appendChild(boutique);
+      boutique.style.display="block";
+      const titre=boutique.querySelector("h3");
+      if(titre)titre.textContent="🔐 Connexion propriétaire boutique / commerce";
+    }
+  }
+}
+function ouvrirConnexionPartenaire(){
+  const details=document.getElementById("zoneConnexionPartenaireDetails");
+  if(!details)return;
+  let zone=document.getElementById("connexionPartenaire");
+  if(!zone){
+    zone=document.createElement("div");
+    zone.id="connexionPartenaire";
+  }
+  details.appendChild(zone);
+  zone.innerHTML=`
     <h3>🔐 Connexion partenaire</h3>
-
     <div id="champsConnexionPartenaire">
       <label>Adresse e-mail</label>
-      <input type="email" id="partenaireEmail" placeholder="Votre adresse e-mail">
-
+      <input type="email" id="partenaireEmail" placeholder="Votre adresse e-mail" autocomplete="username">
       <label>Mot de passe</label>
-      <input type="password" id="partenaireMotDePasse" placeholder="Votre mot de passe">
+      <input type="password" id="partenaireMotDePasse" placeholder="Votre mot de passe" autocomplete="current-password">
     </div>
     <button id="boutonConnexionPartenaire" type="button" class="primary" onclick="connecterPartenaire()">Se connecter</button>
-
     <p id="statutConnexionPartenaire" class="notice"></p>
   `;
-
-  zone.scrollIntoView({behavior:"smooth", block:"start"});
+  zone.scrollIntoView({behavior:"smooth",block:"start"});
 }
 
 async function connecterPartenaire(){
@@ -9086,7 +9159,7 @@ function afficherMarchesCommune(){
     "<button type='button' class='tuile-services' style='width:100%;margin:8px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirSupermarchesCommune()'>🧭 2. Supermarchés les plus proches</button>"+
     "<h3 style='margin:22px 0 8px;'>🛍️ 3. Découvrez les commerces</h3>"+
     "<button type='button' class='primary' style='width:100%;margin:7px 0;' onclick='ouvrirMenuTourBoutique()'>🛍️ Faire un tour en boutique</button>"+
-    "<button type='button' style='width:100%;margin:7px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirMenuProprietaireBoutique()'>🔐 Espace propriétaire boutique</button>";
+    "";
   if(vuePleinEcranActive&&vuePleinEcranActive.element===resultat)document.getElementById("vuePleinEcranContenu").scrollTop=0;
   else resultat.scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -9359,8 +9432,7 @@ async function rechercherSupermarchesCommune(){
 }
 function ouvrirMenuTourBoutique(){ ouvrirTourBoutiques(); }
 function ouvrirMenuProprietaireBoutique(){
-  const resultat=document.getElementById("resultatRechercheGares");if(!resultat)return;
-  resultat.innerHTML="<strong>🔐 Espace propriétaire boutique</strong><p>Accédez à votre compte ou inscrivez une nouvelle boutique.</p><button type='button' class='primary' style='width:100%;' onclick='ouvrirEspaceProprietaireBoutique()'>Connexion / Inscription boutique</button><button type='button' style='width:100%;margin-top:9px;background:#F0F7F1;color:#17663D;' onclick='afficherMarchesCommune()'>← Retour</button>";
+  ouvrirEspacePartenaire("connexion","boutique");
 }
 function ouvrirTourBoutiques(){
   ouvrirSectionPleinEcran("nouveauxServices","Un tour en boutique");
@@ -9380,47 +9452,9 @@ function ouvrirTourBoutiques(){
   chargerCatalogueBoutiques();
 }
 function ouvrirEspaceProprietaireBoutique(){
-  ouvrirSectionPleinEcran("nouveauxServices","Espace propriétaire boutique et commerce");
-  // Ne pas créer le formulaire public caché : l'inscription partenaire crée son propre formulaire.
-  nouveauServiceActif="commerce";
-  const connexion=document.getElementById("connexionBoutiqueZone");
-  const formulaire=document.getElementById("nouveauServiceFormZone");
-  const liste=document.getElementById("nouveauxServicesPublics");
-  if(connexion)connexion.style.display="block";
-  if(formulaire)formulaire.style.display="none";
-  if(liste)liste.style.display="none";
-  const titre=document.getElementById("nouveauxServicesTitre");
-  const description=document.getElementById("nouveauxServicesDescription");
-  if(titre)titre.textContent="🔐 Espace propriétaire";
-  if(description)description.textContent="Connectez-vous à votre espace ou inscrivez votre boutique ou commerce. L’inscription est soumise à l’abonnement en vigueur.";
-  if(connexion && !document.getElementById("boutiqueInscriptionToggle")){
-    const creerBoutonInscription=(id,libelle,categorie)=>{
-      const bouton=document.createElement("button");
-      bouton.type="button";
-      bouton.id=id;
-      bouton.className="primary";
-      bouton.style.marginTop="12px";
-      bouton.textContent=libelle;
-      bouton.onclick=()=>{
-        ouvrirSectionPleinEcran("devenirPartenaire","Devenir partenaire");
-        const choix=document.getElementById("typePartenaireSouhaite");
-        if(choix){
-          choix.value="commercant";
-          afficherFormulairePartenaire("commercant");
-        }
-        const categorieSelect=document.getElementById("nsCategorie");
-        if(categorieSelect){
-          categorieSelect.value=categorie;
-          categorieSelect.disabled=false;
-        }
-        document.getElementById("devenirPartenaire")?.scrollIntoView({behavior:"smooth",block:"start"});
-      };
-      connexion.appendChild(bouton);
-    };
-    creerBoutonInscription("boutiqueInscriptionToggle","🛍️ Inscrire une boutique","Boutique");
-    creerBoutonInscription("commerceInscriptionToggle","🏪 Inscrire un commerce","Autre commerce");
-  }
+  ouvrirEspacePartenaire("connexion","boutique");
 }
+
 function filtrerMarchesCommune(){
   const champ = document.getElementById("rechercheCommuneMarche");
   const zone = document.getElementById("listeMarchesCommune");
