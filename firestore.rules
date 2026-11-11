@@ -275,7 +275,7 @@ service cloud.firestore {
         && request.auth.uid == userId
         && request.resource.data.uid == userId
         && request.resource.data.keys().hasAll(["uid","nom","telephone","email","modeConnexion","createdAt","updatedAt"])
-        && request.resource.data.keys().hasOnly(["uid","nom","telephone","email","modeConnexion","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["uid","nom","telephone","email","modeConnexion","createdAt","updatedAt","photoProfil"])
         && request.resource.data.nom is string
         && request.resource.data.nom.size() >= 2
         && request.resource.data.nom.size() <= 100
@@ -289,11 +289,15 @@ service cloud.firestore {
       allow read: if estAdmin() || (estConnecte() && request.auth.uid == userId);
       allow update: if estConnecte()
         && request.auth.uid == userId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nom","telephone","email","updatedAt"])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nom","telephone","email","updatedAt","photoProfil"])
         && request.resource.data.updatedAt == request.time
         && request.resource.data.nom is string
         && request.resource.data.nom.size() >= 2
-        && request.resource.data.nom.size() <= 100;
+        && request.resource.data.nom.size() <= 100
+        && (!("photoProfil" in request.resource.data)
+          || (request.resource.data.photoProfil is string
+            && request.resource.data.photoProfil.size() <= 190000
+            && request.resource.data.photoProfil.matches("^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$")));
       allow delete: if estAdmin();
     }
 
