@@ -7065,7 +7065,7 @@ async function chargerPartenairesAdmin() {
             ? `<img src="${partenaire.photoProfil}" alt="Photo de profil" style="width:110px;height:110px;object-fit:cover;border-radius:50%;display:block;margin-bottom:12px;">`
             : "<p><em>Aucune photo de profil enregistrée.</em></p>"}
           <h3>${echapperTexteCompagnie(partenaire.nom)}</h3>
-          <p><strong>Profil :</strong> ${type}</p>
+          <p><strong>Profil :</strong> ${echapperTexteCompagnie(partenaire.type === "livreur_independant" ? "Livreur indépendant" : partenaire.type === "representant_gare" ? "Représentant de gare" : partenaire.type || "Non renseigné")}</p>
           <p><strong>Téléphone :</strong> ${echapperTexteCompagnie(partenaire.telephone)}</p>
           <p><strong>E-mail :</strong> ${echapperTexteCompagnie(partenaire.email)}</p>
           <p><strong>Commune :</strong> ${echapperTexteCompagnie(partenaire.commune)}</p>
