@@ -96,6 +96,34 @@ describe("Mon Transport CI — règles Firestore", function () {
   });
 
 
+
+  it("autorise une commande boutique sans tarif initial puis le fixe par le propriétaire avant l'envoi au livreur", async () => {
+    const SHOP_ID = "shop-test-001";
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`demandes_nouveaux_services/${SHOP_ID}`).set({
+        uid: CLIENT_UID, type: "commerce", titre: "Boutique test", categorie: "Boutique",
+        commune: "Yopougon", telephone: "0100000000", description: "Commerce de test",
+        email: "shop@example.test", statut: "approuve", abonnementFin: futureDate()
+      });
+    });
+    const db = testEnv.authenticatedContext(CLIENT_UID, {email:"client@example.test"}).firestore();
+    const {doc,writeBatch,serverTimestamp,updateDoc} = require("firebase/firestore");
+    const orderRef=doc(db,"commandes_colis",ORDER_ID);
+    const privateRef=doc(db,"commandes_colis",ORDER_ID,"informations_privees","details");
+    const priceRef=doc(db,"commandes_colis",ORDER_ID,"tarification","prix");
+    const createBatch=writeBatch(db);
+    createBatch.set(orderRef,{clientId:CLIENT_UID,service:"livraison",depart:"Yopougon",destination:"Adjamé",statut:"commande_boutique",publicVersion:false,createdAt:serverTimestamp(),typeCommande:"boutique",boutiqueId:SHOP_ID,boutiqueUid:CLIENT_UID,boutiqueNom:"Boutique test",montantLivraisonBoutique:0});
+    createBatch.set(privateRef,{...privateFixture(),createdAt:serverTimestamp(),telephoneBoutique:"0100000000",telephoneClient:"0100000000",boutiqueUid:CLIENT_UID,produitCommande:"Riz",quantiteCommande:1,prixProduit:5000});
+    createBatch.set(priceRef,{distanceKm:0,distanceMetres:0,tarifKm:100,montantLivraison:0,fraisService:0,montantTotal:0,devise:"FCFA",operation:"livraison_boutique",createdAt:serverTimestamp()});
+    await assertSucceeds(createBatch.commit());
+    const dispatchBatch=writeBatch(db);
+    dispatchBatch.update(orderRef,{montantLivraisonBoutique:1500,statut:"en_attente",publicVersion:true,dateMiseEnLivraison:serverTimestamp()});
+    dispatchBatch.update(priceRef,{montantLivraison:1500,montantTotal:1500});
+    await assertSucceeds(dispatchBatch.commit());
+    const otherDb=testEnv.authenticatedContext(OTHER_UID,{email:"other@example.test"}).firestore();
+    await assertFails(updateDoc(doc(otherDb,"commandes_colis",ORDER_ID),{montantLivraisonBoutique:2000}));
+  });
+
   it("autorise un utilisateur authentifié à créer et lire uniquement son profil général", async () => {
     const {doc,setDoc,getDoc,serverTimestamp}=require("firebase/firestore");
     const db=testEnv.authenticatedContext(CLIENT_UID,{phone_number:"+2250700000000"}).firestore();
