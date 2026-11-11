@@ -11701,6 +11701,7 @@ function afficherFormulaireInscriptionCompagnie(zone){
  '<label>Localisation précise de la gare principale</label><input id="partCompagnieLocalisation" maxlength="160">'+
  '<label>Photo obligatoire de la gare principale</label><input id="partCompagniePhotoGare" type="file" accept="image/*">'+
  '<label>Contact public de la gare principale</label><input id="partCompagnieTelephoneGare" type="tel">'+
+ '<label>Numéro privé du responsable de la gare principale (administrateur uniquement)</label><input id="partCompagnieTelephoneResponsable" type="tel">'+
  '<label>Contact public du service courrier</label><input id="partCompagnieTelephoneCourrier" type="tel">'+
  '<label>Téléphone général</label><input id="partCompagnieTelephone" type="tel">'+
  '<label>E-mail du compte connecté</label><input id="partCompagnieEmail" type="email" readonly>'+
@@ -11719,17 +11720,20 @@ function afficherFormulaireInscriptionCompagnie(zone){
 async function envoyerInscriptionCompagnie(){
  const user=auth.currentUser, val=id=>document.getElementById(id)?.value.trim()||"", status=document.getElementById("partCompagnieStatut");
  if(!user){status.textContent="Connectez-vous à votre compte utilisateur.";return;}
- const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),telephoneGare=val("partCompagnieTelephoneGare"),courrier=val("partCompagnieTelephoneCourrier"),texte=val("partCompagnieDestinations"),paiement=val("partCompagniePaiement"),reference=val("partCompagnieReference"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite");
+ const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),telephoneGare=val("partCompagnieTelephoneGare"),telephoneResponsable=val("partCompagnieTelephoneResponsable"),courrier=val("partCompagnieTelephoneCourrier"),texte=val("partCompagnieDestinations"),paiement=val("partCompagniePaiement"),reference=val("partCompagnieReference"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite");
  let destinations;try{destinations=analyserDestinationsCompagnie(texte);}catch(e){status.textContent=e.message;return;}
  const photoFile=document.getElementById("partCompagniePhotoGare").files[0];
- if(!nom||!agence||!localisation||!telephone||!telephoneGare||!courrier||!photoFile||!paiement||reference.length<4){status.textContent="Tous les champs obligatoires sont requis, y compris la photo de la gare principale.";return;}
+ if(!nom||!agence||!localisation||!telephone||!telephoneGare||!telephoneResponsable||!courrier||!photoFile||!paiement||reference.length<4){status.textContent="Tous les champs obligatoires sont requis, y compris la photo de la gare principale.";return;}
  try{
   const old=await db.collection("compagnies").where("uid","==",user.uid).limit(1).get();if(!old.empty)throw new Error("Un dossier compagnie existe déjà pour ce compte.");
   const cfg=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));if(!cfg.actif||cfg.unite!=="mois")throw new Error("Formule indisponible.");
   const montant=tarifAbonnementEffectif(cfg),dureeMois=Number(cfg.duree);
   const photoGarePrincipale=await compresserImage(photoFile);if(photoGarePrincipale.length>700000)throw new Error("Photo trop volumineuse.");
   let logo="";const logoFile=document.getElementById("partCompagnieLogo").files[0];if(logoFile){logo=await compresserImage(logoFile);if(logo.length>300000)throw new Error("Le logo est trop volumineux après compression.");}
-  await db.collection("compagnies").add({uid:user.uid,nom,agence,localisation,telephone,telephoneGarePrincipale:telephoneGare,telephoneServiceCourrier:courrier,email:user.email||"",logo,photoGarePrincipale,destinations,formule,periodicite,montant,dureeMois,moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",dateCreation:firebase.firestore.FieldValue.serverTimestamp(),dateDebut:null,dateExpiration:null});
+  const compagnieRef=db.collection("compagnies").doc(),batch=db.batch(),now=firebase.firestore.FieldValue.serverTimestamp();
+  batch.set(compagnieRef,{uid:user.uid,nom,agence,localisation,telephone,telephoneGarePrincipale:telephoneGare,telephoneServiceCourrier:courrier,email:user.email||"",logo,photoGarePrincipale,destinations,formule,periodicite,montant,dureeMois,moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",dateCreation:now,dateDebut:null,dateExpiration:null});
+  batch.set(compagnieRef.collection("informations_privees").doc("gare_principale"),{uid:user.uid,telephoneResponsable,createdAt:now});
+  await batch.commit();
   status.textContent="Dossier transmis. La validation du paiement reste nécessaire avant activation.";
  }catch(e){status.textContent="Erreur : "+e.message;}
 }
