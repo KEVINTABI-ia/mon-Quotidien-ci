@@ -778,4 +778,101 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
   });
 
+
+  describe("compagnies de voyage — gares annexes et avis", () => {
+    const COMPANY_ID = "company-test-001";
+    const STATION_ID = "station-test-001";
+    const companySeed = async (status = "Actif") => testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc("compagnies/" + COMPANY_ID).set({
+        uid: PARTNER_UID, nom: "Compagnie test", statutAbonnement: status
+      });
+    });
+    const stationBatch = db => {
+      const {doc,writeBatch,serverTimestamp}=require("firebase/firestore");
+      const batch=writeBatch(db),ref=doc(db,"gares_compagnies",STATION_ID);
+      batch.set(ref,{
+        compagnieId:COMPANY_ID,compagnieUid:PARTNER_UID,type:"annexe",
+        nom:"Gare annexe test",photo:"data:image/jpeg;base64,abcdefghijklmnopqrstuvwxyz0123456789",
+        localisation:"Yopougon, Abidjan, près du marché",
+        telephonePublic:"0700000000",telephoneServiceCourrier:"0500000000",
+        destinations:[{ville:"Bouaké",prix:5000,heures:["06:00","08:00"]}],
+        statut:"en_attente",createdAt:serverTimestamp(),updatedAt:serverTimestamp()
+      });
+      batch.set(doc(ref,"informations_privees","representant"),{
+        uid:PARTNER_UID,telephoneResponsable:"0100000000",createdAt:serverTimestamp()
+      });
+      return batch;
+    };
+
+    it("protège le numéro privé du responsable de la gare principale", async () => {
+      await companySeed();
+      const db=testEnv.authenticatedContext(PARTNER_UID).firestore();
+      const {doc,setDoc,serverTimestamp,getDoc}=require("firebase/firestore");
+      const ref=doc(db,"compagnies",COMPANY_ID,"informations_privees","gare_principale");
+      await assertSucceeds(setDoc(ref,{uid:PARTNER_UID,telephoneResponsable:"0100000000",createdAt:serverTimestamp()}));
+      await assertFails(getDoc(ref));
+      await assertFails(getDoc(doc(testEnv.authenticatedContext(OTHER_UID).firestore(),"compagnies",COMPANY_ID,"informations_privees","gare_principale")));
+      await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(),"compagnies",COMPANY_ID,"informations_privees","gare_principale")));
+      await assertSucceeds(getDoc(doc(testEnv.authenticatedContext(ADMIN_UID).firestore(),"compagnies",COMPANY_ID,"informations_privees","gare_principale")));
+    });
+
+    it("autorise la compagnie propriétaire à soumettre une gare et son numéro privé atomiquement", async () => {
+      await companySeed();
+      const db=testEnv.authenticatedContext(PARTNER_UID).firestore();
+      await assertSucceeds(stationBatch(db).commit());
+    });
+
+    it("réserve le numéro privé du représentant à l'administrateur", async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const db=context.firestore();
+        await db.doc("compagnies/"+COMPANY_ID).set({uid:PARTNER_UID,nom:"Compagnie test",statutAbonnement:"Actif"});
+        await db.doc("gares_compagnies/"+STATION_ID).set({compagnieId:COMPANY_ID,compagnieUid:PARTNER_UID,statut:"en_attente"});
+        await db.doc("gares_compagnies/"+STATION_ID+"/informations_privees/representant").set({uid:PARTNER_UID,telephoneResponsable:"0100000000"});
+      });
+      const {doc,getDoc}=require("firebase/firestore"),path=["gares_compagnies",STATION_ID,"informations_privees","representant"];
+      await assertFails(getDoc(doc(testEnv.authenticatedContext(PARTNER_UID).firestore(),...path)));
+      await assertFails(getDoc(doc(testEnv.authenticatedContext(OTHER_UID).firestore(),...path)));
+      await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(),...path)));
+      await assertSucceeds(getDoc(doc(testEnv.authenticatedContext(ADMIN_UID).firestore(),...path)));
+    });
+
+    it("refuse à un autre utilisateur de créer une gare au nom d'une compagnie", async () => {
+      await companySeed();
+      const db=testEnv.authenticatedContext(OTHER_UID).firestore();
+      const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
+      await assertFails(setDoc(doc(db,"gares_compagnies",STATION_ID),{
+        compagnieId:COMPANY_ID,compagnieUid:PARTNER_UID,type:"annexe",nom:"Gare usurpée",
+        photo:"data:image/jpeg;base64,abcdefghijklmnopqrstuvwxyz0123456789",
+        localisation:"Yopougon, Abidjan",telephonePublic:"0700000000",
+        telephoneServiceCourrier:"0500000000",destinations:[{ville:"Bouaké",prix:5000,heures:["06:00"]}],
+        statut:"en_attente",createdAt:serverTimestamp(),updatedAt:serverTimestamp()
+      }));
+    });
+
+    it("autorise le dépôt d'un avis en attente et réserve sa publication à l'administrateur", async () => {
+      await companySeed();
+      const db=testEnv.authenticatedContext(CLIENT_UID).firestore();
+      const {doc,setDoc,updateDoc,serverTimestamp,getDoc}=require("firebase/firestore");
+      const ref=doc(db,"avis_compagnies","avis-test-001");
+      await assertSucceeds(setDoc(ref,{
+        compagnieId:COMPANY_ID,compagnieUid:PARTNER_UID,uid:CLIENT_UID,
+        nomVoyageur:"Voyageur test",note:5,commentaire:"Service ponctuel et accueil agréable.",
+        statut:"en_attente",createdAt:serverTimestamp()
+      }));
+      await assertFails(updateDoc(ref,{statut:"publie"}));
+      const admin=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      await assertSucceeds(updateDoc(doc(admin,"avis_compagnies","avis-test-001"),{statut:"publie"}));
+      await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(),"avis_compagnies","avis-test-001")));
+    });
+
+    it("refuse la publication directe d'un avis et les avis sur une compagnie inactive", async () => {
+      await companySeed("En attente");
+      const db=testEnv.authenticatedContext(CLIENT_UID).firestore();
+      const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
+      const base={compagnieId:COMPANY_ID,compagnieUid:PARTNER_UID,uid:CLIENT_UID,nomVoyageur:"Voyageur test",note:5,commentaire:"Avis de test avec commentaire valide."};
+      await assertFails(setDoc(doc(db,"avis_compagnies","avis-direct-publish"),{...base,statut:"publie",createdAt:serverTimestamp()}));
+      await assertFails(setDoc(doc(db,"avis_compagnies","avis-inactive"),{...base,statut:"en_attente",createdAt:serverTimestamp()}));
+    });
+  });
+
 });

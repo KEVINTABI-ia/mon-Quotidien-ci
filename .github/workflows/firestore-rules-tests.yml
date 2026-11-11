@@ -22,5 +22,7 @@ jobs:
         run: |
           npm audit --json > npm-audit.json || true
           node -e 'const a=require("./npm-audit.json"); for (const [name,v] of Object.entries(a.vulnerabilities || {})) { console.log("\\n" + name + " | " + v.severity + " | installed=" + (v.nodes || []).join(", ") + " | fixAvailable=" + JSON.stringify(v.fixAvailable)); for (const item of (v.via || [])) { if (typeof item === "string") console.log("  via dependency: " + item); else console.log("  advisory: " + item.title + " | range=" + item.range + " | url=" + item.url); } }'
+      - name: Check inline JavaScript syntax
+        run: node tests/check-inline-scripts.js
       - name: Run Firestore emulator tests
         run: npm test
