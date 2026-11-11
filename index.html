@@ -7863,7 +7863,10 @@ async function inscrireCompteRamassage(role){
     let credential;
     try{credential=await authRamassage.createUserWithEmailAndPassword(email,password);}
     catch(e){if(compagnie&&e.code==="auth/email-already-in-use")credential=await authRamassage.signInWithEmailAndPassword(email,password);else throw e;}
-    await dbRamassage.collection("comptes_ramassage").doc(credential.user.uid).set({
+    const profilRef=dbRamassage.collection("comptes_ramassage").doc(credential.user.uid);
+    const profilExistant=await profilRef.get();
+    if(profilExistant.exists){if(compagnie)await partnerAuth.signOut();throw new Error("Un compte existe déjà dans cet espace. Utilisez la connexion au lieu de créer un nouveau compte.");}
+    await profilRef.set({
       uid:credential.user.uid,role:role,nom:nom,telephone:telephone,email:email,
       statut:compagnie?"en_attente":"actif",
       abonnement:compagnie?"inactif":"non_applicable",
