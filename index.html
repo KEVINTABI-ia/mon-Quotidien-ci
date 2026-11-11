@@ -7980,9 +7980,16 @@ async function activerAbonnementCompagnieRamassage(uid){
 }
 
 async function deconnecterRamassage(){
+  const etaitCompagnie=ramassageRoleActif==="compagnie";
   await auth.signOut();ramassageRoleActif=null;
-  ["ramassageUsagerAuth","ramassageCompagnieAuth"].forEach(id=>document.getElementById(id).style.display="block");
-  ["ramassageUsagerEspace","ramassageCompagnieEspace"].forEach(id=>document.getElementById(id).style.display="none");
+  ["ramassageUsagerAuth","ramassageUsagerEspace","ramassageCompagnieEspace"].forEach(id=>{
+    const element=document.getElementById(id);if(element)element.style.display=id==="ramassageUsagerAuth"?"block":"none";
+  });
+  if(etaitCompagnie){
+    ouvrirEspacePartenaire("connexion","ramassage");
+  }else{
+    const authUsager=document.getElementById("ramassageUsagerAuth");if(authUsager)authUsager.style.display="block";
+  }
   alert("Vous êtes déconnecté.");
 }
 
