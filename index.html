@@ -5982,16 +5982,9 @@ function ouvrirInscriptionLivreur(){
   onblur="validerTelephone(this, 'erreurLivreurTelephone')" required>
 <span id="erreurLivreurTelephone" style="color:red;"></span>
 
-    <label>Adresse e-mail</label>
-    <input type="email" id="livreurEmail"
-  onblur="validerEmail(this, 'erreurLivreurEmail')" required>
-<span id="erreurLivreurEmail" style="color:red;"></span>
-
-    <label>Mot de passe (6 caractères minimum)</label>
-<input type="password" id="livreurMotDePasse"
-  onblur="validerMotDePasse(this, 'erreurLivreurMotDePasse')"
-  minlength="6" required>
-<span id="erreurLivreurMotDePasse" style="color:red;"></span>
+    <label>Adresse e-mail du compte connecté</label>
+    <input type="email" id="livreurEmail" readonly>
+    <p class="notice">La demande sera rattachée à votre compte utilisateur actuel.</p>
 
     <label>Commune desservie</label>
     <input type="text" id="livreurCommune" required>
@@ -6049,10 +6042,8 @@ numeroPermis: document.getElementById('livreurNumeroPermis').value.trim(),
     </button>
   `;
 
-  zone.scrollIntoView({
-    behavior: "smooth",
-    block: "start"
-  });
+  const emailLivreur=document.getElementById("livreurEmail");if(emailLivreur)emailLivreur.value=auth.currentUser?.email||"";
+  zone.scrollIntoView({behavior:"smooth",block:"start"});
 }
 function retourChoixPartenaire(){
   const select=document.getElementById("typePartenaireSouhaite");
@@ -6192,16 +6183,9 @@ function ouvrirInscriptionGare(){
   onblur="validerTelephone(this, 'erreurGareTelephone')" required>
 <span id="erreurGareTelephone" style="color:red;"></span>
 
-    <label>Adresse e-mail</label>
- <input type="email" id="gareEmail"
-  onblur="validerEmail(this, 'erreurGareEmail')" required>
-<span id="erreurGareEmail" style="color:red;"></span>
-
-    <label>Mot de passe (6 caractères minimum)</label>
-<input type="password" id="gareMotDePasse"
-  onblur="validerMotDePasse(this, 'erreurGareMotDePasse')"
-  minlength="6" required>
-<span id="erreurGareMotDePasse" style="color:red;"></span>
+    <label>Adresse e-mail du compte connecté</label>
+    <input type="email" id="gareEmail" readonly>
+    <p class="notice">La demande sera rattachée à votre compte utilisateur actuel.</p>
 
     <label>Nom de la gare</label>
     <input type="text" id="gareNomStation" required>
@@ -6260,6 +6244,7 @@ posteOccupe: document.getElementById('garePosteOccupe').value.trim(),
     </button>
   `;
 
+  const emailGare=document.getElementById("gareEmail");if(emailGare)emailGare.value=auth.currentUser?.email||"";
   zone.scrollIntoView({behavior:"smooth", block:"start"});
 }
 function ouvrirConnexionPartenaire(){
@@ -7250,172 +7235,30 @@ async function envoyerFichierCloudflare(
   return resultat.key;
 }
 async function creerComptePartenaire(type, donnees) {
-  const telephoneChampId = type === "livreur_independant"
-  ? "livreurTelephone"
-  : "gareTelephone";
-
-const telephoneErreurId = type === "livreur_independant"
-  ? "erreurLivreurTelephone"
-  : "erreurGareTelephone";
-
-const champTelephone = document.getElementById(telephoneChampId);
-
-if (!validerTelephone(champTelephone, telephoneErreurId)) {
-  champTelephone.focus();
-  return;
+  const user=auth.currentUser;
+  if(!user){alert("Connectez-vous d’abord à votre compte utilisateur pour déposer une demande partenaire.");return;}
+  const telephoneId=type==="livreur_independant"?"livreurTelephone":"gareTelephone";
+  const erreurTelephone=type==="livreur_independant"?"erreurLivreurTelephone":"erreurGareTelephone";
+  const champTelephone=document.getElementById(telephoneId);
+  if(!validerTelephone(champTelephone,erreurTelephone)){champTelephone.focus();return;}
+  donnees.telephone=champTelephone.value;
+  const idId=type==="livreur_independant"?"livreurNumeroIdentite":"gareNumeroIdentite";
+  const erreurId=type==="livreur_independant"?"erreurLivreurIdentite":"erreurGareIdentite";
+  const champId=document.getElementById(idId);
+  if(!validerNumeroIdentite(champId,erreurId)){champId.focus();return;}
+  donnees.numeroIdentite=champId.value;
+  const photoId=type==="livreur_independant"?"livreurPhotoProfil":"garePhotoProfil";
+  const fichier=document.getElementById(photoId)?.files?.[0];
+  if(!fichier){alert("Ajoutez une photo de profil avant d’envoyer votre demande.");return;}
+  let photoProfil;
+  try{photoProfil=await convertirImageEnJpegCompressee(fichier);}catch(e){alert(e.message);return;}
+  if(!donnees.nom||!donnees.commune){alert("Complétez votre nom et votre commune.");return;}
+  const dossier={uid:user.uid,type,nom:donnees.nom,telephone:donnees.telephone,commune:donnees.commune,email:user.email||"",dateNaissance:donnees.dateNaissance,lieuNaissance:donnees.lieuNaissance,numeroIdentite:donnees.numeroIdentite,photoProfil,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+  if(type==="livreur_independant"){dossier.quartiers=donnees.quartiers;dossier.numeroPermis=donnees.numeroPermis;}
+  if(type==="representant_gare"){dossier.nomGare=donnees.nomGare;dossier.posteOccupe=donnees.posteOccupe;}
+  try{await db.collection("partenaires").doc(user.uid).set(dossier);alert("Demande envoyée avec votre compte utilisateur. Votre session reste active. Votre dossier est en attente de validation.");}
+  catch(e){console.error("Demande partenaire:",e);alert("Envoi impossible : "+(e.message||"réessayez."));}
 }
-
-donnees.telephone = champTelephone.value;
-  const email = donnees.email.trim();
-  const emailChampId = type === "livreur_independant"
-  ? "livreurEmail"
-  : "gareEmail";
-
-const emailErreurId = type === "livreur_independant"
-  ? "erreurLivreurEmail"
-  : "erreurGareEmail";
-
-const champEmail = document.getElementById(emailChampId);
-
-if (!validerEmail(champEmail, emailErreurId)) {
-  champEmail.focus();
-  return;
-}
-
-donnees.email = champEmail.value;
-  const motDePasse = donnees.motDePasse;
-  const motDePasseChampId = type === "livreur_independant"
-  ? "livreurMotDePasse"
-  : "gareMotDePasse";
-
-const motDePasseErreurId = type === "livreur_independant"
-  ? "erreurLivreurMotDePasse"
-  : "erreurGareMotDePasse";
-
-const champMotDePasse = document.getElementById(motDePasseChampId);
-
-if (!validerMotDePasse(champMotDePasse, motDePasseErreurId)) {
-  champMotDePasse.focus();
-  return;
-}
-const idChamp = type === "livreur_independant"
-  ? "livreurNumeroIdentite"
-  : "gareNumeroIdentite";
-
-const idErreur = type === "livreur_independant"
-  ? "erreurLivreurIdentite"
-  : "erreurGareIdentite";
-
-const champIdentite = document.getElementById(idChamp);
-
-if (!validerNumeroIdentite(champIdentite, idErreur)) {
-  champIdentite.focus();
-  return;
-}
-
-donnees.numeroIdentite = champIdentite.value;
-const champPhotoId = type === "livreur_independant"
-  ? "livreurPhotoProfil"
-  : "garePhotoProfil";
-
-const champPhoto = document.getElementById(champPhotoId);
-const fichierPhoto = champPhoto && champPhoto.files
-  ? champPhoto.files[0]
-  : null;
-
-if (!fichierPhoto) {
-  alert("Ajoute une photo de profil avant de créer ton compte.");
-  return;
-}
-
-let photoProfil;
-
-try {
-  photoProfil = await convertirImageEnJpegCompressee(fichierPhoto);
-} catch (erreurPhoto) {
-  alert(erreurPhoto.message);
-  return;
-}
-  if (!email || !motDePasse || motDePasse.length < 6) {
-    alert("Vérifie ton adresse e-mail et ton mot de passe (6 caractères minimum).");
-    return;
-  }
-const fichiers = {};
-
-  try {
-    let resultat;
-
-    try {
-      resultat = await auth.createUserWithEmailAndPassword(
-        email,
-        motDePasse
-      );
-    } catch (erreurCreation) {
-      if (erreurCreation.code !== "auth/email-already-in-use") {
-        throw erreurCreation;
-      }
-
-      try {
-        resultat = await auth.signInWithEmailAndPassword(
-          email,
-          motDePasse
-        );
-      } catch (erreurConnexion) {
-        if (
-          erreurConnexion.code === "auth/invalid-credential" ||
-          erreurConnexion.code === "auth/wrong-password" ||
-          erreurConnexion.code === "auth/user-not-found"
-        ) {
-          throw new Error(
-            "Cette adresse e-mail possède déjà un compte, mais le mot de passe saisi ne correspond pas. Connectez-vous avec le mot de passe de ce compte ou utilisez une autre adresse e-mail."
-          );
-        }
-        throw erreurConnexion;
-      }
-    }
-    
-    const uid = resultat.user.uid;
-
-    const dossier = {
-      uid: uid,
-      type: type,
-      nom: donnees.nom,
-      telephone: donnees.telephone,
-      commune: donnees.commune,
-      email: email,
-      dateNaissance: donnees.dateNaissance,
-lieuNaissance: donnees.lieuNaissance,
-numeroIdentite: donnees.numeroIdentite,
-photoProfil: photoProfil,
-      statut: "en_attente",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    if (type === "livreur_independant") {
-      dossier.quartiers = donnees.quartiers;
-      dossier.numeroPermis = donnees.numeroPermis;
-    }
-
-    if (type === "representant_gare") {
-      dossier.nomGare = donnees.nomGare;
-      dossier.posteOccupe = donnees.posteOccupe;
-    }
-
-    await db.collection("partenaires").doc(uid).set(dossier);
-
-    await auth.signOut();
-
-alert("Inscription réussie. Ton dossier est en attente de validation.");
-
-  } catch (erreur) {
-    if (auth.currentUser) {
-      await auth.signOut();
-    }
-
-    alert("Erreur lors de la création : " + erreur.message);
-  }
-}
-
 
 // Gestion commune : les formulaires des rubriques quittées se referment sans effacer les saisies.
 function mqciFermerFormulairesDans(conteneur){
