@@ -3245,13 +3245,13 @@ function chargerPublicitesAccueil() {
 <section class="card" id="parametresApplication" style="display:none;">
 <h2>⚙️ Paramètres de l’application</h2>
 <p class="notice">Personnalisez l’affichage et gérez les autorisations de Mon Quotidien CI sur cet appareil.</p>
-<div class="setting-row"><h3>🔠 Taille du texte</h3><p>Adaptez la lecture à votre confort.</p><button type="button" onclick="changerTailleTexteApplication('normal')">Standard</button><button type="button" onclick="changerTailleTexteApplication('grand')">Grand</button><button type="button" onclick="changerTailleTexteApplication('tres-grand')">Très grand</button></div>
-<div class="setting-row"><h3>🔔 Notifications</h3><p>Recevoir, uniquement si vous l’autorisez, les alertes concernant les informations de l’administrateur, les offres d’emploi et annonces, les objets trouvés validés, les messages Gbairai et le suivi des livraisons (acceptation du livreur et livraison terminée).</p><p id="etatNotificationsApplication">Vérification de l’autorisation de notification…</p><button type="button" class="primary" id="boutonNotificationsApplication" onclick="activerNotificationsApplication()">Autoriser les notifications</button><small>Votre choix peut être modifié dans les réglages de votre appareil. Aucune demande d’autorisation n’est affichée sans votre action.</small></div>
-<div class="setting-row"><h3>🌙 Mode sombre</h3><p>Choisissez votre confort d’affichage. Le mode sombre ne s’active qu’après votre choix.</p><p id="etatModeSombreApplication">Mode clair activé.</p><button type="button" id="boutonModeSombreApplication" onclick="basculerModeSombreApplication()" aria-pressed="false">Activer le mode sombre</button></div>
-<div class="setting-row" id="mqci-user-session-setting" hidden><h3>👤 Mon compte</h3><p>Déconnectez-vous de votre compte utilisateur sur cet appareil. Vos informations enregistrées restent conservées.</p><button type="button" class="primary" id="mqci-user-signout" onclick="mqciDeconnexionUtilisateur()">Se déconnecter</button><p id="mqci-user-signout-status" class="notice" aria-live="polite"></p></div>
-<div class="setting-row"><h3>🔒 Confidentialité</h3><p>Les informations personnelles transmises dans les formulaires sont utilisées pour traiter les demandes correspondantes. Les espaces privés restent soumis à leurs contrôles d’accès.</p></div>
-<div class="setting-row"><h3>ℹ️ À propos</h3><p><strong>Mon Quotidien CI</strong><br>Tous les services utiles, au même endroit.<br>Version de l’application : 1.0</p></div>
-<div class="setting-row"><button type="button" onclick="signalerProblemeGeneral()">⚠️ Signaler un problème</button></div>
+<details class="setting-row"><summary>🔠 Taille du texte</summary><div class="setting-content"><p>Adaptez la lecture à votre confort.</p><button type="button" onclick="changerTailleTexteApplication('normal')">Standard</button><button type="button" onclick="changerTailleTexteApplication('grand')">Grand</button><button type="button" onclick="changerTailleTexteApplication('tres-grand')">Très grand</button></div></details>
+<details class="setting-row"><summary>🔔 Notifications</summary><div class="setting-content"><p>Recevoir, uniquement si vous l’autorisez, les alertes concernant les informations de l’administrateur, les offres d’emploi et annonces, les objets trouvés validés, les messages Gbairai et le suivi des livraisons (acceptation du livreur et livraison terminée).</p><p id="etatNotificationsApplication">Vérification de l’autorisation de notification…</p><button type="button" class="primary" id="boutonNotificationsApplication" onclick="activerNotificationsApplication()">Autoriser les notifications</button><small>Votre choix peut être modifié dans les réglages de votre appareil. Aucune demande d’autorisation n’est affichée sans votre action.</small></div></details>
+<details class="setting-row"><summary>🌙 Mode sombre</summary><div class="setting-content"><p>Choisissez votre confort d’affichage. Le mode sombre ne s’active qu’après votre choix.</p><p id="etatModeSombreApplication">Mode clair activé.</p><button type="button" id="boutonModeSombreApplication" onclick="basculerModeSombreApplication()" aria-pressed="false">Activer le mode sombre</button></div></details>
+<details class="setting-row" id="mqci-user-session-setting" hidden><summary>👤 Mon compte</summary><div class="setting-content"><p>Déconnectez-vous de votre compte utilisateur sur cet appareil. Vos informations enregistrées restent conservées.</p><button type="button" class="primary" id="mqci-user-signout" onclick="mqciDeconnexionUtilisateur()">Se déconnecter</button><p id="mqci-user-signout-status" class="notice" aria-live="polite"></p></div></details>
+<details class="setting-row"><summary>🔒 Confidentialité</summary><div class="setting-content"><p>Les informations personnelles transmises dans les formulaires sont utilisées pour traiter les demandes correspondantes. Les espaces privés restent soumis à leurs contrôles d’accès.</p></div></details>
+<details class="setting-row"><summary>ℹ️ À propos</summary><div class="setting-content"><p><strong>Mon Quotidien CI</strong><br>Tous les services utiles, au même endroit.<br>Version de l’application : 1.0</p></div></details>
+<details class="setting-row"><summary>⚠️ Signaler un problème</summary><div class="setting-content"><p>Signalez un dysfonctionnement ou une difficulté rencontrée dans l’application.</p><button type="button" onclick="signalerProblemeGeneral()">Signaler un problème</button></div></details>
 </section>
 <script id="fonctions-parametres-application">
 function basculerMenuBasDroite(){const m=document.getElementById('menuBasDroite'),b=document.querySelector('#accueilBottomNav [data-nav="menu"]');if(!m)return;const ouvert=!m.hidden;m.hidden=ouvert;if(b)b.setAttribute('aria-expanded',String(!ouvert));}
@@ -11331,9 +11331,16 @@ function basculerServicesQuotidiens(){const b=document.querySelector('#menuQuoti
 #menuBasDroite[hidden]{display:none!important}
 #menuBasDroite button{display:block;width:100%;padding:13px 12px;margin:2px 0;text-align:left;border:0;border-radius:10px;background:#fff;color:#174b35;font-size:14px;font-weight:700}
 #menuBasDroite button:active{background:#edf6ef}
-#parametresApplication .setting-row{padding:13px 0;border-bottom:1px solid #e4ece6}
+#parametresApplication .setting-row{padding:0;border-bottom:1px solid #e4ece6}
 #parametresApplication .setting-row:last-child{border-bottom:0}
+#parametresApplication .setting-row>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:13px 4px;cursor:pointer;list-style:none;font-weight:700;color:inherit}
+#parametresApplication .setting-row>summary::-webkit-details-marker{display:none}
+#parametresApplication .setting-row>summary::after{content:"＋";font-size:20px;color:#16834A;flex-shrink:0}
+#parametresApplication .setting-row[open]>summary::after{content:"−"}
+#parametresApplication .setting-row>summary:focus-visible{outline:2px solid #16834A;outline-offset:3px;border-radius:6px}
+#parametresApplication .setting-content{padding:0 4px 14px}
 #parametresApplication button{margin:5px 5px 5px 0}
+#parametresApplication .setting-row[hidden]{display:none!important}
 </style>
 <style id="contour-orange-bouton-accueil">
 #accueilBottomNav button[data-nav="home"]{border:2px solid #F28C28!important;background:#fff!important;color:#16834A!important;border-radius:12px!important;box-shadow:0 3px 12px rgba(242,140,40,.18)!important}
