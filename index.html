@@ -7353,9 +7353,24 @@ alert("Inscription réussie. Ton dossier est en attente de validation.");
 }
 
 
+// Gestion commune : les formulaires des rubriques quittées se referment sans effacer les saisies.
+function mqciFermerFormulairesDans(conteneur){
+  if(!conteneur || !conteneur.querySelectorAll) return;
+  conteneur.querySelectorAll('form[id], div[id*="formulaire" i], [data-mqci-formulaire="true"]').forEach(function(formulaire){
+    formulaire.style.display = "none";
+  });
+}
+function mqciFermerFormulairesHors(conteneurActif){
+  document.querySelectorAll('form[id], div[id*="formulaire" i], [data-mqci-formulaire="true"]').forEach(function(formulaire){
+    if(conteneurActif && conteneurActif.contains(formulaire)) return;
+    formulaire.style.display = "none";
+  });
+}
+
 function ouvrirElementPleinEcran(element, titre){
   if(!element) return;
   if(vuePleinEcranActive) fermerVuePleinEcran();
+  mqciFermerFormulairesHors(element);
 
   const placeholder = document.createComment("emplacement d'origine");
   const displayInitial = element.style.display;
@@ -7560,6 +7575,7 @@ function ouvrirResultatPleinEcran(titre){
 function fermerVuePleinEcran(){
   const active = vuePleinEcranActive;
   vuePleinEcranActive = null;
+  if(active && active.element) mqciFermerFormulairesDans(active.element);
 
   if(active && active.element && active.placeholder && active.placeholder.parentNode){
     active.placeholder.parentNode.insertBefore(active.element, active.placeholder);
