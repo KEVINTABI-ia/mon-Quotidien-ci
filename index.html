@@ -6176,8 +6176,10 @@ numeroPermis: document.getElementById('livreurNumeroPermis').value.trim(),
 function retourChoixPartenaire(){
   const select=document.getElementById("typePartenaireSouhaite");
   const zone=document.getElementById("partenaireFormulaireChoisi");
+  const annuaire=document.getElementById("zoneInscriptionAnnuairePartenaire");
   if(select)select.value="";
   if(zone)zone.replaceChildren();
+  if(annuaire)annuaire.replaceChildren();
   document.getElementById("devenirPartenaire")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
 function afficherFormulairePartenaire(type){
@@ -7847,6 +7849,7 @@ async function inscrireCompteRamassage(role){
     });
     ramassageRoleActif=role;
     await afficherEspaceRamassage(credential.user);
+    if(compagnie)ouvrirSectionPleinEcran("serviceRamassage","Espace compagnie de cars de ramassage");
     alert(compagnie?"Demande d'inscription envoyée. Votre compagnie sera vérifiée par l'administration avant activation de l'abonnement.":"Compte créé. Vous pouvez maintenant publier votre recherche de ramassage.");
   }catch(e){alert("Inscription impossible : "+e.message);}
 }
@@ -7861,6 +7864,7 @@ async function connecterCompteRamassage(role){
     if(!snap.exists||snap.data().role!==role){await auth.signOut();throw new Error("Ce compte n'est pas inscrit dans cet espace.");}
     ramassageRoleActif=role;
     await afficherEspaceRamassage(credential.user,snap.data());
+    if(compagnie)ouvrirSectionPleinEcran("serviceRamassage","Espace compagnie de cars de ramassage");
   }catch(e){alert("Connexion impossible : "+e.message);}
 }
 async function afficherEspaceRamassage(user,profil=null){
