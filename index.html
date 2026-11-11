@@ -3254,6 +3254,19 @@ function chargerPublicitesAccueil() {
 <details class="setting-row"><summary>⚠️ Signaler un problème</summary><div class="setting-content"><p>Signalez un dysfonctionnement ou une difficulté rencontrée dans l’application.</p><button type="button" onclick="signalerProblemeGeneral()">Signaler un problème</button></div></details>
 </section>
 <script id="fonctions-parametres-application">
+document.addEventListener('DOMContentLoaded',function(){
+  const parametres=document.getElementById('parametresApplication');
+  if(!parametres)return;
+  parametres.querySelectorAll('details.setting-row > summary').forEach(function(summary){
+    summary.addEventListener('click',function(event){
+      event.preventDefault();
+      const rubrique=summary.parentElement;
+      const doitOuvrir=!rubrique.open;
+      parametres.querySelectorAll('details.setting-row').forEach(function(item){item.open=false;});
+      rubrique.open=doitOuvrir;
+    });
+  });
+});
 function basculerMenuBasDroite(){const m=document.getElementById('menuBasDroite'),b=document.querySelector('#accueilBottomNav [data-nav="menu"]');if(!m)return;const ouvert=!m.hidden;m.hidden=ouvert;if(b)b.setAttribute('aria-expanded',String(!ouvert));}
 function fermerMenuBasDroite(){const m=document.getElementById('menuBasDroite');if(m)m.hidden=true;const b=document.querySelector('#accueilBottomNav [data-nav="menu"]');if(b)b.setAttribute('aria-expanded','false');}
 function changerTailleTexteApplication(taille){const valeurs={'normal':'16px','grand':'18px','tres-grand':'20px'};if(!valeurs[taille])return;document.documentElement.style.setProperty('--taille-texte-app',valeurs[taille]);document.body.style.fontSize=valeurs[taille];try{localStorage.setItem('mqci_taille_texte',taille);}catch(e){}}
@@ -4493,20 +4506,18 @@ function mqciDeconnexionUtilisateur() {
     if (statut) statut.textContent = "Aucun compte utilisateur n’est actuellement connecté.";
     return;
   }
-  if (user.uid === ADMIN_UID) {
-    if (statut) statut.textContent = "Pour protéger l’accès administrateur, utilisez la déconnexion de l’espace administrateur.";
-    return;
-  }
   if (!window.confirm("Voulez-vous vraiment vous déconnecter de Mon Quotidien CI ?")) return;
-  auth.signOut().catch((erreur) => {
-    console.error("Déconnexion utilisateur impossible :", erreur);
+  auth.signOut().then(() => {
+    if (user.uid === ADMIN_UID) actualiserInterfaceAdmin(false);
+  }).catch((erreur) => {
+    console.error("Déconnexion impossible :", erreur);
     if (statut) statut.textContent = "Déconnexion impossible : " + (erreur.message || "réessayez.");
   });
 }
 
 auth.onAuthStateChanged((user) => {
   const zone = document.getElementById("mqci-user-session-setting");
-  if (zone) zone.hidden = !user || user.uid === ADMIN_UID;
+  if (zone) zone.hidden = !user;
 });
 
 function deconnexionAdmin() {
