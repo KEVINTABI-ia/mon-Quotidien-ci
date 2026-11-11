@@ -3665,7 +3665,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
  ${type==="annonce"?'<div id="zoneAbonnementPetitesAnnonces" style="margin:12px 0;"><button type="button" onclick="ouvrirGestionAbonnementPetitesAnnonces()">Consulter mon abonnement / renouveler</button></div>':""}
- ${type==="commerce"&&!modePartenaire?genererFormulairePaiementCommun("ns",{duree:true,coordId:"coordonneesPaiementBoutique",titre:"Choisissez votre abonnement boutique"})::''}
+ ${type==="commerce"&&!modePartenaire?genererFormulairePaiementCommun("ns",{duree:true,coordId:"coordonneesPaiementBoutique",titre:"Choisissez votre abonnement boutique"}):''}
  ${type==="commerce"&&modePartenaire?'<p class="notice">Inscription partenaire gratuite. Après approbation par l’administration, votre boutique bénéficiera de 30 jours de visibilité gratuite. Un abonnement sera nécessaire pour continuer après cette période.</p>':''}
  <button id="nsEnvoyerValidation" class="primary" type="button">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
