@@ -6810,6 +6810,8 @@ async function deconnecterPartenaire() {
   await partnerAuth.signOut();
   const zone = document.getElementById("zoneEspacePartenaire");
   if (zone) zone.innerHTML = "";
+  const zoneCompagnie = document.getElementById("zoneEspaceCompagnie");
+  if (zoneCompagnie) zoneCompagnie.innerHTML = "";
   const statut = document.getElementById("statutConnexionPartenaire");
   if (statut) statut.textContent = "Vous êtes déconnecté.";
   const champsConnexion = document.getElementById("champsConnexionPartenaire");
@@ -7858,7 +7860,9 @@ async function inscrireCompteRamassage(role){
   if(password.length<6) return alert("Le mot de passe doit contenir au moins 6 caractères.");
   try{
     const authRamassage=compagnie?partnerAuth:auth,dbRamassage=compagnie?partnerDb:db;
-    const credential=await authRamassage.createUserWithEmailAndPassword(email,password);
+    let credential;
+    try{credential=await authRamassage.createUserWithEmailAndPassword(email,password);}
+    catch(e){if(compagnie&&e.code==="auth/email-already-in-use")credential=await authRamassage.signInWithEmailAndPassword(email,password);else throw e;}
     await dbRamassage.collection("comptes_ramassage").doc(credential.user.uid).set({
       uid:credential.user.uid,role:role,nom:nom,telephone:telephone,email:email,
       statut:compagnie?"en_attente":"actif",
@@ -11830,7 +11834,7 @@ async function afficherEspaceCompagnie(id,c){
  const zone=document.getElementById("connexionPartenaire")||document.getElementById("zoneMenuColisPartenaire");
  let el=document.getElementById("zoneEspaceCompagnie");if(!el){el=document.createElement("div");el.id="zoneEspaceCompagnie";zone.appendChild(el);}
  el.innerHTML='<hr><h3>🏢 Espace compagnie – '+echapperTexteCompagnie(c.nom)+'</h3><p>Abonnement : '+echapperTexteCompagnie(c.statutAbonnement)+'</p>'+
- '<h4>Gare principale</h4><img src="'+echapperTexteCompagnie(c.photoGarePrincipale||"")+'" style="width:100%;max-height:170px;object-fit:cover;border-radius:12px">'+
+ '<button type="button" onclick="deconnecterPartenaire()">Se déconnecter de mon espace compagnie</button><h4>Gare principale</h4><img src="'+echapperTexteCompagnie(c.photoGarePrincipale||"")+'" style="width:100%;max-height:170px;object-fit:cover;border-radius:12px">'+
  '<label>Localisation précise</label><input id="espaceCompagnieLocalisation" value="'+echapperTexteCompagnie(c.localisation||"")+'">'+
  '<label>Contact public gare</label><input id="espaceCompagnieTelGare" value="'+echapperTexteCompagnie(c.telephoneGarePrincipale||"")+'">'+
  '<label>Contact public service courrier</label><input id="espaceCompagnieTelCourrier" value="'+echapperTexteCompagnie(c.telephoneServiceCourrier||"")+'">'+
