@@ -6397,7 +6397,16 @@ async function connecterPartenaire(){
   try {
     const resultat = await auth.signInWithEmailAndPassword(email, motDePasse);
     const uid = resultat.user.uid;
-
+    const dossierCompagnie = await db.collection("compagnies").where("uid","==",uid).limit(1).get();
+    if (!dossierCompagnie.empty) {
+      const docCompagnie = dossierCompagnie.docs[0];
+      document.getElementById("champsConnexionPartenaire").style.display = "none";
+      const bouton = document.getElementById("boutonConnexionPartenaire");
+      bouton.textContent = "Me déconnecter"; bouton.onclick = deconnecterPartenaire;
+      statut.textContent = "Connexion réussie à votre espace compagnie.";
+      await afficherEspaceCompagnie(docCompagnie.id,docCompagnie.data());
+      return;
+    }
     const documentPartenaire = await db
       .collection("partenaires")
       .doc(uid)
@@ -11673,5 +11682,169 @@ html.mqci-dark-mode .home-welcome{filter:brightness(.88)}
 .fiche-commerce-actions{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px;margin-top:12px}
 .fiche-commerce-actions .primary{display:inline-flex!important;align-items:center;justify-content:center;width:auto!important;min-width:140px;max-width:190px;flex:0 1 190px;margin:0!important;text-align:center!important;text-decoration:none!important}
 </style>
+<script>
+function ouvrirMapGareCompagnie(adresse){
+ if(!adresse)return alert("Localisation non renseignée.");
+ window.open("https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(adresse),"_blank","noopener");
+}
+function analyserDestinationsCompagnie(texte){
+ return String(texte||"").split(/\n/).map(l=>{
+  const p=l.split("|"),ville=(p[0]||"").trim(),prix=Number((p[1]||"").trim()),heures=(p[2]||"").split(",").map(x=>x.trim()).filter(Boolean);
+  if(!ville||!Number.isFinite(prix)||prix<=0||!heures.length||heures.some(h=>!/^([01]\d|2[0-3]):[0-5]\d$/.test(h)))throw new Error("Format : Destination | Prix FCFA | 06:00, 08:00.");
+  return {ville,prix,heures};
+ });
+}
+function afficherFormulaireInscriptionCompagnie(zone){
+ zone.innerHTML='<div class="card" style="padding:14px"><h3>🚌 Inscription – Compagnie de voyage</h3><p>Utilisez votre compte utilisateur existant.</p>'+
+ '<label>Nom de la compagnie</label><input id="partCompagnieNom" maxlength="100">'+
+ '<label>Nom de la gare principale / agence</label><input id="partCompagnieAgence" maxlength="100">'+
+ '<label>Localisation précise de la gare principale</label><input id="partCompagnieLocalisation" maxlength="160">'+
+ '<label>Photo obligatoire de la gare principale</label><input id="partCompagniePhotoGare" type="file" accept="image/*">'+
+ '<label>Contact public de la gare principale</label><input id="partCompagnieTelephoneGare" type="tel">'+
+ '<label>Contact public du service courrier</label><input id="partCompagnieTelephoneCourrier" type="tel">'+
+ '<label>Téléphone général</label><input id="partCompagnieTelephone" type="tel">'+
+ '<label>E-mail du compte connecté</label><input id="partCompagnieEmail" type="email" readonly>'+
+ '<label>Logo facultatif</label><input id="partCompagnieLogo" type="file" accept="image/*">'+
+ '<label>Destinations, prix et heures</label><textarea id="partCompagnieDestinations" rows="4" placeholder="Bouaké | 5000 | 06:00, 08:00"></textarea><small>Une destination par ligne : Destination | Prix | heures de départ.</small>'+
+ '<label>Formule</label><select id="partCompagnieFormule" onchange="actualiserPrixInscriptionCompagnie()"><option>Essentielle</option><option>Professionnelle</option></select>'+
+ '<label>Périodicité</label><select id="partCompagniePeriodicite" onchange="actualiserPrixInscriptionCompagnie()"><option>Mensuel</option><option>Annuel</option></select><p id="partCompagniePrix" class="notice"></p>'+
+ '<label>Moyen de paiement</label><select id="partCompagniePaiement"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select>'+
+ '<label>Référence de paiement</label><input id="partCompagnieReference">'+
+ '<p id="partCompagnieCoordonneesPaiement" class="notice">Coordonnées de paiement en chargement...</p>'+
+ '<button type="button" class="primary" onclick="envoyerInscriptionCompagnie()">Envoyer mon dossier</button><p id="partCompagnieStatut" class="notice"></p></div>';
+ document.getElementById("partCompagnieEmail").value=auth.currentUser?.email||"";
+ window.chargerCoordonneesPaiementMQCI().then(p=>{document.getElementById("partCompagnieCoordonneesPaiement").textContent="Wave / Orange Money : "+p.numero+" — "+p.beneficiaire;});
+ actualiserPrixInscriptionCompagnie();
+}
+async function envoyerInscriptionCompagnie(){
+ const user=auth.currentUser, val=id=>document.getElementById(id)?.value.trim()||"", status=document.getElementById("partCompagnieStatut");
+ if(!user){status.textContent="Connectez-vous à votre compte utilisateur.";return;}
+ const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),telephoneGare=val("partCompagnieTelephoneGare"),courrier=val("partCompagnieTelephoneCourrier"),texte=val("partCompagnieDestinations"),paiement=val("partCompagniePaiement"),reference=val("partCompagnieReference"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite");
+ let destinations;try{destinations=analyserDestinationsCompagnie(texte);}catch(e){status.textContent=e.message;return;}
+ const photoFile=document.getElementById("partCompagniePhotoGare").files[0];
+ if(!nom||!agence||!localisation||!telephone||!telephoneGare||!courrier||!photoFile||!paiement||reference.length<4){status.textContent="Tous les champs obligatoires sont requis, y compris la photo de la gare principale.";return;}
+ try{
+  const old=await db.collection("compagnies").where("uid","==",user.uid).limit(1).get();if(!old.empty)throw new Error("Un dossier compagnie existe déjà pour ce compte.");
+  const cfg=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));if(!cfg.actif||cfg.unite!=="mois")throw new Error("Formule indisponible.");
+  const montant=tarifAbonnementEffectif(cfg),dureeMois=Number(cfg.duree);
+  const photoGarePrincipale=await compresserImage(photoFile);if(photoGarePrincipale.length>700000)throw new Error("Photo trop volumineuse.");
+  let logo="";const logoFile=document.getElementById("partCompagnieLogo").files[0];if(logoFile)logo=await compresserImage(logoFile);
+  await db.collection("compagnies").add({uid:user.uid,nom,agence,localisation,telephone,telephoneGarePrincipale:telephoneGare,telephoneServiceCourrier:courrier,email:user.email||"",logo,photoGarePrincipale,destinations,formule,periodicite,montant,dureeMois,moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",dateCreation:firebase.firestore.FieldValue.serverTimestamp(),dateDebut:null,dateExpiration:null});
+  status.textContent="Dossier transmis. La validation du paiement reste nécessaire avant activation.";
+ }catch(e){status.textContent="Erreur : "+e.message;}
+}
+async function afficherEspaceCompagnie(id,c){
+ const zone=document.getElementById("connexionPartenaire")||document.getElementById("zoneMenuColisPartenaire");
+ let el=document.getElementById("zoneEspaceCompagnie");if(!el){el=document.createElement("div");el.id="zoneEspaceCompagnie";zone.appendChild(el);}
+ el.innerHTML='<hr><h3>🏢 Espace compagnie – '+echapperTexteCompagnie(c.nom)+'</h3><p>Abonnement : '+echapperTexteCompagnie(c.statutAbonnement)+'</p>'+
+ '<h4>Gare principale</h4><img src="'+echapperTexteCompagnie(c.photoGarePrincipale||"")+'" style="width:100%;max-height:170px;object-fit:cover;border-radius:12px">'+
+ '<label>Localisation précise</label><input id="espaceCompagnieLocalisation" value="'+echapperTexteCompagnie(c.localisation||"")+'">'+
+ '<label>Contact public gare</label><input id="espaceCompagnieTelGare" value="'+echapperTexteCompagnie(c.telephoneGarePrincipale||"")+'">'+
+ '<label>Contact public service courrier</label><input id="espaceCompagnieTelCourrier" value="'+echapperTexteCompagnie(c.telephoneServiceCourrier||"")+'">'+
+ '<label>Nouvelle photo de la gare principale</label><input id="espaceCompagniePhoto" type="file" accept="image/*">'+
+ '<button class="primary" onclick="enregistrerGarePrincipaleCompagnie(\''+id+'\')">Enregistrer la gare principale</button>'+
+ '<h4>Ajouter une gare annexe</h4><label>Nom de la gare</label><input id="annexeNom">'+
+ '<label>Photo obligatoire</label><input id="annexePhoto" type="file" accept="image/*">'+
+ '<label>Localisation précise</label><input id="annexeLocalisation">'+
+ '<label>Contact public de la gare</label><input id="annexeTelPublic" type="tel">'+
+ '<label>Contact public service courrier</label><input id="annexeTelCourrier" type="tel">'+
+ '<label>Numéro privé du responsable / représentant (administrateur uniquement)</label><input id="annexeTelResponsable" type="tel">'+
+ '<label>Destinations, prix et heures de départ</label><textarea id="annexeDestinations" rows="3" placeholder="Bouaké | 5000 | 06:00, 08:00"></textarea>'+
+ '<button class="primary" onclick="ajouterGareAnnexeCompagnie(\''+id+'\')">Soumettre la gare annexe</button><p id="statutEspaceCompagnie" class="notice"></p>'+
+ '<h4>Mes gares annexes</h4><div id="listeGaresAnnexesCompagnie">Chargement...</div><h4>Avis des voyageurs</h4><div id="listeAvisCompagnie">Chargement...</div>';
+ await chargerGaresAnnexesCompagnie(id);await chargerAvisCompagnie(id,true);
+}
+async function enregistrerGarePrincipaleCompagnie(id){
+ const status=document.getElementById("statutEspaceCompagnie");try{
+  const ref=db.collection("compagnies").doc(id),snap=await ref.get();if(!snap.exists||snap.data().uid!==auth.currentUser.uid)throw new Error("Dossier non autorisé.");
+  const localisation=document.getElementById("espaceCompagnieLocalisation").value.trim(),telephoneGare=document.getElementById("espaceCompagnieTelGare").value.trim(),courrier=document.getElementById("espaceCompagnieTelCourrier").value.trim(),f=document.getElementById("espaceCompagniePhoto").files[0];
+  const maj={localisation,telephoneGarePrincipale:telephoneGare,telephoneServiceCourrier:courrier};if(f){maj.photoGarePrincipale=await compresserImage(f);if(maj.photoGarePrincipale.length>700000)throw new Error("Photo trop volumineuse.");}
+  if(!localisation||!telephoneGare||!courrier||(!f&&!snap.data().photoGarePrincipale))throw new Error("Localisation, photo et contacts publics requis.");
+  await ref.update(maj);status.textContent="Gare principale mise à jour.";
+ }catch(e){status.textContent="Erreur : "+e.message;}
+}
+async function ajouterGareAnnexeCompagnie(id){
+ const status=document.getElementById("statutEspaceCompagnie");try{
+  const nom=document.getElementById("annexeNom").value.trim(),localisation=document.getElementById("annexeLocalisation").value.trim(),telephonePublic=document.getElementById("annexeTelPublic").value.trim(),telephoneServiceCourrier=document.getElementById("annexeTelCourrier").value.trim(),telephoneResponsable=document.getElementById("annexeTelResponsable").value.trim(),file=document.getElementById("annexePhoto").files[0],destinations=analyserDestinationsCompagnie(document.getElementById("annexeDestinations").value);
+  if(!nom||!localisation||!telephonePublic||!telephoneServiceCourrier||!telephoneResponsable||!file)throw new Error("Tous les champs sont obligatoires, photo comprise.");
+  const parent=await db.collection("compagnies").doc(id).get();if(!parent.exists||parent.data().uid!==auth.currentUser.uid)throw new Error("Dossier compagnie non autorisé.");
+  const photo=await compresserImage(file);if(photo.length>700000)throw new Error("Photo trop volumineuse.");
+  const ref=db.collection("gares_compagnies").doc(),batch=db.batch(),now=firebase.firestore.FieldValue.serverTimestamp();
+  batch.set(ref,{compagnieId:id,compagnieUid:auth.currentUser.uid,type:"annexe",nom,photo,localisation,telephonePublic,telephoneServiceCourrier,destinations,statut:"en_attente",createdAt:now,updatedAt:now});
+  batch.set(ref.collection("informations_privees").doc("representant"),{uid:auth.currentUser.uid,telephoneResponsable,createdAt:now});
+  await batch.commit();status.textContent="Gare soumise à validation administrative.";
+  ["annexeNom","annexeLocalisation","annexeTelPublic","annexeTelCourrier","annexeTelResponsable","annexePhoto","annexeDestinations"].forEach(x=>document.getElementById(x).value="");
+  await chargerGaresAnnexesCompagnie(id);
+ }catch(e){status.textContent="Erreur : "+e.message;}
+}
+async function chargerGaresAnnexesCompagnie(id){
+ const z=document.getElementById("listeGaresAnnexesCompagnie");if(!z)return;
+ try{const s=await db.collection("gares_compagnies").where("compagnieUid","==",auth.currentUser.uid).where("compagnieId","==",id).get();
+ z.innerHTML=s.empty?"<p class='notice'>Aucune gare annexe.</p>":s.docs.map(d=>{const g=d.data();return '<article class="stop"><img src="'+echapperTexteCompagnie(g.photo)+'" style="width:100%;max-height:130px;object-fit:cover"><strong>'+echapperTexteCompagnie(g.nom)+'</strong><p>'+echapperTexteCompagnie(g.localisation)+'</p><p>Statut : '+echapperTexteCompagnie(g.statut)+'</p><p class="notice">Le téléphone du représentant est réservé à l'administrateur.</p></article>';}).join("");
+ }catch(e){z.textContent="Erreur : "+e.message;}
+}
+async function chargerAvisCompagnie(id,espace){
+ const z=document.getElementById(espace?"listeAvisCompagnie":"avisPublicsCompagnie");if(!z)return;
+ try{
+  const q=await db.collection("avis_compagnies").where("compagnieId","==",id).where("statut","==","publie").get();
+  let html=q.empty?"<p class='notice'>Aucun avis publié.</p>":q.docs.map(d=>{const a=d.data();return '<article class="stop"><strong>'+echapperTexteCompagnie(a.nomVoyageur)+'</strong> · '+a.note+'/5<p>'+echapperTexteCompagnie(a.commentaire)+'</p></article>';}).join("");
+  if(espace){const p=await db.collection("avis_compagnies").where("compagnieId","==",id).where("statut","==","en_attente").get();if(!p.empty)html+='<p class="notice">Avis en attente de validation : '+p.size+'</p>';}
+  z.innerHTML=html;
+ }catch(e){z.textContent="Avis indisponibles : "+e.message;}
+}
+async function envoyerAvisCompagnie(id,uid){
+ if(!auth.currentUser)return alert("Connectez-vous pour déposer un avis.");
+ const nom=(auth.currentUser.displayName||prompt("Votre nom ou prénom :")||"").trim(),note=Number(document.getElementById("noteAvisCompagnie").value),commentaire=document.getElementById("commentaireAvisCompagnie").value.trim();
+ if(nom.length<2||commentaire.length<5)return alert("Nom et commentaire d'au moins 5 caractères requis.");
+ try{await db.collection("avis_compagnies").add({compagnieId:id,compagnieUid:uid,uid:auth.currentUser.uid,nomVoyageur:nom,note,commentaire,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});document.getElementById("statutAvisCompagnie").textContent="Avis envoyé pour validation administrative.";document.getElementById("commentaireAvisCompagnie").value="";}
+ catch(e){alert("Erreur : "+e.message);}
+}
+async function afficherDetailCompagnie(id,c){
+ const z=document.getElementById("detailCompagnie_"+id);if(!z)return;
+ let html='<h4>Gare principale – '+echapperTexteCompagnie(c.agence)+'</h4><img src="'+echapperTexteCompagnie(c.photoGarePrincipale||"")+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px"><p>Localisation : '+echapperTexteCompagnie(c.localisation)+'</p><p>Contact gare : '+echapperTexteCompagnie(c.telephoneGarePrincipale||c.telephone||"")+'</p><p>Service courrier : '+echapperTexteCompagnie(c.telephoneServiceCourrier||"")+'</p><button onclick="ouvrirMapGareCompagnie(\''+echapperTexteCompagnie(c.localisation).replace(/'/g,"&#39;")+'\')">🗺️ Map – Gare principale</button><h4>Gares annexes</h4>';
+ try{
+  const s=await db.collection("gares_compagnies").where("compagnieId","==",id).where("statut","==","publiee").get();
+  if(s.empty)html+="<p class='notice'>Aucune gare annexe publiée.</p>";
+  s.forEach(d=>{const g=d.data(),dest=(g.destinations||[]).map(x=>'<li>'+echapperTexteCompagnie(x.ville)+' : '+Number(x.prix).toLocaleString("fr-FR")+' FCFA · Départs : '+echapperTexteCompagnie((x.heures||[]).join(", "))+'</li>').join("");html+='<article class="stop"><strong>'+echapperTexteCompagnie(g.nom)+'</strong><img src="'+echapperTexteCompagnie(g.photo)+'" style="width:100%;max-height:160px;object-fit:cover"><p>Localisation : '+echapperTexteCompagnie(g.localisation)+'</p><p>Contact gare : '+echapperTexteCompagnie(g.telephonePublic)+'</p><p>Service courrier : '+echapperTexteCompagnie(g.telephoneServiceCourrier)+'</p><ul>'+dest+'</ul><button onclick="ouvrirMapGareCompagnie(\''+echapperTexteCompagnie(g.localisation).replace(/'/g,"&#39;")+'\')">🗺️ Map – '+echapperTexteCompagnie(g.nom)+'</button></article>';});
+ }catch(e){html+="<p class='notice'>Erreur de chargement des gares annexes.</p>";}
+ html+='<h4>Avis des voyageurs</h4><div id="avisPublicsCompagnie"></div><label>Votre note</label><select id="noteAvisCompagnie"><option value="5">5 étoiles</option><option value="4">4 étoiles</option><option value="3">3 étoiles</option><option value="2">2 étoiles</option><option value="1">1 étoile</option></select><label>Votre commentaire</label><textarea id="commentaireAvisCompagnie" rows="3" maxlength="1200"></textarea><button class="primary" onclick="envoyerAvisCompagnie(\''+id+'\',\''+(c.uid||"")+'\')">Envoyer mon avis</button><p id="statutAvisCompagnie" class="notice"></p>';
+ z.innerHTML=html;await chargerAvisCompagnie(id,false);
+}
+async function afficherCompagniesPubliques(){
+ const z=document.getElementById("listeCompagniesPubliques");if(!z)return;z.innerHTML="<p>Chargement...</p>";
+ try{const s=await db.collection("compagnies").where("statutAbonnement","==","Actif").get();if(s.empty){z.innerHTML="<p class='notice'>Aucune compagnie active.</p>";return;}
+ window.__compagniesMQCI={};z.innerHTML=s.docs.map(d=>{window.__compagniesMQCI[d.id]=d.data();return '<article class="stop"><strong>'+echapperTexteCompagnie(d.data().nom)+'</strong><p>'+echapperTexteCompagnie(d.data().agence)+'</p><button class="primary" onclick="document.getElementById(\'detailCompagnie_'+d.id+'\').style.display=\'block\';afficherDetailCompagnie(\''+d.id+'\',window.__compagniesMQCI[\''+d.id+'\'])">Voir les gares et informations</button><div id="detailCompagnie_'+d.id+'" style="display:none"></div></article>';}).join("");
+ }catch(e){z.textContent="Erreur : "+e.message;}
+}
+async function modererGareCompagnie(id,statut){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ try{await db.collection("gares_compagnies").doc(id).update({statut:statut,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});chargerModerationCompagniesAdmin();}catch(e){alert(e.message);}
+}
+async function modererAvisCompagnie(id,statut){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ try{await db.collection("avis_compagnies").doc(id).update({statut:statut,modereLe:firebase.firestore.FieldValue.serverTimestamp()});chargerModerationCompagniesAdmin();}catch(e){alert(e.message);}
+}
+async function chargerModerationCompagniesAdmin(){
+ const z=document.getElementById("moderationCompagniesListe");if(!z||!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;
+ try{
+  const [gs,as]=await Promise.all([db.collection("gares_compagnies").where("statut","==","en_attente").get(),db.collection("avis_compagnies").where("statut","==","en_attente").get()]);
+  let html="<h4>Gares annexes en attente ("+gs.size+")</h4>";
+  for(const d of gs.docs){const g=d.data();let tel="";try{const p=await d.ref.collection("informations_privees").doc("representant").get();if(p.exists)tel=p.data().telephoneResponsable||"";}catch(e){}
+   html+='<article class="stop"><strong>'+echapperTexteCompagnie(g.nom)+'</strong><img src="'+echapperTexteCompagnie(g.photo)+'" style="width:100%;max-height:140px;object-fit:cover"><p>'+echapperTexteCompagnie(g.localisation)+'</p><p>Contact gare : '+echapperTexteCompagnie(g.telephonePublic)+'</p><p>Courrier : '+echapperTexteCompagnie(g.telephoneServiceCourrier)+'</p><p>Responsable (privé) : '+echapperTexteCompagnie(tel)+'</p><button class="primary" onclick="modererGareCompagnie(\''+d.id+'\',\'publiee\')">Valider la gare</button><button onclick="modererGareCompagnie(\''+d.id+'\',\'refusee\')">Refuser</button></article>';
+  }
+  html+="<h4>Avis en attente ("+as.size+")</h4>";
+  as.forEach(d=>{const a=d.data();html+='<article class="stop"><strong>'+echapperTexteCompagnie(a.nomVoyageur)+'</strong> · '+a.note+'/5<p>'+echapperTexteCompagnie(a.commentaire)+'</p><button class="primary" onclick="modererAvisCompagnie(\''+d.id+'\',\'publie\')">Publier l’avis</button><button onclick="modererAvisCompagnie(\''+d.id+'\',\'refuse\')">Refuser</button></article>';});
+  z.innerHTML=html;
+ }catch(e){z.textContent="Erreur de modération : "+e.message;}
+}
+(function(){
+ const gestion=document.getElementById("gestionCompagnies");
+ if(gestion&&!document.getElementById("blocModerationCompagnies")){
+  const b=document.createElement("div");b.id="blocModerationCompagnies";b.style.cssText="margin-top:22px;padding-top:16px;border-top:2px solid #F28C28";
+  b.innerHTML='<h3>🛡️ Modération des gares annexes et avis voyageurs</h3><button type="button" class="primary" onclick="chargerModerationCompagniesAdmin()">Actualiser les demandes en attente</button><div id="moderationCompagniesListe"></div>';gestion.appendChild(b);
+ }
+})();
+</script>
+
 </body>
 </html>
