@@ -1720,11 +1720,9 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
       <label for="mqci-auth-name">Nom complet</label>
       <input id="mqci-auth-name" type="text" autocomplete="name" placeholder="Votre nom complet">
     </div>
-    <label for="mqci-auth-method">Méthode de connexion</label>
-    <select id="mqci-auth-method" onchange="mqciAuthMethodChanged()" disabled aria-describedby="mqci-auth-method-note">
+    <select id="mqci-auth-method" onchange="mqciAuthMethodChanged()" disabled hidden aria-hidden="true" tabindex="-1">
       <option value="email">Adresse e-mail et mot de passe</option>
     </select>
-    <p id="mqci-auth-method-note" class="notice">L'inscription et la connexion se font actuellement par e-mail et mot de passe. La vérification par SMS sera réactivée ultérieurement, lorsque son financement sera disponible.</p>
     <div id="mqci-auth-email-fields">
       <label for="mqci-auth-email">Adresse e-mail</label>
       <input id="mqci-auth-email" type="email" autocomplete="email" placeholder="exemple@email.com">
