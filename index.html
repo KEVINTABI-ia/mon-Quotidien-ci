@@ -3328,7 +3328,7 @@ var storage = firebase.storage();
 auth.useDeviceLanguage();
 let mqciAuthModeActuel="register";
 let mqciConfirmationSMS=null;
-window.window.mqciRecaptchaVerifier=null;
+window.mqciRecaptchaVerifier=null;
 let mqciCodeEnvoye=false;
 function mqciAuthMode(mode){
   mqciAuthModeActuel=mode==="login"?"login":"register";
