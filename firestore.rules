@@ -136,6 +136,7 @@ service cloud.firestore {
           && request.resource.data.email == request.auth.token.email
           && request.resource.data.keys().hasAll([
             "uid","nom","agence","localisation","telephone","email","destinations",
+            "photoGarePrincipale","telephoneGarePrincipale","telephoneServiceCourrier",
             "formule","periodicite","montant","dureeMois","moyenPaiement","referencePaiement",
             "statutAbonnement","dateCreation","dateDebut","dateExpiration"
           ])
@@ -184,12 +185,16 @@ service cloud.firestore {
           && request.resource.data.dateExpiration == null
           && (!request.resource.data.keys().hasAny(["logo"])
             || (request.resource.data.logo is string && request.resource.data.logo.size() <= 300000 && (request.resource.data.logo == "" || request.resource.data.logo.matches("^data:image/jpeg;base64,.*$"))))
-          && (!request.resource.data.keys().hasAny(["photoGarePrincipale"])
-            || (request.resource.data.photoGarePrincipale is string && request.resource.data.photoGarePrincipale.size() <= 700000 && request.resource.data.photoGarePrincipale.matches("^data:image/jpeg;base64,.*$")))
-          && (!request.resource.data.keys().hasAny(["telephoneGarePrincipale"])
-            || (request.resource.data.telephoneGarePrincipale is string && request.resource.data.telephoneGarePrincipale.size() >= 6 && request.resource.data.telephoneGarePrincipale.size() <= 25))
-          && (!request.resource.data.keys().hasAny(["telephoneServiceCourrier"])
-            || (request.resource.data.telephoneServiceCourrier is string && request.resource.data.telephoneServiceCourrier.size() >= 6 && request.resource.data.telephoneServiceCourrier.size() <= 25))
+          && request.resource.data.photoGarePrincipale is string
+          && request.resource.data.photoGarePrincipale.size() > 30
+          && request.resource.data.photoGarePrincipale.size() <= 700000
+          && request.resource.data.photoGarePrincipale.matches("^data:image/jpeg;base64,.*$")
+          && request.resource.data.telephoneGarePrincipale is string
+          && request.resource.data.telephoneGarePrincipale.size() >= 6
+          && request.resource.data.telephoneGarePrincipale.size() <= 25
+          && request.resource.data.telephoneServiceCourrier is string
+          && request.resource.data.telephoneServiceCourrier.size() >= 6
+          && request.resource.data.telephoneServiceCourrier.size() <= 25
         );
       allow update: if estAdmin()
         || (estConnecte() && resource.data.uid == request.auth.uid
