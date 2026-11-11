@@ -3727,6 +3727,9 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
  const statut=document.getElementById("nsStatut");
  const valeur=id=>document.getElementById(id)?.value.trim()||"";
  const titre=valeur("nsTitre"),commune=valeur("nsCommune"),telephone=valeur("nsTelephone"),description=valeur("nsDescription"),email=valeur("nsEmail"),password=document.getElementById("nsPassword")?.value||"";
+ const comptePartenaire=modePartenaire?auth.currentUser:null;
+ if(modePartenaire&&!comptePartenaire){statut.textContent="Connectez-vous à votre compte utilisateur avant de déposer une demande partenaire.";return;}
+ if(modePartenaire&&comptePartenaire.email&&email&&comptePartenaire.email.toLowerCase()!==email.toLowerCase()){statut.textContent="L’adresse e-mail doit correspondre au compte utilisateur connecté.";return;}
  const modePartenaire=!!document.querySelector("#devenirPartenaire [data-mode-partenaire=\"1\"]");
  const estBoutique=nouveauServiceActif==="commerce";
  const paiementMoyen=estBoutique?(document.getElementById("nsPaiementMoyen")?.value||""):"";
@@ -3739,11 +3742,11 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
  if(estBoutique&&!adresseBoutique){statut.textContent="Renseignez l’adresse précise de récupération de votre établissement.";return;}
  if(estBoutique&&(!paiementMoyen||!paiementReference)){statut.textContent="Effectuez le paiement, choisissez Wave ou Orange Money et saisissez la référence de la transaction.";return;}
  if(estBoutique&&(!dureeSelect||!dureeOption||!Number.isInteger(montantAbonnement)||montantAbonnement<=0||!Number.isInteger(dureeAbonnementJours)||dureeAbonnementJours<=0)){statut.textContent="Choisissez une formule d’abonnement disponible avant de continuer.";return;}
- if(!titre||!commune||!telephone||!description||!email||password.length<6){statut.textContent="Remplissez tous les champs obligatoires. Le mot de passe doit contenir au moins 6 caractères.";return;}
+ if(!titre||!commune||!telephone||!description||!(modePartenaire?(comptePartenaire?.email||email):email)||(!modePartenaire&&password.length<6)){statut.textContent="Remplissez tous les champs obligatoires."+(modePartenaire?"":" Le mot de passe doit contenir au moins 6 caractères.");return;}
  statut.textContent="Envoi du dossier...";
  try{
   let user=auth.currentUser;
-  if(user&&user.email!==email){await auth.signOut();user=null;}
+  if(!modePartenaire&&user&&user.email!==email){await auth.signOut();user=null;}
   if(!user){
    try{const cred=await auth.createUserWithEmailAndPassword(email,password);user=cred.user;}
    catch(e){if(e.code==="auth/email-already-in-use"){const cred=await auth.signInWithEmailAndPassword(email,password);user=cred.user;}else throw e;}
@@ -6131,46 +6134,28 @@ function actualiserPrixInscriptionCompagnie(){
   if(zone&&prix)zone.textContent="Tarif : "+prix.toLocaleString("fr-FR")+" FCFA / "+periodicite.toLowerCase();
 }
 async function envoyerInscriptionCompagnie(){
+  const user=auth.currentUser;
   const val=id=>document.getElementById(id)?.value.trim()||"";
   const statut=document.getElementById("partCompagnieStatut");
-  const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),email=val("partCompagnieEmail"),password=document.getElementById("partCompagniePassword")?.value||"",texte=val("partCompagnieDestinations"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite"),paiement=val("partCompagniePaiement"),reference=val("partCompagnieReference");
-  if(!nom||!agence||!localisation||!telephone||!email||password.length<6||!texte||!paiement||reference.length<4){statut.textContent="Complétez tous les champs obligatoires. Le mot de passe doit contenir au moins 6 caractères.";return;}
+  if(!user){statut.textContent="Connectez-vous à votre compte utilisateur avant de déposer une demande partenaire.";return;}
+  const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),email=user.email||"",texte=val("partCompagnieDestinations"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite"),paiement=val("partCompagniePaiement"),reference=val("partCompagnieReference");
   let destinations;
-  try{
-    destinations=texte.split("\n").map(ligne=>{
-      const p=ligne.split("|"),ville=(p[0]||"").trim(),prix=Number((p[1]||"").trim()),s=(p[2]||"").trim().toLowerCase(),services={premium:"Premium",express:"Express",standard:"Standard"};
-      if(!ville||p.length<3||!Number.isFinite(prix)||prix<=0||!services[s])throw new Error("Format incorrect : Destination | Prix | Premium, Express ou Standard.");
-      return {ville,prix,service:services[s]};
-    });
-  }catch(e){statut.textContent=e.message;return;}
-  let cfgCompagnie;
-  try{cfgCompagnie=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));}catch(e){statut.textContent=e.message;return;}
-  if(!cfgCompagnie.actif){statut.textContent="Cette formule de compagnie est temporairement suspendue.";return;}
-  if(cfgCompagnie.unite!=="mois"){statut.textContent="La durée doit être configurée en mois.";return;}
-  const montant=tarifAbonnementEffectif(cfgCompagnie),dureeMois=Number(cfgCompagnie.duree);
+  try{destinations=texte.split("\n").map(ligne=>{const p=ligne.split("|"),ville=(p[0]||"").trim(),prix=Number((p[1]||"").trim()),service=(p[2]||"").trim().toLowerCase(),services={premium:"Premium",express:"Express",standard:"Standard"};if(!ville||p.length<3||!Number.isFinite(prix)||prix<=0||!services[service])throw new Error("Format incorrect : Destination | Prix | Premium, Express ou Standard.");return {ville,prix,service:services[service]};});}
+  catch(e){statut.textContent=e.message;return;}
+  if(!nom||!agence||!localisation||!telephone||!email||!texte||!paiement||reference.length<4){statut.textContent="Complétez tous les champs obligatoires et la référence de paiement.";return;}
+  let cfg;
+  try{cfg=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));}catch(e){statut.textContent=e.message;return;}
+  if(!cfg.actif||cfg.unite!=="mois"){statut.textContent="Cette formule est temporairement indisponible.";return;}
+  const montant=tarifAbonnementEffectif(cfg),dureeMois=Number(cfg.duree);
   if(!montant||!dureeMois){statut.textContent="Tarif ou durée non configuré.";return;}
-  statut.textContent="Création du compte et envoi du dossier...";
+  statut.textContent="Envoi de votre demande...";
   try{
-    let credential;
-    try{credential=await auth.createUserWithEmailAndPassword(email,password);}
-    catch(e){if(e.code!=="auth/email-already-in-use")throw e;credential=await auth.signInWithEmailAndPassword(email,password);}
-    let logo="";
-    const fichier=document.getElementById("partCompagnieLogo")?.files?.[0];
-    if(fichier){logo=await compresserImage(fichier);if(logo.length>300000)throw new Error("Le logo est trop volumineux après compression. Choisissez une image plus légère.");}
-    await db.collection("compagnies").add({
-      uid:credential.user.uid,nom,agence,localisation,telephone,email,logo,destinations,formule,periodicite,montant,dureeMois,
-      moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",
-      dateCreation:firebase.firestore.FieldValue.serverTimestamp(),dateDebut:null,dateExpiration:null
-    });
-    await auth.signOut();
-    statut.textContent="Dossier envoyé. La compagnie sera activée après vérification du paiement par l’administration.";
-  }catch(e){
-    if(auth.currentUser)await auth.signOut();
-    console.error("Inscription compagnie :",e);
-    statut.textContent="Envoi impossible : "+(e.message||"réessayez.");
-  }
+    let logo="";const fichier=document.getElementById("partCompagnieLogo")?.files?.[0];
+    if(fichier){logo=await compresserImage(fichier);if(logo.length>300000)throw new Error("Le logo est trop volumineux après compression.");}
+    await db.collection("compagnies").add({uid:user.uid,nom,agence,localisation,telephone,email,logo,destinations,formule,periodicite,montant,dureeMois,moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",dateCreation:firebase.firestore.FieldValue.serverTimestamp(),dateDebut:null,dateExpiration:null});
+    statut.textContent="Demande envoyée avec votre compte utilisateur. Votre session reste active. Activation après vérification du paiement.";
+  }catch(e){console.error("Demande compagnie:",e);statut.textContent="Envoi impossible : "+(e.message||"réessayez.");}
 }
-
 function validerMotDePasse(champ, idErreur) {
   const motDePasse = champ.value;
   const message = document.getElementById(idErreur);
