@@ -3723,8 +3723,6 @@ async function connecterCompteBoutique(){
   statut.textContent="Connexion réussie.";
   const zone=document.getElementById("boutiqueCompteConnecte");if(zone)zone.innerHTML='<p>Connecté à : <strong>'+echapperTextePublicite(boutique.data().titre)+'</strong></p><button type="button" class="primary" onclick="ouvrirFormulaireArticleBoutique(\''+boutique.id+'\')">➕ Ajouter un article</button><div id="formArticleBoutique_'+boutique.id+'"></div><h4>Mes articles</h4><div id="mesArticlesBoutique_'+boutique.id+'"></div><button type="button" onclick="chargerCommandesBoutique(\''+boutique.id+'\')">📦 Ouvrir mes commandes</button><div id="commandesBoutique_'+boutique.id+'"></div>';
   chargerMesArticlesBoutique(boutique.id);
-  if(zone){const btn=document.createElement("button");btn.type="button";btn.className="primary";btn.textContent="➕ Ajouter un article";btn.onclick=()=>ouvrirFormulaireArticleBoutique(boutique.id);const form=document.createElement("div");form.id="formArticleBoutique_"+boutique.id;const titre=document.createElement("h4");titre.textContent="Mes articles";const liste=document.createElement("div");liste.id="mesArticlesBoutique_"+boutique.id;zone.prepend(liste);zone.prepend(titre);zone.prepend(form);zone.prepend(btn);}
-  chargerMesArticlesBoutique(boutique.id);
   chargerCommandesBoutique(boutique.id);
  }catch(e){console.error(e);statut.textContent="Connexion impossible : "+(e.message||"vérifiez vos identifiants.");}
 }
