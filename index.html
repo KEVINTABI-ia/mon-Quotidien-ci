@@ -1786,27 +1786,49 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
   <h1 class="transport-colis-connexion-titre">ESPACE DE CONNEXION</h1>
   <div class="colis-choix">
     <button type="button" class="colis-choix-bouton colis-client" onclick="ouvrirEspaceClient()">👤 Espace client</button>
-    <button type="button" class="colis-choix-bouton colis-partenaire" onclick="ouvrirConnexionPartenaire()">🤝 Espace partenaire</button>
   </div>
   <div id="zoneMenuColisClient"><div id="zoneEspaceClient"></div></div>
-  <div id="zoneMenuColisPartenaire" style="display:none;"><div id="connexionPartenaire"></div></div>
 </section>
 
 <section class="card" id="devenirPartenaire" style="display:none;">
-  <h2>🤝 Devenir partenaire de Mon Quotidien CI</h2>
-  <p>Rejoignez notre réseau professionnel. Choisissez votre activité pour afficher le formulaire correspondant. Chaque dossier est soumis à vérification avant activation ou publication.</p>
-  <label for="typePartenaireSouhaite"><strong>Quel type de partenaire souhaitez-vous être ?</strong></label>
-  <select id="typePartenaireSouhaite" onchange="afficherFormulairePartenaire(this.value)" style="width:100%;padding:14px;border:1px solid #D5E2D9;border-radius:12px;margin:8px 0 14px;">
-    <option value="">— Sélectionnez votre activité —</option>
-    <option value="mecanicien">🔧 Mécanicien</option>
-    <option value="depannage">🚗 Service de dépannage</option>
-    <option value="vendeur_pieces">🧰 Vendeur de pièces détachées</option>
-    <option value="livreur">📦 Livreur indépendant</option>
-    <option value="representant_gare">🏢 Représentant de gare</option>
-    <option value="commercant">🏪 Commerçant(e)</option>
-    <option value="compagnie">🚌 Compagnie de voyage</option>
-  </select>
-  <div id="partenaireFormulaireChoisi" aria-live="polite"></div>
+  <h2>🤝 Espace partenaire – Mon Quotidien CI</h2>
+  <p>Tous les accès professionnels sont regroupés ici. Les demandes et les comptes restent soumis aux validations et conditions propres à chaque activité.</p>
+  <div id="zoneChoixPartenaire" class="card" style="padding:14px;margin:14px 0;">
+    <h3>Que souhaitez-vous faire ?</h3>
+    <button type="button" class="primary" style="width:100%;margin:6px 0;" onclick="ouvrirEspacePartenaire('inscription')">➕ Devenir partenaire</button>
+    <button type="button" class="primary" style="width:100%;margin:6px 0;" onclick="ouvrirEspacePartenaire('connexion')">🔐 Connexion à mon espace partenaire</button>
+  </div>
+  <div id="zoneInscriptionPartenaire" style="display:none;">
+    <button type="button" onclick="ouvrirEspacePartenaire('accueil')">← Retour à l’espace partenaire</button>
+    <h3>Créer un espace partenaire</h3>
+    <p>Choisissez votre activité. Les formulaires existants et leurs règles de validation sont conservés.</p>
+    <label for="typePartenaireSouhaite"><strong>Quel type de partenaire souhaitez-vous être ?</strong></label>
+    <select id="typePartenaireSouhaite" onchange="afficherFormulairePartenaire(this.value)" style="width:100%;padding:14px;border:1px solid #D5E2D9;border-radius:12px;margin:8px 0 14px;">
+      <option value="">— Sélectionnez votre activité —</option>
+      <option value="mecanicien">🔧 Mécanicien</option>
+      <option value="depannage">🚗 Service de dépannage</option>
+      <option value="vendeur_pieces">🧰 Vendeur de pièces détachées</option>
+      <option value="livreur">📦 Livreur indépendant</option>
+      <option value="representant_gare">🏢 Représentant de gare</option>
+      <option value="commercant">🏪 Commerçant / boutique</option>
+      <option value="compagnie">🚌 Compagnie de voyage</option>
+      <option value="compagnie_ramassage">🚐 Compagnie de cars de ramassage</option>
+      <option value="annuaire">📒 Professionnel de l’annuaire</option>
+    </select>
+    <div id="partenaireFormulaireChoisi" aria-live="polite"></div>
+    <div id="zoneInscriptionAnnuairePartenaire"></div>
+  </div>
+  <div id="zoneConnexionPartenaire" style="display:none;">
+    <button type="button" onclick="ouvrirEspacePartenaire('accueil')">← Retour à l’espace partenaire</button>
+    <h3>Connexion à mon espace partenaire</h3>
+    <p>Choisissez le type de compte utilisé lors de votre inscription. L’accès reste soumis à l’approbation administrative et, si nécessaire, à un abonnement actif.</p>
+    <div id="choixTypeConnexionPartenaire">
+      <button type="button" class="primary" style="width:100%;margin:5px 0;" onclick="ouvrirConnexionPartenaireType('classique')">Partenaire / compagnie de voyage / livreur / gare</button>
+      <button type="button" class="primary" style="width:100%;margin:5px 0;" onclick="ouvrirConnexionPartenaireType('ramassage')">Compagnie de cars de ramassage</button>
+      <button type="button" class="primary" style="width:100%;margin:5px 0;" onclick="ouvrirConnexionPartenaireType('boutique')">Propriétaire de boutique / commerce</button>
+    </div>
+    <div id="zoneConnexionPartenaireDetails"></div>
+  </div>
 </section>
 
 
@@ -1817,7 +1839,7 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
   </div>
   <div class="ramassage-tabs">
     <button type="button" id="tabRamassageUsager" class="active" onclick="afficherOngletRamassage('usager')">👤 Je cherche un car</button>
-    <button type="button" id="tabRamassageCompagnie" onclick="afficherOngletRamassage('compagnie')">🚌 Je suis une compagnie</button>
+    <button type="button" onclick="ouvrirEspacePartenaire('inscription','compagnie_ramassage')">🚌 Espace compagnie</button>
   </div>
   <div id="ramassageUsager" class="ramassage-panel">
     <h3>👤 Espace utilisateur</h3>
@@ -2930,7 +2952,7 @@ function chargerPublicitesAccueil() {
   </div>
 </section>
 
-<section class="card" id="annuaireInterne" style="display:none;"><h2 id="annuaireInterneTitre">📒 Annuaire des professionnels</h2><p>Consultez les professionnels référencés dans Mon Quotidien CI. Les fiches affichées ont été validées par l’administration.</p><label>Rechercher un nom ou un service</label><input id="annuaireRecherche" maxlength="100" placeholder="Ex. plombier, école, traiteur" oninput="chargerAnnuaireInterne()"><div class="modes"><div><label>Catégorie</label><select id="annuaireFiltreCategorie" onchange="chargerAnnuaireInterne()"><option value="">Toutes les catégories</option></select></div><div><label>Commune</label><input id="annuaireFiltreCommune" placeholder="Ex. Cocody" oninput="chargerAnnuaireInterne()"></div></div><button type="button" class="primary" onclick="afficherInscriptionAnnuaire()">➕ Inscrire gratuitement mon activité</button><div id="annuaireInscriptionZone" style="display:none"></div><h3>Professionnels validés</h3><div id="annuaireResultats"></div></section><section class="card" id="educationFormation" style="display:none;">
+<section class="card" id="annuaireInterne" style="display:none;"><h2 id="annuaireInterneTitre">📒 Annuaire des professionnels</h2><p>Consultez les professionnels référencés dans Mon Quotidien CI. Les fiches affichées ont été validées par l’administration.</p><label>Rechercher un nom ou un service</label><input id="annuaireRecherche" maxlength="100" placeholder="Ex. plombier, école, traiteur" oninput="chargerAnnuaireInterne()"><div class="modes"><div><label>Catégorie</label><select id="annuaireFiltreCategorie" onchange="chargerAnnuaireInterne()"><option value="">Toutes les catégories</option></select></div><div><label>Commune</label><input id="annuaireFiltreCommune" placeholder="Ex. Cocody" oninput="chargerAnnuaireInterne()"></div></div><div id="annuaireInscriptionZone" style="display:none"></div><h3>Professionnels validés</h3><div id="annuaireResultats"></div></section><section class="card" id="educationFormation" style="display:none;">
   <h2>🎓 Éducation et formation</h2>
   <p>Accédez rapidement aux établissements et organismes de formation autour de vous.</p>
   <div class="modes">
@@ -7731,9 +7753,8 @@ let ramassageRoleActif = null;
 function afficherOngletRamassage(role){
   const user = role === "usager";
   document.getElementById("ramassageUsager").style.display = user ? "block" : "none";
-  document.getElementById("ramassageCompagnie").style.display = user ? "none" : "block";
+  document.getElementById("ramassageCompagnie").style.display = "block";
   document.getElementById("tabRamassageUsager").classList.toggle("active",user);
-  document.getElementById("tabRamassageCompagnie").classList.toggle("active",!user);
 }
 async function inscrireCompteRamassage(role){
   const compagnie = role === "compagnie";
@@ -11377,7 +11398,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       <button type="button" onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur'); fermerMenuBasDroite()">🔐 Espace administrateur</button>
       <button type="button" onclick="ouvrirSectionPleinEcran('parametresApplication','Paramètres de l’application'); fermerMenuBasDroite()">⚙️ Paramètres</button>
       <button type="button" onclick="ouvrirEspaceSolidarite(); fermerMenuBasDroite()">🤝 Dons et solidarité</button>
-      <button type="button" onclick="ouvrirSectionPleinEcran('devenirPartenaire','Devenir partenaire'); fermerMenuBasDroite()">🤝 Devenir partenaire</button>
+      <button type="button" onclick="ouvrirEspacePartenaire('accueil'); fermerMenuBasDroite()">🤝 Espace partenaire</button>
       <button type="button" onclick="signalerProblemeGeneral(); fermerMenuBasDroite()">⚠️ Signaler un problème</button>`;
     document.body.appendChild(menuBas);
 
