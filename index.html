@@ -3328,7 +3328,7 @@ var storage = firebase.storage();
 auth.useDeviceLanguage();
 let mqciAuthModeActuel="register";
 let mqciConfirmationSMS=null;
-let mqciRecaptchaVerifier=null;
+window.window.mqciRecaptchaVerifier=null;
 let mqciCodeEnvoye=false;
 function mqciAuthMode(mode){
   mqciAuthModeActuel=mode==="login"?"login":"register";
@@ -3395,11 +3395,11 @@ async function mqciEnvoyerCodeSMS(){
     const phone=mqciNormaliserTelephoneAuth(document.getElementById("mqci-auth-phone").value);
     const btn=document.getElementById("mqci-auth-send-code");btn.disabled=true;mqciAuthStatut("Préparation de la vérification SMS...");
     window.__mqciAuthFlowInProgress=true;
-    if(!mqciRecaptchaVerifier)mqciRecaptchaVerifier=new firebase.auth.RecaptchaVerifier("mqci-recaptcha-container",{size:"normal",callback:()=>{}, "expired-callback":()=>{mqciAuthStatut("La vérification a expiré. Recommencez.",true);}});
-    mqciConfirmationSMS=await auth.signInWithPhoneNumber(phone,mqciRecaptchaVerifier);
+    if(!window.mqciRecaptchaVerifier)window.mqciRecaptchaVerifier=new firebase.auth.RecaptchaVerifier("mqci-recaptcha-container",{size:"normal",callback:()=>{}, "expired-callback":()=>{mqciAuthStatut("La vérification a expiré. Recommencez.",true);}});
+    mqciConfirmationSMS=await auth.signInWithPhoneNumber(phone,window.mqciRecaptchaVerifier);
     mqciCodeEnvoye=true;mqciAuthStatut("Code envoyé. Consultez vos SMS puis saisissez le code reçu.");
     document.getElementById("mqci-auth-code").focus();
-  }catch(e){mqciAuthStatut("Envoi du SMS impossible : "+(e.message||"vérifiez le numéro et réessayez."),true);if(mqciRecaptchaVerifier){try{await mqciRecaptchaVerifier.clear();}catch(_){}mqciRecaptchaVerifier=null;}}
+  }catch(e){mqciAuthStatut("Envoi du SMS impossible : "+(e.message||"vérifiez le numéro et réessayez."),true);if(window.mqciRecaptchaVerifier){try{await window.mqciRecaptchaVerifier.clear();}catch(_){}window.mqciRecaptchaVerifier=null;}}
   finally{if(!mqciConfirmationSMS)window.__mqciAuthFlowInProgress=false;document.getElementById("mqci-auth-send-code").disabled=false;}
 }
 async function mqciVerifierCodeSMS(){
