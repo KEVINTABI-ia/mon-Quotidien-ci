@@ -3376,6 +3376,11 @@ firebase.initializeApp(firebaseConfig);
 var auth = firebase.auth();
 var db = firebase.firestore();
 var storage = firebase.storage();
+// Authentification indépendante des espaces partenaires : ne remplace jamais la session utilisateur.
+var partnerApp = firebase.apps.find(function(app){return app.name === "partnerAuth";}) || firebase.initializeApp(firebaseConfig, "partnerAuth");
+var partnerAuth = partnerApp.auth();
+var partnerDb = partnerApp.firestore();
+partnerAuth.useDeviceLanguage();
 
 /* Authentification générale obligatoire — e-mail ou téléphone */
 auth.useDeviceLanguage();
@@ -3897,24 +3902,24 @@ async function ouvrirFormulaireArticleBoutique(id){
  z.innerHTML='<div class="card" style="padding:12px"><h4>Ajouter un article</h4><label>Nom</label><input id="artNom_'+id+'" maxlength="100"><label>Catégorie</label><input id="artCat_'+id+'" maxlength="70"><label>Prix FCFA</label><input id="artPrix_'+id+'" type="number" min="1"><label>Description</label><textarea id="artDesc_'+id+'" maxlength="700"></textarea><label>Photo JPG, PNG ou WEBP (3 Mo max.)</label><input id="artPhoto_'+id+'" type="file" accept="image/jpeg,image/png,image/webp"><label>Disponibilité</label><select id="artDispo_'+id+'"><option value="true">Disponible</option><option value="false">Indisponible</option></select><button type="button" class="primary" onclick="enregistrerArticleBoutique(\''+id+'\')">Envoyer pour validation</button><p id="artStatut_'+id+'" class="notice"></p></div>';
 }
 async function enregistrerArticleBoutique(id){
- const u=auth.currentUser;if(!u)return alert("Connectez-vous à votre boutique.");
+ const u=partnerAuth.currentUser;if(!u)return alert("Connectez-vous à votre boutique.");
  const val=x=>document.getElementById(x+id)?.value.trim()||"";
  const nom=val("artNom_"),categorie=val("artCat_"),prix=Number(val("artPrix_")),description=val("artDesc_"),disponible=val("artDispo_")==="true",photo=document.getElementById("artPhoto_"+id)?.files?.[0],status=document.getElementById("artStatut_"+id);
  if(!nom||!categorie||!Number.isInteger(prix)||prix<=0){status.textContent="Vérifiez le nom, la catégorie et le prix.";return;}
  try{
-  const b=await db.collection("demandes_nouveaux_services").doc(id).get();
+  const b=await partnerDb.collection("demandes_nouveaux_services").doc(id).get();
   if(!b.exists||b.data().uid!==u.uid||b.data().statut!=="approuve"||!b.data().abonnementFin?.toDate||b.data().abonnementFin.toDate().getTime()<=Date.now())throw new Error("Boutique approuvée avec abonnement actif obligatoire.");
   if(!photo||!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>3*1024*1024)throw new Error("Ajoutez une photo JPG, PNG ou WEBP de 3 Mo maximum.");
   status.textContent="Compression et envoi de la photo...";
   const photoUrl=await compresserPhotoNouveauService(photo);
-  await db.collection("articles_boutiques").add({boutiqueId:id,boutiqueUid:u.uid,boutiqueNom:b.data().titre,nom,categorie,prix,description,photoUrl,disponible,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  await partnerDb.collection("articles_boutiques").add({boutiqueId:id,boutiqueUid:u.uid,boutiqueNom:b.data().titre,nom,categorie,prix,description,photoUrl,disponible,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
   status.textContent="Article envoyé. Il sera visible après validation de l’administration.";
   await chargerMesArticlesBoutique(id);
  }catch(e){console.error(e);status.textContent="Envoi impossible : "+e.message;}
 }
 async function chargerMesArticlesBoutique(id){
- const z=document.getElementById("mesArticlesBoutique_"+id);if(!z||!auth.currentUser)return;
- try{const q=await db.collection("articles_boutiques").where("boutiqueId","==",id).where("boutiqueUid","==",auth.currentUser.uid).get();z.innerHTML=q.empty?'<p class="notice">Aucun article pour le moment.</p>':q.docs.map(d=>'<article class="stop"><img src="'+d.data().photoUrl+'" style="width:110px;height:90px;object-fit:cover;border-radius:8px"><strong>'+echapperTextePublicite(d.data().nom)+'</strong><p>'+Number(d.data().prix).toLocaleString("fr-FR")+' FCFA · '+(d.data().statut==="approuve"?"Publié":"En attente de validation")+'</p></article>').join("");}catch(e){z.textContent="Erreur : "+e.message;}
+ const z=document.getElementById("mesArticlesBoutique_"+id);if(!z||!partnerAuth.currentUser)return;
+ try{const q=await partnerDb.collection("articles_boutiques").where("boutiqueId","==",id).where("boutiqueUid","==",partnerAuth.currentUser.uid).get();z.innerHTML=q.empty?'<p class="notice">Aucun article pour le moment.</p>':q.docs.map(d=>'<article class="stop"><img src="'+d.data().photoUrl+'" style="width:110px;height:90px;object-fit:cover;border-radius:8px"><strong>'+echapperTextePublicite(d.data().nom)+'</strong><p>'+Number(d.data().prix).toLocaleString("fr-FR")+' FCFA · '+(d.data().statut==="approuve"?"Publié":"En attente de validation")+'</p></article>').join("");}catch(e){z.textContent="Erreur : "+e.message;}
 }
 async function chargerArticlesPublicsBoutique(id){
  const z=document.getElementById("articlesBoutiquePublic_"+id);if(!z)return;
@@ -3980,22 +3985,23 @@ async function traiterArticleBoutiqueAdmin(id,statut){
  try{await db.collection("articles_boutiques").doc(id).update({statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});await chargerArticlesBoutiquesAdmin();}catch(e){alert("Traitement impossible : "+e.message);}
 }
 
+let boutiqueSessionPartenaire=false;
 async function connecterCompteBoutique(){
  const email=document.getElementById("connexionBoutiqueEmail")?.value.trim()||"";
  const motDePasse=document.getElementById("connexionBoutiqueMotDePasse")?.value||"";
  const statut=document.getElementById("connexionBoutiqueStatut");
  if(!email||!motDePasse){statut.textContent="Saisissez votre e-mail et votre mot de passe.";return;}
  try{
-  const resultat=await auth.signInWithEmailAndPassword(email,motDePasse);
-  const snap=await db.collection("demandes_nouveaux_services").where("uid","==",resultat.user.uid).where("type","==","commerce").where("statut","==","approuve").limit(10).get();
+  const resultat=await partnerAuth.signInWithEmailAndPassword(email,motDePasse);boutiqueSessionPartenaire=true;
+  const snap=await partnerDb.collection("demandes_nouveaux_services").where("uid","==",resultat.user.uid).where("type","==","commerce").where("statut","==","approuve").limit(10).get();
   const boutique=snap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0))[0];
-  if(!boutique){await auth.signOut();statut.textContent="Aucune boutique approuvée n'est liée à ce compte.";return;}
+  if(!boutique){await partnerAuth.signOut();boutiqueSessionPartenaire=false;statut.textContent="Aucune boutique approuvée n'est liée à ce compte.";return;}
   const d=boutique.data(),fin=d.abonnementFin&&d.abonnementFin.toDate?d.abonnementFin.toDate():null,actif=!!fin&&fin.getTime()>Date.now();
-  if(!actif&&d.modePartenaire!==true){await auth.signOut();statut.textContent="Aucune boutique approuvée avec un abonnement actif n'est liée à ce compte.";return;}
+  if(!actif&&d.modePartenaire!==true){await partnerAuth.signOut();boutiqueSessionPartenaire=false;statut.textContent="Aucune boutique approuvée avec un abonnement actif n'est liée à ce compte.";return;}
   statut.textContent=actif?"Connexion réussie.":"Votre période gratuite ou votre abonnement est terminé. Votre boutique n'est plus visible.";
   const zone=document.getElementById("boutiqueCompteConnecte");
   if(zone){
-   let contenu='<p>Connecté à : <strong>'+echapperTextePublicite(d.titre)+'</strong></p>';
+   let contenu='<p>Connecté à : <strong>'+echapperTextePublicite(d.titre)+'</strong></p><button type="button" onclick="deconnecterCompteBoutique()">Se déconnecter de mon espace boutique</button>';
    if(actif){
     contenu+='<button type="button" class="primary" onclick="ouvrirFormulaireArticleBoutique(\''+boutique.id+'\')">➕ Ajouter un article</button><div id="formArticleBoutique_'+boutique.id+'"></div><h4>Mes articles</h4><div id="mesArticlesBoutique_'+boutique.id+'"></div><button type="button" onclick="chargerCommandesBoutique(\''+boutique.id+'\')">📦 Ouvrir mes commandes</button><div id="commandesBoutique_'+boutique.id+'"></div>';
    }else{
@@ -4006,6 +4012,12 @@ async function connecterCompteBoutique(){
   if(actif){chargerMesArticlesBoutique(boutique.id);chargerCommandesBoutique(boutique.id);}
  }catch(e){console.error(e);statut.textContent="Connexion impossible : "+(e.message||"vérifiez vos identifiants.");}
 }
+async function deconnecterCompteBoutique(){
+ try{await partnerAuth.signOut();boutiqueSessionPartenaire=false;
+  const zone=document.getElementById("boutiqueCompteConnecte");if(zone)zone.innerHTML="";
+  const statut=document.getElementById("connexionBoutiqueStatut");if(statut)statut.textContent="Vous êtes déconnecté de votre espace boutique. Votre compte Mon Quotidien CI reste connecté.";
+ }catch(e){alert("Déconnexion boutique impossible : "+e.message);}
+}
 function afficherFormulaireRenouvellementBoutique(id){
  const zone=document.getElementById("formRenouvellementBoutique_"+id);if(!zone)return;
  const prefix="renouvBoutique_"+id;
@@ -4013,7 +4025,7 @@ function afficherFormulaireRenouvellementBoutique(id){
  initialiserFormulairePaiementCommun(prefix,["boutiques_1mois","boutiques_2mois","boutiques_3mois"],"coordonneesRenouvellementBoutique_"+id);
 }
 async function envoyerDemandeRenouvellementBoutique(id){
- const user=auth.currentUser;if(!user)return alert("Connectez-vous au compte de votre boutique.");
+ const user=partnerAuth.currentUser;if(!user)return alert("Connectez-vous au compte de votre boutique.");
  const prefix="renouvBoutique_"+id,op=document.getElementById(prefix+"PaiementMoyen")?.value||"",ref=document.getElementById(prefix+"PaiementReference")?.value.trim()||"",select=document.getElementById(prefix+"DureeAbonnement"),option=select?.selectedOptions?.[0],montant=Number(option?.dataset?.montant||0),jours=Number(select?.value||0),zone=document.getElementById("statutRenouvBoutique_"+id);
  if(!zone)return;
  if(!["Wave","Orange Money"].includes(op)||ref.length<4||ref.length>80||!Number.isInteger(montant)||montant<1||!Number.isInteger(jours)||jours<1||jours>365){zone.textContent="Choisissez une formule disponible, un moyen de paiement et saisissez une référence valide.";return;}
@@ -4022,9 +4034,9 @@ async function envoyerDemandeRenouvellementBoutique(id){
   const formule=option?.dataset?.config;if(!["boutiques_1mois","boutiques_2mois","boutiques_3mois"].includes(formule))throw new Error("Formule de renouvellement invalide.");
   const cfg=await obtenirConfigurationAbonnement(formule,true);
   if(!cfg.actif||tarifAbonnementEffectif(cfg)!==montant||dureeAbonnementEnJours(cfg)!==jours)throw new Error("La formule a changé. Rechargez le formulaire pour vérifier le tarif.");
-  const b=await db.collection("demandes_nouveaux_services").doc(id).get();if(!b.exists||b.data().uid!==user.uid||b.data().modePartenaire!==true)throw new Error("Dossier partenaire introuvable.");
-  const enAttente=await db.collection("demandes_renouvellement_boutiques").where("boutiqueId","==",id).where("statut","==","en_attente").limit(1).get();if(!enAttente.empty)throw new Error("Une demande est déjà en attente de vérification.");
-  await db.collection("demandes_renouvellement_boutiques").add({boutiqueId:id,uid:user.uid,email:user.email||"",operateur:op,referencePaiement:ref,nomPayeur:"",montantFCFA:montant,dureeJours:jours,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  const b=await partnerDb.collection("demandes_nouveaux_services").doc(id).get();if(!b.exists||b.data().uid!==user.uid||b.data().modePartenaire!==true)throw new Error("Dossier partenaire introuvable.");
+  const enAttente=await partnerDb.collection("demandes_renouvellement_boutiques").where("boutiqueId","==",id).where("statut","==","en_attente").limit(1).get();if(!enAttente.empty)throw new Error("Une demande est déjà en attente de vérification.");
+  await partnerDb.collection("demandes_renouvellement_boutiques").add({boutiqueId:id,uid:user.uid,email:user.email||"",operateur:op,referencePaiement:ref,nomPayeur:"",montantFCFA:montant,dureeJours:jours,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
   zone.textContent="Demande envoyée. Votre boutique restera invisible jusqu’à la vérification et la validation de l’administrateur.";
  }catch(e){console.error(e);zone.textContent="Envoi impossible : "+(e.message||"vérifiez les règles Firestore.");}
 }
@@ -4055,10 +4067,10 @@ async function traiterRenouvellementBoutiqueAdmin(id,approuver){
 }
 async function chargerCommandesBoutique(boutiqueId){
  const zone=document.getElementById("commandesBoutique_"+boutiqueId);if(!zone)return;
- const user=auth.currentUser;if(!user){zone.textContent="Connectez-vous au compte de la boutique.";return;}
+ const user=partnerAuth.currentUser,dbBoutique=partnerDb;if(!user){zone.textContent="Connectez-vous au compte de la boutique.";return;}
  zone.textContent="Chargement des commandes...";
  try{
-  const snap=await db.collection("commandes_colis").where("boutiqueId","==",boutiqueId).where("boutiqueUid","==",user.uid).get();
+  const snap=await dbBoutique.collection("commandes_colis").where("boutiqueId","==",boutiqueId).where("boutiqueUid","==",user.uid).get();
   if(snap.empty){zone.innerHTML='<p class="notice">Aucune commande reçue pour le moment.</p>';return;}
   const docs=snap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
   zone.innerHTML="";
@@ -4080,17 +4092,17 @@ async function chargerCommandesBoutique(boutiqueId){
  }catch(e){console.error(e);zone.textContent="Impossible de charger les commandes : "+e.message;}
 }
 async function declencherLivraisonBoutique(commandeId){
- const user=auth.currentUser;if(!user)return alert("Connectez-vous au compte boutique.");
+ const user=partnerAuth.currentUser,dbBoutique=partnerDb;if(!user)return alert("Connectez-vous au compte boutique.");
  const saisie=prompt("Fixez les frais de livraison de cette commande en FCFA. Ce montant sera communiqué au livreur avant son acceptation.","");
  if(saisie===null)return;
  const montant=Number(String(saisie).replace(/[\s.]/g,"").replace(",","."));
  if(!Number.isInteger(montant)||montant<1||montant>100000)return alert("Saisissez un montant entier compris entre 1 et 100 000 FCFA.");
  if(!confirm("Confirmer les frais de livraison de "+montant.toLocaleString("fr-FR")+" FCFA et transmettre la demande aux livreurs en ligne ?"))return;
  try{
-  const ref=db.collection("commandes_colis").doc(commandeId),snap=await ref.get();
+  const ref=dbBoutique.collection("commandes_colis").doc(commandeId),snap=await ref.get();
   if(!snap.exists)throw new Error("Commande introuvable.");
   const c=snap.data();if(c.boutiqueUid!==user.uid||c.statut!=="commande_boutique"||c.publicVersion===true)throw new Error("Cette commande ne peut plus être envoyée.");
-  const batch=db.batch();
+  const batch=dbBoutique.batch();
   batch.update(ref,{montantLivraisonBoutique:montant,statut:"en_attente",publicVersion:true,dateMiseEnLivraison:firebase.firestore.FieldValue.serverTimestamp()});
   batch.update(ref.collection("tarification").doc("prix"),{montantLivraison:montant,montantTotal:montant});
   await batch.commit();
@@ -6494,9 +6506,9 @@ async function connecterPartenaire(){
   }
 
   try {
-    const resultat = await auth.signInWithEmailAndPassword(email, motDePasse);
+    const resultat = await partnerAuth.signInWithEmailAndPassword(email, motDePasse);
     const uid = resultat.user.uid;
-    const dossierCompagnie = await db.collection("compagnies").where("uid","==",uid).limit(1).get();
+    const dossierCompagnie = await partnerDb.collection("compagnies").where("uid","==",uid).limit(1).get();
     if (!dossierCompagnie.empty) {
       const docCompagnie = dossierCompagnie.docs[0];
       document.getElementById("champsConnexionPartenaire").style.display = "none";
@@ -6506,13 +6518,13 @@ async function connecterPartenaire(){
       await afficherEspaceCompagnie(docCompagnie.id,docCompagnie.data());
       return;
     }
-    const documentPartenaire = await db
+    const documentPartenaire = await partnerDb
       .collection("partenaires")
       .doc(uid)
       .get();
 
     if(!documentPartenaire.exists){
-      await auth.signOut();
+      await partnerAuth.signOut();
       statut.textContent = "Aucun dossier partenaire trouvé.";
       return;
     }
@@ -6520,7 +6532,7 @@ async function connecterPartenaire(){
     const dossier = documentPartenaire.data();
 
     if(dossier.statut !== "approuve"){
-      await auth.signOut();
+      await partnerAuth.signOut();
       statut.textContent = dossier.statut === "refuse"
         ? "Votre demande de partenariat a été refusée."
         : "Votre dossier est encore en attente de validation.";
@@ -6545,13 +6557,13 @@ async function connecterPartenaire(){
     }
 
     if (etatCompte === "suspendu_definitivement") {
-      await auth.signOut();
+      await partnerAuth.signOut();
       statut.textContent = "Votre compte est suspendu définitivement. Motif : " + (dossier.motifModeration || "non précisé") + ". Contactez l'administrateur.";
       return;
     }
 
     if (etatCompte === "suspendu_temporairement") {
-      await auth.signOut();
+      await partnerAuth.signOut();
       const fin = dossier.suspensionFin && dossier.suspensionFin.toDate
         ? dossier.suspensionFin.toDate()
         : new Date(dossier.suspensionFin);
@@ -6573,7 +6585,7 @@ async function connecterPartenaire(){
       if (dossier.statutAbonnementPartenaire === "Essai" && dateFinEssai && dateFinEssai <= maintenant) {
         await documentPartenaire.ref.update({ statutAbonnementPartenaire: "Expiré" });
       }
-      await auth.signOut();
+      await partnerAuth.signOut();
       statut.textContent = "Votre période d'essai ou votre abonnement est terminé. Contactez l'administrateur pour activer ou renouveler votre abonnement.";
       return;
     }
@@ -6687,7 +6699,7 @@ function ecouterNouvellesCommandesPartenaire(uid, partenaire, missionActive) {
   if (ecouteFileCommandesPartenaire) { ecouteFileCommandesPartenaire(); ecouteFileCommandesPartenaire = null; }
   if (partenaire.enLigne !== true) { file.innerHTML = "<p>Vous êtes hors ligne. Passez en ligne pour recevoir les nouvelles commandes.</p>"; return; }
   if (missionActive) { file.innerHTML = "<p>Terminez votre mission actuelle avant d'en accepter une autre.</p>"; return; }
-  let requete = db.collection("commandes_colis").where("publicVersion", "==", true).where("statut", "==", "en_attente");
+  let requete = partnerDb.collection("commandes_colis").where("publicVersion", "==", true).where("statut", "==", "en_attente");
   requete = partenaire.type === "representant_gare"
     ? requete.where("service", "==", "compagnie")
     : requete.where("service", "in", ["livraison", "livraison_programmee"]);
@@ -6717,16 +6729,16 @@ function ecouterNouvellesCommandesPartenaire(uid, partenaire, missionActive) {
 
 async function chargerCommandesPartenaire() {
   const zone = document.getElementById("listeCommandesPartenaire");
-  const user = auth.currentUser;
+  const user = partnerAuth.currentUser;
   if (!zone) return;
   if (!user) {
-    zone.textContent = "Veuillez vous reconnecter.";
+    zone.textContent = "Veuillez vous reconnecter à votre espace partenaire.";
     return;
   }
 
   zone.innerHTML = "<p>Chargement de vos commandes...</p>";
   try {
-    const partenaireDoc = await db.collection("partenaires").doc(user.uid).get();
+    const partenaireDoc = await partnerDb.collection("partenaires").doc(user.uid).get();
     if (!partenaireDoc.exists) {
       zone.textContent = "Dossier partenaire introuvable.";
       return;
@@ -6747,7 +6759,7 @@ async function chargerCommandesPartenaire() {
       return;
     }
 
-    const resultat = await db.collection("commandes_colis")
+    const resultat = await partnerDb.collection("commandes_colis")
       .where("partenaireId", "==", user.uid)
       .get();
 
@@ -6795,9 +6807,11 @@ async function chargerCommandesPartenaire() {
 
 async function deconnecterPartenaire() {
   if (ecouteFileCommandesPartenaire) { ecouteFileCommandesPartenaire(); ecouteFileCommandesPartenaire = null; }
-  await auth.signOut();
+  await partnerAuth.signOut();
   const zone = document.getElementById("zoneEspacePartenaire");
   if (zone) zone.innerHTML = "";
+  const zoneCompagnie = document.getElementById("zoneEspaceCompagnie");
+  if (zoneCompagnie) zoneCompagnie.innerHTML = "";
   const statut = document.getElementById("statutConnexionPartenaire");
   if (statut) statut.textContent = "Vous êtes déconnecté.";
   const champsConnexion = document.getElementById("champsConnexionPartenaire");
@@ -7845,8 +7859,14 @@ async function inscrireCompteRamassage(role){
   if(!email||!password||!nom||!telephone) return alert("Veuillez remplir tous les champs.");
   if(password.length<6) return alert("Le mot de passe doit contenir au moins 6 caractères.");
   try{
-    const credential=await auth.createUserWithEmailAndPassword(email,password);
-    await db.collection("comptes_ramassage").doc(credential.user.uid).set({
+    const authRamassage=compagnie?partnerAuth:auth,dbRamassage=compagnie?partnerDb:db;
+    let credential;
+    try{credential=await authRamassage.createUserWithEmailAndPassword(email,password);}
+    catch(e){if(compagnie&&e.code==="auth/email-already-in-use")credential=await authRamassage.signInWithEmailAndPassword(email,password);else throw e;}
+    const profilRef=dbRamassage.collection("comptes_ramassage").doc(credential.user.uid);
+    const profilExistant=await profilRef.get();
+    if(profilExistant.exists){if(compagnie)await partnerAuth.signOut();throw new Error("Un compte existe déjà dans cet espace. Utilisez la connexion au lieu de créer un nouveau compte.");}
+    await profilRef.set({
       uid:credential.user.uid,role:role,nom:nom,telephone:telephone,email:email,
       statut:compagnie?"en_attente":"actif",
       abonnement:compagnie?"inactif":"non_applicable",
@@ -7864,16 +7884,18 @@ async function connecterCompteRamassage(role){
   const password=document.getElementById(compagnie?"ramassageCompanyPassword":"ramassageUserPassword").value;
   if(!email||!password)return alert("Saisissez votre e-mail et votre mot de passe.");
   try{
-    const credential=await auth.signInWithEmailAndPassword(email,password);
-    const snap=await db.collection("comptes_ramassage").doc(credential.user.uid).get();
-    if(!snap.exists||snap.data().role!==role){await auth.signOut();throw new Error("Ce compte n'est pas inscrit dans cet espace.");}
+    const authRamassage=compagnie?partnerAuth:auth,dbRamassage=compagnie?partnerDb:db;
+    const credential=await authRamassage.signInWithEmailAndPassword(email,password);
+    const snap=await dbRamassage.collection("comptes_ramassage").doc(credential.user.uid).get();
+    if(!snap.exists||snap.data().role!==role){await authRamassage.signOut();throw new Error("Ce compte n'est pas inscrit dans cet espace.");}
     ramassageRoleActif=role;
     await afficherEspaceRamassage(credential.user,snap.data());
     if(compagnie){afficherOngletRamassage("compagnie");ouvrirSectionPleinEcran("serviceRamassage","Espace compagnie de cars de ramassage");}
   }catch(e){alert("Connexion impossible : "+e.message);}
 }
 async function afficherEspaceRamassage(user,profil=null){
-  const snap=profil?null:await db.collection("comptes_ramassage").doc(user.uid).get();
+  const dbRamassage=ramassageRoleActif==="compagnie"?partnerDb:db;
+  const snap=profil?null:await dbRamassage.collection("comptes_ramassage").doc(user.uid).get();
   const p=profil||(snap&&snap.exists?snap.data():null);
   if(!p)throw new Error("Profil de ramassage introuvable.");
   const company=p.role==="compagnie";
@@ -7904,13 +7926,13 @@ async function publierDemandeRamassage(){
   }catch(e){alert("Publication impossible : "+e.message);}
 }
 async function publierOffreRamassage(){
-  const user=auth.currentUser;if(!user)return alert("Connectez-vous à votre compte compagnie.");
+  const user=partnerAuth.currentUser;if(!user)return alert("Connectez-vous à votre compte compagnie.");
   const val=id=>document.getElementById(id).value.trim();
   const commune=val("offreRamassageCommune"),points=val("offreRamassagePoints"),destination=val("offreRamassageDestination"),jours=val("offreRamassageJours"),heure=val("offreRamassageHeure"),places=Number(val("offreRamassagePlaces")),tarif=val("offreRamassageTarif");
   if(!commune||!points||!destination||!jours||!heure||!Number.isInteger(places)||places<1||places>100)return alert("Vérifiez les informations du trajet et les places disponibles.");
-  const profil=await db.collection("comptes_ramassage").doc(user.uid).get();if(!profil.exists)return alert("Profil compagnie introuvable.");
+  const profil=await partnerDb.collection("comptes_ramassage").doc(user.uid).get();if(!profil.exists)return alert("Profil compagnie introuvable.");
   try{
-    await db.collection("offres_ramassage").add({compagnieId:user.uid,compagnieNom:profil.data().nom,telephone:profil.data().telephone||"",communeDepart:commune,points:points,destination:destination,jours:jours,heure:heure,placesDisponibles:places,tarif:tarif?Number(tarif):null,statut:"publiee",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    await partnerDb.collection("offres_ramassage").add({compagnieId:user.uid,compagnieNom:profil.data().nom,telephone:profil.data().telephone||"",communeDepart:commune,points:points,destination:destination,jours:jours,heure:heure,placesDisponibles:places,tarif:tarif?Number(tarif):null,statut:"publiee",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     alert("Votre trajet est publié.");
     await chargerOffresRamassage();
   }catch(e){alert("Publication impossible : "+e.message);}
@@ -7935,7 +7957,7 @@ async function chargerDemandesRamassage(){
   const zone=document.getElementById("listeDemandesRamassage");if(!zone)return;
   zone.innerHTML="<p class='notice'>Chargement des recherches...</p>";
   try{
-    const snap=await db.collection("demandes_ramassage").where("statut","==","ouverte").get();
+    const snap=await partnerDb.collection("demandes_ramassage").where("statut","==","ouverte").get();
     if(snap.empty){zone.innerHTML="<p class='notice'>Aucune recherche ouverte pour le moment.</p>";return;}
     zone.innerHTML="";
     snap.forEach(doc=>{
@@ -7981,7 +8003,7 @@ async function activerAbonnementCompagnieRamassage(uid){
 
 async function deconnecterRamassage(){
   const etaitCompagnie=ramassageRoleActif==="compagnie";
-  await auth.signOut();ramassageRoleActif=null;
+  if(etaitCompagnie)await partnerAuth.signOut();else await auth.signOut();ramassageRoleActif=null;
   ["ramassageUsagerAuth","ramassageUsagerEspace","ramassageCompagnieEspace"].forEach(id=>{
     const element=document.getElementById(id);if(element)element.style.display=id==="ramassageUsagerAuth"?"block":"none";
   });
@@ -10379,10 +10401,10 @@ function partenaireAbonnementValide(p) {
 
 async function basculerDisponibilitePartenaire() {
   activerSonCommandesPartenaire();
-  const user = auth.currentUser;
+  const user = partnerAuth.currentUser;
   if (!user) return alert("Veuillez vous reconnecter.");
   try {
-    const ref = db.collection("partenaires").doc(user.uid);
+    const ref = partnerDb.collection("partenaires").doc(user.uid);
     const snap = await ref.get();
     if (!snap.exists || !partenaireAbonnementValide(snap.data())) {
       return alert("Votre dossier doit être approuvé et votre abonnement actif pour passer en ligne.");
@@ -10429,7 +10451,7 @@ function afficherEspacePartenaire(dossier, uid) {
 }
 
 async function chargerCommandesPartenaire() {
-  const user = auth.currentUser;
+  const user = partnerAuth.currentUser;
   const file = document.getElementById("fileCommandesPartenaire");
   const mission = document.getElementById("missionActivePartenaire");
   const historique = document.getElementById("historiquePartenaire");
@@ -10437,15 +10459,15 @@ async function chargerCommandesPartenaire() {
   file.innerHTML = "<p>Chargement des commandes disponibles...</p>";
   mission.innerHTML = "<p>Chargement de votre mission...</p>";
   try {
-    const pSnap = await db.collection("partenaires").doc(user.uid).get();
+    const pSnap = await partnerDb.collection("partenaires").doc(user.uid).get();
     if (!pSnap.exists) throw new Error("Dossier partenaire introuvable.");
     const p = pSnap.data();
     if (!partenaireAbonnementValide(p)) throw new Error("Votre compte ou abonnement n'est pas actif.");
-    const lockRef = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
+    const lockRef = partnerDb.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
     const lockSnap = await lockRef.get();
     let activeOrder = null;
     if (lockSnap.exists && lockSnap.data().commandeId) {
-      const activeSnap = await db.collection("commandes_colis").doc(lockSnap.data().commandeId).get();
+      const activeSnap = await partnerDb.collection("commandes_colis").doc(lockSnap.data().commandeId).get();
       if (activeSnap.exists) activeOrder = {id: activeSnap.id, ...activeSnap.data()};
     }
     if (activeOrder) {
@@ -10457,7 +10479,7 @@ async function chargerCommandesPartenaire() {
     ecouterNouvellesCommandesPartenaire(user.uid, p, activeOrder);
 
     if (historique) {
-      const hs = await db.collection("commandes_colis").where("partenaireId", "==", user.uid).get();
+      const hs = await partnerDb.collection("commandes_colis").where("partenaireId", "==", user.uid).get();
       const done = hs.docs.filter(d => ["livre","annule"].includes(d.data().statut));
       historique.innerHTML = done.length ? "" : "<p>Aucune mission terminée.</p>";
       done.forEach(d => {
@@ -10474,13 +10496,13 @@ async function chargerCommandesPartenaire() {
 }
 
 async function accepterCommandePartenaire(commandeId) {
-  const user = auth.currentUser;
+  const user = partnerAuth.currentUser;
   if (!user) return alert("Veuillez vous reconnecter.");
-  const commandeRef = db.collection("commandes_colis").doc(commandeId);
-  const partenaireRef = db.collection("partenaires").doc(user.uid);
+  const commandeRef = partnerDb.collection("commandes_colis").doc(commandeId);
+  const partenaireRef = partnerDb.collection("partenaires").doc(user.uid);
   const verrouRef = partenaireRef.collection("verrous").doc("missionActive");
   try {
-    await db.runTransaction(async tx => {
+    await partnerDb.runTransaction(async tx => {
       const [cSnap, pSnap, lSnap] = await Promise.all([tx.get(commandeRef), tx.get(partenaireRef), tx.get(verrouRef)]);
       if (!cSnap.exists || !pSnap.exists) throw new Error("Commande ou dossier partenaire introuvable.");
       const c = cSnap.data(), p = pSnap.data();
@@ -10513,7 +10535,7 @@ function demarrerPartagePositionLivreur(commandeId) {
     if (maintenant - derniereMajPositionLivreur < 12000) return;
     derniereMajPositionLivreur = maintenant;
     try {
-      await db.collection("commandes_colis").doc(commandeId).update({
+      await partnerDb.collection("commandes_colis").doc(commandeId).update({
         positionLivreur: {latitude:position.coords.latitude, longitude:position.coords.longitude, precision:Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null},
         positionLivreurMaj: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -10535,7 +10557,7 @@ async function afficherMissionPartenaire(c, partenaire, zone) {
   const labels={livreur_affecte:"Livreur en route",colis_recupere:"Colis récupéré",en_transit:"En cours de livraison",arrive_destination:"Arrivé à destination"};
   const status = document.createElement("p"); status.textContent = "Statut : " + (labels[c.statut] || c.statut || "");
   card.append(title, route, status);
-  const privateSnap = await db.collection("commandes_colis").doc(c.id).collection("informations_privees").doc("details").get();
+  const privateSnap = await partnerDb.collection("commandes_colis").doc(c.id).collection("informations_privees").doc("details").get();
   let details={};
   if (privateSnap.exists) {
     details = privateSnap.data();
@@ -10582,7 +10604,7 @@ async function afficherMissionPartenaire(c, partenaire, zone) {
   } else if (c.statut === "colis_recupere" || c.statut === "en_transit") {
     const arrive = document.createElement("button"); arrive.className = "primary"; arrive.textContent = "Arrivé à destination"; arrive.addEventListener("click", () => marquerArriveDestination(c.id)); card.appendChild(arrive);
   } else if (estArrive) {
-    const prixSnap=await db.collection("commandes_colis").doc(c.id).collection("tarification").doc("prix").get();
+    const prixSnap=await partnerDb.collection("commandes_colis").doc(c.id).collection("tarification").doc("prix").get();
     if(prixSnap.exists){
       const p=prixSnap.data();
       const montant=document.createElement("p"); montant.textContent="Montant Mon Quotidien CI à percevoir : "+Number(p.montantTotal||0).toLocaleString("fr-FR")+" FCFA"; card.appendChild(montant);
@@ -10604,7 +10626,7 @@ async function afficherMissionPartenaire(c, partenaire, zone) {
 
 async function naviguerVersEtapeCommande(commandeId, etape) {
   try {
-    const commandeRef = db.collection("commandes_colis").doc(commandeId);
+    const commandeRef = partnerDb.collection("commandes_colis").doc(commandeId);
     const snap = await commandeRef.get();
     if (!snap.exists) return alert("Commande introuvable.");
 
@@ -10641,13 +10663,13 @@ async function naviguerVersEtapeCommande(commandeId, etape) {
 }
 
 async function refuserMissionPartenaire(commandeId) {
-  const user = auth.currentUser;
+  const user = partnerAuth.currentUser;
   if (!user) return alert("Veuillez vous reconnecter.");
   if (!confirm("Confirmer le refus ? Cette action est possible uniquement avant la récupération du colis.")) return;
-  const ref = db.collection("commandes_colis").doc(commandeId);
-  const lock = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
+  const ref = partnerDb.collection("commandes_colis").doc(commandeId);
+  const lock = partnerDb.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
   try {
-    await db.runTransaction(async tx => {
+    await partnerDb.runTransaction(async tx => {
       const [snap, lockSnap] = await Promise.all([tx.get(ref), tx.get(lock)]);
       if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut !== "livreur_affecte") {
         throw new Error("Le colis a déjà été récupéré ou la mission n'est plus à votre nom.");
@@ -10673,11 +10695,11 @@ async function refuserMissionPartenaire(commandeId) {
 }
 
 async function marquerColisRecupere(commandeId) {
-  const user = auth.currentUser; if (!user) return;
+  const user = partnerAuth.currentUser; if (!user) return;
   if (!confirm("Confirmer que vous avez physiquement récupéré le colis ? Après cette étape, le refus par le livreur sera bloqué.")) return;
   try {
-    const ref = db.collection("commandes_colis").doc(commandeId);
-    await db.runTransaction(async tx => {
+    const ref = partnerDb.collection("commandes_colis").doc(commandeId);
+    await partnerDb.runTransaction(async tx => {
       const snap = await tx.get(ref);
       if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut !== "livreur_affecte") throw new Error("Cette mission ne peut plus être modifiée.");
       tx.update(ref,{statut:"colis_recupere",dateRecuperation:firebase.firestore.FieldValue.serverTimestamp()});
@@ -10688,11 +10710,11 @@ async function marquerColisRecupere(commandeId) {
 }
 
 async function marquerArriveDestination(commandeId) {
-  const user=auth.currentUser; if(!user) return;
+  const user=partnerAuth.currentUser; if(!user) return;
   if(!confirm("Confirmer votre arrivée au point de destination ? Le montant Mon Quotidien CI deviendra visible.")) return;
   try {
-    await db.runTransaction(async tx=>{
-      const ref=db.collection("commandes_colis").doc(commandeId), snap=await tx.get(ref);
+    await partnerDb.runTransaction(async tx=>{
+      const ref=partnerDb.collection("commandes_colis").doc(commandeId), snap=await tx.get(ref);
       if(!snap.exists || snap.data().partenaireId!==user.uid || !["colis_recupere","en_transit"].includes(snap.data().statut)) throw new Error("Cette mission ne peut pas passer à l'étape arrivée.");
       tx.update(ref,{statut:"arrive_destination",dateArriveeDestination:firebase.firestore.FieldValue.serverTimestamp()});
     });
@@ -10701,12 +10723,12 @@ async function marquerArriveDestination(commandeId) {
 }
 
 async function terminerMissionPartenaire(commandeId) {
-  const user = auth.currentUser; if (!user) return;
+  const user = partnerAuth.currentUser; if (!user) return;
   if (!confirm("Confirmez-vous que le règlement convenu a été effectué et que la course est terminée ?")) return;
-  const ref = db.collection("commandes_colis").doc(commandeId);
-  const lock = db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
+  const ref = partnerDb.collection("commandes_colis").doc(commandeId);
+  const lock = partnerDb.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
   try {
-    await db.runTransaction(async tx => {
+    await partnerDb.runTransaction(async tx => {
       const snap = await tx.get(ref);
       if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut!=="arrive_destination") throw new Error("La course ne peut pas être clôturée avant l'arrivée.");
       const prix=await tx.get(ref.collection("tarification").doc("prix"));
@@ -10720,15 +10742,15 @@ async function terminerMissionPartenaire(commandeId) {
 }
 
 async function terminerExpeditionGare(commandeId) {
-  const user=auth.currentUser; if(!user) return;
+  const user=partnerAuth.currentUser; if(!user) return;
   const lire=id=>{const el=document.getElementById(id);return el?el.value.trim():"";};
   const compagnie=lire("refCompagnieExpedition"), gareDestination=lire("refGareDestination"), codeColis=lire("refCodeColisExpedition");
   if(!compagnie||!gareDestination||!codeColis) return alert("Les trois références sont obligatoires.");
   if(!confirm("Confirmez-vous que le règlement Mon Quotidien CI a été effectué ? Les frais éventuels du service courrier de la gare restent distincts et convenus directement avec le client.\n\nEnregistrer les références d'expédition et terminer la course ?")) return;
-  const ref=db.collection("commandes_colis").doc(commandeId);
-  const lock=db.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
+  const ref=partnerDb.collection("commandes_colis").doc(commandeId);
+  const lock=partnerDb.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
   try{
-    const batch=db.batch();
+    const batch=partnerDb.batch();
     batch.set(ref.collection("informations_privees").doc("expedition"),{
       compagnieExpedition:compagnie,gareDestination,codeColis,partenaireId:user.uid,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
@@ -11815,7 +11837,7 @@ async function afficherEspaceCompagnie(id,c){
  const zone=document.getElementById("connexionPartenaire")||document.getElementById("zoneMenuColisPartenaire");
  let el=document.getElementById("zoneEspaceCompagnie");if(!el){el=document.createElement("div");el.id="zoneEspaceCompagnie";zone.appendChild(el);}
  el.innerHTML='<hr><h3>🏢 Espace compagnie – '+echapperTexteCompagnie(c.nom)+'</h3><p>Abonnement : '+echapperTexteCompagnie(c.statutAbonnement)+'</p>'+
- '<h4>Gare principale</h4><img src="'+echapperTexteCompagnie(c.photoGarePrincipale||"")+'" style="width:100%;max-height:170px;object-fit:cover;border-radius:12px">'+
+ '<button type="button" onclick="deconnecterPartenaire()">Se déconnecter de mon espace compagnie</button><h4>Gare principale</h4><img src="'+echapperTexteCompagnie(c.photoGarePrincipale||"")+'" style="width:100%;max-height:170px;object-fit:cover;border-radius:12px">'+
  '<label>Localisation précise</label><input id="espaceCompagnieLocalisation" value="'+echapperTexteCompagnie(c.localisation||"")+'">'+
  '<label>Contact public gare</label><input id="espaceCompagnieTelGare" value="'+echapperTexteCompagnie(c.telephoneGarePrincipale||"")+'">'+
  '<label>Contact public service courrier</label><input id="espaceCompagnieTelCourrier" value="'+echapperTexteCompagnie(c.telephoneServiceCourrier||"")+'">'+
@@ -11835,7 +11857,7 @@ async function afficherEspaceCompagnie(id,c){
 }
 async function enregistrerGarePrincipaleCompagnie(id){
  const status=document.getElementById("statutEspaceCompagnie");try{
-  const ref=db.collection("compagnies").doc(id),snap=await ref.get();if(!snap.exists||snap.data().uid!==auth.currentUser.uid)throw new Error("Dossier non autorisé.");
+  const ref=partnerDb.collection("compagnies").doc(id),snap=await ref.get();if(!snap.exists||snap.data().uid!==partnerAuth.currentUser.uid)throw new Error("Dossier non autorisé.");
   const localisation=document.getElementById("espaceCompagnieLocalisation").value.trim(),telephoneGare=document.getElementById("espaceCompagnieTelGare").value.trim(),courrier=document.getElementById("espaceCompagnieTelCourrier").value.trim(),telephoneResponsable=document.getElementById("espaceCompagnieTelResponsable").value.trim(),f=document.getElementById("espaceCompagniePhoto").files[0];
   const maj={localisation,telephoneGarePrincipale:telephoneGare,telephoneServiceCourrier:courrier};if(f){maj.photoGarePrincipale=await compresserImage(f);if(maj.photoGarePrincipale.length>700000)throw new Error("Photo trop volumineuse.");}
   if(!localisation||!telephoneGare||!courrier||(!f&&!snap.data().photoGarePrincipale))throw new Error("Localisation, photo et contacts publics requis.");
@@ -11846,11 +11868,11 @@ async function ajouterGareAnnexeCompagnie(id){
  const status=document.getElementById("statutEspaceCompagnie");try{
   const nom=document.getElementById("annexeNom").value.trim(),localisation=document.getElementById("annexeLocalisation").value.trim(),telephonePublic=document.getElementById("annexeTelPublic").value.trim(),telephoneServiceCourrier=document.getElementById("annexeTelCourrier").value.trim(),telephoneResponsable=document.getElementById("annexeTelResponsable").value.trim(),file=document.getElementById("annexePhoto").files[0],destinations=analyserDestinationsCompagnie(document.getElementById("annexeDestinations").value);
   if(!nom||!localisation||!telephonePublic||!telephoneServiceCourrier||!telephoneResponsable||!file)throw new Error("Tous les champs sont obligatoires, photo comprise.");
-  const parent=await db.collection("compagnies").doc(id).get();if(!parent.exists||parent.data().uid!==auth.currentUser.uid)throw new Error("Dossier compagnie non autorisé.");
+  const parent=await partnerDb.collection("compagnies").doc(id).get();if(!parent.exists||parent.data().uid!==partnerAuth.currentUser.uid)throw new Error("Dossier compagnie non autorisé.");
   const photo=await compresserImage(file);if(photo.length>700000)throw new Error("Photo trop volumineuse.");
-  const ref=db.collection("gares_compagnies").doc(),batch=db.batch(),now=firebase.firestore.FieldValue.serverTimestamp();
-  batch.set(ref,{compagnieId:id,compagnieUid:auth.currentUser.uid,type:"annexe",nom,photo,localisation,telephonePublic,telephoneServiceCourrier,destinations,statut:"en_attente",createdAt:now,updatedAt:now});
-  batch.set(ref.collection("informations_privees").doc("representant"),{uid:auth.currentUser.uid,telephoneResponsable,createdAt:now});
+  const ref=partnerDb.collection("gares_compagnies").doc(),batch=partnerDb.batch(),now=firebase.firestore.FieldValue.serverTimestamp();
+  batch.set(ref,{compagnieId:id,compagnieUid:partnerAuth.currentUser.uid,type:"annexe",nom,photo,localisation,telephonePublic,telephoneServiceCourrier,destinations,statut:"en_attente",createdAt:now,updatedAt:now});
+  batch.set(ref.collection("informations_privees").doc("representant"),{uid:partnerAuth.currentUser.uid,telephoneResponsable,createdAt:now});
   await batch.commit();status.textContent="Gare soumise à validation administrative.";
   ["annexeNom","annexeLocalisation","annexeTelPublic","annexeTelCourrier","annexeTelResponsable","annexePhoto","annexeDestinations"].forEach(x=>document.getElementById(x).value="");
   await chargerGaresAnnexesCompagnie(id);
@@ -11858,16 +11880,16 @@ async function ajouterGareAnnexeCompagnie(id){
 }
 async function chargerGaresAnnexesCompagnie(id){
  const z=document.getElementById("listeGaresAnnexesCompagnie");if(!z)return;
- try{const s=await db.collection("gares_compagnies").where("compagnieUid","==",auth.currentUser.uid).where("compagnieId","==",id).get();
+ try{const s=await partnerDb.collection("gares_compagnies").where("compagnieUid","==",partnerAuth.currentUser.uid).where("compagnieId","==",id).get();
  z.innerHTML=s.empty?"<p class='notice'>Aucune gare annexe.</p>":s.docs.map(d=>{const g=d.data();return '<article class="stop"><img src="'+echapperTexteCompagnie(g.photo)+'" style="width:100%;max-height:130px;object-fit:cover"><strong>'+echapperTexteCompagnie(g.nom)+'</strong><p>'+echapperTexteCompagnie(g.localisation)+'</p><p>Statut : '+echapperTexteCompagnie(g.statut)+'</p><p class="notice">Le téléphone du représentant est réservé à l’administration.</p></article>';}).join("");
  }catch(e){z.textContent="Erreur : "+e.message;}
 }
 async function chargerAvisCompagnie(id,espace){
  const z=document.getElementById(espace?"listeAvisCompagnie":"avisPublicsCompagnie");if(!z)return;
  try{
-  const q=await db.collection("avis_compagnies").where("compagnieId","==",id).where("statut","==","publie").get();
+  const baseDb=espace?partnerDb:db;const q=await baseDb.collection("avis_compagnies").where("compagnieId","==",id).where("statut","==","publie").get();
   let html=q.empty?"<p class='notice'>Aucun avis publié.</p>":q.docs.map(d=>{const a=d.data();return '<article class="stop"><strong>'+echapperTexteCompagnie(a.nomVoyageur)+'</strong> · '+a.note+'/5<p>'+echapperTexteCompagnie(a.commentaire)+'</p></article>';}).join("");
-  if(espace){const p=await db.collection("avis_compagnies").where("compagnieId","==",id).where("compagnieUid","==",auth.currentUser.uid).where("statut","==","en_attente").get();if(!p.empty){html+='<h5>Avis en attente de validation</h5>';p.forEach(d=>{const a=d.data();html+='<article class="stop"><strong>'+echapperTexteCompagnie(a.nomVoyageur)+'</strong> · '+a.note+'/5 · En attente<p>'+echapperTexteCompagnie(a.commentaire)+'</p></article>';});}}
+  if(espace){const p=await partnerDb.collection("avis_compagnies").where("compagnieId","==",id).where("compagnieUid","==",partnerAuth.currentUser.uid).where("statut","==","en_attente").get();if(!p.empty){html+='<h5>Avis en attente de validation</h5>';p.forEach(d=>{const a=d.data();html+='<article class="stop"><strong>'+echapperTexteCompagnie(a.nomVoyageur)+'</strong> · '+a.note+'/5 · En attente<p>'+echapperTexteCompagnie(a.commentaire)+'</p></article>';});}}
   z.innerHTML=html;
  }catch(e){z.textContent="Avis indisponibles : "+e.message;}
 }
