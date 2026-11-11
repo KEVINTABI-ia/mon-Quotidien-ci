@@ -804,6 +804,18 @@ describe("Mon Transport CI — règles Firestore", function () {
       return batch;
     };
 
+    it("protège le numéro privé du responsable de la gare principale", async () => {
+      await companySeed();
+      const db=testEnv.authenticatedContext(PARTNER_UID).firestore();
+      const {doc,setDoc,serverTimestamp,getDoc}=require("firebase/firestore");
+      const ref=doc(db,"compagnies",COMPANY_ID,"informations_privees","gare_principale");
+      await assertSucceeds(setDoc(ref,{uid:PARTNER_UID,telephoneResponsable:"0100000000",createdAt:serverTimestamp()}));
+      await assertFails(getDoc(ref));
+      await assertFails(getDoc(doc(testEnv.authenticatedContext(OTHER_UID).firestore(),"compagnies",COMPANY_ID,"informations_privees","gare_principale")));
+      await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(),"compagnies",COMPANY_ID,"informations_privees","gare_principale")));
+      await assertSucceeds(getDoc(doc(testEnv.authenticatedContext(ADMIN_UID).firestore(),"compagnies",COMPANY_ID,"informations_privees","gare_principale")));
+    });
+
     it("autorise la compagnie propriétaire à soumettre une gare et son numéro privé atomiquement", async () => {
       await companySeed();
       const db=testEnv.authenticatedContext(PARTNER_UID).firestore();
