@@ -63,6 +63,34 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "articles_boutiques",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "boutiqueId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "statut",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "articles_boutiques",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "boutiqueId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "boutiqueUid",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

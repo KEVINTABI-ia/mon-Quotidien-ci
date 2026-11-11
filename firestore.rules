@@ -720,7 +720,7 @@ service cloud.firestore {
           || (request.resource.data.modePartenaire == true
             && request.resource.data.categorie in ["Pièces détachées","Autre commerce"])
           || (request.resource.data.produits is list
-            && request.resource.data.produits.size() > 0
+            && request.resource.data.produits.size() <= 50
             && request.resource.data.adresseBoutique is string
             && request.resource.data.adresseBoutique.size() > 4
             && request.resource.data.adresseBoutique.size() <= 220
@@ -1107,6 +1107,39 @@ service cloud.firestore {
     match /configuration_abonnements/{configId} {
       allow read: if configId == "globale";
       allow create, update, delete: if estAdmin() && configId == "globale";
+    }
+
+
+    // Articles de boutiques : les vendeurs ne peuvent gérer que les articles de leur boutique active.
+    match /articles_boutiques/{articleId} {
+      function boutiqueActive(boutiqueId) {
+        return estConnecte()
+          && exists(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId))
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.type == "commerce"
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.uid == request.auth.uid
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.statut == "approuve"
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.abonnementFin is timestamp
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.abonnementFin > request.time;
+      }
+      allow read: if estAdmin()
+        || (estConnecte() && resource.data.boutiqueUid == request.auth.uid)
+        || resource.data.statut == "approuve";
+      allow create: if boutiqueActive(request.resource.data.boutiqueId)
+        && request.resource.data.boutiqueUid == request.auth.uid
+        && request.resource.data.keys().hasAll(["boutiqueId","boutiqueUid","boutiqueNom","nom","categorie","prix","description","photoUrl","disponible","statut","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["boutiqueId","boutiqueUid","boutiqueNom","nom","categorie","prix","description","photoUrl","disponible","statut","createdAt","updatedAt"])
+        && request.resource.data.nom is string && request.resource.data.nom.size() > 0 && request.resource.data.nom.size() <= 100
+        && request.resource.data.categorie is string && request.resource.data.categorie.size() > 0 && request.resource.data.categorie.size() <= 70
+        && request.resource.data.prix is int && request.resource.data.prix > 0 && request.resource.data.prix <= 100000000
+        && request.resource.data.description is string && request.resource.data.description.size() <= 700
+        && request.resource.data.photoUrl is string && request.resource.data.photoUrl.size() <= 400000 && request.resource.data.photoUrl.matches("^data:image/jpeg;base64,.*$")
+        && request.resource.data.disponible is bool
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if estAdmin();
+      allow delete: if estAdmin()
+        || (estConnecte() && resource.data.boutiqueUid == request.auth.uid && boutiqueActive(resource.data.boutiqueId));
     }
 
     match /{document=**} {
