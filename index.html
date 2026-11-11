@@ -3967,6 +3967,7 @@ async function connecterCompteBoutique(){
   const boutique=snap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0))[0];
   if(!boutique){await auth.signOut();statut.textContent="Aucune boutique approuvée n'est liée à ce compte.";return;}
   const d=boutique.data(),fin=d.abonnementFin&&d.abonnementFin.toDate?d.abonnementFin.toDate():null,actif=!!fin&&fin.getTime()>Date.now();
+  if(!actif&&d.modePartenaire!==true){await auth.signOut();statut.textContent="Aucune boutique approuvée avec un abonnement actif n'est liée à ce compte.";return;}
   statut.textContent=actif?"Connexion réussie.":"Votre période gratuite ou votre abonnement est terminé. Votre boutique n'est plus visible.";
   const zone=document.getElementById("boutiqueCompteConnecte");
   if(zone){
@@ -7448,8 +7449,14 @@ async function connecterCompteAbonnementAuto(){
 async function creerCompteAbonnementAuto(){
   const email=document.getElementById("emailAbonnementAuto").value.trim(),mot=document.getElementById("motPasseAbonnementAuto").value;
   if(!email||mot.length<6)return alert("Renseignez un e-mail valide et un mot de passe d'au moins 6 caractères.");
-  try{await auth.createUserWithEmailAndPassword(email,mot);document.getElementById("connexionAbonnementAuto").style.display="none";document.getElementById("formulaireDemandeAbonnementAuto").style.display="block";await actualiserEtatAbonnementAutomobiliste();}
-  catch(e){alert("Création du compte impossible : "+e.message);}
+  try{
+    const credential=await auth.createUserWithEmailAndPassword(email,mot);
+    const nom=(email.split("@")[0]||"Utilisateur").slice(0,100);
+    await mqciEnregistrerProfil(credential.user,nom);
+    document.getElementById("connexionAbonnementAuto").style.display="none";
+    document.getElementById("formulaireDemandeAbonnementAuto").style.display="block";
+    await actualiserEtatAbonnementAutomobiliste();
+  }catch(e){alert("Création du compte impossible : "+e.message);}
 }
 async function deconnecterCompteAbonnementAuto(){await auth.signOut();abonnementAutomobilisteValide=false;document.getElementById("formulaireDemandeAbonnementAuto").style.display="none";document.getElementById("connexionAbonnementAuto").style.display="block";}
 
