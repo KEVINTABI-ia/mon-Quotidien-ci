@@ -3395,7 +3395,10 @@ async function mqciEnvoyerCodeSMS(){
     const phone=mqciNormaliserTelephoneAuth(document.getElementById("mqci-auth-phone").value);
     const btn=document.getElementById("mqci-auth-send-code");btn.disabled=true;mqciAuthStatut("Préparation de la vérification SMS...");
     window.__mqciAuthFlowInProgress=true;
-    if(!window.mqciRecaptchaVerifier)window.mqciRecaptchaVerifier=new firebase.auth.RecaptchaVerifier("mqci-recaptcha-container",{size:"normal",callback:()=>{}, "expired-callback":()=>{mqciAuthStatut("La vérification a expiré. Recommencez.",true);}});
+    if(!window.mqciRecaptchaVerifier){
+      window.mqciRecaptchaVerifier=new firebase.auth.RecaptchaVerifier("mqci-recaptcha-container",{size:"normal",callback:()=>{mqciAuthStatut("Vérification reCAPTCHA validée. Envoi du SMS...");}, "expired-callback":()=>{mqciAuthStatut("La vérification a expiré. Cochez à nouveau la case reCAPTCHA.",true);}},auth);
+      await window.mqciRecaptchaVerifier.render();
+    }
     mqciConfirmationSMS=await auth.signInWithPhoneNumber(phone,window.mqciRecaptchaVerifier);
     mqciCodeEnvoye=true;mqciAuthStatut("Code envoyé. Consultez vos SMS puis saisissez le code reçu.");
     document.getElementById("mqci-auth-code").focus();
