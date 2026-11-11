@@ -3665,7 +3665,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
  ${type==="annonce"?'<div id="zoneAbonnementPetitesAnnonces" style="margin:12px 0;"><button type="button" onclick="ouvrirGestionAbonnementPetitesAnnonces()">Consulter mon abonnement / renouveler</button></div>':""}
- ${type==="commerce"&&!modePartenaire?'<div style="padding:12px;background:#FFF8E8;border:1px solid #E8D39A;border-radius:10px;margin:12px 0;"><strong>Choisissez votre abonnement boutique</strong><label>Durée</label><select id="nsDureeAbonnement" required><option value="30" data-montant="2500">1 mois — 2 500 FCFA</option><option value="60" data-montant="4500">2 mois — 4 500 FCFA</option><option value="90" data-montant="7000">3 mois — 7 000 FCFA</option></select><p>Pour rendre votre boutique visible et permettre aux utilisateurs de vous contacter, effectuez le paiement par Orange Money ou Wave.</p><p id="coordonneesPaiementBoutique">Chargement des coordonnées de paiement...</p><label>Moyen de paiement</label><select id="nsPaiementMoyen" required><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select><label>Référence de la transaction</label><input id="nsPaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required><small>La boutique sera publiée après vérification du paiement par l’administration.</small></div>':''}
+ ${type==="commerce"&&!modePartenaire?genererFormulairePaiementCommun("ns",{duree:true,coordId:"coordonneesPaiementBoutique",titre:"Choisissez votre abonnement boutique"})::''}
  ${type==="commerce"&&modePartenaire?'<p class="notice">Inscription partenaire gratuite. Après approbation par l’administration, votre boutique bénéficiera de 30 jours de visibilité gratuite. Un abonnement sera nécessaire pour continuer après cette période.</p>':''}
  <button id="nsEnvoyerValidation" class="primary" type="button">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
@@ -3984,18 +3984,23 @@ async function connecterCompteBoutique(){
 }
 function afficherFormulaireRenouvellementBoutique(id){
  const zone=document.getElementById("formRenouvellementBoutique_"+id);if(!zone)return;
- zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><h4>Renouveler mon abonnement</h4><p>Effectuez votre paiement avec les coordonnées habituelles, puis transmettez la référence pour vérification.</p><div id="coordonneesRenouvellementBoutique_'+id+'">Chargement...</div><label>Moyen de paiement</label><select id="renouvBoutiqueOperateur_'+id+'"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select><label>Référence de transaction</label><input id="renouvBoutiqueReference_'+id+'" maxlength="80"><label>Nom du payeur</label><input id="renouvBoutiquePayeur_'+id+'" maxlength="80"><label>Montant payé (FCFA)</label><input id="renouvBoutiqueMontant_'+id+'" type="number" min="1" step="1"><label>Durée souhaitée (jours)</label><input id="renouvBoutiqueDuree_'+id+'" type="number" min="1" max="365" value="30"><button type="button" class="primary" onclick="envoyerDemandeRenouvellementBoutique(\''+id+'\')">Envoyer à l’administrateur</button><p id="statutRenouvBoutique_'+id+'" class="notice"></p></div>';
- window.chargerCoordonneesPaiementMQCI().then(p=>{const z=document.getElementById("coordonneesRenouvellementBoutique_"+id);if(z)z.textContent="Wave / Orange Money : "+p.numero+" · Bénéficiaire : "+p.beneficiaire;}).catch(()=>{const z=document.getElementById("coordonneesRenouvellementBoutique_"+id);if(z)z.textContent="Coordonnées de paiement indisponibles.";});
+ const prefix="renouvBoutique_"+id;
+ zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><h4>Renouveler mon abonnement</h4><p>Choisissez une formule et effectuez le paiement avec les coordonnées habituelles.</p>'+genererFormulairePaiementCommun(prefix,{duree:true,coordId:"coordonneesRenouvellementBoutique_"+id})+'<button type="button" class="primary" onclick="envoyerDemandeRenouvellementBoutique(\\''+id+'\\')">Envoyer à l’administrateur</button><p id="statutRenouvBoutique_'+id+'" class="notice"></p></div>';
+ initialiserFormulairePaiementCommun(prefix,["boutiques_1mois","boutiques_2mois","boutiques_3mois"],"coordonneesRenouvellementBoutique_"+id);
 }
 async function envoyerDemandeRenouvellementBoutique(id){
  const user=auth.currentUser;if(!user)return alert("Connectez-vous au compte de votre boutique.");
- const op=document.getElementById("renouvBoutiqueOperateur_"+id).value,ref=document.getElementById("renouvBoutiqueReference_"+id).value.trim(),payeur=document.getElementById("renouvBoutiquePayeur_"+id).value.trim(),montant=Number(document.getElementById("renouvBoutiqueMontant_"+id).value),jours=Number(document.getElementById("renouvBoutiqueDuree_"+id).value),zone=document.getElementById("statutRenouvBoutique_"+id);
- if(!["Wave","Orange Money"].includes(op)||ref.length<4||!Number.isInteger(montant)||montant<1||!Number.isInteger(jours)||jours<1||jours>365){zone.textContent="Vérifiez le moyen de paiement, la référence, le montant et la durée.";return;}
+ const prefix="renouvBoutique_"+id,op=document.getElementById(prefix+"PaiementMoyen")?.value||"",ref=document.getElementById(prefix+"PaiementReference")?.value.trim()||"",select=document.getElementById(prefix+"DureeAbonnement"),option=select?.selectedOptions?.[0],montant=Number(option?.dataset?.montant||0),jours=Number(select?.value||0),zone=document.getElementById("statutRenouvBoutique_"+id);
+ if(!zone)return;
+ if(!["Wave","Orange Money"].includes(op)||ref.length<4||ref.length>80||!Number.isInteger(montant)||montant<1||!Number.isInteger(jours)||jours<1||jours>365){zone.textContent="Choisissez une formule disponible, un moyen de paiement et saisissez une référence valide.";return;}
  zone.textContent="Envoi de la demande...";
  try{
+  const formule=option?.dataset?.config;if(!["boutiques_1mois","boutiques_2mois","boutiques_3mois"].includes(formule))throw new Error("Formule de renouvellement invalide.");
+  const cfg=await obtenirConfigurationAbonnement(formule,true);
+  if(!cfg.actif||tarifAbonnementEffectif(cfg)!==montant||dureeAbonnementEnJours(cfg)!==jours)throw new Error("La formule a changé. Rechargez le formulaire pour vérifier le tarif.");
   const b=await db.collection("demandes_nouveaux_services").doc(id).get();if(!b.exists||b.data().uid!==user.uid||b.data().modePartenaire!==true)throw new Error("Dossier partenaire introuvable.");
   const enAttente=await db.collection("demandes_renouvellement_boutiques").where("boutiqueId","==",id).where("statut","==","en_attente").limit(1).get();if(!enAttente.empty)throw new Error("Une demande est déjà en attente de vérification.");
-  await db.collection("demandes_renouvellement_boutiques").add({boutiqueId:id,uid:user.uid,email:user.email||"",operateur:op,referencePaiement:ref,nomPayeur:payeur,montantFCFA:montant,dureeJours:jours,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  await db.collection("demandes_renouvellement_boutiques").add({boutiqueId:id,uid:user.uid,email:user.email||"",operateur:op,referencePaiement:ref,nomPayeur:"",montantFCFA:montant,dureeJours:jours,formule,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
   zone.textContent="Demande envoyée. Votre boutique restera invisible jusqu’à la vérification et la validation de l’administrateur.";
  }catch(e){console.error(e);zone.textContent="Envoi impossible : "+(e.message||"vérifiez les règles Firestore.");}
 }
@@ -4470,14 +4475,28 @@ function tarifAbonnementEffectif(c){
  return c.promotionActive&&c.promotionPrix>0&&c.promotionPrix<=c.prix&&debut&&fin&&maintenant>=debut&&maintenant<=fin?Number(c.promotionPrix):Number(c.prix);
 }
 function dureeAbonnementEnJours(c){const n=Number(c.duree||1);return c.unite==="mois"?Math.round(n*30):n;}
-async function initialiserFormulaireAbonnementBoutique(){
- const select=document.getElementById("nsDureeAbonnement");if(!select)return;
+function genererFormulairePaiementCommun(prefix,options={}){
+ const duree=options.duree!==false,coordId=options.coordId||("coordonneesPaiement_"+prefix);
+ return '<div style="padding:12px;background:#F0F7F1;border:1px solid #DCEBDD;border-radius:10px;margin:12px 0;">'+
+  (options.titre?'<strong>'+options.titre+'</strong>':'')+
+  (duree?'<label for="'+prefix+'DureeAbonnement">Formule / durée</label><select id="'+prefix+'DureeAbonnement" required><option value="">Chargement des formules...</option></select>':'')+
+  '<p id="'+coordId+'">Chargement des coordonnées de paiement...</p>'+
+  '<label for="'+prefix+'PaiementMoyen">Moyen de paiement</label><select id="'+prefix+'PaiementMoyen" required><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select>'+
+  '<label for="'+prefix+'PaiementReference">Référence de la transaction</label><input id="'+prefix+'PaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required>'+
+  '<small>Votre demande sera transmise à l’administration. La visibilité sera rétablie uniquement après vérification du paiement.</small></div>';
+}
+async function initialiserFormulairePaiementCommun(prefix,ids,coordId){
  try{
-  const formules=await Promise.all(["boutiques_1mois","boutiques_2mois","boutiques_3mois"].map(async id=>({id,c:await obtenirConfigurationAbonnement(id)})));
-  const options=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&dureeAbonnementEnJours(x.c)>0).map(x=>{const jours=dureeAbonnementEnJours(x.c),prix=tarifAbonnementEffectif(x.c);return '<option value="'+jours+'" data-montant="'+prix+'" data-config="'+x.id+'">'+Number(x.c.duree)+' mois — '+prix.toLocaleString("fr-FR")+' FCFA'+(prix<x.c.prix?' (promotion)':'')+'</option>';});
-  select.innerHTML=options.length?options.join(""):'<option value="">Souscriptions temporairement suspendues ou formules non configurées</option>';
-  select.disabled=!options.length;
- }catch(e){console.error(e);select.disabled=true;}
+  const paiement=await window.chargerCoordonneesPaiementMQCI(),zone=document.getElementById(coordId||("coordonneesPaiement_"+prefix));
+  if(zone)zone.textContent="Wave : "+paiement.numero+" · Orange Money : "+paiement.numero+" · Titulaire : "+paiement.beneficiaire;
+  const select=document.getElementById(prefix+"DureeAbonnement");if(!select)return;
+  const formules=await Promise.all(ids.map(async id=>({id,c:await obtenirConfigurationAbonnement(id)})));
+  const options=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&dureeAbonnementEnJours(x.c)>0).map(x=>{const jours=dureeAbonnementEnJours(x.c),prix=tarifAbonnementEffectif(x.c);return '<option value="'+jours+'" data-montant="'+prix+'" data-config="'+x.id+'">'+Number(x.c.duree)+' '+(x.c.unite==="mois"?"mois":"jours")+' — '+prix.toLocaleString("fr-FR")+' FCFA'+(prix<x.c.prix?' (promotion)':'')+'</option>';});
+  select.innerHTML=options.length?'<option value="">Choisir une formule</option>'+options.join(""):'<option value="">Formules indisponibles</option>';select.disabled=!options.length;
+ }catch(e){console.error("Formulaire de paiement commun",e);const select=document.getElementById(prefix+"DureeAbonnement");if(select)select.disabled=true;const zone=document.getElementById(coordId||("coordonneesPaiement_"+prefix));if(zone)zone.textContent="Coordonnées ou formules de paiement indisponibles.";}
+}
+async function initialiserFormulaireAbonnementBoutique(){
+ await initialiserFormulairePaiementCommun("ns",["boutiques_1mois","boutiques_2mois","boutiques_3mois"],"coordonneesPaiementBoutique");
 }
 
 function valeurConfigAbonnement(id,champ){
