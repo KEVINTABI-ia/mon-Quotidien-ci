@@ -4067,7 +4067,7 @@ async function traiterRenouvellementBoutiqueAdmin(id,approuver){
 }
 async function chargerCommandesBoutique(boutiqueId){
  const zone=document.getElementById("commandesBoutique_"+boutiqueId);if(!zone)return;
- const authBoutique=boutiqueSessionPartenaire?partnerAuth:auth,dbBoutique=boutiqueSessionPartenaire?partnerDb:db;const user=authBoutique.currentUser;if(!user){zone.textContent="Connectez-vous au compte de la boutique.";return;}
+ const user=partnerAuth.currentUser,dbBoutique=partnerDb;if(!user){zone.textContent="Connectez-vous au compte de la boutique.";return;}
  zone.textContent="Chargement des commandes...";
  try{
   const snap=await dbBoutique.collection("commandes_colis").where("boutiqueId","==",boutiqueId).where("boutiqueUid","==",user.uid).get();
@@ -4092,7 +4092,7 @@ async function chargerCommandesBoutique(boutiqueId){
  }catch(e){console.error(e);zone.textContent="Impossible de charger les commandes : "+e.message;}
 }
 async function declencherLivraisonBoutique(commandeId){
- const authBoutique=boutiqueSessionPartenaire?partnerAuth:auth,dbBoutique=boutiqueSessionPartenaire?partnerDb:db;const user=authBoutique.currentUser;if(!user)return alert("Connectez-vous au compte boutique.");
+ const user=partnerAuth.currentUser,dbBoutique=partnerDb;if(!user)return alert("Connectez-vous au compte boutique.");
  const saisie=prompt("Fixez les frais de livraison de cette commande en FCFA. Ce montant sera communiqué au livreur avant son acceptation.","");
  if(saisie===null)return;
  const montant=Number(String(saisie).replace(/[\s.]/g,"").replace(",","."));
