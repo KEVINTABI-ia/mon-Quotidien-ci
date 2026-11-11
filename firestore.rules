@@ -191,7 +191,10 @@ service cloud.firestore {
           && (!request.resource.data.keys().hasAny(["telephoneServiceCourrier"])
             || (request.resource.data.telephoneServiceCourrier is string && request.resource.data.telephoneServiceCourrier.size() >= 6 && request.resource.data.telephoneServiceCourrier.size() <= 25))
         );
-      allow update, delete: if estAdmin();
+      allow update: if estAdmin()
+        || (estConnecte() && resource.data.uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["photoGarePrincipale","telephoneGarePrincipale","telephoneServiceCourrier","localisation"]));
+      allow delete: if estAdmin();
     }
 
 
