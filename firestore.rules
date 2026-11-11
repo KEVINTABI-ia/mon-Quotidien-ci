@@ -335,7 +335,7 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.statut == "approuve"
         && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin is timestamp
         && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin > request.time
-        && request.resource.data.montantLivraisonBoutique in [1000,1500,2000,2500]
+        && request.resource.data.montantLivraisonBoutique == 0
         && existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details)
         && getAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details).data.clientId == request.auth.uid
         && existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix)
@@ -412,7 +412,13 @@ service cloud.firestore {
           && request.resource.data.statut == "en_attente"
           && request.resource.data.publicVersion == true
           && request.resource.data.dateMiseEnLivraison == request.time
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","publicVersion","dateMiseEnLivraison"])
+           && request.resource.data.montantLivraisonBoutique is int
+           && request.resource.data.montantLivraisonBoutique > 0
+           && request.resource.data.montantLivraisonBoutique <= 100000
+           && existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix)
+           && getAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix).data.montantLivraison == request.resource.data.montantLivraisonBoutique
+           && getAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix).data.montantTotal == request.resource.data.montantLivraisonBoutique
+           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","publicVersion","dateMiseEnLivraison","montantLivraisonBoutique"])
         )
         || (
           estConnecte()
@@ -586,7 +592,21 @@ service cloud.firestore {
             && get(commandePath(commandeId)).data.partenaireId == request.auth.uid
             && (get(commandePath(commandeId)).data.statut == "arrive_destination"
               || get(commandePath(commandeId)).data.statut == "livre"));
-        allow update, delete: if estAdmin();
+        allow update: if estAdmin()
+          || (docId == "prix"
+            && estConnecte()
+            && get(commandePath(commandeId)).data.typeCommande == "boutique"
+            && get(commandePath(commandeId)).data.boutiqueUid == request.auth.uid
+            && get(commandePath(commandeId)).data.statut == "commande_boutique"
+            && getAfter(commandePath(commandeId)).data.statut == "en_attente"
+            && getAfter(commandePath(commandeId)).data.publicVersion == true
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["montantLivraison","montantTotal"])
+            && request.resource.data.montantLivraison is int
+            && request.resource.data.montantLivraison > 0
+            && request.resource.data.montantLivraison <= 100000
+            && request.resource.data.montantTotal == request.resource.data.montantLivraison
+            && request.resource.data.montantLivraison == getAfter(commandePath(commandeId)).data.montantLivraisonBoutique);
+        allow delete: if estAdmin();
       }
 
     }
@@ -740,7 +760,7 @@ service cloud.firestore {
       allow create: if estConnecte()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","telephone","description","email","statut","createdAt"])
-        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","telephone","description","email","photoUrl","produits","adresseBoutique","tarifLivraisonBoutique","paiementMoyen","paiementReference","montantAbonnement","dureeAbonnementJours","paiementStatut","modePartenaire","rubrique","quartier","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","telephone","description","email","photoUrl","adresseBoutique","paiementMoyen","paiementReference","montantAbonnement","dureeAbonnementJours","paiementStatut","modePartenaire","rubrique","quartier","statut","createdAt"])
         && request.resource.data.type in ["depannage","commerce","annonce","annuaire"]
         && (request.resource.data.type != "annuaire"
           || (request.resource.data.rubrique in ["educationFormation","logementImmobilier","depannageDomicile","agricultureElevage","evenementsPrestations","artisansProfessionnels"]
@@ -751,12 +771,9 @@ service cloud.firestore {
         && (request.resource.data.type != "commerce"
           || (request.resource.data.modePartenaire == true
             && request.resource.data.categorie in ["Pièces détachées","Autre commerce"])
-          || (request.resource.data.produits is list
-            && request.resource.data.produits.size() <= 50
-            && request.resource.data.adresseBoutique is string
+          || (request.resource.data.adresseBoutique is string
             && request.resource.data.adresseBoutique.size() > 4
             && request.resource.data.adresseBoutique.size() <= 220
-            && request.resource.data.tarifLivraisonBoutique in [1000,1500,2000,2500]
             && request.resource.data.paiementMoyen in ["Wave","Orange Money"]
             && request.resource.data.paiementReference is string
             && request.resource.data.paiementReference.size() >= 4
