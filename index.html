@@ -11688,7 +11688,10 @@ function ouvrirMapGareCompagnie(adresse){
  window.open("https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(adresse),"_blank","noopener");
 }
 function analyserDestinationsCompagnie(texte){
- return String(texte||"").split(/\n/).map(l=>l.trim()).filter(Boolean).map(l=>{
+ const lignes=String(texte||"").split(/\n/).map(l=>l.trim()).filter(Boolean);
+ if(!lignes.length)throw new Error("Ajoutez au moins une destination avec son prix et ses heures de départ.");
+ if(lignes.length>100)throw new Error("Vous pouvez ajouter au maximum 100 destinations.");
+ return lignes.map(l=>{
   const p=l.split("|"),ville=(p[0]||"").trim(),prix=Number((p[1]||"").trim()),heures=(p[2]||"").split(",").map(x=>x.trim()).filter(Boolean);
   if(!ville||!Number.isFinite(prix)||prix<=0||!heures.length||heures.some(h=>!/^([01]\d|2[0-3]):[0-5]\d$/.test(h)))throw new Error("Format : Destination | Prix FCFA | 06:00, 08:00.");
   return {ville,prix,heures};
