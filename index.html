@@ -3629,7 +3629,8 @@ async function envoyerFichierFirebaseStorage(fichier, categorie) {
     : fichierAEnvoyer.type === "image/webp" ? "webp"
     : fichier.type === "video/quicktime" ? "mov"
     : fichier.type === "video/webm" ? "webm" : "mp4";
-  const chemin = estLogo ? "compagnies/logos/" + identifiant + "." + extension
+  if (estLogo && !auth.currentUser) throw new Error("Connectez-vous avant de modifier un logo.");
+  const chemin = estLogo ? "compagnies/logos/" + auth.currentUser.uid + "/" + identifiant + "." + extension
     : "publicites/" + identifiant + "." + extension;
   try {
     const reference = storage.ref().child(chemin);
