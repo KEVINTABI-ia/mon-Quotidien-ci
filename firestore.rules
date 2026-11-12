@@ -1432,7 +1432,9 @@ service cloud.firestore {
         && request.resource.data.statutCompte == "actif"
         && request.resource.data.statutAbonnement == "essai"
         && request.resource.data.finEssai is timestamp
-        && request.resource.data.createdAt is timestamp;
+        && request.resource.data.finEssai > request.time
+        && request.resource.data.finEssai <= request.time + duration.value(30, "d")
+        && request.resource.data.createdAt == request.time;
       allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
       allow update: if estAdmin();
       allow delete: if estAdmin();
