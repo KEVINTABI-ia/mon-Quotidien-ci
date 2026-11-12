@@ -1023,4 +1023,35 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
   });
 
+
+  describe("Contrôles complémentaires — paiements et parcours gratuits", () => {
+    it("refuse une inscription payante de compagnie avec des données autrement valides", async () => {
+      const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
+      await assertFails(setDoc(doc(db,"compagnies","compagnie-paiement-bloque"),{
+        uid:CLIENT_UID,nom:"Compagnie test",agence:"Agence principale",
+        localisation:"Yopougon, Abidjan",telephone:"0700000000",email:"client@example.test",
+        destinations:[{ville:"Bouaké"}],
+        photoGarePrincipale:"data:image/jpeg;base64,abcdefghijklmnopqrstuvwxyz0123456789",
+        telephoneGarePrincipale:"0700000001",telephoneServiceCourrier:"0700000002",
+        formule:"Essentielle",periodicite:"Mensuel",montant:5000,dureeMois:1,
+        moyenPaiement:"Wave",referencePaiement:"REF-TEST-1234",
+        statutAbonnement:"En attente",dateCreation:serverTimestamp(),
+        dateDebut:null,dateExpiration:null
+      }));
+    });
+
+    it("conserve l'inscription partenaire gratuite d'une boutique pour 30 jours", async () => {
+      const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
+      await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","boutique-partenaire-essai-gratuit"),{
+        uid:CLIENT_UID,type:"commerce",titre:"Boutique partenaire test",
+        categorie:"Boutique",commune:"Yopougon",telephone:"0700000000",
+        description:"Présentation de la boutique partenaire de test.",
+        email:"client@example.test",modePartenaire:true,
+        statut:"en_attente",createdAt:serverTimestamp()
+      }));
+    });
+  });
+
 });
