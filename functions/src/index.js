@@ -30,9 +30,11 @@ function verifyWaveSignature(req, secret) {
   const timestamp = fields.t;
   const signatures = header.split(",").filter(x => x.trim().startsWith("v1=")).map(x => x.trim().slice(3));
   if (!timestamp || !/^\d+$/.test(timestamp) || !signatures.length) return false;
-  const age = Math.abs(Date.now() - Number(timestamp) * 1000);
-  if (!Number.isFinite(age) || age > 5 * 60 * 1000) return false;
-  const digest = crypto.createHmac("sha256", secret).update(timestamp + "." + req.rawBody.toString("utf8")).digest("hex");
+  const timestampSeconds = Number(timestamp);
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (!Number.isSafeInteger(timestampSeconds) || timestampSeconds < nowSeconds - 300 || timestampSeconds > nowSeconds + 30) return false;
+  // Wave signs the exact raw payload: Unix timestamp immediately followed by the raw body (no separator).
+  const digest = crypto.createHmac("sha256", secret).update(timestamp).update(req.rawBody).digest("hex");
   return signatures.some(signature => safeEqualHex(signature, digest));
 }
 async function waveRequest(path, options = {}, apiKey) {
