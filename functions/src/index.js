@@ -73,13 +73,33 @@ exports.createWaveCheckout = onRequest(
           !validReturnUrl(successUrl) || !validReturnUrl(errorUrl)) {
         return json(res, 400, { error: "invalid_request" });
       }
-      // Price and entitlement are read only from a server-managed catalogue.
-      const planSnap = await db.doc("payment_catalog/" + serviceId + "/plans/" + planId).get();
-      if (!planSnap.exists || planSnap.data().active !== true) return json(res, 404, { error: "plan_unavailable" });
-      const plan = planSnap.data();
-      if (!Number.isSafeInteger(plan.amountXof) || plan.amountXof < 100 || plan.amountXof > 10000000 ||
+      // The first rollout reuses the existing administrator-controlled automotive subscription settings.
+      // Other services remain on the dedicated server-managed payment catalogue.
+      let plan;
+      if (serviceId === "automobiliste" && planId === "annuel") {
+        const configSnap = await db.doc("configuration_abonnements/globale").get();
+        const config = configSnap.exists ? (configSnap.data().services || {}).automobiliste || {} : {};
+        const active = config.actif !== false;
+        const durationMonths = Number(config.duree ?? 12);
+        const unit = config.unite || "mois";
+        const basePrice = Number(config.prix ?? 1000);
+        const now = new Date();
+        const promoStart = config.promotionDebut ? new Date(config.promotionDebut + "T00:00:00") : null;
+        const promoEnd = config.promotionFin ? new Date(config.promotionFin + "T23:59:59") : null;
+        const promoPrice = Number(config.promotionPrix || 0);
+        const promoActive = config.promotionActive === true && promoPrice > 0 && promoPrice <= basePrice &&
+          promoStart && promoEnd && now >= promoStart && now <= promoEnd;
+        plan = { active, amountXof: promoActive ? promoPrice : basePrice, currency: "XOF",
+          label: "Abonnement automobiliste annuel", durationDays: 365, durationMonths: 12 };
+      } else {
+        const planSnap = await db.doc("payment_catalog/" + serviceId + "/plans/" + planId).get();
+        if (!planSnap.exists || planSnap.data().active !== true) return json(res, 404, { error: "plan_unavailable" });
+        plan = planSnap.data();
+      }
+      if (plan.active !== true || !Number.isSafeInteger(plan.amountXof) || plan.amountXof < 100 || plan.amountXof > 10000000 ||
           plan.currency !== "XOF" || typeof plan.label !== "string" ||
-          !Number.isSafeInteger(plan.durationDays) || plan.durationDays < 1 || plan.durationDays > 3660) {
+          !Number.isSafeInteger(plan.durationDays) || plan.durationDays < 1 || plan.durationDays > 3660 ||
+          (serviceId === "automobiliste" && (plan.durationMonths !== 12 || plan.amountXof < 100))) {
         logger.error("Invalid server payment catalogue entry", { serviceId, planId });
         return json(res, 503, { error: "plan_configuration_invalid" });
       }
@@ -154,22 +174,43 @@ exports.waveWebhook = onRequest(
         }
         if (success && p.status !== "succeeded") {
           const subRef = db.collection("subscriptions").doc(p.uid + "_" + p.serviceId);
-          // Firestore transactions require every read to happen before the first write.
+          const legacyAutoRef = db.collection("abonnements_automobiliste").doc(p.uid);
+          // Complete all transaction reads before performing any writes.
           const subSnap = await tx.get(subRef);
+          const legacyAutoSnap = p.serviceId === "automobiliste" ? await tx.get(legacyAutoRef) : null;
           const now = admin.firestore.Timestamp.now();
           const oldEnd = subSnap.exists ? subSnap.data().endAt : null;
-          const renewingEarly = !!oldEnd && oldEnd.toMillis() > now.toMillis();
-          const base = renewingEarly ? oldEnd.toMillis() : now.toMillis();
-          const endAt = admin.firestore.Timestamp.fromMillis(base + p.durationDays * 86400000);
+          const legacyEnd = legacyAutoSnap?.exists ? legacyAutoSnap.data().dateExpiration : null;
+          const effectiveEnd = oldEnd && (!legacyEnd || oldEnd.toMillis() >= legacyEnd.toMillis()) ? oldEnd : legacyEnd;
+          const renewingEarly = !!effectiveEnd && effectiveEnd.toMillis() > now.toMillis();
+          const base = renewingEarly ? effectiveEnd.toMillis() : now.toMillis();
+          let endAt;
+          if (p.serviceId === "automobiliste") {
+            const startDate = new Date(base);
+            const day = startDate.getDate();
+            startDate.setDate(1);
+            startDate.setMonth(startDate.getMonth() + 12);
+            startDate.setDate(Math.min(day, new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate()));
+            endAt = admin.firestore.Timestamp.fromDate(startDate);
+          } else {
+            endAt = admin.firestore.Timestamp.fromMillis(base + p.durationDays * 86400000);
+          }
           tx.update(paymentRef, {
             status: "succeeded", providerTransactionId: checkout.transaction_id || null,
             confirmedAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp()
           });
           tx.set(subRef, {
             uid: p.uid, serviceId: p.serviceId, planId: p.planId, status: "active",
-            startAt: renewingEarly ? subSnap.data().startAt : now,
+            startAt: renewingEarly ? (subSnap.data()?.startAt || now) : now,
             endAt, lastPaymentId: paymentId, updatedAt: admin.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
+          if (p.serviceId === "automobiliste") {
+            tx.set(legacyAutoRef, {
+              uid: p.uid, statut: "actif", montantFCFA: p.amountXof, dureeMois: 12,
+              dateActivation: renewingEarly && legacyAutoSnap?.exists ? legacyAutoSnap.data().dateActivation || now : now,
+              dateExpiration: endAt, paymentId, operateur: "Wave"
+            }, { merge: true });
+          }
         }
         tx.create(receiptRef, { provider: "wave", eventId, checkoutId, outcome: success ? "processed" : "not_paid", receivedAt: admin.firestore.FieldValue.serverTimestamp() });
       });
