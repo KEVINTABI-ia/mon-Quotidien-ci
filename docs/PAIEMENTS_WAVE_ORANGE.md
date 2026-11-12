@@ -11,7 +11,7 @@
 
 Le navigateur transmet uniquement un identifiant de service et de formule. Pour l'abonnement automobiliste annuel, le backend relit la configuration administrateur `configuration_abonnements/globale.services.automobiliste`, applique le tarif promotionnel uniquement si ses dates sont valides, puis crée une session Wave. Pour les autres services, il lit le catalogue `payment_catalog/{serviceId}/plans/{planId}`. Le montant envoyé au prestataire est toujours calculé côté serveur.
 
-Le webhook Wave est vérifié sur le corps brut avec HMAC-SHA256. Le backend récupère ensuite la session via l'API Wave et vérifie la référence client, l'identifiant de session, le montant, la devise XOF et les états de paiement. La transaction Firestore active alors l'abonnement de façon atomique et idempotente.
+Le webhook Wave est vérifié sur le corps brut avec HMAC-SHA256 (timestamp concaténé directement au corps, sans séparateur) et fenêtre temporelle anti-rejeu. Le backend récupère ensuite la session via l'API Wave et vérifie la référence client, l'identifiant de session, le montant, la devise XOF et les états de paiement. La transaction Firestore active alors l'abonnement de façon atomique et idempotente. Les échecs de paiement sont enregistrés sans activer de droits.
 
 La redirection du navigateur vers success_url ne confirme jamais un paiement.
 
@@ -23,8 +23,10 @@ La redirection du navigateur vers success_url ne confirme jamais un paiement.
    - firebase functions:secrets:set WAVE_API_KEY
    - firebase functions:secrets:set WAVE_WEBHOOK_SECRET
 4. Déployer après revue : firebase deploy --only functions:createWaveCheckout,functions:waveWebhook,functions:getPaymentStatus
-5. Enregistrer l'URL HTTPS de waveWebhook dans le portail Wave Business avec l'événement checkout.session.completed.
-6. Contrôler les journaux, les quotas, la facturation, les règles Firestore et le projet avant activation publique.
+5. Enregistrer l'URL HTTPS de waveWebhook dans le portail Wave Business avec les événements checkout.session.completed et checkout.session.payment_failed.
+6. Pour l'API Checkout, ne pas activer la liste blanche IP Wave tant que l'egress sortant Firebase n'a pas une IP statique dédiée. Si elle est requise pour le compte marchand, configurer un VPC connector et Cloud NAT avec IP réservée, puis autoriser uniquement cette IP /32 dans le portail Wave. Ne jamais deviner une plage IP Firebase.
+7. Pour le webhook entrant, appliquer la liste des IP Wave publiée dans la documentation officielle si une couche WAF/proxy permet un filtrage fiable, en plus de la signature HMAC. La signature reste obligatoire.
+8. Contrôler les journaux, les quotas, la facturation, les règles Firestore et le projet avant activation publique.
 
 ## Catalogue de prix
 
