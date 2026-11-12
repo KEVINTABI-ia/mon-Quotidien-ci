@@ -1,0 +1,19 @@
+name = "mon-quotidien-ci-enfants"
+main = "src/index.mjs"
+compatibility_date = "2026-11-12"
+
+[observability]
+enabled = true
+
+[observability.traces]
+enabled = true
+
+[[r2_buckets]]
+binding = "ENFANTS_BUCKET"
+bucket_name = "mon-quotidien-ci-enfants"
+
+[vars]
+FIREBASE_PROJECT_ID = "mon-transport-ci"
+FIREBASE_WEB_API_KEY = "AIzaSyBJFCyGS-cEaEm0_c_-p0CzunNcME9-u7Q"
+ADMIN_UID = "3LpoTLyQdtVcdtnSMAJFc7Cvnpz2"
+ALLOWED_ORIGINS = "https://kevintabi-ia.github.io"
