@@ -43,14 +43,21 @@
   if(!file||file.size>8*1024*1024||!/^image\/(jpeg|png|webp)$/.test(file.type)){status.textContent="Ajoutez une photo JPG, PNG ou WEBP de 8 Mo maximum.";return;}
   if(type==="retrouve"&&!v("mqciEnfantPresence")){status.textContent="Indiquez où se trouve actuellement l’enfant.";return;}
   status.textContent="Envoi sécurisé en cours…";
+  const form=el("mqciEnfantForm");
   try{
-   const id=db.collection("declarations_enfants").doc().id,uid=auth.currentUser.uid;
-   const uploaded=await workerJson("/upload/"+encodeURIComponent(id),{method:"POST",headers:{"Content-Type":file.type},body:file});
+   const uid=auth.currentUser.uid;
+   const id=form.dataset.declarationDraftId||(form.dataset.declarationDraftId=db.collection("declarations_enfants").doc().id);
+   const photoKey="private/"+uid+"/"+id+"/photo";
    const publicData={type:type,nom:v("mqciEnfantNom"),age:type==="perdu"?v("mqciEnfantAge"):"",photoUrl:"",telephonePublic:"",presencePublic:"",statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-   const prive={uid:uid,photoKey:uploaded.photoKey,telephone:type==="perdu"?v("mqciEnfantTel"):"",adresseExacte:v("mqciEnfantAdresse"),nomDeclarant:v("mqciEnfantTrouvePar"),telephoneDeclarant:type==="retrouve"?v("mqciEnfantTel"):"",presence:type==="retrouve"?v("mqciEnfantPresence"):"",commissariat:v("mqciEnfantCommissariat"),lieuTrouve:v("mqciEnfantLieuPrecise"),commune:v("mqciEnfantCommune"),description:v("mqciEnfantDescription"),ageSaisi:type==="retrouve"?v("mqciEnfantAge"):"",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-   const ref=db.collection("declarations_enfants").doc(id);
-   const batch=db.batch();batch.set(ref,publicData);batch.set(ref.collection("informations_privees").doc("contact"),prive);await batch.commit();
-   status.textContent="Déclaration envoyée. Elle sera publiée uniquement après validation de l’administration.";el("mqciEnfantForm").reset();
+   const prive={uid:uid,photoKey:photoKey,telephone:type==="perdu"?v("mqciEnfantTel"):"",adresseExacte:v("mqciEnfantAdresse"),nomDeclarant:v("mqciEnfantTrouvePar"),telephoneDeclarant:type==="retrouve"?v("mqciEnfantTel"):"",presence:type==="retrouve"?v("mqciEnfantPresence"):"",commissariat:v("mqciEnfantCommissariat"),lieuTrouve:v("mqciEnfantLieuPrecise"),commune:v("mqciEnfantCommune"),description:v("mqciEnfantDescription"),ageSaisi:type==="retrouve"?v("mqciEnfantAge"):"",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+   if(form.dataset.declarationDraftCreated!=="true"){
+    const ref=db.collection("declarations_enfants").doc(id);
+    const batch=db.batch();batch.set(ref,publicData);batch.set(ref.collection("informations_privees").doc("contact"),prive);await batch.commit();
+    form.dataset.declarationDraftCreated="true";
+   }
+   await workerJson("/upload/"+encodeURIComponent(id),{method:"POST",headers:{"Content-Type":file.type},body:file});
+   status.textContent="Déclaration envoyée. Elle sera publiée uniquement après validation de l’administration.";
+   form.reset();delete form.dataset.declarationDraftId;delete form.dataset.declarationDraftCreated;
   }catch(err){console.error(err);status.textContent="Envoi impossible : "+(err.message||"erreur inconnue");}
  };
  window.chargerDeclarationsEnfantsAdmin=async function(){
