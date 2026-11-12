@@ -366,7 +366,7 @@ service cloud.firestore {
           && request.resource.data.derniereActivite == request.time
           && (request.resource.data.enLigne == false
             || abonnementValide(request.resource.data)))
-        || (estConnecte()
+        || (paiementsActifs() && estConnecte()
           && request.auth.uid == partenaireId
           && resource.data.statut == "approuve"
           && (!("etatCompte" in resource.data) || resource.data.etatCompte == "actif")
