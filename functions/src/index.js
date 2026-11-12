@@ -182,10 +182,13 @@ exports.waveWebhook = onRequest(
           tx.create(receiptRef, { provider: "wave", eventId, checkoutId, outcome: "mismatch", receivedAt: admin.firestore.FieldValue.serverTimestamp() });
           return;
         }
-        if (!success && ["failed", "cancelled"].includes(checkout.payment_status) && p.status !== "succeeded") {
+        if (!success && p.status !== "succeeded" &&
+          (["failed", "cancelled"].includes(checkout.payment_status) || checkout.checkout_status === "expired")) {
           tx.update(paymentRef, {
-            status: "failed",
-            failureCode: checkout.last_payment_error?.code || "payment_failed",
+            status: checkout.checkout_status === "expired" ? "expired" : "failed",
+            failureCode: checkout.last_payment_error?.code || (checkout.checkout_status === "expired" ? "checkout_expired" : "payment_failed"),
+            providerPaymentStatus: checkout.payment_status || null,
+            providerCheckoutStatus: checkout.checkout_status || null,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
           });
         }
@@ -224,7 +227,12 @@ exports.waveWebhook = onRequest(
             }, { merge: true });
           }
         }
-        tx.create(receiptRef, { provider: "wave", eventId, checkoutId, outcome: success ? "processed" : "not_paid", receivedAt: admin.firestore.FieldValue.serverTimestamp() });
+        tx.create(receiptRef, {
+          provider: "wave", eventId, checkoutId,
+          outcome: success ? "processed" :
+            (checkout.checkout_status === "expired" || ["failed", "cancelled"].includes(checkout.payment_status) ? "failed_or_expired" : "not_paid"),
+          receivedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
       });
       return res.sendStatus(200);
     } catch (error) {
