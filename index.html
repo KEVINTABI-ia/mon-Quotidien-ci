@@ -1785,7 +1785,6 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
   </div>
   <div class="transport-colis-client-entete">
     <h3>👤 Mon espace colis</h3>
-    <p>Votre compte Mon Quotidien CI est automatiquement utilisé pour vos commandes et votre historique.</p>
   </div>
   <div id="zoneMenuColisClient"><div id="zoneEspaceClient"></div></div>
 </section>
@@ -8152,7 +8151,6 @@ async function afficherAccueilClient(user){
   nom=String(nom).replace(/[&<>"']/g,"");
   zone.innerHTML=`
     <hr><h3>👋 Bienvenue ${nom}</h3>
-    <p>Vous utilisez votre compte Mon Quotidien CI. Aucune deuxième connexion n’est nécessaire.</p>
     <button type="button" class="primary" onclick="afficherFormulaireCommande()">➕ Nouvelle commande</button>
     <div id="zoneFormulaireCommande"></div>
     <button type="button" class="primary" onclick="chargerHistoriqueCommandes()">📦 Historique des commandes</button>
