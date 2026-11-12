@@ -1,9 +1,18 @@
 import test from "node:test";
 import worker from "../cloudflare-enfants/src/index.mjs";
 import assert from "node:assert/strict";
-import { validDocId, validImageType, matchesImageSignature, privatePhotoKey, publicPhotoKey, readBodyLimited, uploadOwnerMatches, verifyFirebaseIdToken } from "../cloudflare-enfants/src/index.mjs";
+import { validDocId, validImageType, matchesImageSignature, privatePhotoKey, publicPhotoKey, readBodyLimited, uploadOwnerMatches, verifyFirebaseIdToken, verifyFirebaseAccountStatus } from "../cloudflare-enfants/src/index.mjs";
 const pair = await crypto.subtle.generateKey({name:"RSASSA-PKCS1-v1_5",modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:"SHA-256"},true,["sign","verify"]);
 const jwk = {...await crypto.subtle.exportKey("jwk",pair.publicKey),kid:"test-key",alg:"RS256",use:"sig"};
+const adminPkcs8 = await crypto.subtle.exportKey("pkcs8", pair.privateKey);
+const adminPem = "-----BEGIN PRIVATE KEY-----\\n" +
+  btoa(Array.from(new Uint8Array(adminPkcs8), x => String.fromCharCode(x)).join("")).match(/.{1,64}/g).join("\\n") +
+  "\\n-----END PRIVATE KEY-----";
+const serviceAccount = JSON.stringify({
+  project_id: "mon-transport-ci",
+  client_email: "worker-test@mon-transport-ci.iam.gserviceaccount.com",
+  private_key: adminPem
+});
 const b64 = bytes => btoa(Array.from(new Uint8Array(bytes),x=>String.fromCharCode(x)).join("")).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
 async function token(overrides={}, signingPair=pair) {
  const now=Math.floor(Date.now()/1000);
@@ -104,7 +113,7 @@ function mockUploadEnvironment(t, { parentStatus = "en_attente", ownerUid = "use
   });
   const env = {
     FIREBASE_PROJECT_ID: "mon-transport-ci",
-    FIREBASE_WEB_API_KEY: "public-test-key",
+    FIREBASE_WEB_API_KEY: "public-test-key",\n    FIREBASE_SERVICE_ACCOUNT_JSON: serviceAccount,
     ADMIN_UID: "admin-test",
     ALLOWED_ORIGINS: "https://kevintabi-ia.github.io",
     ENFANTS_BUCKET: {
@@ -162,4 +171,32 @@ test("valide signature, audience, émetteur et expiration des jetons Firebase", 
 test("rejette une signature falsifiée", async () => {
  const impostor=await crypto.subtle.generateKey({name:"RSASSA-PKCS1-v1_5",modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:"SHA-256"},true,["sign","verify"]);
  assert.equal(await verifyFirebaseIdToken(await token({},impostor),"mon-transport-ci"),null);
+});
+
+
+test("refuse les comptes Firebase désactivés", async () => {
+ const ok = await verifyFirebaseAccountStatus("user-123", Math.floor(Date.now()/1000), {
+  FIREBASE_PROJECT_ID: "mon-transport-ci", FIREBASE_SERVICE_ACCOUNT_JSON: serviceAccount
+ }, async (url) => {
+  if (String(url).includes("accounts:lookup")) return Response.json({users:[{localId:"user-123",disabled:true,validSince:"0"}]});
+  return Response.json({access_token:"test-admin-access",expires_in:3600});
+ });
+ assert.equal(ok, false);
+});
+
+test("refuse les jetons antérieurs à la révocation Firebase", async () => {
+ const ok = await verifyFirebaseAccountStatus("user-123", 100, {
+  FIREBASE_PROJECT_ID: "mon-transport-ci", FIREBASE_SERVICE_ACCOUNT_JSON: serviceAccount
+ }, async (url) => {
+  if (String(url).includes("accounts:lookup")) return Response.json({users:[{localId:"user-123",disabled:false,validSince:"200"}]});
+  return Response.json({access_token:"test-admin-access",expires_in:3600});
+ });
+ assert.equal(ok, false);
+});
+
+test("refuse l’accès si le contrôle de compte ne peut pas être vérifié", async () => {
+ const ok = await verifyFirebaseAccountStatus("user-123", Math.floor(Date.now()/1000), {
+  FIREBASE_PROJECT_ID: "mon-transport-ci", FIREBASE_SERVICE_ACCOUNT_JSON: serviceAccount
+ }, async () => new Response("unavailable", {status:503}));
+ assert.equal(ok, false);
 });
