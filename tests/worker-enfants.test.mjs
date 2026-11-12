@@ -1,4 +1,5 @@
 import test from "node:test";
+import worker from "../cloudflare-enfants/src/index.mjs";
 import assert from "node:assert/strict";
 import { validDocId, validImageType, matchesImageSignature, privatePhotoKey, publicPhotoKey, readBodyLimited, uploadOwnerMatches } from "../cloudflare-enfants/src/index.mjs";
 
