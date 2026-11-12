@@ -7835,7 +7835,7 @@ async function creerCompteAbonnementAuto(){
 }
 async function deconnecterCompteAbonnementAuto(){await auth.signOut();abonnementAutomobilisteValide=false;document.getElementById("formulaireDemandeAbonnementAuto").style.display="none";document.getElementById("connexionAbonnementAuto").style.display="block";}
 
-async let mqciWaveCheckoutEnCours = false;
+let mqciWaveCheckoutEnCours = false;
 
 async function envoyerDemandeAbonnementAuto(){
   const user=auth.currentUser;
