@@ -1388,7 +1388,9 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && existsAfter(/databases/$(database)/documents/declarations_enfants/$(dossierId)/informations_privees/contact)
         && getAfter(/databases/$(database)/documents/declarations_enfants/$(dossierId)/informations_privees/contact).data.uid == request.auth.uid;
-      allow update, delete: if estAdmin();
+      allow update: if estAdmin()
+        && (resource.data.photoUrl == "" || request.resource.data.photoUrl == resource.data.photoUrl);
+      allow delete: if estAdmin() && resource.data.photoUrl == "";
       match /informations_privees/{contactId} {
         allow create: if estConnecte() && contactId == "contact"
           && request.resource.data.uid == request.auth.uid
