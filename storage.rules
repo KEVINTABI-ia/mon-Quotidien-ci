@@ -6,14 +6,14 @@ service firebase.storage {
     }
 
     // Logos de compagnies: consultation publique, dépôt par un compte authentifié.
-    match /compagnies/logos/{fileName} {
+    match /compagnies/logos/{uid}/{fileName} {
       allow read: if true;
       allow create: if resource == null
-        && request.auth != null
+        && request.auth != null && request.auth.uid == uid
         && request.resource.size <= 10 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
       allow update: if false;
-      allow delete: if estAdmin();
+      allow delete: if estAdmin() || (request.auth != null && request.auth.uid == uid);
     }
 
     // Créations publicitaires réservées à l'administrateur; médias servis publiquement.
