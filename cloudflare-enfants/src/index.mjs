@@ -112,6 +112,11 @@ async function getFirestoreDocument(path, idToken) {
 function stringField(doc, name) {
   return doc && doc.fields && doc.fields[name] && doc.fields[name].stringValue || "";
 }
+export function uploadOwnerMatches(parentDoc, privateDoc, uid, docId) {
+  return Boolean(parentDoc && stringField(parentDoc, "statut") === "en_attente" &&
+    privateDoc && stringField(privateDoc, "uid") === uid &&
+    stringField(privateDoc, "photoKey") === privatePhotoKey(uid, docId));
+}
 async function handle(request, env) {
   assertWorkerConfig(env);
   const url = new URL(request.url);
@@ -146,9 +151,7 @@ async function handle(request, env) {
       getFirestoreDocument(privatePath, user.idToken)
     ]);
     const expectedKey = privatePhotoKey(user.uid, docId);
-    if (!parentDoc || stringField(parentDoc, "statut") !== "en_attente" ||
-        !privateDoc || stringField(privateDoc, "uid") !== user.uid ||
-        stringField(privateDoc, "photoKey") !== expectedKey) {
+    if (!uploadOwnerMatches(parentDoc, privateDoc, user.uid, docId)) {
       return json({ error: "Dossier introuvable ou accès non autorisé." }, 403);
     }
     const type = (request.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
