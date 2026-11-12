@@ -89,8 +89,8 @@ function mockUploadEnvironment(t, { parentStatus = "en_attente", ownerUid = "use
   let putCount = 0;
   t.mock.method(globalThis, "fetch", async (input) => {
     const url = String(input);
-    if (url.includes("identitytoolkit.googleapis.com")) {
-      return Response.json({ users: [{ localId: uid }] });
+    if (url.includes("securetoken@system.gserviceaccount.com")) {
+      return Response.json({ keys: [jwk] }, { headers: { "cache-control": "public, max-age=3600" } });
     }
     if (url.includes("/declarations_enfants/" + docId + "/informations_privees/contact")) {
       return privateExists
