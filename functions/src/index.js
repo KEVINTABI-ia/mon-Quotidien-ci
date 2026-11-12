@@ -111,11 +111,13 @@ exports.createWaveCheckout = onRequest(
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
+      const successReturn = new URL(successUrl);
+      successReturn.searchParams.set("paymentId", paymentRef.id);
       const checkout = await waveRequest("/v1/checkout/sessions", {
         method: "POST",
         body: JSON.stringify({
           amount: String(plan.amountXof), currency: "XOF", client_reference: clientReference,
-          success_url: successUrl, error_url: errorUrl
+          success_url: successReturn.toString(), error_url: errorUrl
         })
       }, WAVE_API_KEY.value());
       if (!checkout.id || !checkout.wave_launch_url) throw new Error("Réponse Wave incomplète.");
