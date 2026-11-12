@@ -4,7 +4,7 @@
  const el=id=>document.getElementById(id);
  const admin=()=>auth.currentUser&&auth.currentUser.uid===ADMIN_UID;
  const style="width:100%;padding:10px;margin:6px 0 12px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box";
- const workerBase=()=>{let base=String(window.MQCI_ENFANTS_MEDIA_WORKER_URL||"");while(base.endsWith("/"))base=base.slice(0,-1);return base;};
+ const workerBase=()=>{let base=String(window.MQCI_ENFANTS_MEDIA_WORKER_URL||"https://mon-quotidien-ci-enfants.tabikevin57.workers.dev");while(base.endsWith("/"))base=base.slice(0,-1);return base;};
  async function workerFetch(path,options={}){
   const base=workerBase();if(!base)throw new Error("Le service sécurisé des photos n’est pas encore configuré.");
   if(!auth.currentUser)throw new Error("Connectez-vous à votre compte.");
