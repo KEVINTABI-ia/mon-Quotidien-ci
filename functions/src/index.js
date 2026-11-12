@@ -2,7 +2,7 @@ const { onRequest } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
-const crypto = require("node:crypto");
+const { verifyWaveSignature: verifyWaveSignatureHeader, addMonthsClamped } = require("./payment-utils");
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -18,24 +18,8 @@ async function requireUser(req) {
   if (!token) throw Object.assign(new Error("Authentification requise."), { status: 401 });
   return admin.auth().verifyIdToken(token, true);
 }
-function safeEqualHex(a, b) {
-  if (!/^[a-f0-9]{64}$/i.test(a) || !/^[a-f0-9]{64}$/i.test(b)) return false;
-  return crypto.timingSafeEqual(Buffer.from(a, "hex"), Buffer.from(b, "hex"));
-}
 function verifyWaveSignature(req, secret) {
-  const header = req.get("wave-signature") || "";
-  const fields = Object.fromEntries(header.split(",").map(part => {
-    const i = part.indexOf("="); return i < 0 ? ["", ""] : [part.slice(0, i).trim(), part.slice(i + 1).trim()];
-  }));
-  const timestamp = fields.t;
-  const signatures = header.split(",").filter(x => x.trim().startsWith("v1=")).map(x => x.trim().slice(3));
-  if (!timestamp || !/^\d+$/.test(timestamp) || !signatures.length) return false;
-  const timestampSeconds = Number(timestamp);
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  if (!Number.isSafeInteger(timestampSeconds) || timestampSeconds < nowSeconds - 300 || timestampSeconds > nowSeconds + 30) return false;
-  // Wave signs the exact raw payload: Unix timestamp immediately followed by the raw body (no separator).
-  const digest = crypto.createHmac("sha256", secret).update(timestamp).update(req.rawBody).digest("hex");
-  return signatures.some(signature => safeEqualHex(signature, digest));
+  return verifyWaveSignatureHeader(req.get("wave-signature") || "", req.rawBody, secret);
 }
 async function waveRequest(path, options = {}, apiKey) {
   const response = await fetch(WAVE_API_BASE + path, {
@@ -188,12 +172,7 @@ exports.waveWebhook = onRequest(
           const base = renewingEarly ? effectiveEnd.toMillis() : now.toMillis();
           let endAt;
           if (p.serviceId === "automobiliste") {
-            const startDate = new Date(base);
-            const day = startDate.getDate();
-            startDate.setDate(1);
-            startDate.setMonth(startDate.getMonth() + 12);
-            startDate.setDate(Math.min(day, new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate()));
-            endAt = admin.firestore.Timestamp.fromDate(startDate);
+            endAt = admin.firestore.Timestamp.fromDate(addMonthsClamped(new Date(base), 12));
           } else {
             endAt = admin.firestore.Timestamp.fromMillis(base + p.durationDays * 86400000);
           }
