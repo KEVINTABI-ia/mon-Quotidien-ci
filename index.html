@@ -1707,8 +1707,33 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 @media(prefers-reduced-motion:reduce){#mqci-splash-screen{transition:none}}
 </style>
 
+
+<style id="mqci-accessibility-refinement">
+  html { scroll-behavior: smooth; scroll-padding-top: 18px; }
+  :focus-visible { outline: 3px solid #F28C28 !important; outline-offset: 3px !important; }
+  .mqci-skip-link {
+    position: fixed; z-index: 2147483001; top: 10px; left: 10px;
+    transform: translateY(-160%); padding: 12px 16px; border-radius: 12px;
+    background: #18352A; color: #fff; font-weight: 800; text-decoration: none;
+    box-shadow: 0 5px 18px #0003;
+  }
+  .mqci-skip-link:focus { transform: translateY(0); }
+  button, a, input, select, textarea { touch-action: manipulation; }
+  button:disabled { cursor: not-allowed; opacity: .65; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      scroll-behavior: auto !important;
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+    }
+  }
+</style>
+
 </head>
 <body>
+<a class="mqci-skip-link" href="#contenu-principal">Aller au contenu principal</a>
 
 
 <!-- Accès obligatoire aux utilisateurs de Mon Quotidien CI -->
@@ -1782,7 +1807,7 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
   <div class="mqci-flag-stripe" aria-hidden="true"><i></i><i></i><i></i></div>
 </header>
 
-<main>
+<main id="contenu-principal" tabindex="-1">
   <section class="card transport-colis-screen" id="transportColis" style="display:none;">
   <div class="transport-colis-intro">
     <h2>📦 Transport Colis CI</h2>
