@@ -15,8 +15,9 @@ L'authentification Firebase est vérifiée par Identity Toolkit `accounts:lookup
 2. Vérifier que l'UID admin correspond au compte de production.
 3. Dans Wrangler, le binding R2 `ENFANTS_BUCKET` doit pointer vers le bucket dédié.
 4. Configurer `ALLOWED_ORIGINS` avec les origines exactes réellement utilisées par l'application.
-5. Aucun secret de service account n'est requis. `FIREBASE_WEB_API_KEY` est la clé Web Firebase déjà utilisée côté navigateur; elle n'est pas un secret d'authentification.
-6. Déployer séparément avec `npx wrangler deploy --config cloudflare-enfants/wrangler.toml` après validation humaine du compte, bucket et coûts.
+5. Configurer `ADMIN_UID` comme secret Worker, jamais comme variable versionnée : `npx wrangler secret put ADMIN_UID --config cloudflare-enfants/wrangler.toml`. Saisir l'UID du compte administrateur directement dans l'invite locale, sans le publier dans Git.
+6. Aucun secret de service account n'est requis. `FIREBASE_WEB_API_KEY` est la clé Web Firebase déjà utilisée côté navigateur; elle n'est pas un secret d'authentification.
+7. Déployer séparément avec `npx wrangler deploy --config cloudflare-enfants/wrangler.toml` après validation humaine du compte, bucket et coûts.
 
 ## Sécurité et limites
 - Aucun endpoint DELETE ou remplacement.
