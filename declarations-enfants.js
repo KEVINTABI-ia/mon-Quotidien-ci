@@ -4,6 +4,18 @@
  const el=id=>document.getElementById(id);
  const admin=()=>auth.currentUser&&auth.currentUser.uid===ADMIN_UID;
  const style="width:100%;padding:10px;margin:6px 0 12px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box";
+ const workerBase=()=>String(window.MQCI_ENFANTS_MEDIA_WORKER_URL||"").replace(/\\/+$/,"");
+ async function workerFetch(path,options={}){
+  const base=workerBase();if(!base)throw new Error("Le service sécurisé des photos n’est pas encore configuré.");
+  if(!auth.currentUser)throw new Error("Connectez-vous à votre compte.");
+  const headers=new Headers(options.headers||{});headers.set("Authorization","Bearer "+await auth.currentUser.getIdToken());
+  return fetch(base+path,{...options,headers});
+ }
+ async function workerJson(path,options={}){
+  const response=await workerFetch(path,options);let data={};try{data=await response.json();}catch(_){}
+  if(!response.ok)throw new Error(data.error||("Service photo indisponible (HTTP "+response.status+")."));
+  return data;
+ }
  function modal(){
   let m=el("mqciDeclarationsEnfantsModal");if(m)return m;
   m=document.createElement("div");m.id="mqciDeclarationsEnfantsModal";
@@ -32,10 +44,10 @@
   if(type==="retrouve"&&!v("mqciEnfantPresence")){status.textContent="Indiquez où se trouve actuellement l’enfant.";return;}
   status.textContent="Envoi sécurisé en cours…";
   try{
-   const id=db.collection("declarations_enfants").doc().id,uid=auth.currentUser.uid,path="declarations_enfants_privees/"+uid+"/"+id+"/"+Date.now()+"_"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
-   await storage.ref(path).put(file,{contentType:file.type,customMetadata:{uid:uid,dossierId:id}});
+   const id=db.collection("declarations_enfants").doc().id,uid=auth.currentUser.uid;
+   const uploaded=await workerJson("/upload/"+encodeURIComponent(id),{method:"POST",headers:{"Content-Type":file.type},body:file});
    const publicData={type:type,nom:v("mqciEnfantNom"),age:type==="perdu"?v("mqciEnfantAge"):"",photoUrl:"",telephonePublic:"",presencePublic:"",statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-   const prive={uid:uid,photoPath:path,telephone:type==="perdu"?v("mqciEnfantTel"):"",adresseExacte:v("mqciEnfantAdresse"),nomDeclarant:v("mqciEnfantTrouvePar"),telephoneDeclarant:type==="retrouve"?v("mqciEnfantTel"):"",presence:type==="retrouve"?v("mqciEnfantPresence"):"",commissariat:v("mqciEnfantCommissariat"),lieuTrouve:v("mqciEnfantLieuPrecise"),commune:v("mqciEnfantCommune"),description:v("mqciEnfantDescription"),ageSaisi:type==="retrouve"?v("mqciEnfantAge"):"",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+   const prive={uid:uid,photoKey:uploaded.photoKey,telephone:type==="perdu"?v("mqciEnfantTel"):"",adresseExacte:v("mqciEnfantAdresse"),nomDeclarant:v("mqciEnfantTrouvePar"),telephoneDeclarant:type==="retrouve"?v("mqciEnfantTel"):"",presence:type==="retrouve"?v("mqciEnfantPresence"):"",commissariat:v("mqciEnfantCommissariat"),lieuTrouve:v("mqciEnfantLieuPrecise"),commune:v("mqciEnfantCommune"),description:v("mqciEnfantDescription"),ageSaisi:type==="retrouve"?v("mqciEnfantAge"):"",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
    const ref=db.collection("declarations_enfants").doc(id);
    const batch=db.batch();batch.set(ref,publicData);batch.set(ref.collection("informations_privees").doc("contact"),prive);await batch.commit();
    status.textContent="Déclaration envoyée. Elle sera publiée uniquement après validation de l’administration.";el("mqciEnfantForm").reset();
@@ -46,7 +58,7 @@
   z.textContent="Chargement…";
   try{const snap=await db.collection("declarations_enfants").where("statut","==","en_attente").get();if(!snap.size){z.textContent="Aucune déclaration en attente.";return;}
    let out="";for(const d of snap.docs){const a=d.data();let p={};try{const ps=await d.ref.collection("informations_privees").doc("contact").get();if(ps.exists)p=ps.data();}catch(_){}
-    let photo="";try{photo=await storage.ref(p.photoPath).getDownloadURL();}catch(_){}
+    let photo="";try{const response=await workerFetch("/admin/photo/"+encodeURIComponent(d.id)+"?ownerUid="+encodeURIComponent(p.uid),{method:"GET"});if(response.ok)photo=URL.createObjectURL(await response.blob());}catch(_){}
     out+='<article class="stop" style="margin:12px 0;padding:12px;border:1px solid #ccc;border-radius:10px"><strong>'+esc(a.type==="perdu"?"Enfant perdu":"Enfant retrouvé")+' — '+esc(a.nom||"Nom non renseigné")+'</strong>'+(photo?'<img src="'+esc(photo)+'" alt="Photo de l’enfant" style="display:block;width:100%;max-height:240px;object-fit:contain;margin:10px 0">':'<p>Photo non accessible</p>')+'<p>Âge : '+esc(a.age||p.ageSaisi||"Non précisé")+' · Commune (privée) : '+esc(p.commune||"Non précisée")+'</p><p>Description (privée) : '+esc(p.description||"")+'</p><p>Contact parent/déclarant (privé) : '+esc(p.telephone||p.telephoneDeclarant||"")+'</p><p>Adresse exacte (privée) : '+esc(p.adresseExacte||"")+'</p><p>Situation : '+esc(p.presence||"")+' · Commissariat : '+esc(p.commissariat||"")+'</p><button class="primary" onclick="moderationDeclarationEnfant(\''+d.id+'\',true)">Valider et publier la photo</button> <button onclick="moderationDeclarationEnfant(\''+d.id+'\',false)">Refuser</button></article>';
    }z.innerHTML=out;
   }catch(err){z.textContent="Erreur de chargement : "+err.message;}
@@ -57,9 +69,8 @@
    if(approve){
     const privateSnap=await ref.collection("informations_privees").doc("contact").get();const p=privateSnap.exists?privateSnap.data():{};
     const isLost=a.type==="perdu";const phone=isLost?p.telephone:(p.presence==="avec_moi"?p.telephoneDeclarant:"");
-    const source=storage.ref(p.photoPath),blob=await source.getBlob(),publicPath="declarations_enfants_publics/"+id+"/photo";
-    await storage.ref(publicPath).put(blob,{contentType:blob.type||"image/jpeg",cacheControl:"public,max-age=3600"});
-    const photoUrl=await storage.ref(publicPath).getDownloadURL();
+    const publication=await workerJson("/admin/approve/"+encodeURIComponent(id),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ownerUid:p.uid})});
+    const photoUrl=publication.photoUrl;
     const update={statut:"approuve",photoUrl:photoUrl,modereLe:firebase.firestore.FieldValue.serverTimestamp(),telephonePublic:phone||"",presencePublic:isLost?"":(p.presence||"")};
     await ref.update(update);
    }else await ref.update({statut:"refusee",modereLe:firebase.firestore.FieldValue.serverTimestamp()});
