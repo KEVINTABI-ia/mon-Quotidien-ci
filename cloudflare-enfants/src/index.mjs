@@ -28,13 +28,17 @@ function base64UrlEncode(bytes) {
   return btoa(Array.from(value, c => String.fromCharCode(c)).join(""))
     .replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
 }
+function accountEmailHint(serviceAccountJson) {
+  try { return JSON.parse(serviceAccountJson).client_email || ""; } catch { return ""; }
+}
 function pemToBytes(pem) {
   const body = String(pem || "").replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\\s/g, "");
   return Uint8Array.from(atob(body), c => c.charCodeAt(0));
 }
 async function getFirebaseAdminAccessToken(serviceAccountJson, fetcher) {
   const now = Math.floor(Date.now() / 1000);
-  if (firebaseAccessTokenCache && firebaseAccessTokenCache.expiresAt > now + 60) return firebaseAccessTokenCache.token;
+  if (firebaseAccessTokenCache && firebaseAccessTokenCache.clientEmail === accountEmailHint(serviceAccountJson) &&
+      firebaseAccessTokenCache.expiresAt > now + 60) return firebaseAccessTokenCache.token;
   const account = JSON.parse(serviceAccountJson);
   if (!account || typeof account.client_email !== "string" || typeof account.private_key !== "string" ||
       typeof account.project_id !== "string") throw new Error("Invalid Firebase service account configuration");
@@ -59,7 +63,7 @@ async function getFirebaseAdminAccessToken(serviceAccountJson, fetcher) {
   if (!response.ok) throw new Error("Firebase Admin OAuth token request failed");
   const data = await response.json();
   if (typeof data.access_token !== "string" || !Number.isFinite(data.expires_in)) throw new Error("Invalid Firebase Admin OAuth response");
-  firebaseAccessTokenCache = { token: data.access_token, expiresAt: now + data.expires_in };
+  firebaseAccessTokenCache = { token: data.access_token, expiresAt: now + data.expires_in, clientEmail: account.client_email };
   return data.access_token;
 }
 export async function verifyFirebaseAccountStatus(uid, authTime, env, fetcher = fetch) {
