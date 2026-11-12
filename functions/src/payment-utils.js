@@ -19,7 +19,6 @@ function verifyWaveSignature(header, rawBody, secret, nowMs = Date.now()) {
   const seconds = Number(timestamp);
   const nowSeconds = Math.floor(nowMs / 1000);
   if (!Number.isSafeInteger(seconds) || seconds < nowSeconds - 300 || seconds > nowSeconds + 30) return false;
-  // Wave Business API specifies timestamp + raw request body, with no separator.
   const digest = crypto.createHmac("sha256", secret).update(timestamp).update(rawBody).digest("hex");
   return signatures.some(signature => safeEqualHex(signature, digest));
 }
