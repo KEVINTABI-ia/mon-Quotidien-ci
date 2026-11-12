@@ -1372,6 +1372,36 @@ service cloud.firestore {
         || (estConnecte() && resource.data.boutiqueUid == request.auth.uid && boutiqueActive(resource.data.boutiqueId));
     }
 
+    // Déclarations d’enfants : données publiques limitées, coordonnées privées séparées.
+    match /declarations_enfants/{dossierId} {
+      allow read: if estAdmin() || resource.data.statut == "approuve";
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["uid","type","nom","age","commune","description","photoPath","photoUrl","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","nom","age","commune","description","photoPath","photoUrl","statut","createdAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.type in ["perdu","retrouve"]
+        && request.resource.data.nom is string && request.resource.data.nom.size() <= 120
+        && request.resource.data.age is string && request.resource.data.age.size() <= 3
+        && request.resource.data.commune is string && request.resource.data.commune.size() <= 120
+        && request.resource.data.description is string && request.resource.data.description.size() <= 1200
+        && request.resource.data.photoPath is string
+        && request.resource.data.photoPath.matches("^declarations_enfants_privees/" + request.auth.uid + "/" + dossierId + "/[^/]+$")
+        && request.resource.data.photoUrl == ""
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/declarations_enfants/$(dossierId)/informations_privees/contact)
+        && getAfter(/databases/$(database)/documents/declarations_enfants/$(dossierId)/informations_privees/contact).data.uid == request.auth.uid;
+      allow update, delete: if estAdmin();
+      match /informations_privees/{contactId} {
+        allow create: if estConnecte() && contactId == "contact"
+          && request.resource.data.uid == request.auth.uid
+          && getAfter(/databases/$(database)/documents/declarations_enfants/$(dossierId)).data.uid == request.auth.uid
+          && getAfter(/databases/$(database)/documents/declarations_enfants/$(dossierId)).data.statut == "en_attente";
+        allow read: if estAdmin();
+        allow update, delete: if estAdmin();
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
