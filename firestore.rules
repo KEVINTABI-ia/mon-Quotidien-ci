@@ -1406,6 +1406,99 @@ service cloud.firestore {
       }
     }
 
+    // Module Logement : comptes et abonnements indépendants des autres partenaires/annuaires.
+    function logementAbonnementActif(uid) {
+      return exists(/databases/$(database)/documents/partenaires_logement/$(uid))
+        && get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.statutCompte == "actif"
+        && (
+          (get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.statutAbonnement == "essai"
+            && get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.finEssai is timestamp
+            && get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.finEssai > request.time)
+          ||
+          (get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.statutAbonnement == "actif"
+            && get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.finAbonnement is timestamp
+            && get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.finAbonnement > request.time)
+        );
+    }
+    match /partenaires_logement/{uid} {
+      allow create: if estConnecte() && request.auth.uid == uid
+        && request.resource.data.keys().hasAll(["uid","type","nom","telephone","email","statutCompte","statutAbonnement","debutEssai","finEssai","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","nom","telephone","email","statutCompte","statutAbonnement","debutEssai","finEssai","createdAt","updatedAt"])
+        && request.resource.data.uid == uid
+        && request.resource.data.type in ["particulier","agence"]
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 2 && request.resource.data.nom.size() <= 120
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 24
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.statutCompte == "actif"
+        && request.resource.data.statutAbonnement == "essai"
+        && request.resource.data.finEssai is timestamp
+        && request.resource.data.finEssai > request.time
+        && request.resource.data.finEssai <= request.time + duration.value(30, "d")
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
+      allow update: if estAdmin();
+      allow delete: if estAdmin();
+    }
+    match /annonces_logement/{annonceId} {
+      allow read: if estAdmin()
+        || resource.data.statut == "publiee"
+        || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow create: if estConnecte()
+        && logementAbonnementActif(request.auth.uid)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasAll(["uid","nomPublieur","typePublieur","titre","categorie","transaction","prix","periodePrix","commune","quartier","description","telephone","whatsapp","photos","statut","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["uid","nomPublieur","typePublieur","titre","categorie","transaction","prix","periodePrix","commune","quartier","adresse","superficie","description","telephone","whatsapp","photos","statut","createdAt","updatedAt"])
+        && request.resource.data.typePublieur in ["particulier","agence"]
+        && request.resource.data.titre is string && request.resource.data.titre.size() >= 4 && request.resource.data.titre.size() <= 120
+        && request.resource.data.categorie in ["Hôtel","Résidence meublée","Chambre à louer","Studio à louer","Appartement à louer","Maison à louer","Appartement à vendre","Maison à vendre","Terrain à vendre"]
+        && request.resource.data.transaction in ["location","vente"]
+        && request.resource.data.prix is number && request.resource.data.prix > 0 && request.resource.data.prix <= 10000000000
+        && request.resource.data.periodePrix in ["par nuit","par mois","par an","prix total"]
+        && request.resource.data.commune is string && request.resource.data.commune.size() >= 2 && request.resource.data.commune.size() <= 80
+        && request.resource.data.quartier is string && request.resource.data.quartier.size() >= 2 && request.resource.data.quartier.size() <= 100
+        && (!("adresse" in request.resource.data) || (request.resource.data.adresse is string && request.resource.data.adresse.size() <= 250))
+        && (!("superficie" in request.resource.data) || (request.resource.data.superficie is string && request.resource.data.superficie.size() <= 100))
+        && request.resource.data.description is string && request.resource.data.description.size() >= 20 && request.resource.data.description.size() <= 2500
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 24
+        && request.resource.data.whatsapp is string && request.resource.data.whatsapp.size() <= 24
+        && request.resource.data.photos is list && request.resource.data.photos.size() >= 1 && request.resource.data.photos.size() <= 8
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if estAdmin();
+      allow delete: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+    }
+    match /historique_suppressions_logement/{auditId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["uid","annonceId","titre","commune","deletedAt"])
+        && request.resource.data.keys().hasOnly(["uid","annonceId","titre","commune","deletedAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.annonceId is string
+        && request.resource.data.titre is string
+        && request.resource.data.commune is string
+        && request.resource.data.deletedAt == request.time
+        && exists(/databases/$(database)/documents/annonces_logement/$(request.resource.data.annonceId))
+        && get(/databases/$(database)/documents/annonces_logement/$(request.resource.data.annonceId)).data.uid == request.auth.uid;
+      allow read: if estAdmin();
+      allow update, delete: if estAdmin();
+    }
+    match /demandes_abonnement_logement/{demandeId} {
+      allow create: if estConnecte()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasAll(["uid","nom","email","telephone","formule","montant","operateur","reference","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","nom","email","telephone","formule","montant","operateur","reference","statut","createdAt"])
+        && request.resource.data.formule in ["mensuel","trimestriel","semestriel"]
+        && ((request.resource.data.formule == "mensuel" && request.resource.data.montant == 3000)
+          || (request.resource.data.formule == "trimestriel" && request.resource.data.montant == 8000)
+          || (request.resource.data.formule == "semestriel" && request.resource.data.montant == 15000))
+        && request.resource.data.operateur in ["Orange Money","Wave","MTN MoMo","Moov Money"]
+        && request.resource.data.reference is string && request.resource.data.reference.size() >= 4 && request.resource.data.reference.size() <= 100
+        && request.resource.data.statut == "a_verifier"
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update, delete: if estAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

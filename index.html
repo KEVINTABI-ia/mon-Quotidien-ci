@@ -1935,6 +1935,7 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 <div id="gestionDonsSolidarite" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🤝 Dons et demandes d’aide</h3><p class="notice">Les coordonnées des personnes sont privées et visibles uniquement ici.</p><div id="listeDonsSolidariteAdmin">Chargement...</div></div>
 <div id="gestionServicesProximite" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📍 Services de proximité</h3><p class="notice">Gère les stations-service, banques, hôtels et supermarchés de la plateforme.</p><button type="button" class="primary" onclick="importerServicesQuotidiensOSM()">⬇️ Importer / actualiser stations, banques et hôtels</button><p id="statutGestionServicesProximite" class="notice"></p><div id="resumeGestionServicesProximite">Chargement...</div></div>
 <div id="gestionValidationAnnuaires" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📒 Validation des annuaires professionnels</h3><p class="notice">Vérifie les coordonnées et l’activité avant publication.</p><div id="listeValidationAnnuairesAdmin">Chargement...</div></div>
+<div id="gestionLogementAdmin" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🏠 Modération des annonces Logement</h3><button type="button" class="primary" onclick="chargerGestionLogementAdmin()">Actualiser les annonces en attente</button><div id="logementAdminAds"></div><h3>💳 Abonnements Logement à vérifier</h3><button type="button" onclick="chargerDemandesAbonnementLogementAdmin()">Actualiser les paiements</button><div id="logementAdminPayments"></div><h3>Journal des suppressions</h3><button type="button" onclick="chargerHistoriqueSuppressionsLogementAdmin()">Consulter le journal</button><div id="logementAdminDeletions"></div></div>
 <div id="gestionValidationAnnonces" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>📢 Validation des annonces</h3><p class="notice">Examine les petites annonces et les offres avant leur publication.</p><div id="listeValidationAnnoncesAdmin">Chargement...</div><h4>💳 Renouvellements d’abonnement</h4><button type="button" onclick="chargerPaiementsAnnoncesAdmin()">Actualiser les paiements en attente</button><div id="listePaiementsAnnoncesAdmin"></div></div>
 <div id="gestionObjetsPerdus" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🔎 Gestion des objets et documents retrouvés</h3><p class="notice">Les coordonnées des trouveurs et les demandes sont privées et visibles uniquement ici. Vérifie les paiements avant la mise en relation.</p><div id="listeObjetsRetrouvesAdmin">Chargement...</div><h3>Demandes de récupération et paiements</h3><div id="listeReclamationsObjetsAdmin">Chargement...</div></div>
 <div id="gestionGares" style="display:none;margin-top:18px;border-top:1px solid #ddd;padding-top:16px;">
@@ -2963,14 +2964,60 @@ function chargerPublicitesAccueil() {
   <p class="notice">Les inscriptions, agréments, frais et conditions doivent être confirmés directement auprès de chaque établissement.</p>
 </section>
 <section class="card" id="logementImmobilier" style="display:none;">
-  <h2>🏠 Logement et immobilier</h2>
-  <p>Recherchez des professionnels et agences immobilières dans votre commune.</p>
+  <h2>🏠 Logement – annonces immobilières</h2>
+  <p>Consultez les logements à louer ou à vendre, les hôtels et les résidences proposés par des particuliers et des agences.</p>
   <div class="modes">
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('logementImmobilier','Agence immobilière')">🏢 Agences immobilières</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('logementImmobilier','Location de logement')">🔑 Locations de logements</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('logementImmobilier','Promoteur immobilier')">🏗️ Promoteurs immobiliers</button>
+    <button type="button" class="mode" onclick="logementOpenAuth('public');chargerAnnoncesLogementPubliques()">🔎 Consulter les annonces</button>
+    <button type="button" class="mode" onclick="logementOpenAuth('auth')">🤝 Publier une annonce</button>
   </div>
-  <p class="notice">Visitez le logement et vérifiez les documents, l’identité du bailleur et les conditions avant tout paiement.</p>
+  <div id="logementPublic" style="display:block;margin-top:14px">
+    <h3>Annonces disponibles</h3>
+    <label>Catégorie</label><select id="logementFilterCategory" onchange="chargerAnnoncesLogementPubliques()"><option value="">Toutes les catégories</option><option>Hôtel</option><option>Résidence meublée</option><option>Chambre à louer</option><option>Studio à louer</option><option>Appartement à louer</option><option>Maison à louer</option><option>Appartement à vendre</option><option>Maison à vendre</option><option>Terrain à vendre</option></select>
+    <label>Commune</label><input id="logementFilterCommune" placeholder="Ex. Cocody, Yopougon">
+    <button type="button" onclick="chargerAnnoncesLogementPubliques()">Rechercher</button>
+    <div id="logementPublicResults">Chargement des annonces…</div>
+  </div>
+  <div id="logementAuth" style="display:none;margin-top:14px">
+    <h3>Créer un compte Logement</h3><p>Un mois d’essai gratuit, puis un abonnement par période. Les justificatifs ne sont pas obligatoires à l’inscription.</p>
+    <label>Type de compte</label><select id="logementTypeCompte"><option value="particulier">Particulier</option><option value="agence">Agence immobilière</option></select>
+    <label>Nom / nom de l’agence</label><input id="logementNomCompte">
+    <label>Téléphone</label><input id="logementTelCompte" type="tel">
+    <label>E-mail</label><input id="logementEmailCompte" type="email">
+    <label>Mot de passe (6 caractères minimum)</label><input id="logementPasswordCompte" type="password">
+    <button class="primary" type="button" onclick="logementRegister()">Créer mon compte</button>
+    <hr><h3>Déjà inscrit ?</h3><label>E-mail</label><input id="logementLoginEmail" type="email"><label>Mot de passe</label><input id="logementLoginPassword" type="password"><button type="button" onclick="logementLogin()">Connexion</button>
+  </div>
+  <div id="logementPartnerSpace" style="display:none;margin-top:14px">
+    <h3 id="logementWelcome"></h3><p id="logementSubscriptionStatus" class="notice"></p>
+    <div id="logementPublishForm">
+      <h3>Publier une nouvelle annonce</h3>
+      <label>Titre</label><input id="logementAdTitle" maxlength="120">
+      <label>Type de bien</label><select id="logementAdCategory"><option value="">Choisir</option><option>Hôtel</option><option>Résidence meublée</option><option>Chambre à louer</option><option>Studio à louer</option><option>Appartement à louer</option><option>Maison à louer</option><option>Appartement à vendre</option><option>Maison à vendre</option><option>Terrain à vendre</option></select>
+      <label>Opération</label><select id="logementAdTransaction"><option value="location">À louer</option><option value="vente">À vendre</option></select>
+      <label>Prix en FCFA</label><input id="logementAdPrice" type="number" min="1">
+      <label>Période du prix</label><select id="logementAdPricePeriod"><option value="par nuit">Par nuit</option><option value="par mois">Par mois</option><option value="par an">Par an</option><option value="prix total">Prix total</option></select>
+      <label>Commune</label><input id="logementAdCommune">
+      <label>Quartier</label><input id="logementAdDistrict">
+      <label>Adresse précise (facultatif)</label><input id="logementAdAddress">
+      <label>Superficie / dimensions (facultatif)</label><input id="logementAdArea">
+      <label>Description</label><textarea id="logementAdDescription" rows="4"></textarea>
+      <label>Téléphone public</label><input id="logementAdPhone" type="tel">
+      <label>WhatsApp (facultatif)</label><input id="logementAdWhatsapp" type="tel">
+      <label>Liens HTTPS des photos (une URL par ligne, 8 maximum)</label><textarea id="logementAdPhotos" rows="3" placeholder="https://..."></textarea>
+      <p class="notice">Chaque annonce est examinée par l’administrateur avant sa mise en ligne.</p>
+      <button class="primary" type="button" onclick="logementSubmitAd()">Envoyer l’annonce pour validation</button>
+    </div>
+    <div id="logementRenewal" style="display:none">
+      <h3>Renouveler mon abonnement de publication</h3>
+      <p>3 000 FCFA / mois · 8 000 FCFA / 3 mois · 15 000 FCFA / 6 mois. Publications illimitées pendant la période payée.</p>
+      <label>Formule</label><select id="logementPlan"><option value="mensuel">1 mois – 3 000 FCFA</option><option value="trimestriel">3 mois – 8 000 FCFA</option><option value="semestriel">6 mois – 15 000 FCFA</option></select>
+      <label>Opérateur de paiement</label><select id="logementPaymentOperator"><option value="">Choisir</option><option>Orange Money</option><option>Wave</option><option>MTN MoMo</option><option>Moov Money</option></select>
+      <label>Référence de transaction</label><input id="logementPaymentReference">
+      <button class="primary" type="button" onclick="logementRequestPlan()">Envoyer ma demande de renouvellement</button>
+    </div>
+    <h3>Mes annonces</h3><div id="logementMyAds">Chargement…</div>
+    <button type="button" onclick="logementLogout()">Déconnexion</button>
+  </div>
 </section>
 <section class="card" id="depannageDomicile" style="display:none;">
   <h2>🛠️ Dépannage à domicile</h2>
@@ -4652,6 +4699,7 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionCompagnies",groupe:"Transport",icone:"🚍",image:"compagnies",titre:"Compagnies de voyage",description:"Gérer les agences et leurs dessertes."},
   {id:"gestionAbonnementsRamassage",groupe:"Professionnels",icone:"🚌",titre:"Compagnies de ramassage",description:"Valider les dossiers et abonnements."},
   {id:"gestionValidationAnnuaires",groupe:"Professionnels",icone:"📒",titre:"Annuaires professionnels",description:"Valider les inscriptions avant publication.",notification:"annuaire"},
+  {id:"gestionLogementAdmin",groupe:"Vie communautaire",icone:"🏠",titre:"Logement",description:"Modérer les annonces et vérifier les abonnements."},
   {id:"gestionPartenaires",groupe:"Professionnels",icone:"👥",titre:"Partenaires",description:"Gérer les partenaires de services."},
   {id:"gestionCommandesPartenaires",groupe:"Professionnels",icone:"📦",titre:"Commandes partenaires",description:"Suivre et attribuer les commandes."},
   {id:"gestionPublicites",groupe:"Publications et communication",icone:"📣",titre:"Publicités",description:"Gérer les campagnes publicitaires."},
@@ -4706,6 +4754,7 @@ function ouvrirRubriqueAdmin(id){
   if(id==="gestionServicesProximite") chargerGestionServicesProximiteAdmin();
   if(id==="gestionValidationAnnonces") chargerNouveauxServicesAdmin("annonce");
   if(id==="gestionValidationAnnuaires") chargerAnnuairesAdmin();
+  if(id==="gestionLogementAdmin"){chargerGestionLogementAdmin();chargerDemandesAbonnementLogementAdmin();}
   if(id==="gestionObjetsPerdus") chargerObjetsPerdusAdmin();
    if(id==="gestionCommunautaire") chargerGestionCommunautaireAdmin();
   if(id==="gestionMaCommuneDirect"){ chargerInfosCommuneAdmin(); chargerPropositionsCommuneAdmin(); }
@@ -11957,6 +12006,7 @@ async function chargerModerationCompagniesAdmin(){
 })();
 </script>
 
+<script src="logement.js"></script>
 <script src="declarations-enfants.js"></script>
 </body>
 </html>
