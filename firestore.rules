@@ -1447,7 +1447,7 @@ service cloud.firestore {
         && logementAbonnementActif(request.auth.uid)
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasAll(["uid","nomPublieur","typePublieur","titre","categorie","transaction","prix","periodePrix","commune","quartier","description","telephone","whatsapp","photos","statut","createdAt","updatedAt"])
-        && request.resource.data.keys().hasOnly(["uid","nomPublieur","typePublieur","titre","categorie","transaction","prix","periodePrix","commune","quartier","description","telephone","whatsapp","photos","statut","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["uid","nomPublieur","typePublieur","titre","categorie","transaction","prix","periodePrix","commune","quartier","adresse","superficie","description","telephone","whatsapp","photos","statut","createdAt","updatedAt"])
         && request.resource.data.typePublieur in ["particulier","agence"]
         && request.resource.data.titre is string && request.resource.data.titre.size() >= 4 && request.resource.data.titre.size() <= 120
         && request.resource.data.categorie in ["Hôtel","Résidence meublée","Chambre à louer","Studio à louer","Appartement à louer","Maison à louer","Appartement à vendre","Maison à vendre","Terrain à vendre"]
@@ -1456,6 +1456,8 @@ service cloud.firestore {
         && request.resource.data.periodePrix in ["par nuit","par mois","par an","prix total"]
         && request.resource.data.commune is string && request.resource.data.commune.size() >= 2 && request.resource.data.commune.size() <= 80
         && request.resource.data.quartier is string && request.resource.data.quartier.size() >= 2 && request.resource.data.quartier.size() <= 100
+        && (!("adresse" in request.resource.data) || (request.resource.data.adresse is string && request.resource.data.adresse.size() <= 250))
+        && (!("superficie" in request.resource.data) || (request.resource.data.superficie is string && request.resource.data.superficie.size() <= 100))
         && request.resource.data.description is string && request.resource.data.description.size() >= 20 && request.resource.data.description.size() <= 2500
         && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 24
         && request.resource.data.whatsapp is string && request.resource.data.whatsapp.size() <= 24
@@ -1465,6 +1467,20 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       allow update: if estAdmin();
       allow delete: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+    }
+    match /historique_suppressions_logement/{auditId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["uid","annonceId","titre","commune","deletedAt"])
+        && request.resource.data.keys().hasOnly(["uid","annonceId","titre","commune","deletedAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.annonceId is string
+        && request.resource.data.titre is string
+        && request.resource.data.commune is string
+        && request.resource.data.deletedAt == request.time
+        && exists(/databases/$(database)/documents/annonces_logement/$(request.resource.data.annonceId))
+        && get(/databases/$(database)/documents/annonces_logement/$(request.resource.data.annonceId)).data.uid == request.auth.uid;
+      allow read: if estAdmin();
+      allow update, delete: if estAdmin();
     }
     match /demandes_abonnement_logement/{demandeId} {
       allow create: if estConnecte()
