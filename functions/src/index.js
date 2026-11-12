@@ -135,7 +135,7 @@ exports.waveWebhook = onRequest(
   { region: "europe-west1", secrets: [WAVE_API_KEY, WAVE_WEBHOOK_SECRET], cors: false },
   async (req, res) => {
     if (req.method !== "POST") return res.sendStatus(405);
-    if (!verifyWaveSignature(req, WAVE_WEBHOOK_SECRET.value())) return res.sendStatus(401);
+    if (!verifyWaveSignatureHeader(req.get("wave-signature") || "", req.rawBody, WAVE_WEBHOOK_SECRET.value())) return res.sendStatus(401);
     let event;
     try { event = JSON.parse(req.rawBody.toString("utf8")); } catch { return res.sendStatus(400); }
     if (!["checkout.session.completed", "checkout.session.payment_failed"].includes(event?.type)) {
@@ -166,7 +166,7 @@ exports.waveWebhook = onRequest(
         const p = paymentSnap.data();
         const success = checkout.payment_status === "succeeded" && checkout.checkout_status === "complete";
         const amount = Number(checkout.amount);
-        const valid = p.provider === "wave" && p.providerCheckoutId === checkoutId &&
+        const valid = p.provider === "wave" && (!p.providerCheckoutId || p.providerCheckoutId === checkoutId) &&
           p.clientReference === clientReference && checkout.currency === "XOF" &&
           Number.isSafeInteger(amount) && amount === p.amountXof;
         if (!valid) {
@@ -200,7 +200,7 @@ exports.waveWebhook = onRequest(
             endAt = admin.firestore.Timestamp.fromMillis(base + p.durationDays * 86400000);
           }
           tx.update(paymentRef, {
-            status: "succeeded", providerTransactionId: checkout.transaction_id || null,
+            status: "succeeded", providerCheckoutId: checkoutId, providerTransactionId: checkout.transaction_id || null,
             confirmedAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp()
           });
           tx.set(subRef, {
