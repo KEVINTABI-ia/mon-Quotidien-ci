@@ -1,7 +1,17 @@
 import test from "node:test";
 import worker from "../cloudflare-enfants/src/index.mjs";
 import assert from "node:assert/strict";
-import { validDocId, validImageType, matchesImageSignature, privatePhotoKey, publicPhotoKey, readBodyLimited, uploadOwnerMatches } from "../cloudflare-enfants/src/index.mjs";
+import { validDocId, validImageType, matchesImageSignature, privatePhotoKey, publicPhotoKey, readBodyLimited, uploadOwnerMatches, verifyFirebaseIdToken } from "../cloudflare-enfants/src/index.mjs";
+const pair = await crypto.subtle.generateKey({name:"RSASSA-PKCS1-v1_5",modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:"SHA-256"},true,["sign","verify"]);
+const jwk = {...await crypto.subtle.exportKey("jwk",pair.publicKey),kid:"test-key",alg:"RS256",use:"sig"};
+const b64 = bytes => btoa(Array.from(new Uint8Array(bytes),x=>String.fromCharCode(x)).join("")).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
+async function token(overrides={}, signingPair=pair) {
+ const now=Math.floor(Date.now()/1000);
+ const h=b64(new TextEncoder().encode(JSON.stringify({alg:"RS256",typ:"JWT",kid:"test-key"})));
+ const c=b64(new TextEncoder().encode(JSON.stringify({iss:"https://securetoken.google.com/mon-transport-ci",aud:"mon-transport-ci",sub:"user-123",user_id:"user-123",iat:now,exp:now+3600,auth_time:now-5,...overrides})));
+ const input=h+"."+c;
+ return input+"."+b64(await crypto.subtle.sign("RSASSA-PKCS1-v1_5",signingPair.privateKey,new TextEncoder().encode(input)));
+}
 
 test("valide les identifiants de dossier sans accepter de chemin", () => {
   assert.equal(validDocId("Abcdefghij_123"), true);
@@ -108,7 +118,7 @@ function mockUploadEnvironment(t, { parentStatus = "en_attente", ownerUid = "use
 async function uploadTestRequest(docId) {
   return new Request("https://worker.test/upload/" + docId, {
     method: "POST",
-    headers: { Authorization: "Bearer test-id-token", "Content-Type": "image/png" },
+    headers: { Authorization: "Bearer " + await token(), "Content-Type": "image/png" },
     body: Uint8Array.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])
   });
 }
@@ -142,63 +152,14 @@ test("accepte l’upload pour le propriétaire d’un dossier en attente", async
 });
 
 
-test("journalise uniquement le code Firebase lors d’un rejet du jeton", async (t) => {
-  const token = "token-ne-doit-jamais-apparaitre";
-  const apiKey = "cle-ne-doit-jamais-apparaitre";
-  const logs = [];
-  t.mock.method(console, "warn", (line) => logs.push(String(line)));
-  t.mock.method(globalThis, "fetch", async () =>
-    Response.json({ error: { message: "INVALID_ID_TOKEN" } }, { status: 400 })
-  );
-  const env = {
-    FIREBASE_PROJECT_ID: "mon-transport-ci",
-    FIREBASE_WEB_API_KEY: apiKey,
-    ADMIN_UID: "admin-test",
-    ALLOWED_ORIGINS: "https://kevintabi-ia.github.io",
-    ENFANTS_BUCKET: { async get() { return null; }, async put() { throw new Error("unexpected write"); } }
-  };
-  const request = new Request("https://worker.test/admin/photo/abcdefghij123?ownerUid=user-123", {
-    headers: { Authorization: "Bearer " + token }
-  });
-  const response = await worker.fetch(request, env);
-  assert.equal(response.status, 401);
-  assert.equal(logs.length, 1);
-  assert.match(logs[0], /INVALID_ID_TOKEN/);
-  assert.match(logs[0], /"upstreamStatus":400/);
-  assert.equal(logs[0].includes(token), false);
-  assert.equal(logs[0].includes(apiKey), false);
+test("valide signature, audience, émetteur et expiration des jetons Firebase", async () => {
+ const valid=await token();
+ const fetchKeys=async()=>Response.json({keys:[jwk]},{headers:{"cache-control":"public, max-age=3600"}});
+ assert.equal((await verifyFirebaseIdToken(valid,"mon-transport-ci",fetchKeys)).uid,"user-123");
+ assert.equal(await verifyFirebaseIdToken(await token({aud:"autre-projet"}),"mon-transport-ci",fetchKeys),null);
+ assert.equal(await verifyFirebaseIdToken(await token({exp:Math.floor(Date.now()/1000)-1}),"mon-transport-ci",fetchKeys),null);
 });
-
-
-test("classe un refus HTTP 403 Firebase sans journaliser le message brut", async (t) => {
-  const token = "token-prive-a-masquer";
-  const apiKey = "cle-privee-a-masquer";
-  const logs = [];
-  t.mock.method(console, "warn", (line) => logs.push(String(line)));
-  t.mock.method(globalThis, "fetch", async () => Response.json({
-    error: {
-      code: 403,
-      message: "Requests from this IP address are blocked.",
-      status: "PERMISSION_DENIED",
-      details: [{ reason: "API_KEY_IP_ADDRESS_BLOCKED" }]
-    }
-  }, { status: 403 }));
-  const env = {
-    FIREBASE_PROJECT_ID: "mon-transport-ci",
-    FIREBASE_WEB_API_KEY: apiKey,
-    ADMIN_UID: "admin-test",
-    ALLOWED_ORIGINS: "https://kevintabi-ia.github.io",
-    ENFANTS_BUCKET: { async get() { return null; }, async put() { throw new Error("unexpected write"); } }
-  };
-  const request = new Request("https://worker.test/admin/photo/abcdefghij123?ownerUid=user-123", {
-    headers: { Authorization: "Bearer " + token }
-  });
-  const response = await worker.fetch(request, env);
-  assert.equal(response.status, 401);
-  assert.equal(logs.length, 1);
-  assert.match(logs[0], /"firebaseCategory":"API_KEY_RESTRICTION"/);
-  assert.match(logs[0], /API_KEY_IP_ADDRESS_BLOCKED/);
-  assert.equal(logs[0].includes("Requests from this IP address"), false);
-  assert.equal(logs[0].includes(token), false);
-  assert.equal(logs[0].includes(apiKey), false);
+test("rejette une signature falsifiée", async () => {
+ const impostor=await crypto.subtle.generateKey({name:"RSASSA-PKCS1-v1_5",modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:"SHA-256"},true,["sign","verify"]);
+ assert.equal(await verifyFirebaseIdToken(await token({},impostor),"mon-transport-ci"),null);
 });
