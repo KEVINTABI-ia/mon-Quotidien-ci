@@ -168,3 +168,37 @@ test("journalise uniquement le code Firebase lors d’un rejet du jeton", async 
   assert.equal(logs[0].includes(token), false);
   assert.equal(logs[0].includes(apiKey), false);
 });
+
+
+test("classe un refus HTTP 403 Firebase sans journaliser le message brut", async (t) => {
+  const token = "token-prive-a-masquer";
+  const apiKey = "cle-privee-a-masquer";
+  const logs = [];
+  t.mock.method(console, "warn", (line) => logs.push(String(line)));
+  t.mock.method(globalThis, "fetch", async () => Response.json({
+    error: {
+      code: 403,
+      message: "Requests from this IP address are blocked.",
+      status: "PERMISSION_DENIED",
+      details: [{ reason: "API_KEY_IP_ADDRESS_BLOCKED" }]
+    }
+  }, { status: 403 }));
+  const env = {
+    FIREBASE_PROJECT_ID: "mon-transport-ci",
+    FIREBASE_WEB_API_KEY: apiKey,
+    ADMIN_UID: "admin-test",
+    ALLOWED_ORIGINS: "https://kevintabi-ia.github.io",
+    ENFANTS_BUCKET: { async get() { return null; }, async put() { throw new Error("unexpected write"); } }
+  };
+  const request = new Request("https://worker.test/admin/photo/abcdefghij123?ownerUid=user-123", {
+    headers: { Authorization: "Bearer " + token }
+  });
+  const response = await worker.fetch(request, env);
+  assert.equal(response.status, 401);
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /"firebaseCategory":"API_KEY_RESTRICTION"/);
+  assert.match(logs[0], /API_KEY_IP_ADDRESS_BLOCKED/);
+  assert.equal(logs[0].includes("Requests from this IP address"), false);
+  assert.equal(logs[0].includes(token), false);
+  assert.equal(logs[0].includes(apiKey), false);
+});

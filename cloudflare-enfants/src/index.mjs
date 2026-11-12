@@ -82,20 +82,56 @@ async function firebaseUser(request, env) {
   });
   if (!response.ok) {
     let firebaseCode = "UNKNOWN";
+    let firebaseStatus = "UNKNOWN";
+    let firebaseCategory = "UNKNOWN";
     try {
       const errorData = await response.json();
-      const candidate = errorData?.error?.message;
+      const error = errorData?.error || {};
+      const candidate = error.message;
       if (typeof candidate === "string" && /^[A-Z0-9_]+$/.test(candidate)) {
         firebaseCode = candidate;
       }
+      if (typeof error.status === "string" && /^[A-Z0-9_]+$/.test(error.status)) {
+        firebaseStatus = error.status;
+      }
+      const detailReasons = Array.isArray(error.details)
+        ? error.details.flatMap(detail => [
+            detail?.reason,
+            ...(Array.isArray(detail?.violations) ? detail.violations.map(item => item?.type || item?.reason) : [])
+          ]).filter(value => typeof value === "string")
+        : [];
+      const safeReasons = detailReasons.filter(value => /^[A-Z0-9_.-]{1,80}$/.test(value)).slice(0, 5);
+      const diagnosticText = [
+        typeof candidate === "string" ? candidate : "",
+        typeof error.status === "string" ? error.status : "",
+        ...detailReasons
+      ].join(" ").toUpperCase();
+      if (/API_KEY_INVALID|API KEY INVALID/.test(diagnosticText)) firebaseCategory = "API_KEY_INVALID";
+      else if (/REFERER|REFERRER|IP_ADDRESS|API_KEY_HTTP_REFERRER_BLOCKED|API_KEY_IP_ADDRESS_BLOCKED|API_KEY_RESTRICTION/.test(diagnosticText)) firebaseCategory = "API_KEY_RESTRICTION";
+      else if (/SERVICE_DISABLED|API_NOT_ENABLED|SERVICE.*NOT.*ENABLED/.test(diagnosticText)) firebaseCategory = "API_NOT_ENABLED";
+      else if (/PROJECT_NOT_FOUND|INVALID_PROJECT|CONSUMER_INVALID/.test(diagnosticText)) firebaseCategory = "PROJECT_CONFIGURATION";
+      else if (/PERMISSION_DENIED|ACCESS_NOT_CONFIGURED/.test(diagnosticText)) firebaseCategory = "PERMISSION_OR_API_CONFIGURATION";
+      else if (/INVALID_ID_TOKEN|TOKEN_EXPIRED|USER_DISABLED|USER_NOT_FOUND/.test(diagnosticText)) firebaseCategory = "FIREBASE_AUTH_REJECTED";
+      else if (response.status === 403) firebaseCategory = "UPSTREAM_FORBIDDEN";
+      console.warn(JSON.stringify({
+        event: "enfants_firebase_auth_rejected",
+        upstreamStatus: response.status,
+        firebaseCode,
+        firebaseStatus,
+        firebaseCategory,
+        firebaseReasons: safeReasons
+      }));
     } catch {
       // Ne jamais journaliser le corps brut de la réponse Firebase.
+      console.warn(JSON.stringify({
+        event: "enfants_firebase_auth_rejected",
+        upstreamStatus: response.status,
+        firebaseCode,
+        firebaseStatus,
+        firebaseCategory: response.status === 403 ? "UPSTREAM_FORBIDDEN" : "UNKNOWN",
+        firebaseReasons: []
+      }));
     }
-    console.warn(JSON.stringify({
-      event: "enfants_firebase_auth_rejected",
-      upstreamStatus: response.status,
-      firebaseCode
-    }));
     return null;
   }
   const data = await response.json();
