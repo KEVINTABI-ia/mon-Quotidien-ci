@@ -11,6 +11,12 @@ service cloud.firestore {
     function estConnecte() {
       return request.auth != null;
     }
+
+    // Verrou serveur temporaire : aucun paiement n’est accepté avant intégration et validation des API.
+    // Réactivation uniquement après mise en place d’un traitement serveur vérifié.
+    function paiementsActifs() {
+      return false;
+    }
     function abonnementServices() {
       return exists(/databases/$(database)/documents/configuration_abonnements/globale)
         ? get(/databases/$(database)/documents/configuration_abonnements/globale).data.get("services", {})
@@ -131,7 +137,7 @@ service cloud.firestore {
     match /compagnies/{compagnieId} {
       allow read: if true;
       allow create: if estAdmin()
-        || (estConnecte()
+        || (paiementsActifs() && estConnecte()
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.email == request.auth.token.get("email", "")
           && request.resource.data.keys().hasAll([
@@ -360,7 +366,7 @@ service cloud.firestore {
           && request.resource.data.derniereActivite == request.time
           && (request.resource.data.enLigne == false
             || abonnementValide(request.resource.data)))
-        || (estConnecte()
+        || (paiementsActifs() && estConnecte()
           && request.auth.uid == partenaireId
           && resource.data.statut == "approuve"
           && (!("etatCompte" in resource.data) || resource.data.etatCompte == "actif")
@@ -839,7 +845,8 @@ service cloud.firestore {
     }
 
     match /demandes_publicites/{demandeId} {
-      allow create: if request.resource.data.keys().hasAll([
+      allow create: if paiementsActifs()
+        && request.resource.data.keys().hasAll([
           "nom","telephone","activite","description","forfait","forfaitTexte",
           "dureeJours","montantFCFA","statut","createdAt"
         ])
@@ -895,7 +902,7 @@ service cloud.firestore {
         && request.resource.data.dateExpiration >= request.time + duration.value(abonnementChamp("petites_annonces", "essai", 30) - 1, "d")
         && request.resource.data.dateExpiration <= request.time + duration.value(abonnementChamp("petites_annonces", "essai", 30) + 1, "d");
       allow update: if estAdmin()
-        || (estConnecte() && request.auth.uid == uid
+        || (paiementsActifs() && estConnecte() && request.auth.uid == uid
           && resource.data.dateExpiration is timestamp
           && resource.data.dateExpiration <= request.time
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["paiementMoyen","paiementReference","montantRenouvellement","dureeRenouvellementJours","paiementStatut","demandeRenouvellementLe"])
@@ -927,7 +934,8 @@ service cloud.firestore {
         && (!request.resource.data.keys().hasAny(["modePartenaire"]) || request.resource.data.get("modePartenaire", false) == true)
         && (request.resource.data.type != "commerce"
           || request.resource.data.modePartenaire == true
-          || (request.resource.data.adresseBoutique is string
+          || (paiementsActifs()
+            && request.resource.data.adresseBoutique is string
             && request.resource.data.adresseBoutique.size() > 4
             && request.resource.data.adresseBoutique.size() <= 220
             && request.resource.data.paiementMoyen in ["Wave","Orange Money"]
@@ -964,7 +972,7 @@ service cloud.firestore {
     }
 
     match /demandes_renouvellement_boutiques/{demandeId} {
-      allow create: if estConnecte()
+      allow create: if paiementsActifs() && estConnecte()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasAll(["boutiqueId","uid","email","operateur","referencePaiement","nomPayeur","montantFCFA","dureeJours","statut","createdAt"])
         && request.resource.data.keys().hasOnly(["boutiqueId","uid","email","operateur","referencePaiement","nomPayeur","montantFCFA","dureeJours","statut","createdAt"])
@@ -1027,7 +1035,7 @@ service cloud.firestore {
     }
 
     match /demandes_abonnement_automobiliste/{demandeId} {
-      allow create: if estConnecte()
+      allow create: if paiementsActifs() && estConnecte()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasAll(["uid","email","operateur","referencePaiement","nomPayeur","montantFCFA","dureeMois","statut","createdAt"])
         && request.resource.data.keys().hasOnly(["uid","email","operateur","referencePaiement","nomPayeur","montantFCFA","dureeMois","statut","createdAt"])
@@ -1133,7 +1141,7 @@ service cloud.firestore {
       allow delete: if estAdmin();
     }
     match /gbairai_recharges/{id} {
-      allow create: if estConnecte() && request.resource.data.uid == request.auth.uid
+      allow create: if paiementsActifs() && estConnecte() && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasOnly(["uid","pseudonyme","operateur","referencePaiement","montantFCFA","messages","statut","createdAt"])
         && request.resource.data.operateur in ["Wave","Orange Money"] && request.resource.data.referencePaiement is string
         && request.resource.data.referencePaiement.size() >= 4 && request.resource.data.montantFCFA == 100
@@ -1179,7 +1187,7 @@ service cloud.firestore {
 
     // Coordonnées du demandeur et références de paiement : aucun accès public en lecture.
     match /demandes_recuperation_objets/{demandeId} {
-      allow create: if request.resource.data.keys().hasOnly([
+      allow create: if paiementsActifs() && request.resource.data.keys().hasOnly([
           "objetId","nomComplet","telephone","residence","operateur",
           "referenceTransaction","heureTransaction","montantFCFA","statut","createdAt"
         ])
@@ -1483,7 +1491,7 @@ service cloud.firestore {
       allow update, delete: if estAdmin();
     }
     match /demandes_abonnement_logement/{demandeId} {
-      allow create: if estConnecte()
+      allow create: if paiementsActifs() && estConnecte()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasAll(["uid","nom","email","telephone","formule","montant","operateur","reference","statut","createdAt"])
         && request.resource.data.keys().hasOnly(["uid","nom","email","telephone","formule","montant","operateur","reference","statut","createdAt"])
