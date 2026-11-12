@@ -365,7 +365,7 @@ service cloud.firestore {
           && resource.data.statut == "approuve"
           && (!("etatCompte" in resource.data) || resource.data.etatCompte == "actif")
           && !abonnementValide(resource.data)
-          && resource.data.renouvellementStatut != "a_verifier"
+          && (!("renouvellementStatut" in resource.data) || resource.data.renouvellementStatut != "a_verifier")
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             "renouvellementStatut","renouvellementFormule","renouvellementMois",
             "renouvellementMontant","renouvellementOperateur","renouvellementReference",
