@@ -2133,7 +2133,8 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 
 <div id="gestionCommunautaire" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🗞️ Gestion de la communauté</h3>
 <h4>Publier une information</h4><textarea id="nouvelleInformationCommunautaire" rows="4" maxlength="1500" placeholder="Rédige l’information"></textarea><button class="primary" onclick="publierInformationCommunautaire()">Publier l’information</button><p id="statutInformationCommunautaire" class="notice"></p>
-<h4>Informations publiées</h4><div id="listeInformationsAdmin"></div><h4>Recharges du tchat — 100 FCFA / 15 messages</h4><div id="listeRechargesGbairaiAdmin"></div><h4>Messages du tchat — 24 heures</h4><div id="listeMessagesGbairaiAdmin"></div><h4>Annonces et offres — 2 000 FCFA / 15 jours · 3 500 FCFA / 30 jours</h4><div id="listeAnnoncesAdmin"></div></div>
+<h4>Informations publiées</h4><div id="listeInformationsAdmin"></div>
+<h4>Déclarations d’enfants — modération obligatoire</h4><button type="button" class="primary" onclick="chargerDeclarationsEnfantsAdmin()">Actualiser les déclarations</button><div id="declarationsEnfantsAdminListe"></div><h4>Recharges du tchat — 100 FCFA / 15 messages</h4><div id="listeRechargesGbairaiAdmin"></div><h4>Messages du tchat — 24 heures</h4><div id="listeMessagesGbairaiAdmin"></div><h4>Annonces et offres — 2 000 FCFA / 15 jours · 3 500 FCFA / 30 jours</h4><div id="listeAnnoncesAdmin"></div></div>
 </section>
 
 </section>
@@ -11417,6 +11418,7 @@ window.mtcAfficherActeJudiciaire = function(type){
           <button class="home-discovery-card" type="button" onclick="ouvrirEmploisOpportunites()"><span>💼</span><strong>Emplois et opportunités</strong><small>Offres d’emploi, stages et opportunités vérifiées</small></button>
           <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier')"><span>🏠</span><strong>Logement et immobilier</strong><small>Maisons, chambres et agences dans votre commune</small></button>
           <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Signaler et retrouver un objet ou un document perdu')"><span>🔎</span><strong>Objets et documents perdus</strong><small>Signalez un objet perdu ou consultez les biens retrouvés</small></button>
+          <button class="home-discovery-card" type="button" onclick="ouvrirDeclarationsEnfants()"><span>🧒</span><strong>Déclaration d’enfant perdu ou retrouvé</strong><small>Signaler un enfant disparu ou un enfant retrouvé</small></button>
         </div>
       </section>`;
     main.insertBefore(shell,recherche);
@@ -11955,5 +11957,6 @@ async function chargerModerationCompagniesAdmin(){
 })();
 </script>
 
+<script src="declarations-enfants.js"></script>
 </body>
 </html>
