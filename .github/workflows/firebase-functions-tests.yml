@@ -1,0 +1,39 @@
+name: Firebase Functions tests
+
+on:
+  pull_request:
+    paths:
+      - "functions/**"
+      - ".github/workflows/firebase-functions-tests.yml"
+  push:
+    branches:
+      - main
+      - feat/paiements-securises-wave-orange
+    paths:
+      - "functions/**"
+      - ".github/workflows/firebase-functions-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+      - name: Run unit tests
+        run: npm test
+      - name: Check JavaScript syntax
+        run: |
+          node --check src/index.js
+          node --check src/payment-utils.js
