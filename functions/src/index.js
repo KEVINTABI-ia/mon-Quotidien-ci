@@ -2,6 +2,7 @@ const { onRequest } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
+const crypto = require("node:crypto");
 const { verifyWaveSignature: verifyWaveSignatureHeader, addMonthsClamped } = require("./payment-utils");
 
 admin.initializeApp();
@@ -151,7 +152,8 @@ exports.waveWebhook = onRequest(
     const eventId = event?.id;
     if (typeof checkoutId !== "string" || typeof eventId !== "string") return res.sendStatus(400);
     try {
-      const receiptRef = db.collection("payment_webhooks").doc("wave_" + eventId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 140));
+      const receiptKey = crypto.createHash("sha256").update(eventId).digest("hex");
+      const receiptRef = db.collection("payment_webhooks").doc("wave_" + receiptKey);
       const prior = await receiptRef.get();
       if (prior.exists) return res.sendStatus(200);
       const checkout = await waveRequest("/v1/checkout/sessions/" + encodeURIComponent(checkoutId), { method: "GET" }, WAVE_API_KEY.value());
