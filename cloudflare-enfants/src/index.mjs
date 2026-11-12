@@ -26,13 +26,13 @@ let firebaseAccessTokenCache = null;
 function base64UrlEncode(bytes) {
   const value = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   return btoa(Array.from(value, c => String.fromCharCode(c)).join(""))
-    .replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+    .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 function accountEmailHint(serviceAccountJson) {
   try { return JSON.parse(serviceAccountJson).client_email || ""; } catch { return ""; }
 }
 function pemToBytes(pem) {
-  const body = String(pem || "").replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\\s/g, "");
+  const body = String(pem || "").replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, "");
   return Uint8Array.from(atob(body), c => c.charCodeAt(0));
 }
 async function getFirebaseAdminAccessToken(serviceAccountJson, fetcher) {
@@ -81,8 +81,9 @@ export async function verifyFirebaseAccountStatus(uid, authTime, env, fetcher = 
     if (!response.ok) return false;
     const data = await response.json();
     const user = Array.isArray(data.users) ? data.users.find(item => item.localId === uid) : null;
-    if (!user || user.disabled === true) return false;
-    const validSince = Number(user.validSince || 0);
+    if (!user || user.disabled !== false) return false;
+    if (user.validSince === undefined || user.validSince === null || user.validSince === "") return false;
+    const validSince = Number(user.validSince);
     if (!Number.isFinite(validSince) || !Number.isFinite(authTime) || authTime < validSince) return false;
     return true;
   } catch {
