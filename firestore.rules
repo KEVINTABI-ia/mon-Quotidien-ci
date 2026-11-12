@@ -1522,6 +1522,31 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // Paiements : seules les fonctions serveur (Admin SDK) écrivent ces collections.
+    // Le client ne peut lire que ses propres paiements et abonnements.
+    match /payments/{paymentId} {
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+    match /subscriptions/{subscriptionId} {
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+    match /payment_catalog/{document=**} {
+      allow read: if estAdmin();
+      allow write: if false;
+    }
+    match /payment_webhooks/{eventId} {
+      allow read, write: if false;
+    }
+    match /payment_webhook_events/{eventId} {
+      allow read, write: if false;
+    }
+    match /refunds/{refundId} {
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
