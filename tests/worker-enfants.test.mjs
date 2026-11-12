@@ -5,9 +5,9 @@ import { validDocId, validImageType, matchesImageSignature, privatePhotoKey, pub
 const pair = await crypto.subtle.generateKey({name:"RSASSA-PKCS1-v1_5",modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:"SHA-256"},true,["sign","verify"]);
 const jwk = {...await crypto.subtle.exportKey("jwk",pair.publicKey),kid:"test-key",alg:"RS256",use:"sig"};
 const adminPkcs8 = await crypto.subtle.exportKey("pkcs8", pair.privateKey);
-const adminPem = "-----BEGIN PRIVATE KEY-----\\n" +
-  btoa(Array.from(new Uint8Array(adminPkcs8), x => String.fromCharCode(x)).join("")).match(/.{1,64}/g).join("\\n") +
-  "\\n-----END PRIVATE KEY-----";
+const adminPem = "-----BEGIN PRIVATE KEY-----\n" +
+  btoa(Array.from(new Uint8Array(adminPkcs8), x => String.fromCharCode(x)).join("")).match(/.{1,64}/g).join("\n") +
+  "\n-----END PRIVATE KEY-----";
 const serviceAccount = JSON.stringify({
   project_id: "mon-transport-ci",
   client_email: "worker-test@mon-transport-ci.iam.gserviceaccount.com",
@@ -101,6 +101,12 @@ function mockUploadEnvironment(t, { parentStatus = "en_attente", ownerUid = "use
     if (url.includes("securetoken@system.gserviceaccount.com")) {
       return Response.json({ keys: [jwk] }, { headers: { "cache-control": "public, max-age=3600" } });
     }
+    if (url.includes("oauth2.googleapis.com/token")) {
+      return Response.json({ access_token: "test-admin-access", expires_in: 3600 });
+    }
+    if (url.includes("/accounts:lookup")) {
+      return Response.json({ users: [{ localId: uid, disabled: false, validSince: "0" }] });
+    }
     if (url.includes("/declarations_enfants/" + docId + "/informations_privees/contact")) {
       return privateExists
         ? Response.json({ fields: { uid: { stringValue: ownerUid }, photoKey: { stringValue: expectedKey } } })
@@ -113,7 +119,8 @@ function mockUploadEnvironment(t, { parentStatus = "en_attente", ownerUid = "use
   });
   const env = {
     FIREBASE_PROJECT_ID: "mon-transport-ci",
-    FIREBASE_WEB_API_KEY: "public-test-key",\n    FIREBASE_SERVICE_ACCOUNT_JSON: serviceAccount,
+    FIREBASE_WEB_API_KEY: "public-test-key",
+    FIREBASE_SERVICE_ACCOUNT_JSON: serviceAccount,
     ADMIN_UID: "admin-test",
     ALLOWED_ORIGINS: "https://kevintabi-ia.github.io",
     ENFANTS_BUCKET: {
