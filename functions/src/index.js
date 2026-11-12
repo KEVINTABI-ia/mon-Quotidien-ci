@@ -166,7 +166,7 @@ exports.waveWebhook = onRequest(
         const p = paymentSnap.data();
         const success = checkout.payment_status === "succeeded" && checkout.checkout_status === "complete";
         const amount = Number(checkout.amount);
-        const valid = p.provider === "wave" && (!p.providerCheckoutId || p.providerCheckoutId === checkoutId) &&
+        const valid = checkout.id === checkoutId && p.provider === "wave" && (!p.providerCheckoutId || p.providerCheckoutId === checkoutId) &&
           p.clientReference === clientReference && checkout.currency === "XOF" &&
           Number.isSafeInteger(amount) && amount === p.amountXof;
         if (!valid) {
