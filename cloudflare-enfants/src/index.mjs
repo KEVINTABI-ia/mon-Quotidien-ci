@@ -8,6 +8,17 @@ export function validDocId(value) {
 export function validImageType(value) {
   return ALLOWED_TYPES.has(String(value || "").toLowerCase());
 }
+export function matchesImageSignature(bytes, type) {
+  const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  if (type === "image/jpeg") return b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+  if (type === "image/png") return b.length >= 8 &&
+    b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 &&
+    b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a;
+  if (type === "image/webp") return b.length >= 12 &&
+    String.fromCharCode(...b.slice(0, 4)) === "RIFF" &&
+    String.fromCharCode(...b.slice(8, 12)) === "WEBP";
+  return false;
+}
 export function privatePhotoKey(uid, docId) {
   return "private/" + uid + "/" + docId + "/photo";
 }
@@ -105,6 +116,9 @@ async function handle(request, env) {
     if (declaredSize > MAX_IMAGE_BYTES) return json({ error: "Photo limitée à 8 Mo." }, 413);
     const bytes = await request.arrayBuffer();
     if (!bytes.byteLength || bytes.byteLength > MAX_IMAGE_BYTES) return json({ error: "Photo vide ou supérieure à 8 Mo." }, 413);
+    if (!matchesImageSignature(new Uint8Array(bytes), type)) {
+      return json({ error: "Le contenu du fichier ne correspond pas au format image annoncé." }, 415);
+    }
     const key = privatePhotoKey(user.uid, docId);
     const existing = await env.ENFANTS_BUCKET.get(key);
     if (existing) {
