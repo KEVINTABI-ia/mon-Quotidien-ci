@@ -2,8 +2,14 @@
   "name": "mon-quotidien-ci-payments",
   "private": true,
   "main": "src/index.js",
-  "engines": { "node": "20" },
-  "scripts": { "serve": "firebase emulators:start --only functions,firestore", "deploy": "firebase deploy --only functions" },
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "serve": "firebase emulators:start --only functions,firestore",
+    "deploy": "firebase deploy --only functions",
+    "test": "node --test"
+  },
   "dependencies": {
     "firebase-admin": "^13.0.2",
     "firebase-functions": "^6.3.2"
