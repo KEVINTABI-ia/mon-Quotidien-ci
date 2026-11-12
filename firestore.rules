@@ -1376,7 +1376,7 @@ service cloud.firestore {
     match /declarations_enfants/{dossierId} {
       allow read: if estAdmin() || resource.data.statut == "approuve";
       allow create: if estConnecte()
-        && request.resource.data.keys().hasAll(["uid","type","nom","age","photoUrl","telephonePublic","presencePublic","statut","createdAt"])
+        && request.resource.data.keys().hasAll(["type","nom","age","photoUrl","telephonePublic","presencePublic","statut","createdAt"])
         && request.resource.data.keys().hasOnly(["uid","type","nom","age","photoUrl","telephonePublic","presencePublic","statut","createdAt"])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.type in ["perdu","retrouve"]
@@ -1393,7 +1393,7 @@ service cloud.firestore {
       match /informations_privees/{contactId} {
         allow create: if estConnecte() && contactId == "contact"
           && request.resource.data.uid == request.auth.uid
-          && getAfter(/databases/$(database)/documents/declarations_enfants/$(dossierId)).data.uid == request.auth.uid
+          && getAfter(/databases/$(database)/documents/declarations_enfants/$(dossierId)/informations_privees/contact).data.uid == request.auth.uid
           && getAfter(/databases/$(database)/documents/declarations_enfants/$(dossierId)).data.statut == "en_attente";
         allow read: if estAdmin();
         allow update, delete: if estAdmin();
