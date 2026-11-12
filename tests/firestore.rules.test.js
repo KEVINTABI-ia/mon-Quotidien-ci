@@ -1054,4 +1054,33 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
   });
 
+
+  it("refuse le renouvellement payant d'un livreur ou représentant de gare tant que les API sont absentes", async () => {
+    const expired = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
+    await testEnv.withSecurityRulesDisabled(async context => {
+      const db=context.firestore();
+      await db.doc("partenaires/"+PARTNER_UID).set(partnerFixture({
+        statutAbonnementPartenaire:"Expire",
+        dateExpirationAbonnement:expired,
+        enLigne:false
+      }));
+      await db.doc("configuration_abonnements/globale").set({
+        services:{
+          partenaires_colis_1mois:{actif:true,prix:1000,duree:1,unite:"mois"}
+        }
+      });
+    });
+    const db=testEnv.authenticatedContext(PARTNER_UID,{email:"partner@example.test"}).firestore();
+    const {doc,updateDoc,serverTimestamp}=require("firebase/firestore");
+    await assertFails(updateDoc(doc(db,"partenaires",PARTNER_UID),{
+      renouvellementStatut:"a_verifier",
+      renouvellementFormule:"partenaires_colis_1mois",
+      renouvellementMois:1,
+      renouvellementMontant:1000,
+      renouvellementOperateur:"Wave",
+      renouvellementReference:"REF-TEST-1234",
+      renouvellementDemandeLe:serverTimestamp()
+    }));
+  });
+
 });
