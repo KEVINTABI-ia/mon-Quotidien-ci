@@ -2911,14 +2911,11 @@ function chargerPublicitesAccueil() {
     <select id="operateurAbonnementAuto" style="width:100%;padding:12px;margin:5px 0 10px;">
       <option value="Wave">Wave</option><option value="Orange Money" disabled>Orange Money (bientôt disponible)</option>
     </select>
-    <label for="referenceAbonnementAuto">Référence de la transaction</label>
-    <input id="referenceAbonnementAuto" type="text" maxlength="80" placeholder="Référence affichée après le transfert" style="width:100%;padding:12px;margin:5px 0 10px;">
-    <label for="nomPayeurAbonnementAuto">Nom du payeur (facultatif)</label>
-    <input id="nomPayeurAbonnementAuto" type="text" maxlength="80" placeholder="Nom indiqué lors du paiement" style="width:100%;padding:12px;margin:5px 0 10px;">
-    <button type="button" onclick="envoyerDemandeAbonnementAuto()" style="width:100%;background:#087C62;color:white;">Envoyer ma demande de validation</button>
+    <p class="notice">Vous serez redirigé vers la page sécurisée Wave. Votre abonnement sera activé uniquement après confirmation automatique du paiement.</p>
+    <button type="button" onclick="envoyerDemandeAbonnementAuto()" style="width:100%;background:#087C62;color:white;">Payer avec Wave</button>
     <button type="button" onclick="deconnecterCompteAbonnementAuto()" style="width:100%;margin-top:8px;">Se déconnecter</button>
   </div>
-  <p class="notice" style="margin-top:12px;">Ne transmettez jamais votre code secret Mobile Money. La validation peut nécessiter un délai de vérification.</p>
+  <p class="notice" style="margin-top:12px;">Mon Quotidien CI ne vous demandera jamais votre code secret Wave ou Mobile Money.</p>
 </section>
 
 <section id="mesDocumentsAutomobiles" class="card" style="display:none;">
