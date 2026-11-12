@@ -84,7 +84,7 @@ exports.createWaveCheckout = onRequest(
       const clientReference = "MQCI-" + paymentRef.id;
       await paymentRef.create({
         uid: user.uid, serviceId, planId, provider: "wave", amountXof: plan.amountXof,
-        currency: "XOF", status: "pending", clientReference,
+        durationDays: plan.durationDays, currency: "XOF", status: "pending", clientReference,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
