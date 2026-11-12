@@ -1,0 +1,95 @@
+# Paiements sécurisés — Mon Quotidien CI
+
+## État de l'intégration
+
+- Ajout d'un backend Firebase Functions v2 pour créer les sessions Wave, vérifier les webhooks signés et activer un abonnement côté serveur.
+- Orange Money CI n'est pas activé : ses identifiants, son contrat marchand et sa documentation technique CI doivent être fournis avant de coder l'adaptateur. Aucun endpoint d'un autre pays n'est supposé.
+- Les boutons et formulaires de paiement historiques de l'interface ne sont pas encore raccordés à ce backend. Ne pas annoncer les paiements automatiques comme disponibles avant ce raccordement et les tests.
+- Les remboursements et le rapprochement automatique restent à implémenter après validation des capacités exactes du contrat marchand.
+
+## Architecture
+
+Le navigateur transmet uniquement un identifiant de service, un identifiant de formule et l'opérateur. Le backend lit le montant et la durée depuis le catalogue Firestore, puis crée une session Wave. Le montant envoyé au prestataire est toujours celui calculé côté serveur.
+
+Le webhook Wave est vérifié sur le corps brut avec HMAC-SHA256. Le backend récupère ensuite la session via l'API Wave et vérifie la référence client, l'identifiant de session, le montant, la devise XOF et les états de paiement. La transaction Firestore active alors l'abonnement de façon atomique et idempotente.
+
+La redirection du navigateur vers success_url ne confirme jamais un paiement.
+
+## Configuration
+
+1. Vérifier le projet Firebase ciblé avant déploiement. Le code client historique pointe vers le projet mon-transport-ci ; confirmer qu'il s'agit bien du projet voulu.
+2. Installer les dépendances depuis le dossier functions avec npm install.
+3. Configurer les secrets avec Firebase Secret Manager :
+   - firebase functions:secrets:set WAVE_API_KEY
+   - firebase functions:secrets:set WAVE_WEBHOOK_SECRET
+4. Déployer après revue : firebase deploy --only functions:createWaveCheckout,functions:waveWebhook,functions:getPaymentStatus
+5. Enregistrer l'URL HTTPS de waveWebhook dans le portail Wave Business avec l'événement checkout.session.completed.
+6. Contrôler les journaux, les quotas, la facturation, les règles Firestore et le projet avant activation publique.
+
+## Catalogue de prix
+
+Le backend lit les documents de la forme payment_catalog/{serviceId}/plans/{planId}. Exemple de document :
+
+    {
+      "active": true,
+      "amountXof": 1000,
+      "currency": "XOF",
+      "durationDays": 30,
+      "label": "Formule mensuelle"
+    }
+
+Ces documents doivent être créés et modifiés uniquement par un administrateur de confiance ou le backend. Aucun prix ne doit être accepté depuis le navigateur. Ne pas activer les plans avant validation commerciale des prix et durées.
+
+## Endpoints
+
+### Créer un paiement
+
+POST createWaveCheckout avec un Firebase ID token dans Authorization: Bearer. Corps JSON :
+
+    {
+      "serviceId": "annuaire",
+      "planId": "mensuel",
+      "successUrl": "https://kevintabi-ia.github.io/mon-Quotidien-ci/?payment=return",
+      "errorUrl": "https://kevintabi-ia.github.io/mon-Quotidien-ci/?payment=error"
+    }
+
+Le serveur retourne paymentId et checkoutUrl. Ouvrir checkoutUrl dans le navigateur normal, pas dans une WebView.
+
+### Consulter le statut
+
+GET getPaymentStatus?paymentId=... avec le même Firebase ID token. Afficher le paiement comme confirmé uniquement si le serveur renvoie status=succeeded.
+
+## Abonnements
+
+Les abonnements sont enregistrés dans subscriptions/{uid}_{serviceId}. La durée provient du catalogue et est exprimée en jours dans cette version. Un renouvellement avant expiration prolonge la date existante ; après expiration, il repart de l'instant de confirmation.
+
+Les droits d'accès des modules métier doivent ensuite être raccordés à cette collection et les règles historiques auditées. Une simple désactivation visuelle dans l'interface n'est pas un contrôle d'accès.
+
+Les prélèvements récurrents ne sont pas supposés disponibles. Un nouveau checkout explicitement autorisé par le client est requis tant que le contrat opérateur n'établit pas une récurrence et un mandat valides.
+
+## Orange Money CI
+
+Avant activation, obtenir auprès d'Orange CI les endpoints et modalités exacts de création de paiement, authentification, callback, interrogation de statut, sandbox, remboursements partiels/totaux, frais et délais. Le callback doit être authentifié selon la spécification fournie par Orange et le statut doit être recoupé côté serveur lorsque l'API le permet.
+
+## Remboursements et rapprochement
+
+Conserver le paiement original et créer une écriture de remboursement distincte, liée au paiement, avec statut, motif, montant, opérateur, référence externe, identité de l'administrateur et clé d'idempotence. Les statuts prévus sont requested, approved, processing, succeeded, failed et rejected. Ne jamais supprimer une transaction pour simuler un remboursement.
+
+Le rapprochement quotidien doit comparer paiements internes, transactions opérateur et versements nets : paiements manquants, doublons, montants ou devises incohérents, remboursements en attente et écarts de frais.
+
+## Tests avant production
+
+- Jeton Firebase absent ou invalide : rejet.
+- Formule inconnue/inactive : aucune session créée.
+- Signature Wave invalide ou timestamp hors fenêtre : HTTP 401.
+- Référence, identifiant, montant ou devise non concordants : aucun abonnement activé.
+- Webhook rejoué : une seule activation.
+- Retour navigateur falsifié : aucun paiement confirmé.
+- Utilisateur A ne peut pas lire le paiement de B.
+- Le client ne peut ni créer ni modifier paiements, abonnements ou catalogue.
+- Vérifier les renouvellements avant et après expiration, ainsi que les durées de 28, 29, 30 et 31 jours.
+- Tester les droits réels des modules existants : les anciens champs d'abonnement ne doivent pas permettre de contourner le nouveau contrôle serveur.
+
+## Limites de cette livraison
+
+Cette livraison constitue le socle backend Wave et les règles de protection des collections de paiement. Elle ne raccorde pas encore les écrans de paiement, n'active pas Orange Money, ne traite pas les remboursements et ne migre pas les contrôles d'abonnement de tous les modules. Elle doit être testée dans un projet Firebase de préproduction avant déploiement.
