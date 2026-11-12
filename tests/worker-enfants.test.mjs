@@ -140,3 +140,31 @@ test("accepte l’upload pour le propriétaire d’un dossier en attente", async
   assert.equal(response.status, 201);
   assert.equal(getPutCount(), 1);
 });
+
+
+test("journalise uniquement le code Firebase lors d’un rejet du jeton", async (t) => {
+  const token = "token-ne-doit-jamais-apparaitre";
+  const apiKey = "cle-ne-doit-jamais-apparaitre";
+  const logs = [];
+  t.mock.method(console, "warn", (line) => logs.push(String(line)));
+  t.mock.method(globalThis, "fetch", async () =>
+    Response.json({ error: { message: "INVALID_ID_TOKEN" } }, { status: 400 })
+  );
+  const env = {
+    FIREBASE_PROJECT_ID: "mon-transport-ci",
+    FIREBASE_WEB_API_KEY: apiKey,
+    ADMIN_UID: "admin-test",
+    ALLOWED_ORIGINS: "https://kevintabi-ia.github.io",
+    ENFANTS_BUCKET: { async get() { return null; }, async put() { throw new Error("unexpected write"); } }
+  };
+  const request = new Request("https://worker.test/admin/photo/abcdefghij123?ownerUid=user-123", {
+    headers: { Authorization: "Bearer " + token }
+  });
+  const response = await worker.fetch(request, env);
+  assert.equal(response.status, 401);
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /INVALID_ID_TOKEN/);
+  assert.match(logs[0], /"upstreamStatus":400/);
+  assert.equal(logs[0].includes(token), false);
+  assert.equal(logs[0].includes(apiKey), false);
+});
