@@ -1707,8 +1707,33 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 @media(prefers-reduced-motion:reduce){#mqci-splash-screen{transition:none}}
 </style>
 
+
+<style id="mqci-accessibility-refinement">
+  html { scroll-behavior: smooth; scroll-padding-top: 18px; }
+  :focus-visible { outline: 3px solid #F28C28 !important; outline-offset: 3px !important; }
+  .mqci-skip-link {
+    position: fixed; z-index: 2147483001; top: 10px; left: 10px;
+    transform: translateY(-160%); padding: 12px 16px; border-radius: 12px;
+    background: #18352A; color: #fff; font-weight: 800; text-decoration: none;
+    box-shadow: 0 5px 18px #0003;
+  }
+  .mqci-skip-link:focus { transform: translateY(0); }
+  button, a, input, select, textarea { touch-action: manipulation; }
+  button:disabled { cursor: not-allowed; opacity: .65; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      scroll-behavior: auto !important;
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+    }
+  }
+</style>
+
 </head>
 <body>
+<a class="mqci-skip-link" href="#contenu-principal">Aller au contenu principal</a>
 
 
 <!-- Accès obligatoire aux utilisateurs de Mon Quotidien CI -->
@@ -1782,7 +1807,7 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
   <div class="mqci-flag-stripe" aria-hidden="true"><i></i><i></i><i></i></div>
 </header>
 
-<main>
+<main id="contenu-principal" tabindex="-1">
   <section class="card transport-colis-screen" id="transportColis" style="display:none;">
   <div class="transport-colis-intro">
     <h2>📦 Transport Colis CI</h2>
@@ -2884,16 +2909,13 @@ function chargerPublicitesAccueil() {
     <p id="etatAbonnementAuto" class="notice" aria-live="polite">Vérification de votre abonnement...</p>
     <label for="operateurAbonnementAuto">Moyen de paiement</label>
     <select id="operateurAbonnementAuto" style="width:100%;padding:12px;margin:5px 0 10px;">
-      <option value="Wave">Wave</option><option value="Orange Money">Orange Money</option>
+      <option value="Wave">Wave</option><option value="Orange Money" disabled>Orange Money (bientôt disponible)</option>
     </select>
-    <label for="referenceAbonnementAuto">Référence de la transaction</label>
-    <input id="referenceAbonnementAuto" type="text" maxlength="80" placeholder="Référence affichée après le transfert" style="width:100%;padding:12px;margin:5px 0 10px;">
-    <label for="nomPayeurAbonnementAuto">Nom du payeur (facultatif)</label>
-    <input id="nomPayeurAbonnementAuto" type="text" maxlength="80" placeholder="Nom indiqué lors du paiement" style="width:100%;padding:12px;margin:5px 0 10px;">
-    <button type="button" onclick="envoyerDemandeAbonnementAuto()" style="width:100%;background:#087C62;color:white;">Envoyer ma demande de validation</button>
+    <p class="notice">Vous serez redirigé vers la page sécurisée Wave. Votre abonnement sera activé uniquement après confirmation automatique du paiement.</p>
+    <button type="button" onclick="envoyerDemandeAbonnementAuto()" style="width:100%;background:#087C62;color:white;">Payer avec Wave</button>
     <button type="button" onclick="deconnecterCompteAbonnementAuto()" style="width:100%;margin-top:8px;">Se déconnecter</button>
   </div>
-  <p class="notice" style="margin-top:12px;">Ne transmettez jamais votre code secret Mobile Money. La validation peut nécessiter un délai de vérification.</p>
+  <p class="notice" style="margin-top:12px;">Mon Quotidien CI ne vous demandera jamais votre code secret Wave ou Mobile Money.</p>
 </section>
 
 <section id="mesDocumentsAutomobiles" class="card" style="display:none;">
@@ -3555,9 +3577,11 @@ async function mqciVerifierCodeSMS(){
 }
 auth.onAuthStateChanged(function(user){
   const gate=document.getElementById("mqci-auth-gate");
-  if(!gate)return;
-  if(user&&window.__mqciAuthFlowInProgress)return;
-  gate.hidden=!!user;
+  if(gate){
+    if(user&&window.__mqciAuthFlowInProgress)return;
+    gate.hidden=!!user;
+  }
+  if(user)verifierRetourPaiementWave(user);
 });
 
 
@@ -3604,7 +3628,8 @@ async function envoyerFichierFirebaseStorage(fichier, categorie) {
     : fichierAEnvoyer.type === "image/webp" ? "webp"
     : fichier.type === "video/quicktime" ? "mov"
     : fichier.type === "video/webm" ? "webm" : "mp4";
-  const chemin = estLogo ? "compagnies/logos/" + identifiant + "." + extension
+  if (estLogo && !auth.currentUser) throw new Error("Connectez-vous avant de modifier un logo.");
+  const chemin = estLogo ? "compagnies/logos/" + auth.currentUser.uid + "/" + identifiant + "." + extension
     : "publicites/" + identifiant + "." + extension;
   try {
     const reference = storage.ref().child(chemin);
@@ -7807,23 +7832,88 @@ async function creerCompteAbonnementAuto(){
 }
 async function deconnecterCompteAbonnementAuto(){await auth.signOut();abonnementAutomobilisteValide=false;document.getElementById("formulaireDemandeAbonnementAuto").style.display="none";document.getElementById("connexionAbonnementAuto").style.display="block";}
 
+let mqciWaveCheckoutEnCours = false;
+
 async function envoyerDemandeAbonnementAuto(){
-  const user=auth.currentUser;if(!user)return alert("Connectez-vous d'abord.");
-  const reference=document.getElementById("referenceAbonnementAuto").value.trim();
-  if(reference.length<4)return alert("Saisissez la référence de votre transaction.");
-  const operateur=document.getElementById("operateurAbonnementAuto").value;
-  const nomPayeur=document.getElementById("nomPayeurAbonnementAuto").value.trim();
+  const user=auth.currentUser;
+  const zone=document.getElementById("etatAbonnementAuto");
+  if(!user)return alert("Connectez-vous d'abord.");
+  if(mqciWaveCheckoutEnCours)return;
+  const operateur=document.getElementById("operateurAbonnementAuto")?.value || "Wave";
+  if(operateur!=="Wave"){
+    if(zone)zone.textContent="Orange Money sera disponible dès que l'accès API marchand Orange CI sera configuré.";
+    return;
+  }
+  const bouton=document.querySelector('button[onclick="envoyerDemandeAbonnementAuto()"]');
+  mqciWaveCheckoutEnCours=true;
+  if(bouton){bouton.disabled=true;bouton.textContent="Préparation du paiement…";}
+  if(zone)zone.textContent="Vérification du tarif et création sécurisée de la session Wave…";
   try{
-    const cfg=await obtenirConfigurationAbonnement("automobiliste",true);if(!cfg.actif)return alert("Les nouvelles souscriptions automobilistes sont temporairement suspendues.");if(cfg.unite!=="mois"||Number(cfg.duree)!==12)return alert("L’abonnement automobiliste doit être annuel.");const montant=tarifAbonnementEffectif(cfg);
-    await db.collection("demandes_abonnement_automobiliste").add({
-      uid:user.uid,email:user.email||"",operateur,referencePaiement:reference,nomPayeur,
-      montantFCFA:montant,dureeMois:Number(cfg.duree),statut:"en_attente",
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
+    if(!cfg.actif)throw new Error("Les nouvelles souscriptions automobilistes sont temporairement suspendues.");
+    if(cfg.unite!=="mois"||Number(cfg.duree)!==12)throw new Error("La formule automobiliste doit être annuelle.");
+    const token=await user.getIdToken();
+    const response=await fetch("https://europe-west1-mon-transport-ci.cloudfunctions.net/createWaveCheckout",{
+      method:"POST",
+      headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+      body:JSON.stringify({
+        serviceId:"automobiliste",planId:"annuel",
+        successUrl:location.origin+location.pathname+"?payment=return",
+        errorUrl:location.origin+location.pathname+"?payment=error"
+      })
     });
-    document.getElementById("referenceAbonnementAuto").value="";
-    alert("Demande envoyée. L'accès sera activé après vérification du paiement.");
-    await actualiserEtatAbonnementAutomobiliste();
-  }catch(e){console.error(e);alert("Envoi impossible. Vérifiez votre connexion et réessayez.");}
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.checkoutUrl)throw new Error(data.error==="plan_unavailable"?"Cette formule n'est pas encore activée côté serveur. Contactez l'administration.":"Impossible de créer le paiement Wave. Réessayez dans quelques instants.");
+    if(zone)zone.textContent="Session Wave créée. Redirection sécurisée…";
+    window.location.assign(data.checkoutUrl);
+  }catch(e){
+    console.error("Création checkout Wave:",e);
+    if(zone)zone.textContent=e.message||"Paiement indisponible.";
+    else alert(e.message||"Paiement indisponible.");
+    mqciWaveCheckoutEnCours=false;
+    if(bouton){bouton.disabled=false;bouton.textContent="Payer avec Wave";}
+  }
+}
+
+async function verifierRetourPaiementWave(user){
+  const params=new URLSearchParams(window.location.search);
+  const paymentState=params.get("payment");
+  const paymentId=params.get("paymentId");
+  if(paymentState!=="return"&&!paymentId)return;
+  const zone=document.getElementById("etatAbonnementAuto");
+  if(paymentState==="error"){
+    if(zone)zone.textContent="Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
+    params.delete("payment");params.delete("paymentId");
+    history.replaceState({},document.title,location.pathname+(params.toString()?"?"+params.toString():""));
+    return;
+  }
+  if(!paymentId)return;
+  if(zone)zone.textContent="Retour de Wave reçu. Vérification de la confirmation officielle…";
+  try{
+    const token=await user.getIdToken(true);
+    for(let attempt=0;attempt<8;attempt++){
+      const response=await fetch("https://europe-west1-mon-transport-ci.cloudfunctions.net/getPaymentStatus?paymentId="+encodeURIComponent(paymentId),{
+        headers:{"Authorization":"Bearer "+token}
+      });
+      const data=await response.json().catch(()=>({}));
+      if(response.ok&&data.status==="succeeded"){
+        if(zone)zone.textContent="Paiement confirmé par Wave. Activation de votre abonnement…";
+        await actualiserEtatAbonnementAutomobiliste();
+        params.delete("payment");params.delete("paymentId");
+        history.replaceState({},document.title,location.pathname+(params.toString()?"?"+params.toString():""));
+        return;
+      }
+      if(response.ok&&["review_required","provider_error","failed","expired"].includes(data.status)){
+        if(zone)zone.textContent="Le paiement nécessite une vérification. Votre accès n'a pas été activé.";
+        return;
+      }
+      await new Promise(resolve=>setTimeout(resolve,1500));
+    }
+    if(zone)zone.textContent="Paiement reçu en attente de confirmation du prestataire. Actualisez cet écran dans un instant; aucun accès n'est activé avant confirmation.";
+  }catch(e){
+    console.error("Vérification du paiement Wave:",e);
+    if(zone)zone.textContent="Impossible de vérifier le paiement pour le moment. Réessayez dans quelques instants.";
+  }
 }
 
 async function chargerDemandesAbonnementAutomobilisteAdmin(){
