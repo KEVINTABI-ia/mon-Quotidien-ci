@@ -57,7 +57,7 @@ async function waveRequest(path, options = {}, apiKey) {
 function validReturnUrl(value) {
   try {
     const u = new URL(value);
-    return u.protocol === "https:" && (u.hostname === "kevintabi-ia.github.io" || u.hostname.endsWith(".monquotidien.ci"));
+    return u.origin === "https://kevintabi-ia.github.io" && u.pathname.startsWith("/mon-Quotidien-ci/");
   } catch { return false; }
 }
 
@@ -68,15 +68,18 @@ exports.createWaveCheckout = onRequest(
     try {
       const user = await requireUser(req);
       const { serviceId, planId, successUrl, errorUrl } = req.body || {};
-      if (typeof serviceId !== "string" || typeof planId !== "string" || !validReturnUrl(successUrl) || !validReturnUrl(errorUrl)) {
+      if (typeof serviceId !== "string" || typeof planId !== "string" ||
+          !/^[a-z0-9_-]{2,60}$/i.test(serviceId) || !/^[a-z0-9_-]{2,40}$/i.test(planId) ||
+          !validReturnUrl(successUrl) || !validReturnUrl(errorUrl)) {
         return json(res, 400, { error: "invalid_request" });
       }
       // Price and entitlement are read only from a server-managed catalogue.
       const planSnap = await db.doc("payment_catalog/" + serviceId + "/plans/" + planId).get();
       if (!planSnap.exists || planSnap.data().active !== true) return json(res, 404, { error: "plan_unavailable" });
       const plan = planSnap.data();
-      if (!Number.isSafeInteger(plan.amountXof) || plan.amountXof < 100 || plan.currency !== "XOF" ||
-          typeof plan.label !== "string" || !Number.isSafeInteger(plan.durationDays) || plan.durationDays < 1) {
+      if (!Number.isSafeInteger(plan.amountXof) || plan.amountXof < 100 || plan.amountXof > 10000000 ||
+          plan.currency !== "XOF" || typeof plan.label !== "string" ||
+          !Number.isSafeInteger(plan.durationDays) || plan.durationDays < 1 || plan.durationDays > 3660) {
         logger.error("Invalid server payment catalogue entry", { serviceId, planId });
         return json(res, 503, { error: "plan_configuration_invalid" });
       }
