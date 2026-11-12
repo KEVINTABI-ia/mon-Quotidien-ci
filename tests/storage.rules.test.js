@@ -34,7 +34,7 @@ describe("Mon Quotidien CI — règles Firebase Storage",function(){
   await assertFails(uploadBytes(ref(storage,"declarations_enfants_privees/storage-owner-test/too-large/photo.jpg"),new Uint8Array(8*1024*1024+1),metadata));
  });
  it("interdit définitivement la suppression des photos privées et publiques, même à l’administrateur",async()=>{
-  const privatePath="declarations_enfants_privees/storage-owner-test/never-delete-private.jpg";
+  const privatePath="declarations_enfants_privees/storage-owner-test/dossier-never-delete/never-delete-private.jpg";
   const publicPath="declarations_enfants_publics/never-delete-public.jpg";
   await testEnv.withSecurityRulesDisabled(async context=>{
    await uploadBytes(ref(context.storage(),privatePath),jpeg,metadata);
