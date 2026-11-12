@@ -5,7 +5,8 @@ service firebase.storage {
       return request.auth != null && request.auth.uid == "3LpoTLyQdtVcdtnSMAJFc7Cvnpz2";
     }
     match /declarations_enfants_privees/{uid}/{dossierId}/{fileName} {
-      allow create: if request.auth != null && request.auth.uid == uid
+      allow create: if resource == null
+        && request.auth != null && request.auth.uid == uid
         && request.resource.size <= 8 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
       allow read: if estAdmin();
@@ -14,7 +15,7 @@ service firebase.storage {
     }
     match /declarations_enfants_publics/{dossierId}/{fileName} {
       allow read: if true;
-      allow create: if estAdmin()
+      allow create: if resource == null && estAdmin()
         && request.resource.size <= 8 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
       allow update: if false;
