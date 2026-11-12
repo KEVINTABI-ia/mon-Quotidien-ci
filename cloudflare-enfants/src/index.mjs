@@ -45,7 +45,7 @@ async function firebaseUser(request, env) {
   const data = await response.json();
   const user = data.users && data.users[0];
   if (!user || user.disabled === true || !user.localId) return null;
-  return { uid: user.localId };
+  return { uid: user.localId, idToken: match[1] };
 }
 function isAdmin(user, env) {
   return Boolean(user && env.ADMIN_UID && user.uid === env.ADMIN_UID);
@@ -60,6 +60,13 @@ async function getApprovedDocument(docId, env) {
     encodeURIComponent(env.FIREBASE_PROJECT_ID) +
     "/databases/(default)/documents/declarations_enfants/" + encodeURIComponent(docId);
   const response = await fetch(url);
+  if (!response.ok) return null;
+  return response.json();
+}
+async function getFirestoreDocument(path, idToken) {
+  const response = await fetch("https://firestore.googleapis.com/v1/" + path, {
+    headers: { authorization: "Bearer " + idToken }
+  });
   if (!response.ok) return null;
   return response.json();
 }
@@ -145,7 +152,21 @@ async function handle(request, env) {
     try { body = await request.json(); } catch { return json({ error: "Corps JSON invalide." }, 400); }
     const ownerUid = String(body.ownerUid || "");
     if (!/^[A-Za-z0-9_-]{1,128}$/.test(ownerUid)) return json({ error: "Propriétaire invalide." }, 400);
+    const parentPath = "projects/" + encodeURIComponent(env.FIREBASE_PROJECT_ID) +
+      "/databases/(default)/documents/declarations_enfants/" + encodeURIComponent(docId);
+    const privatePath = parentPath + "/informations_privees/contact";
+    const [parentDoc, privateDoc] = await Promise.all([
+      getFirestoreDocument(parentPath, user.idToken),
+      getFirestoreDocument(privatePath, user.idToken)
+    ]);
+    if (!parentDoc || stringField(parentDoc, "statut") !== "en_attente" ||
+        !privateDoc || stringField(privateDoc, "uid") !== ownerUid) {
+      return json({ error: "Dossier en attente ou propriétaire introuvable." }, 404);
+    }
     const sourceKey = privatePhotoKey(ownerUid, docId);
+    if (stringField(privateDoc, "photoKey") !== sourceKey) {
+      return json({ error: "La clé de photo ne correspond pas au dossier." }, 403);
+    }
     const source = await env.ENFANTS_BUCKET.get(sourceKey);
     if (!source || source.customMetadata?.ownerUid !== ownerUid || source.customMetadata?.docId !== docId) {
       return json({ error: "Photo privée introuvable." }, 404);
