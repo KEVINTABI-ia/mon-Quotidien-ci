@@ -5,12 +5,11 @@ on:
     branches:
       - main
       - feature-securiser-terrain-qr-idufci
-      - feat/regles-firestore-paiements-bloques
   pull_request:
     branches:
       - main
       - feature-securiser-terrain-qr-idufci
-      - feat/paiements-desactives-en-attente-api
+      - feat/paiements-desactivees-en-attente-api
 
 jobs:
   firestore-rules:
