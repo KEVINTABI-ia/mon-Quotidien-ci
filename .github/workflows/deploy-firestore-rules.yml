@@ -1,0 +1,58 @@
+name: Deploy Firestore Rules
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Tape DEPLOY pour autoriser la publication des règles Firestore de production"
+        required: true
+        type: string
+        default: "NO"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-firestore-rules-production
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test Firestore rules before deployment
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'DEPLOY'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install project dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run Firestore emulator tests
+        run: npm run test:rules
+
+  deploy:
+    name: Deploy Firestore rules only
+    needs: test
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'DEPLOY'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Deploy Firestore rules
+        run: npx --yes firebase-tools@15.34.2 deploy --only firestore:rules --project mon-transport-ci --non-interactive
