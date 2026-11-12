@@ -1783,9 +1783,9 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
     <p class="transport-colis-service">Un service de Mon Quotidien CI</p>
     <p class="transport-colis-description">Envoyez et recevez vos colis partout à Abidjan.</p>
   </div>
-  <h1 class="transport-colis-connexion-titre">ESPACE DE CONNEXION</h1>
-  <div class="colis-choix">
-    <button type="button" class="colis-choix-bouton colis-client" onclick="ouvrirEspaceClient()">👤 Espace client</button>
+  <div class="transport-colis-client-entete">
+    <h3>👤 Mon espace colis</h3>
+    <p>Votre compte Mon Quotidien CI est automatiquement utilisé pour vos commandes et votre historique.</p>
   </div>
   <div id="zoneMenuColisClient"><div id="zoneEspaceClient"></div></div>
 </section>
@@ -4112,7 +4112,7 @@ async function declencherLivraisonBoutique(commandeId){
 }
 async function ouvrirCommandeBoutique(boutiqueId,index){
  const user=auth.currentUser;
- if(!user){alert("Connectez-vous d'abord à votre compte client pour commander.");if(typeof afficherConnexionClient==="function")afficherConnexionClient();return;}
+ if(!user){alert("Connectez-vous d'abord à votre compte client pour commander.");alert("Connectez-vous à votre compte Mon Quotidien CI depuis l’accueil, puis réessayez.");return;}
  let profil=await db.collection("clients").doc(user.uid).get();
  if(!profil.exists){
   try{
@@ -8109,189 +8109,56 @@ async function deconnecterRamassage(){
 }
 
 function afficherSousMenuColis(espace){
-  const client = document.getElementById("zoneMenuColisClient");
-  const partenaire = document.getElementById("zoneMenuColisPartenaire");
-  if(client) client.style.display = espace === "client" ? "block" : "none";
-  if(partenaire) partenaire.style.display = espace === "partenaire" ? "block" : "none";
+  const client=document.getElementById("zoneMenuColisClient");
+  const partenaire=document.getElementById("zoneMenuColisPartenaire");
+  if(client)client.style.display=espace==="client"?"block":"none";
+  if(partenaire)partenaire.style.display=espace==="partenaire"?"block":"none";
+  if(espace==="client"&&typeof ouvrirEspaceClient==="function")ouvrirEspaceClient();
 }
 
-function ouvrirEspaceClient(){
-  const section = document.getElementById("transportColis");
-  if(section) section.style.display = "block";
-  afficherSousMenuColis("client");
-  const user = auth.currentUser;
-
-  if(user){
-    afficherAccueilClient(user);
-  }else{
-    afficherConnexionClient();
-  }
-
-  document.getElementById("zoneEspaceClient").scrollIntoView({
-    behavior:"smooth",
-    block:"start"
-  });
-}
-
-function afficherConnexionClient(message=""){
-  const zone = document.getElementById("zoneEspaceClient");
-
-  zone.innerHTML = `
-    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('zoneEspaceClient')">← Retour à Transport Colis</button>
-    <hr>
-    <h3>👤 Connexion à mon espace client</h3>
-    <p>Connectez-vous pour retrouver vos commandes.</p>
-
-    <label>Adresse e-mail</label>
-    <input id="clientEmailConnexion" type="email" placeholder="Votre adresse e-mail">
-
-    <label>Mot de passe</label>
-    <input id="clientMotDePasseConnexion" type="password" placeholder="Votre mot de passe">
-
-    <button class="primary" onclick="connecterClient()">Se connecter</button>
-    <p id="messageConnexionClient">${message}</p>
-
-    <p>Vous n'avez pas encore de compte ?</p>
-    <button type="button" onclick="afficherInscriptionClient()">Créer mon compte</button>
-  `;
-}
-
-function afficherInscriptionClient(message=""){
-  const zone = document.getElementById("zoneEspaceClient");
-
-  zone.innerHTML = `
-    <button type="button" class="btn-retour-accueil" onclick="retourEspaceColis('zoneEspaceClient')">← Retour à Transport Colis</button>
-    <hr>
-    <h3>📝 Créer mon compte client</h3>
-    <p>Votre compte conservera vos commandes et votre historique.</p>
-
-    <label>Nom complet</label>
-    <input id="clientNom" type="text" placeholder="Votre nom complet">
-
-    <label>Numéro de téléphone</label>
-    <input id="clientTelephone" type="tel" placeholder="Ex. : 0700000000">
-
-    <label>Adresse e-mail</label>
-    <input id="clientEmailInscription" type="email" placeholder="Votre adresse e-mail">
-
-    <label>Mot de passe (6 caractères minimum)</label>
-    <input id="clientMotDePasseInscription" type="password" placeholder="Créer un mot de passe">
-
-    <button class="primary" onclick="inscrireClient()">Créer mon compte</button>
-    <p id="messageInscriptionClient">${message}</p>
-
-    <p>Vous avez déjà un compte ?</p>
-    <button type="button" onclick="afficherConnexionClient()">Se connecter</button>
-  `;
-}
-
-function normaliserTelephoneClient(valeur){
-  let numero = (valeur || "").replace(/[\s.-]/g,"");
-
-  if(numero.startsWith("+225")){
-    numero = numero.slice(4);
-  }
-
-  return /^(01|05|07)[0-9]{8}$/.test(numero) ? numero : "";
-}
-async function inscrireClient(){
-  const nom = document.getElementById("clientNom").value.trim();
-  const telephone = normaliserTelephoneClient(
-    document.getElementById("clientTelephone").value
-  );
-  const email = document.getElementById("clientEmailInscription").value.trim().toLowerCase();
-  const motDePasse = document.getElementById("clientMotDePasseInscription").value;
-  const message = document.getElementById("messageInscriptionClient");
-
-  if(!nom || !telephone || !email || motDePasse.length < 6){
-    message.textContent = "Vérifiez vos informations et le mot de passe (6 caractères minimum).";
-    return;
-  }
-
+async function ouvrirEspaceClient(){
+  const section=document.getElementById("transportColis");
+  if(section)section.style.display="block";
+  const zone=document.getElementById("zoneEspaceClient");
+  if(!zone)return;
+  const user=auth.currentUser;
+  if(!user){zone.innerHTML='<p class="notice">Connectez-vous à votre compte Mon Quotidien CI depuis l’accueil pour accéder à vos colis.</p>';return;}
+  zone.innerHTML='<p class="notice">Préparation de votre espace colis...</p>';
   try{
-    const resultat = await auth.createUserWithEmailAndPassword(email,motDePasse);
-
-    await db.collection("clients").doc(resultat.user.uid).set({
-      uid: resultat.user.uid,
-      nom: nom,
-      telephone: telephone,
-      email: email,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    afficherAccueilClient(resultat.user);
-
-  }catch(erreur){
-    message.textContent = "Inscription impossible : " + erreur.message;
-  }
-}
-
-async function connecterClient(){
-  const email = document.getElementById("clientEmailConnexion").value.trim();
-  const motDePasse = document.getElementById("clientMotDePasseConnexion").value;
-  const message = document.getElementById("messageConnexionClient");
-
-  if(!email || !motDePasse){
-    message.textContent = "Saisissez votre e-mail et votre mot de passe.";
-    return;
-  }
-
-  try{
-    const resultat = await auth.signInWithEmailAndPassword(email,motDePasse);
-    const profil = await db.collection("clients").doc(resultat.user.uid).get();
-
+    let profil=await db.collection("clients").doc(user.uid).get();
+    if(!auth.currentUser||auth.currentUser.uid!==user.uid)return;
     if(!profil.exists){
-      await auth.signOut();
-      afficherConnexionClient("Ce compte n'est pas enregistré comme compte client.");
-      return;
+      const general=await db.collection("utilisateurs").doc(user.uid).get();
+      const d=general.exists?general.data():{};
+      await db.collection("clients").doc(user.uid).set({
+        uid:user.uid,nom:String(d.nom||user.displayName||"Client").trim()||"Client",
+        telephone:String(d.telephone||user.phoneNumber||""),email:user.email||"",
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
     }
-
-    afficherAccueilClient(resultat.user);
-
-  }catch(erreur){
-    message.textContent = "Connexion impossible : " + erreur.message;
+    await afficherAccueilClient(user);
+  }catch(e){
+    console.error("Préparation espace colis :",e);
+    zone.innerHTML='<p class="notice">Impossible de préparer votre espace colis. Vérifiez votre connexion puis réessayez.</p><button type="button" class="primary" onclick="ouvrirEspaceClient()">Réessayer</button>';
   }
 }
-
 async function afficherAccueilClient(user){
-  const zone = document.getElementById("zoneEspaceClient");
-
-  let nom = "Client";
-
-  try{
-    const profil = await db.collection("clients").doc(user.uid).get();
-
-    if(profil.exists){
-      nom = profil.data().nom || nom;
-    }
-  }catch(erreur){
-    console.error(erreur);
-  }
-
-  nom = nom.replace(/[&<>"']/g,"");
-
-  zone.innerHTML = `
-    <hr>
-    <h3>👋 Bienvenue ${nom}</h3>
-    <button type="button" class="primary" onclick="deconnecterClient()">Me déconnecter</button>
-    <p>Votre espace client est ouvert.</p>
-
-<button type="button" class="primary"
-  onclick="afficherFormulaireCommande()">
-  ➕ Nouvelle commande
-</button>
-
-<div id="zoneFormulaireCommande"></div>
-
-    <button type="button" class="primary"
-      onclick="chargerHistoriqueCommandes()">
-      📦 Historique des commandes
-    </button>
-
-    <div id="zoneHistoriqueCommandes"></div>
-
-  `;
+  const zone=document.getElementById("zoneEspaceClient");
+  if(!zone||!user||!auth.currentUser||auth.currentUser.uid!==user.uid)return;
+  let nom=user.displayName||"Client";
+  try{const p=await db.collection("clients").doc(user.uid).get();if(p.exists)nom=p.data().nom||nom;}
+  catch(e){console.error("Lecture profil client :",e);}
+  if(!auth.currentUser||auth.currentUser.uid!==user.uid)return;
+  nom=String(nom).replace(/[&<>"']/g,"");
+  zone.innerHTML=`
+    <hr><h3>👋 Bienvenue ${nom}</h3>
+    <p>Vous utilisez votre compte Mon Quotidien CI. Aucune deuxième connexion n’est nécessaire.</p>
+    <button type="button" class="primary" onclick="afficherFormulaireCommande()">➕ Nouvelle commande</button>
+    <div id="zoneFormulaireCommande"></div>
+    <button type="button" class="primary" onclick="chargerHistoriqueCommandes()">📦 Historique des commandes</button>
+    <div id="zoneHistoriqueCommandes"></div>`;
 }
+
 function afficherFormulaireCommande(){
 
   const zone = document.getElementById("zoneFormulaireCommande");
