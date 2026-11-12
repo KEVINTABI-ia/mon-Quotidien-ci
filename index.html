@@ -6570,9 +6570,14 @@ async function connecterPartenaire(){
     if (!abonnementActif && !essaiActif) {
       if (dossier.statutAbonnementPartenaire === "Essai" && dateFinEssai && dateFinEssai <= maintenant) {
         await documentPartenaire.ref.update({ statutAbonnementPartenaire: "Expiré" });
+        dossier.statutAbonnementPartenaire = "Expiré";
       }
-      await partnerAuth.signOut();
-      statut.textContent = "Votre période d'essai ou votre abonnement est terminé. Contactez l'administrateur pour activer ou renouveler votre abonnement.";
+      const champsConnexion=document.getElementById("champsConnexionPartenaire");
+      const boutonConnexion=document.getElementById("boutonConnexionPartenaire");
+      if(champsConnexion)champsConnexion.style.display="none";
+      if(boutonConnexion){boutonConnexion.textContent="Me déconnecter";boutonConnexion.onclick=deconnecterPartenaire;}
+      statut.textContent = "Votre abonnement est arrivé à expiration. Vous pouvez demander son renouvellement depuis votre espace partenaire.";
+      afficherEspacePartenaire(dossier, uid);
       return;
     }
 
@@ -6614,9 +6619,11 @@ function afficherEspacePartenaire(dossier, uid) {
   const finAbonnement = dossier.dateExpirationAbonnement && dossier.dateExpirationAbonnement.toDate
     ? dossier.dateExpirationAbonnement.toDate()
     : (dossier.dateExpirationAbonnement ? new Date(dossier.dateExpirationAbonnement) : null);
-  const enEssai = dossier.statutAbonnementPartenaire === "Essai" && finEssai;
-  const actif = dossier.statutAbonnementPartenaire === "Actif" && finAbonnement;
+  const enEssai = dossier.statutAbonnementPartenaire === "Essai" && finEssai && finEssai > new Date();
+  const actif = dossier.statutAbonnementPartenaire === "Actif" && finAbonnement && finAbonnement > new Date();
+  const expire = !actif && !enEssai;
   const dateFin = actif ? finAbonnement : finEssai;
+  const renouvellementEnAttente = dossier.renouvellementStatut === "a_verifier";
 
   zone.innerHTML = `
     <hr>
@@ -6629,6 +6636,9 @@ function afficherEspacePartenaire(dossier, uid) {
       ${actif ? "Actif" : (enEssai ? "Essai gratuit" : "À renouveler")}
       ${dateFin ? " — échéance : " + dateFin.toLocaleDateString("fr-FR") : ""}
     </div>
+    ${expire ? (renouvellementEnAttente
+      ? '<div class="notice" style="border:1px solid #D5A84B;padding:12px;margin:12px 0;"><strong>💳 Renouvellement en attente</strong><p>Votre demande a été reçue. L’administrateur vérifiera le paiement avant de réactiver votre abonnement.</p></div>'
+      : '<div class="notice" style="border:1px solid #D5A84B;padding:12px;margin:12px 0;"><strong>Votre abonnement a expiré.</strong><p>Choisissez une formule et transmettez la référence de votre paiement pour demander le renouvellement.</p><button type="button" class="primary" onclick="ouvrirFormulaireRenouvellementPartenaire()">Renouveler mon abonnement</button><div id="formulaireRenouvellementPartenaire"></div></div>') : ""}
     <h3>📦 Mes commandes attribuées</h3>
     <button type="button" class="primary" onclick="chargerCommandesPartenaire()">Actualiser mes commandes</button>
     <div id="listeCommandesPartenaire"><p>Appuyez sur « Actualiser mes commandes » pour consulter vos missions.</p></div>
@@ -6636,6 +6646,57 @@ function afficherEspacePartenaire(dossier, uid) {
   `;
   zone.scrollIntoView({behavior:"smooth", block:"start"});
   chargerCommandesPartenaire();
+}
+
+async function ouvrirFormulaireRenouvellementPartenaire(){
+ const zone=document.getElementById("formulaireRenouvellementPartenaire");
+ const user=partnerAuth.currentUser;if(!zone||!user)return;
+ zone.innerHTML="<p class='notice'>Chargement des formules...</p>";
+ try{
+  const ids=["partenaires_colis_1mois","partenaires_colis_3mois","partenaires_colis_6mois"];
+  const formules=await Promise.all(ids.map(async key=>({key,c:await obtenirConfigurationAbonnement(key)})));
+  const disponibles=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&x.c.unite==="mois"&&Number(x.c.duree)>0);
+  if(!disponibles.length){zone.innerHTML="<p class='notice'>Aucune formule de renouvellement n’est disponible actuellement.</p>";return;}
+  const options=disponibles.map(x=>'<option value="'+x.key+'" data-montant="'+tarifAbonnementEffectif(x.c)+'" data-mois="'+Number(x.c.duree)+'">'+Number(x.c.duree)+' mois — '+tarifAbonnementEffectif(x.c).toLocaleString("fr-FR")+' FCFA</option>').join("");
+  const paiement=await window.chargerCoordonneesPaiementMQCI();
+  zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><label>Formule d’abonnement</label><select id="partenaireRenouvellementFormule" style="width:100%;padding:12px;">'+options+'</select><p class="notice">Wave ou Orange Money au '+echapperTexteCompagnie(paiement.numero)+' — Bénéficiaire : '+echapperTexteCompagnie(paiement.beneficiaire)+'</p><label>Opérateur de paiement</label><select id="partenaireRenouvellementOperateur" style="width:100%;padding:12px;"><option value="">Choisir</option><option value="Wave">Wave</option><option value="Orange Money">Orange Money</option></select><label>Référence de transaction</label><input id="partenaireRenouvellementReference" maxlength="80" placeholder="Référence affichée après le paiement" style="width:100%;padding:12px;"><button type="button" class="primary" onclick="envoyerRenouvellementPartenaire()">Envoyer ma demande de renouvellement</button><p id="statutRenouvellementPartenaire" class="notice" aria-live="polite"></p></div>';
+ }catch(e){zone.textContent="Impossible de charger les formules : "+e.message;}
+}
+async function envoyerRenouvellementPartenaire(){
+ const user=partnerAuth.currentUser,statut=document.getElementById("statutRenouvellementPartenaire");
+ const formule=document.getElementById("partenaireRenouvellementFormule")?.value||"";
+ const operateur=document.getElementById("partenaireRenouvellementOperateur")?.value||"";
+ const reference=document.getElementById("partenaireRenouvellementReference")?.value.trim()||"";
+ if(!user||!["Wave","Orange Money"].includes(operateur)||reference.length<4){if(statut)statut.textContent="Choisissez un opérateur et saisissez une référence valide.";return;}
+ try{
+  const cfg=await obtenirConfigurationAbonnement(formule);
+  if(!["partenaires_colis_1mois","partenaires_colis_3mois","partenaires_colis_6mois"].includes(formule)||!cfg.actif||cfg.unite!=="mois")throw new Error("Cette formule n’est plus disponible. Actualisez la page.");
+  const montant=tarifAbonnementEffectif(cfg),mois=Number(cfg.duree);
+  const ref=partnerDb.collection("partenaires").doc(user.uid),snap=await ref.get();
+  if(!snap.exists)throw new Error("Dossier partenaire introuvable.");
+  const p=snap.data(),now=Date.now(),finEssai=p.dateFinEssai?.toDate?.()?.getTime()||0,finAbonnement=p.dateExpirationAbonnement?.toDate?.()?.getTime()||0;
+  if(p.statut!=="approuve"||(p.etatCompte||"actif")!=="actif")throw new Error("Votre dossier ou votre compte ne permet pas ce renouvellement.");
+  if((p.statutAbonnementPartenaire==="Essai"&&finEssai>now)||(p.statutAbonnementPartenaire==="Actif"&&finAbonnement>now))throw new Error("Votre abonnement est encore actif. Le renouvellement n’est pas encore nécessaire.");
+  if(p.renouvellementStatut==="a_verifier")throw new Error("Une demande de renouvellement est déjà en attente de vérification.");
+  await ref.update({renouvellementStatut:"a_verifier",renouvellementFormule:formule,renouvellementMois:mois,renouvellementMontant:montant,renouvellementOperateur:operateur,renouvellementReference:reference,renouvellementDemandeLe:firebase.firestore.FieldValue.serverTimestamp()});
+  if(statut)statut.textContent="Demande envoyée. Votre abonnement sera réactivé après vérification et confirmation du paiement par l’administration.";
+  const zone=document.getElementById("formulaireRenouvellementPartenaire");if(zone)zone.innerHTML='<p class="notice">Votre demande de renouvellement est en attente de vérification par l’administration.</p>';
+ }catch(e){console.error(e);if(statut)statut.textContent="Envoi impossible : "+e.message;}
+}
+async function confirmerRenouvellementPartenaire(id){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ try{
+  const ref=db.collection("partenaires").doc(id),snap=await ref.get();
+  if(!snap.exists)throw new Error("Partenaire introuvable.");
+  const p=snap.data();if(p.renouvellementStatut!=="a_verifier")throw new Error("Aucune demande de renouvellement en attente.");
+  const cfg=await obtenirConfigurationAbonnement(p.renouvellementFormule);
+  if(!cfg.actif||tarifAbonnementEffectif(cfg)!==Number(p.renouvellementMontant)||Number(cfg.duree)!==Number(p.renouvellementMois))throw new Error("La formule ou son tarif a changé. Vérifiez la demande avant toute activation.");
+  if(!confirm("Confirmer la réception de "+Number(p.renouvellementMontant).toLocaleString("fr-FR")+" FCFA via "+p.renouvellementOperateur+" (référence "+p.renouvellementReference+") et activer "+p.renouvellementMois+" mois ?"))return;
+  const maintenant=new Date(),ancienneFin=p.dateExpirationAbonnement?.toDate?.()||null,base=ancienneFin&&ancienneFin>maintenant?ancienneFin:maintenant,expiration=new Date(base);expiration.setMonth(expiration.getMonth()+Number(p.renouvellementMois));
+  const libelle=Number(p.renouvellementMois)+" mois";
+  await ref.update({statutAbonnementPartenaire:"Actif",etatCompte:"actif",formuleAbonnementPartenaire:libelle,montantAbonnementPartenaire:Number(p.renouvellementMontant),dateDebutAbonnement:firebase.firestore.Timestamp.fromDate(maintenant),dateExpirationAbonnement:firebase.firestore.Timestamp.fromDate(expiration),renouvellementStatut:"confirme",renouvellementConfirmeLe:firebase.firestore.FieldValue.serverTimestamp(),renouvellementConfirmePar:auth.currentUser.uid,historiqueAbonnements:firebase.firestore.FieldValue.arrayUnion({formule:libelle,montant:Number(p.renouvellementMontant),operateur:p.renouvellementOperateur,reference:p.renouvellementReference,dateValidation:firebase.firestore.Timestamp.fromDate(maintenant),dateExpiration:firebase.firestore.Timestamp.fromDate(expiration),validePar:auth.currentUser.uid})});
+  alert("Renouvellement confirmé. Abonnement actif jusqu’au "+expiration.toLocaleDateString("fr-FR")+".");chargerPartenairesAdmin();chargerCommandesAdmin();
+ }catch(e){console.error(e);alert("Validation impossible : "+e.message);}
 }
 
 let ecouteFileCommandesPartenaire = null;
@@ -7082,6 +7143,7 @@ ${partenaire.type === "livreur_independant" ? `
             return `<p><strong>Abonnement :</strong> ${statutAbonnement}${dateAffichee ? " — échéance : " + dateAffichee.toLocaleDateString("fr-FR") : ""}</p>`
               + (lignesHistorique ? "<p><strong>Historique des paiements validés :</strong></p><ul>" + lignesHistorique + "</ul>" : "<p><em>Aucun paiement validé enregistré.</em></p>");
           })()}
+          ${partenaire.renouvellementStatut === "a_verifier" ? `<div class="card" style="padding:10px;margin:10px 0;border:1px solid #D5A84B;"><strong>💳 Renouvellement à vérifier</strong><p>Formule : ${echapperTexteCompagnie(partenaire.renouvellementMois+" mois")} — ${Number(partenaire.renouvellementMontant||0).toLocaleString("fr-FR")} FCFA</p><p>Opérateur : ${echapperTexteCompagnie(partenaire.renouvellementOperateur||"")}<br>Référence : ${echapperTexteCompagnie(partenaire.renouvellementReference||"")}</p><button type="button" class="primary" onclick="confirmerRenouvellementPartenaire('${doc.id}')">Confirmer le paiement et activer</button></div>` : ""}
           ${partenaire.motifModeration ? `<p><strong>Motif :</strong> ${echapperTexteCompagnie(partenaire.motifModeration)}</p>` : ""}
           ${partenaire.suspensionFin ? `<p><strong>Fin de suspension :</strong> ${new Date(partenaire.suspensionFin.toDate ? partenaire.suspensionFin.toDate() : partenaire.suspensionFin).toLocaleString("fr-FR")}</p>` : ""}
           ${partenaire.avertissementDernier ? `<p><strong>Dernier avertissement :</strong> ${echapperTexteCompagnie(partenaire.avertissementDernier.motif || "")}</p>` : ""}
