@@ -3713,6 +3713,7 @@ async function traiterInscriptionAnnuaire(id,statut){
 }
 async function renouvelerAbonnementAnnuaire(id){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ if(!(await window.paiementsMQCIDisponibles(true)))return alert("Renouvellements payants suspendus en attendant les API Wave et Orange Money.");
  if(!confirm("Confirmer que le paiement de 1 000 FCFA a été reçu et activer 30 jours supplémentaires ?"))return;
  try{
   const ref=db.collection("demandes_nouveaux_services").doc(id),snap=await ref.get();
@@ -3834,6 +3835,7 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
  if(modePartenaire&&comptePartenaire.email&&email&&comptePartenaire.email.toLowerCase()!==email.toLowerCase()){statut.textContent="L’adresse e-mail doit correspondre au compte utilisateur connecté.";return;}
  const estBoutique=nouveauServiceActif==="commerce";
  const boutiquePartenaire=estBoutique&&modePartenaire;
+ if(estBoutique&&!boutiquePartenaire&&!(await window.paiementsMQCIDisponibles(true))){if(statut)statut.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
  const paiementMoyen=estBoutique&&!boutiquePartenaire?(document.getElementById("nsPaiementMoyen")?.value||""):"";
  const paiementReference=estBoutique&&!boutiquePartenaire?(document.getElementById("nsPaiementReference")?.value.trim()||""):"";
  const dureeSelect=estBoutique&&!boutiquePartenaire?document.getElementById("nsDureeAbonnement"):null;
@@ -4278,6 +4280,7 @@ async function chargerNouveauxServicesAdmin(typeFiltre){
 }
 async function renouvelerAbonnementBoutiqueAdmin(id){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ if(!(await window.paiementsMQCIDisponibles(true)))return alert("Renouvellements payants suspendus en attendant les API Wave et Orange Money.");
  try{
   const ref=db.collection("demandes_nouveaux_services").doc(id),snap=await ref.get();
   if(!snap.exists)return alert("Boutique introuvable.");
@@ -4353,7 +4356,7 @@ async function chargerAvisBoutiqueAdmin(boutiqueId){
 async function traiterNouveauService(id,statut){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
  if(!["approuve","refuse"].includes(statut))return;
- try{const ref=db.collection("demandes_nouveaux_services").doc(id);const doc=await ref.get();if(!doc.exists)return alert("Dossier introuvable.");const data=doc.data();const maj={statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()};if(statut==="approuve"&&data.type==="commerce"){const debut=new Date();if(data.modePartenaire===true){const fin=new Date(debut.getTime()+30*24*60*60*1000);maj.abonnementStatut="essai_gratuit";maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);maj.paiementStatut="gratuit";}else{if(!data.paiementMoyen||!data.paiementReference)return alert("Impossible d’activer : informations de paiement manquantes.");const montantAttendu=Number(data.montantAbonnement||0),dureeJours=Number(data.dureeAbonnementJours||0);if(!Number.isInteger(montantAttendu)||montantAttendu<=0||!Number.isInteger(dureeJours)||dureeJours<=0)return alert("Forfait boutique invalide. Vérifiez le montant et la durée enregistrés.");if(!confirm("Confirmer la réception de "+montantAttendu.toLocaleString("fr-FR")+" FCFA ? L’abonnement sera activé pour "+dureeJours+" jours."))return;const fin=new Date(debut.getTime()+dureeJours*24*60*60*1000);maj.paiementStatut="confirme";maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);}}await ref.update(maj);await chargerNouveauxServicesAdmin(data.type==="commerce"?(String(data.categorie||"").toLowerCase()==="boutique"?"boutique":"commerce"):data.type);}
+ try{const ref=db.collection("demandes_nouveaux_services").doc(id);const doc=await ref.get();if(!doc.exists)return alert("Dossier introuvable.");const data=doc.data();const maj={statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()};if(statut==="approuve"&&data.type==="commerce"){const debut=new Date();if(data.modePartenaire!==true&&!(await window.paiementsMQCIDisponibles(true)))return alert("Activation payante suspendue en attendant les API Wave et Orange Money.");if(data.modePartenaire===true){const fin=new Date(debut.getTime()+30*24*60*60*1000);maj.abonnementStatut="essai_gratuit";maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);maj.paiementStatut="gratuit";}else{if(!data.paiementMoyen||!data.paiementReference)return alert("Impossible d’activer : informations de paiement manquantes.");const montantAttendu=Number(data.montantAbonnement||0),dureeJours=Number(data.dureeAbonnementJours||0);if(!Number.isInteger(montantAttendu)||montantAttendu<=0||!Number.isInteger(dureeJours)||dureeJours<=0)return alert("Forfait boutique invalide. Vérifiez le montant et la durée enregistrés.");if(!confirm("Confirmer la réception de "+montantAttendu.toLocaleString("fr-FR")+" FCFA ? L’abonnement sera activé pour "+dureeJours+" jours."))return;const fin=new Date(debut.getTime()+dureeJours*24*60*60*1000);maj.paiementStatut="confirme";maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);}}await ref.update(maj);await chargerNouveauxServicesAdmin(data.type==="commerce"?(String(data.categorie||"").toLowerCase()==="boutique"?"boutique":"commerce"):data.type);}
  catch(e){console.error(e);alert("Impossible de modifier ce dossier. Vérifiez les règles Firestore.");}
 }
 
@@ -4485,7 +4488,7 @@ async function ouvrirReclamationObjet(id){
   const p=await window.chargerCoordonneesPaiementMQCI();const zone=document.getElementById("coordonneesPaiementReclamation");if(zone)zone.textContent="Wave : "+p.numero+" · Orange Money : "+p.numero+" · Bénéficiaire : "+p.beneficiaire;
 }
 async function envoyerReclamationObjet(){
-  const statutPaiement=document.getElementById("orStatutReclamation");if(!(await window.paiementsMQCIDisponibles(true))){statutPaiement.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
+  const statutPaiement=document.getElementById("orStatutReclamation");if(!(await window.paiementsMQCIDisponibles(true))){if(statutPaiement)statutPaiement.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
   const objetId=document.getElementById("orObjetReclameId").value;
   const nom=document.getElementById("orReclamantNom").value.trim();
   const tel=document.getElementById("orReclamantTel").value.trim();
@@ -11862,6 +11865,7 @@ function afficherFormulaireInscriptionCompagnie(zone){
 }
 async function envoyerInscriptionCompagnie(){
  const user=auth.currentUser, val=id=>document.getElementById(id)?.value.trim()||"", status=document.getElementById("partCompagnieStatut");
+ if(!(await window.paiementsMQCIDisponibles(true))){if(status)status.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
  if(!user){status.textContent="Connectez-vous à votre compte utilisateur.";return;}
  const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),telephoneGare=val("partCompagnieTelephoneGare"),telephoneResponsable=val("partCompagnieTelephoneResponsable"),courrier=val("partCompagnieTelephoneCourrier"),texte=val("partCompagnieDestinations"),paiement=val("partCompagniePaiement"),reference=val("partCompagnieReference"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite");
  let destinations;try{destinations=analyserDestinationsCompagnie(texte);}catch(e){status.textContent=e.message;return;}
