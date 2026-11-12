@@ -150,7 +150,6 @@ async function handle(request, env) {
       getFirestoreDocument(parentPath, user.idToken),
       getFirestoreDocument(privatePath, user.idToken)
     ]);
-    const expectedKey = privatePhotoKey(user.uid, docId);
     if (!uploadOwnerMatches(parentDoc, privateDoc, user.uid, docId)) {
       return json({ error: "Dossier introuvable ou accès non autorisé." }, 403);
     }
