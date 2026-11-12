@@ -1499,6 +1499,29 @@ service cloud.firestore {
       allow update, delete: if estAdmin();
     }
 
+
+    // Paiements: lecture propriétaire uniquement; toutes les écritures passent par le backend Admin SDK.
+    match /payments/{paymentId} {
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+    match /subscriptions/{subscriptionId} {
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+    match /payment_webhooks/{eventId} {
+      allow read: if estAdmin();
+      allow create, update, delete: if false;
+    }
+    match /payment_catalog/{serviceId}/plans/{planId} {
+      allow read: if resource.data.active == true;
+      allow write: if estAdmin();
+    }
+    match /refunds/{refundId} {
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
