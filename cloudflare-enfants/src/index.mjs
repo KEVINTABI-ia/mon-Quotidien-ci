@@ -16,7 +16,7 @@ async function getFirebaseSigningKey(kid, fetcher) {
   const data = await response.json();
   if (!Array.isArray(data.keys)) throw new Error("Invalid Firebase signing keys");
   const keys = new Map(data.keys.filter(k => k?.kid && k.kty === "RSA" && k.alg === "RS256" && k.use === "sig").map(k => [k.kid, k]));
-  const maxAge = Number((response.headers.get("cache-control")?.match(/max-age=(\\d+)/i) || [])[1] || 3600);
+  const maxAge = Number((response.headers.get("cache-control")?.match(/max-age=([0-9]+)/i) || [])[1] || 3600);
   firebaseJwksCache = { keys, expiresAt: now + Math.min(Math.max(maxAge, 60), 21600) * 1000 };
   if (!keys.has(kid)) throw new Error("Unknown Firebase signing key");
   return keys.get(kid);
