@@ -93,3 +93,15 @@ Le rapprochement quotidien doit comparer paiements internes, transactions opéra
 ## Limites de cette livraison
 
 Cette livraison raccorde le parcours Wave de l'abonnement automobiliste et conserve la compatibilité avec la collection historique `abonnements_automobiliste`. Elle n'active pas Orange Money, ne traite pas les remboursements et ne migre pas les contrôles d'abonnement des autres modules. Elle doit être testée dans un projet Firebase de préproduction avant déploiement.
+
+
+## Tests automatisés ajoutés
+
+Le dossier `functions/test` contient des tests Node.js sur :
+- la signature HMAC Wave calculée sur le timestamp suivi du corps brut ;
+- le rejet des signatures falsifiées, des corps modifiés et des timestamps hors fenêtre ;
+- la prise en charge de plusieurs signatures pendant une rotation de clé ;
+- les comparaisons hexadécimales en temps constant ;
+- les renouvellements calendaires en fin de mois (y compris février bissextile).
+
+Lancer localement depuis `functions/` avec `npm install`, puis `npm test`. Un workflow GitHub Actions exécute ces tests lors des changements du backend de paiement.
