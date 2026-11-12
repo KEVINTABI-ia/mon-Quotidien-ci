@@ -875,4 +875,54 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
   });
 
+  describe("Déclarations d’enfants — confidentialité Firestore", function () {
+    it("autorise un utilisateur connecté à créer atomiquement un dossier en attente et ses données privées", async () => {
+      const db = testEnv.authenticatedContext(CLIENT_UID).firestore();
+      const { doc, writeBatch, serverTimestamp } = require("firebase/firestore");
+      const dossier = doc(db, "declarations_enfants", "enfant-test-perdu");
+      const batch = writeBatch(db);
+      batch.set(dossier, { type:"perdu", nom:"Enfant test", age:"8", photoUrl:"", telephonePublic:"", presencePublic:"", statut:"en_attente", createdAt:serverTimestamp() });
+      batch.set(doc(dossier,"informations_privees","contact"), { uid:CLIENT_UID, photoPath:"declarations_enfants_privees/client-test-001/enfant-test-perdu/photo.jpg", telephone:"0100000000", adresseExacte:"Adresse confidentielle", description:"Détail privé", createdAt:serverTimestamp() });
+      await assertSucceeds(batch.commit());
+    });
+    it("refuse un dossier sans fiche privée atomique ou avec des champs publics supplémentaires", async () => {
+      const db=testEnv.authenticatedContext(CLIENT_UID).firestore();
+      const {doc,setDoc,serverTimestamp,writeBatch}=require("firebase/firestore");
+      await assertFails(setDoc(doc(db,"declarations_enfants","sans-prive"),{type:"perdu",nom:"Test",age:"7",photoUrl:"",telephonePublic:"",presencePublic:"",statut:"en_attente",createdAt:serverTimestamp()}));
+      const batch=writeBatch(db), dossier=doc(db,"declarations_enfants","champ-inattendu");
+      batch.set(dossier,{type:"perdu",nom:"Test",age:"7",photoUrl:"",telephonePublic:"",presencePublic:"",statut:"en_attente",createdAt:serverTimestamp(),adresseExacte:"Ne doit pas être public"});
+      batch.set(doc(dossier,"informations_privees","contact"),{uid:CLIENT_UID});
+      await assertFails(batch.commit());
+    });
+    it("réserve la lecture du dossier en attente et de ses données privées à l’administrateur", async () => {
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        const db=context.firestore();
+        await db.doc("declarations_enfants/dossier-prive").set({type:"retrouve",nom:"Enfant test",age:"",photoUrl:"",telephonePublic:"",presencePublic:"",statut:"en_attente"});
+        await db.doc("declarations_enfants/dossier-prive/informations_privees/contact").set({uid:CLIENT_UID,telephoneDeclarant:"0700000000",commissariat:"Commissariat privé"});
+      });
+      const {doc,getDoc}=require("firebase/firestore"), path=["declarations_enfants","dossier-prive"];
+      await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(),...path)));
+      await assertFails(getDoc(doc(testEnv.authenticatedContext(OTHER_UID).firestore(),...path)));
+      await assertFails(getDoc(doc(testEnv.authenticatedContext(CLIENT_UID).firestore(),...path,"informations_privees","contact")));
+      await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(),...path,"informations_privees","contact")));
+      await assertSucceeds(getDoc(doc(testEnv.authenticatedContext(ADMIN_UID).firestore(),...path,"informations_privees","contact")));
+    });
+    it("permet la lecture publique uniquement après approbation et interdit l’approbation par un utilisateur", async () => {
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        await context.firestore().doc("declarations_enfants/dossier-approuve").set({type:"retrouve",nom:"Enfant retrouvé",age:"",photoUrl:"https://example.test/photo.jpg",telephonePublic:"",presencePublic:"avec_autorites",statut:"approuve"});
+      });
+      const {doc,getDoc,updateDoc,deleteDoc}=require("firebase/firestore");
+      await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(),"declarations_enfants","dossier-approuve")));
+      await assertFails(updateDoc(doc(testEnv.authenticatedContext(CLIENT_UID).firestore(),"declarations_enfants","dossier-approuve"),{statut:"approuve",photoUrl:"https://example.test/fake.jpg",telephonePublic:"0100000000"}));
+      await assertFails(deleteDoc(doc(testEnv.authenticatedContext(CLIENT_UID).firestore(),"declarations_enfants","dossier-approuve")));
+    });
+    it("permet à l’administrateur de modérer le dossier", async () => {
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        await context.firestore().doc("declarations_enfants/dossier-a-moderer").set({type:"perdu",nom:"Enfant",age:"6",photoUrl:"",telephonePublic:"",presencePublic:"",statut:"en_attente"});
+      });
+      const {doc,updateDoc}=require("firebase/firestore");
+      await assertSucceeds(updateDoc(doc(testEnv.authenticatedContext(ADMIN_UID).firestore(),"declarations_enfants","dossier-a-moderer"),{statut:"approuve",photoUrl:"https://example.test/photo.jpg",telephonePublic:"0100000000"}));
+    });
+  });
+
 });
