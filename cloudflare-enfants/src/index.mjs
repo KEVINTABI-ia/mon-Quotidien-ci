@@ -1,6 +1,45 @@
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const FIREBASE_LOOKUP = "https://identitytoolkit.googleapis.com/v1/accounts:lookup";
+const FIREBASE_JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
+let firebaseJwksCache = null;
+function decodeBase64Url(value) {
+  if (typeof value !== "string" || !/^[A-Za-z0-9_-]+$/.test(value)) throw new Error("Invalid JWT encoding");
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - value.length % 4) % 4);
+  return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+}
+function decodeJwtPart(value) { return JSON.parse(new TextDecoder().decode(decodeBase64Url(value))); }
+async function getFirebaseSigningKey(kid, fetcher) {
+  const now = Date.now();
+  if (firebaseJwksCache && firebaseJwksCache.expiresAt > now && firebaseJwksCache.keys.has(kid)) return firebaseJwksCache.keys.get(kid);
+  const response = await fetcher(FIREBASE_JWKS_URL);
+  if (!response.ok) throw new Error("Firebase signing keys unavailable");
+  const data = await response.json();
+  if (!Array.isArray(data.keys)) throw new Error("Invalid Firebase signing keys");
+  const keys = new Map(data.keys.filter(k => k?.kid && k.kty === "RSA" && k.alg === "RS256" && k.use === "sig").map(k => [k.kid, k]));
+  const maxAge = Number((response.headers.get("cache-control")?.match(/max-age=(\\d+)/i) || [])[1] || 3600);
+  firebaseJwksCache = { keys, expiresAt: now + Math.min(Math.max(maxAge, 60), 21600) * 1000 };
+  if (!keys.has(kid)) throw new Error("Unknown Firebase signing key");
+  return keys.get(kid);
+}
+export async function verifyFirebaseIdToken(token, projectId, fetcher = fetch) {
+  try {
+    if (typeof token !== "string" || token.length > 10000) return null;
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const header = decodeJwtPart(parts[0]), claims = decodeJwtPart(parts[1]);
+    if (header.alg !== "RS256" || header.typ !== "JWT" || typeof header.kid !== "string") return null;
+    const now = Math.floor(Date.now() / 1000);
+    if (claims.aud !== projectId || claims.iss !== "https://securetoken.google.com/" + projectId ||
+        typeof claims.sub !== "string" || claims.sub.length < 1 || claims.sub.length > 128 ||
+        claims.user_id !== claims.sub || !Number.isFinite(claims.exp) || claims.exp <= now ||
+        !Number.isFinite(claims.iat) || claims.iat > now + 60 || claims.exp - claims.iat > 3660 ||
+        !Number.isFinite(claims.auth_time) || claims.auth_time > now + 60) return null;
+    const jwk = await getFirebaseSigningKey(header.kid, fetcher);
+    const key = await crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+    const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, decodeBase64Url(parts[2]), new TextEncoder().encode(parts[0] + "." + parts[1]));
+    return valid ? { uid: claims.sub, claims } : null;
+  } catch { return null; }
+}
 
 export function validDocId(value) {
   return typeof value === "string" && /^[A-Za-z0-9_-]{10,80}$/.test(value);
@@ -72,78 +111,20 @@ function corsHeaders(request, env) {
   };
 }
 async function firebaseUser(request, env) {
-  const auth = request.headers.get("Authorization") || "";
-  const match = auth.match(/^Bearer\s+(.+)$/i);
-  if (!match || !env.FIREBASE_WEB_API_KEY) return null;
-  const response = await fetch(FIREBASE_LOOKUP + "?key=" + encodeURIComponent(env.FIREBASE_WEB_API_KEY), {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ idToken: match[1] })
-  });
-  if (!response.ok) {
-    let firebaseCode = "UNKNOWN";
-    let firebaseStatus = "UNKNOWN";
-    let firebaseCategory = "UNKNOWN";
-    try {
-      const errorData = await response.json();
-      const error = errorData?.error || {};
-      const candidate = error.message;
-      if (typeof candidate === "string" && /^[A-Z0-9_]+$/.test(candidate)) {
-        firebaseCode = candidate;
-      }
-      if (typeof error.status === "string" && /^[A-Z0-9_]+$/.test(error.status)) {
-        firebaseStatus = error.status;
-      }
-      const detailReasons = Array.isArray(error.details)
-        ? error.details.flatMap(detail => [
-            detail?.reason,
-            ...(Array.isArray(detail?.violations) ? detail.violations.map(item => item?.type || item?.reason) : [])
-          ]).filter(value => typeof value === "string")
-        : [];
-      const safeReasons = detailReasons.filter(value => /^[A-Z0-9_.-]{1,80}$/.test(value)).slice(0, 5);
-      const diagnosticText = [
-        typeof candidate === "string" ? candidate : "",
-        typeof error.status === "string" ? error.status : "",
-        ...detailReasons
-      ].join(" ").toUpperCase();
-      if (/API_KEY_INVALID|API KEY INVALID/.test(diagnosticText)) firebaseCategory = "API_KEY_INVALID";
-      else if (/REFERER|REFERRER|IP_ADDRESS|API_KEY_HTTP_REFERRER_BLOCKED|API_KEY_IP_ADDRESS_BLOCKED|API_KEY_RESTRICTION/.test(diagnosticText)) firebaseCategory = "API_KEY_RESTRICTION";
-      else if (/SERVICE_DISABLED|API_NOT_ENABLED|SERVICE.*NOT.*ENABLED/.test(diagnosticText)) firebaseCategory = "API_NOT_ENABLED";
-      else if (/PROJECT_NOT_FOUND|INVALID_PROJECT|CONSUMER_INVALID/.test(diagnosticText)) firebaseCategory = "PROJECT_CONFIGURATION";
-      else if (/PERMISSION_DENIED|ACCESS_NOT_CONFIGURED/.test(diagnosticText)) firebaseCategory = "PERMISSION_OR_API_CONFIGURATION";
-      else if (/INVALID_ID_TOKEN|TOKEN_EXPIRED|USER_DISABLED|USER_NOT_FOUND/.test(diagnosticText)) firebaseCategory = "FIREBASE_AUTH_REJECTED";
-      else if (response.status === 403) firebaseCategory = "UPSTREAM_FORBIDDEN";
-      console.warn(JSON.stringify({
-        event: "enfants_firebase_auth_rejected",
-        upstreamStatus: response.status,
-        firebaseCode,
-        firebaseStatus,
-        firebaseCategory,
-        firebaseReasons: safeReasons
-      }));
-    } catch {
-      // Ne jamais journaliser le corps brut de la réponse Firebase.
-      console.warn(JSON.stringify({
-        event: "enfants_firebase_auth_rejected",
-        upstreamStatus: response.status,
-        firebaseCode,
-        firebaseStatus,
-        firebaseCategory: response.status === 403 ? "UPSTREAM_FORBIDDEN" : "UNKNOWN",
-        firebaseReasons: []
-      }));
-    }
+  const match = (request.headers.get("Authorization") || "").match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+  const verified = await verifyFirebaseIdToken(match[1], env.FIREBASE_PROJECT_ID);
+  if (!verified) {
+    console.warn(JSON.stringify({ event: "enfants_firebase_auth_rejected", reason: "INVALID_OR_EXPIRED_ID_TOKEN" }));
     return null;
   }
-  const data = await response.json();
-  const user = data.users && data.users[0];
-  if (!user || user.disabled === true || !user.localId) return null;
-  return { uid: user.localId, idToken: match[1] };
+  return { uid: verified.uid, idToken: match[1] };
 }
 function isAdmin(user, env) {
   return Boolean(user && env.ADMIN_UID && user.uid === env.ADMIN_UID);
 }
 function assertWorkerConfig(env) {
-  if (!env.ENFANTS_BUCKET || !env.FIREBASE_PROJECT_ID || !env.FIREBASE_WEB_API_KEY || !env.ADMIN_UID) {
+  if (!env.ENFANTS_BUCKET || !env.FIREBASE_PROJECT_ID || !env.ADMIN_UID) {
     throw new Error("Worker configuration is incomplete");
   }
 }
