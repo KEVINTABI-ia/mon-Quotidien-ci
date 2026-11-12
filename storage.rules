@@ -10,14 +10,14 @@ service firebase.storage {
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
       allow read: if estAdmin();
       allow update: if estAdmin();
-      allow delete: if estAdmin();
+      allow delete: if false;
     }
     match /declarations_enfants_publics/{dossierId}/{fileName} {
       allow read: if true;
       allow create, update: if estAdmin()
         && request.resource.size <= 8 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
-      allow delete: if estAdmin();
+      allow delete: if false;
     }
   }
 }
