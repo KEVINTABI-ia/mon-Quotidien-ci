@@ -15,7 +15,7 @@ function verifyWaveSignature(header, rawBody, secret, nowMs = Date.now()) {
   });
   const timestamp = fields.find(([key]) => key === "t")?.[1];
   const signatures = fields.filter(([key]) => key === "v1").map(([, value]) => value);
-  if (!timestamp || !/^\\d+$/.test(timestamp) || !signatures.length) return false;
+  if (!timestamp || !/^\d+$/.test(timestamp) || !signatures.length) return false;
   const seconds = Number(timestamp);
   const nowSeconds = Math.floor(nowMs / 1000);
   if (!Number.isSafeInteger(seconds) || seconds < nowSeconds - 300 || seconds > nowSeconds + 30) return false;
