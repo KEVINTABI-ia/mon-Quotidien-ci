@@ -21,6 +21,70 @@ async function getFirebaseSigningKey(kid, fetcher) {
   if (!keys.has(kid)) throw new Error("Unknown Firebase signing key");
   return keys.get(kid);
 }
+
+let firebaseAccessTokenCache = null;
+function base64UrlEncode(bytes) {
+  const value = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  return btoa(Array.from(value, c => String.fromCharCode(c)).join(""))
+    .replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+}
+function pemToBytes(pem) {
+  const body = String(pem || "").replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\\s/g, "");
+  return Uint8Array.from(atob(body), c => c.charCodeAt(0));
+}
+async function getFirebaseAdminAccessToken(serviceAccountJson, fetcher) {
+  const now = Math.floor(Date.now() / 1000);
+  if (firebaseAccessTokenCache && firebaseAccessTokenCache.expiresAt > now + 60) return firebaseAccessTokenCache.token;
+  const account = JSON.parse(serviceAccountJson);
+  if (!account || typeof account.client_email !== "string" || typeof account.private_key !== "string" ||
+      typeof account.project_id !== "string") throw new Error("Invalid Firebase service account configuration");
+  const key = await crypto.subtle.importKey("pkcs8", pemToBytes(account.private_key),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const header = base64UrlEncode(new TextEncoder().encode(JSON.stringify({ alg: "RS256", typ: "JWT" })));
+  const claims = base64UrlEncode(new TextEncoder().encode(JSON.stringify({
+    iss: account.client_email,
+    scope: "https://www.googleapis.com/auth/identitytoolkit",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600
+  })));
+  const unsigned = header + "." + claims;
+  const signature = base64UrlEncode(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsigned)));
+  const assertion = unsigned + "." + signature;
+  const response = await fetcher("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion })
+  });
+  if (!response.ok) throw new Error("Firebase Admin OAuth token request failed");
+  const data = await response.json();
+  if (typeof data.access_token !== "string" || !Number.isFinite(data.expires_in)) throw new Error("Invalid Firebase Admin OAuth response");
+  firebaseAccessTokenCache = { token: data.access_token, expiresAt: now + data.expires_in };
+  return data.access_token;
+}
+export async function verifyFirebaseAccountStatus(uid, authTime, env, fetcher = fetch) {
+  try {
+    if (!env.FIREBASE_SERVICE_ACCOUNT_JSON) return false;
+    const account = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    if (account.project_id !== env.FIREBASE_PROJECT_ID) return false;
+    const accessToken = await getFirebaseAdminAccessToken(env.FIREBASE_SERVICE_ACCOUNT_JSON, fetcher);
+    const response = await fetcher("https://identitytoolkit.googleapis.com/v1/projects/" +
+      encodeURIComponent(env.FIREBASE_PROJECT_ID) + "/accounts:lookup", {
+      method: "POST",
+      headers: { authorization: "Bearer " + accessToken, "content-type": "application/json" },
+      body: JSON.stringify({ localId: [uid] })
+    });
+    if (!response.ok) return false;
+    const data = await response.json();
+    const user = Array.isArray(data.users) ? data.users.find(item => item.localId === uid) : null;
+    if (!user || user.disabled === true) return false;
+    const validSince = Number(user.validSince || 0);
+    if (!Number.isFinite(validSince) || !Number.isFinite(authTime) || authTime < validSince) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
 export async function verifyFirebaseIdToken(token, projectId, fetcher = fetch) {
   try {
     if (typeof token !== "string" || token.length > 10000) return null;
@@ -118,13 +182,18 @@ async function firebaseUser(request, env) {
     console.warn(JSON.stringify({ event: "enfants_firebase_auth_rejected", reason: "INVALID_OR_EXPIRED_ID_TOKEN" }));
     return null;
   }
+  const accountActive = await verifyFirebaseAccountStatus(verified.uid, verified.claims.auth_time, env);
+  if (!accountActive) {
+    console.warn(JSON.stringify({ event: "enfants_firebase_auth_rejected", reason: "DISABLED_REVOKED_OR_UNVERIFIABLE_ACCOUNT" }));
+    return null;
+  }
   return { uid: verified.uid, idToken: match[1] };
 }
 function isAdmin(user, env) {
   return Boolean(user && env.ADMIN_UID && user.uid === env.ADMIN_UID);
 }
 function assertWorkerConfig(env) {
-  if (!env.ENFANTS_BUCKET || !env.FIREBASE_PROJECT_ID || !env.ADMIN_UID) {
+  if (!env.ENFANTS_BUCKET || !env.FIREBASE_PROJECT_ID || !env.ADMIN_UID || !env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     throw new Error("Worker configuration is incomplete");
   }
 }
