@@ -78,14 +78,15 @@ export default {
     const user = await requireUser(request, env);
     if (parts[0] === "private" && parts.length===2 && request.method==="POST" && validId(parts[1])) {
       const id=parts[1];
-      const meta=await request.json().catch(()=>null);
-      if (!meta || !Number.isInteger(meta.size) || meta.size<1 || meta.size>MAX_BYTES || !ALLOWED.has(meta.contentType))
+      const contentType=request.headers.get("Content-Type") || "";
+      const declaredSize=Number(request.headers.get("X-File-Size") || 0);
+      if (!Number.isInteger(declaredSize) || declaredSize<1 || declaredSize>MAX_BYTES || !ALLOWED.has(contentType))
         return json({error:"invalid_image_metadata"},400,origin);
-      const object = await request.blob();
-      if (object.size !== meta.size || object.size>MAX_BYTES) return json({error:"invalid_size"},400,origin);
-      const bytes = new Uint8Array(await object.arrayBuffer());
-      if (await imageType(bytes) !== meta.contentType) return json({error:"invalid_image"},415,origin);
-      await createOnly(env.ENFANTS_BUCKET,"private/"+id+"/photo",bytes,{contentType:meta.contentType});
+      const object = await request.arrayBuffer();
+      if (object.byteLength !== declaredSize || object.byteLength>MAX_BYTES) return json({error:"invalid_size"},400,origin);
+      const bytes = new Uint8Array(object);
+      if (await imageType(bytes) !== contentType) return json({error:"invalid_image"},415,origin);
+      await createOnly(env.ENFANTS_BUCKET,"private/"+id+"/photo",bytes,{contentType});
       return json({ok:true,photoKey:"private/"+id+"/photo"},201,origin);
     }
     if (parts[0] === "admin" && parts[1] === "private" && parts.length===3 && request.method==="GET" && validId(parts[2])) {
