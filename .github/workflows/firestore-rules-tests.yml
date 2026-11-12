@@ -26,3 +26,38 @@ jobs:
         run: node tests/check-inline-scripts.js
       - name: Run Firestore emulator tests
         run: npm test
+      - name: Smoke test deployed children Worker (read-only)
+        if: github.event_name == 'pull_request' && github.event.pull_request.number == 125
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          const base = "https://mon-quotidien-ci-enfants.tabikevin57.workers.dev";
+          const allowedOrigin = "https://kevintabi-ia.github.io";
+          const docId = `smoke-test-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`;
+          const upload = await fetch(`${base}/upload/${docId}`, {
+            method: "POST",
+            headers: { "Content-Type": "image/png" },
+            body: Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+          });
+          assert.equal(upload.status, 401, "upload without Firebase token must be rejected");
+          const adminPhoto = await fetch(`${base}/admin/photo/${docId}?ownerUid=smoke-test`);
+          assert.equal(adminPhoto.status, 401, "admin photo route must require Firebase authentication");
+          const publicPhoto = await fetch(`${base}/public/${docId}`);
+          assert.equal(publicPhoto.status, 404, "unknown/unapproved declaration photo must remain hidden");
+          const allowedCors = await fetch(`${base}/upload/${docId}`, {
+            method: "OPTIONS",
+            headers: {
+              Origin: allowedOrigin,
+              "Access-Control-Request-Method": "POST",
+              "Access-Control-Request-Headers": "Authorization, Content-Type"
+            }
+          });
+          assert.equal(allowedCors.status, 204, "configured application origin must pass CORS preflight");
+          assert.equal(allowedCors.headers.get("access-control-allow-origin"), allowedOrigin);
+          const blockedCors = await fetch(`${base}/upload/${docId}`, {
+            method: "OPTIONS",
+            headers: { Origin: "https://untrusted.example", "Access-Control-Request-Method": "POST" }
+          });
+          assert.equal(blockedCors.status, 403, "untrusted origin must fail CORS preflight");
+          console.log("Worker smoke tests passed: auth, public gate and CORS.");
+          NODE

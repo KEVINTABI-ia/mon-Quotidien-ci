@@ -894,7 +894,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       batch.set(doc(dossier,"informations_privees","contact"),{uid:CLIENT_UID});
       await assertFails(batch.commit());
     });
-    it("réserve la lecture du dossier en attente et de ses données privées à l’administrateur", async () => {
+    it("réserve la lecture du dossier en attente et des données privées au propriétaire et à l’administrateur", async () => {
       await testEnv.withSecurityRulesDisabled(async context=>{
         const db=context.firestore();
         await db.doc("declarations_enfants/dossier-prive").set({type:"retrouve",nom:"Enfant test",age:"",photoUrl:"",telephonePublic:"",presencePublic:"",statut:"en_attente"});
@@ -903,8 +903,11 @@ describe("Mon Transport CI — règles Firestore", function () {
       const {doc,getDoc}=require("firebase/firestore"), path=["declarations_enfants","dossier-prive"];
       await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(),...path)));
       await assertFails(getDoc(doc(testEnv.authenticatedContext(OTHER_UID).firestore(),...path)));
-      await assertFails(getDoc(doc(testEnv.authenticatedContext(CLIENT_UID).firestore(),...path,"informations_privees","contact")));
+      await assertSucceeds(getDoc(doc(testEnv.authenticatedContext(CLIENT_UID).firestore(),...path)));
+      await assertSucceeds(getDoc(doc(testEnv.authenticatedContext(CLIENT_UID).firestore(),...path,"informations_privees","contact")));
+      await assertFails(getDoc(doc(testEnv.authenticatedContext(OTHER_UID).firestore(),...path,"informations_privees","contact")));
       await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(),...path,"informations_privees","contact")));
+      await assertSucceeds(getDoc(doc(testEnv.authenticatedContext(ADMIN_UID).firestore(),...path)));
       await assertSucceeds(getDoc(doc(testEnv.authenticatedContext(ADMIN_UID).firestore(),...path,"informations_privees","contact")));
     });
     it("permet la lecture publique uniquement après approbation et interdit l’approbation par un utilisateur", async () => {
@@ -913,6 +916,8 @@ describe("Mon Transport CI — règles Firestore", function () {
       });
       const {doc,getDoc,updateDoc,deleteDoc}=require("firebase/firestore");
       await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(),"declarations_enfants","dossier-approuve")));
+      await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(),"declarations_enfants","dossier-approuve","informations_privees","contact")));
+      await assertFails(getDoc(doc(testEnv.authenticatedContext(CLIENT_UID).firestore(),"declarations_enfants","dossier-approuve","informations_privees","contact")));
       await assertFails(updateDoc(doc(testEnv.authenticatedContext(CLIENT_UID).firestore(),"declarations_enfants","dossier-approuve"),{statut:"approuve",photoUrl:"https://example.test/fake.jpg",telephonePublic:"0100000000"}));
       await assertFails(deleteDoc(doc(testEnv.authenticatedContext(CLIENT_UID).firestore(),"declarations_enfants","dossier-approuve")));
     });
