@@ -13,9 +13,10 @@ service firebase.storage {
     }
     match /declarations_enfants_publics/{dossierId}/{fileName} {
       allow read: if true;
-      allow create, update, delete: if estAdmin()
+      allow create, update: if estAdmin()
         && request.resource.size <= 8 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow delete: if estAdmin();
     }
   }
 }
