@@ -147,6 +147,18 @@ async function handle(request, env) {
     const docId = parts[2];
     const ownerUid = url.searchParams.get("ownerUid") || "";
     if (!validDocId(docId) || !/^[A-Za-z0-9_-]{1,128}$/.test(ownerUid)) return json({ error: "Paramètres invalides." }, 400);
+    const parentPath = "projects/" + encodeURIComponent(env.FIREBASE_PROJECT_ID) +
+      "/databases/(default)/documents/declarations_enfants/" + encodeURIComponent(docId);
+    const privatePath = parentPath + "/informations_privees/contact";
+    const [parentDoc, privateDoc] = await Promise.all([
+      getFirestoreDocument(parentPath, user.idToken),
+      getFirestoreDocument(privatePath, user.idToken)
+    ]);
+    if (!parentDoc || stringField(parentDoc, "statut") !== "en_attente" ||
+        !privateDoc || stringField(privateDoc, "uid") !== ownerUid ||
+        stringField(privateDoc, "photoKey") !== privatePhotoKey(ownerUid, docId)) {
+      return new Response("Not found", { status: 404 });
+    }
     const object = await env.ENFANTS_BUCKET.get(privatePhotoKey(ownerUid, docId));
     if (!object || object.customMetadata?.ownerUid !== ownerUid || object.customMetadata?.docId !== docId) {
       return new Response("Not found", { status: 404 });
