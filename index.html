@@ -3912,6 +3912,7 @@ async function ouvrirGestionAbonnementPetitesAnnonces(){
  }catch(e){zone.textContent="Consultation impossible : "+(e.message||"réessayez.");}
 }
 async function envoyerRenouvellementPetitesAnnonces(){
+ if(!(await window.paiementsMQCIDisponibles(true))){alert("Paiements temporairement indisponibles en attendant les API Wave et Orange Money.");return;}
  const cfg=await obtenirConfigurationAbonnement("petites_annonces");
  const user=auth.currentUser,zone=document.getElementById("zoneAbonnementPetitesAnnonces"),moyen=document.getElementById("nsRenouvellementMoyen")?.value||"",reference=document.getElementById("nsRenouvellementReference")?.value.trim()||"";
  if(!cfg.actif)return alert("Les nouvelles souscriptions et renouvellements de petites annonces sont temporairement suspendus.");
@@ -4097,6 +4098,7 @@ function afficherFormulaireRenouvellementBoutique(id){
 }
 async function envoyerDemandeRenouvellementBoutique(id){
  const user=partnerAuth.currentUser;if(!user)return alert("Connectez-vous au compte de votre boutique.");
+ if(!(await window.paiementsMQCIDisponibles(true))){const zoneBloquee=document.getElementById("statutRenouvBoutique_"+id);if(zoneBloquee)zoneBloquee.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
  const prefix="renouvBoutique_"+id,op=document.getElementById(prefix+"PaiementMoyen")?.value||"",ref=document.getElementById(prefix+"PaiementReference")?.value.trim()||"",select=document.getElementById(prefix+"DureeAbonnement"),option=select?.selectedOptions?.[0],montant=Number(option?.dataset?.montant||0),jours=Number(select?.value||0),zone=document.getElementById("statutRenouvBoutique_"+id);
  if(!zone)return;
  if(!["Wave","Orange Money"].includes(op)||ref.length<4||ref.length>80||!Number.isInteger(montant)||montant<1||!Number.isInteger(jours)||jours<1||jours>365){zone.textContent="Choisissez une formule disponible, un moyen de paiement et saisissez une référence valide.";return;}
@@ -4483,6 +4485,7 @@ async function ouvrirReclamationObjet(id){
   const p=await window.chargerCoordonneesPaiementMQCI();const zone=document.getElementById("coordonneesPaiementReclamation");if(zone)zone.textContent="Wave : "+p.numero+" · Orange Money : "+p.numero+" · Bénéficiaire : "+p.beneficiaire;
 }
 async function envoyerReclamationObjet(){
+  const statutPaiement=document.getElementById("orStatutReclamation");if(!(await window.paiementsMQCIDisponibles(true))){statutPaiement.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
   const objetId=document.getElementById("orObjetReclameId").value;
   const nom=document.getElementById("orReclamantNom").value.trim();
   const tel=document.getElementById("orReclamantTel").value.trim();
@@ -4573,8 +4576,15 @@ const CONFIG_ABONNEMENTS_DEFAUT={
 };
 const NUMERO_PAIEMENT_MQCI="0757522319";
 const BENEFICIAIRE_PAIEMENT_MQCI="TA BI SERGE KEVIN";
-let coordonneesPaiementMQCI={numero:NUMERO_PAIEMENT_MQCI,beneficiaire:BENEFICIAIRE_PAIEMENT_MQCI};
+let coordonneesPaiementMQCI={numero:"",beneficiaire:"",actif:false};
 window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
+window.paiementsMQCIDisponibles=async function(forcer=false){
+ try{
+  const snap=await db.collection("configuration_abonnements").doc("globale").get(forcer?{source:"server"}:undefined);
+  const p=snap.exists?(snap.data().paiement||{}):{};
+  return p.actif===true && /^[+0-9 .()-]{8,24}$/.test(String(p.numero||"").trim()) && String(p.beneficiaire||"").trim().length>=2;
+ }catch(e){console.warn("État des paiements indisponible.",e);return false;}
+};
 window.chargerCoordonneesPaiementMQCI=async function(forcer=false){
  try{
   const snap=await db.collection("configuration_abonnements").doc("globale").get(forcer?{source:"server"}:undefined);
@@ -4582,10 +4592,11 @@ window.chargerCoordonneesPaiementMQCI=async function(forcer=false){
   const numero=String(p.numero||NUMERO_PAIEMENT_MQCI).trim();
   const beneficiaire=String(p.beneficiaire||BENEFICIAIRE_PAIEMENT_MQCI).trim();
   if(!/^[+0-9 .()-]{8,24}$/.test(numero)||beneficiaire.length<2||beneficiaire.length>100)throw new Error("Coordonnées de paiement invalides.");
-  coordonneesPaiementMQCI={numero,beneficiaire};
+  const actif=p.actif===true;
+  coordonneesPaiementMQCI={numero:actif?numero:"",beneficiaire:actif?beneficiaire:"",actif};
   window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
   return coordonneesPaiementMQCI;
- }catch(e){console.warn("Coordonnées de paiement : configuration par défaut conservée.",e);return coordonneesPaiementMQCI;}
+ }catch(e){console.warn("Coordonnées de paiement indisponibles.",e);coordonneesPaiementMQCI={numero:"",beneficiaire:"",actif:false};window.MQCI_PAIEMENT=coordonneesPaiementMQCI;return coordonneesPaiementMQCI;}
 };
 let configurationAbonnementsCachee={};
 let configurationAbonnementsPromise=null;
@@ -4617,8 +4628,10 @@ function genererFormulairePaiementCommun(prefix,options={}){
 async function initialiserFormulairePaiementCommun(prefix,ids,coordId){
  try{
   const paiement=await window.chargerCoordonneesPaiementMQCI(),zone=document.getElementById(coordId||("coordonneesPaiement_"+prefix));
+  const select=document.getElementById(prefix+"DureeAbonnement");
+  if(!paiement.actif){if(zone)zone.textContent="Paiements temporairement indisponibles : intégration des API Wave et Orange Money en attente.";if(select){select.innerHTML='<option value="">Paiements indisponibles</option>';select.disabled=true;}return;}
   if(zone)zone.textContent="Wave : "+paiement.numero+" · Orange Money : "+paiement.numero+" · Titulaire : "+paiement.beneficiaire;
-  const select=document.getElementById(prefix+"DureeAbonnement");if(!select)return;
+  if(!select)return;
   const formules=await Promise.all(ids.map(async id=>({id,c:await obtenirConfigurationAbonnement(id)})));
   const options=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&dureeAbonnementEnJours(x.c)>0).map(x=>{const jours=dureeAbonnementEnJours(x.c),prix=tarifAbonnementEffectif(x.c);return '<option value="'+jours+'" data-montant="'+prix+'" data-config="'+x.id+'">'+Number(x.c.duree)+' '+(x.c.unite==="mois"?"mois":"jours")+' — '+prix.toLocaleString("fr-FR")+' FCFA'+(prix<x.c.prix?' (promotion)':'')+'</option>';});
   select.innerHTML=options.length?'<option value="">Choisir une formule</option>'+options.join(""):'<option value="">Formules indisponibles</option>';select.disabled=!options.length;
@@ -6348,6 +6361,7 @@ function actualiserPrixInscriptionCompagnie(){
 }
 async function envoyerInscriptionCompagnie(){
   const user=auth.currentUser;
+  if(!(await window.paiementsMQCIDisponibles(true))){const zonePaiement=document.getElementById("partCompagnieStatut");if(zonePaiement)zonePaiement.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
   const val=id=>document.getElementById(id)?.value.trim()||"";
   const statut=document.getElementById("partCompagnieStatut");
   if(!user){statut.textContent="Connectez-vous à votre compte utilisateur avant de déposer une demande partenaire.";return;}
@@ -6736,6 +6750,7 @@ async function ouvrirFormulaireRenouvellementPartenaire(){
 }
 async function envoyerRenouvellementPartenaire(){
  const user=partnerAuth.currentUser,statut=document.getElementById("statutRenouvellementPartenaire");
+ if(!(await window.paiementsMQCIDisponibles(true))){if(statut)statut.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
  const formule=document.getElementById("partenaireRenouvellementFormule")?.value||"";
  const operateur=document.getElementById("partenaireRenouvellementOperateur")?.value||"";
  const reference=document.getElementById("partenaireRenouvellementReference")?.value.trim()||"";
@@ -7809,6 +7824,7 @@ async function deconnecterCompteAbonnementAuto(){await auth.signOut();abonnement
 
 async function envoyerDemandeAbonnementAuto(){
   const user=auth.currentUser;if(!user)return alert("Connectez-vous d'abord.");
+  if(!(await window.paiementsMQCIDisponibles(true)))return alert("Paiements temporairement indisponibles en attendant les API Wave et Orange Money.");
   const reference=document.getElementById("referenceAbonnementAuto").value.trim();
   if(reference.length<4)return alert("Saisissez la référence de votre transaction.");
   const operateur=document.getElementById("operateurAbonnementAuto").value;
