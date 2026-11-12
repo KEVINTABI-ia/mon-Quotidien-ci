@@ -68,6 +68,12 @@ exports.createWaveCheckout = onRequest(
         const durationMonths = Number(config.duree ?? 12);
         const unit = config.unite || "mois";
         const basePrice = Number(config.prix ?? 1000);
+        if (!active) return json(res, 409, { error: "plan_unavailable" });
+        if (durationMonths !== 12 || unit !== "mois" ||
+            !Number.isSafeInteger(basePrice) || basePrice < 100 || basePrice > 10000000) {
+          logger.error("Invalid automotive annual subscription configuration", { durationMonths, unit });
+          return json(res, 503, { error: "plan_configuration_invalid" });
+        }
         const now = new Date();
         const promoStart = config.promotionDebut ? new Date(config.promotionDebut + "T00:00:00") : null;
         const promoEnd = config.promotionFin ? new Date(config.promotionFin + "T23:59:59") : null;
@@ -174,7 +180,7 @@ exports.waveWebhook = onRequest(
           tx.create(receiptRef, { provider: "wave", eventId, checkoutId, outcome: "mismatch", receivedAt: admin.firestore.FieldValue.serverTimestamp() });
           return;
         }
-        if (!success && checkout.payment_status === "failed" && p.status !== "succeeded") {
+        if (!success && ["failed", "cancelled"].includes(checkout.payment_status) && p.status !== "succeeded") {
           tx.update(paymentRef, {
             status: "failed",
             failureCode: checkout.last_payment_error?.code || "payment_failed",
