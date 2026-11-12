@@ -4,6 +4,28 @@ service firebase.storage {
     function estAdmin() {
       return request.auth != null && request.auth.uid == "3LpoTLyQdtVcdtnSMAJFc7Cvnpz2";
     }
+
+    // Logos de compagnies: consultation publique, dépôt par un compte authentifié.
+    match /compagnies/logos/{fileName} {
+      allow read: if true;
+      allow create: if resource == null
+        && request.auth != null
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow update: if false;
+      allow delete: if estAdmin();
+    }
+
+    // Créations publicitaires réservées à l'administrateur; médias servis publiquement.
+    match /publicites/{fileName} {
+      allow read: if true;
+      allow create: if resource == null && estAdmin()
+        && request.resource.size <= 25 * 1024 * 1024
+        && request.resource.contentType.matches('(image/(jpeg|png|webp)|video/(mp4|webm|quicktime))');
+      allow update: if false;
+      allow delete: if estAdmin();
+    }
+
     match /declarations_enfants_privees/{uid}/{dossierId}/{fileName} {
       allow create: if resource == null
         && request.auth != null && request.auth.uid == uid
