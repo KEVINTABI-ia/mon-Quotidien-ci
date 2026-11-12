@@ -25,6 +25,34 @@ export function privatePhotoKey(uid, docId) {
 export function publicPhotoKey(docId) {
   return "public/" + docId + "/photo";
 }
+export async function readBodyLimited(request, limit = MAX_IMAGE_BYTES) {
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > limit) {
+        await reader.cancel("Payload too large");
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
     status,
@@ -114,9 +142,9 @@ async function handle(request, env) {
     const declaredSize = Number(request.headers.get("Content-Length") || 0);
     if (!validImageType(type)) return json({ error: "Format accepté : JPG, PNG ou WEBP." }, 415);
     if (declaredSize > MAX_IMAGE_BYTES) return json({ error: "Photo limitée à 8 Mo." }, 413);
-    const bytes = await request.arrayBuffer();
-    if (!bytes.byteLength || bytes.byteLength > MAX_IMAGE_BYTES) return json({ error: "Photo vide ou supérieure à 8 Mo." }, 413);
-    if (!matchesImageSignature(new Uint8Array(bytes), type)) {
+    const bytes = await readBodyLimited(request, MAX_IMAGE_BYTES);
+    if (!bytes || !bytes.byteLength) return json({ error: "Photo vide ou supérieure à 8 Mo." }, 413);
+    if (!matchesImageSignature(bytes, type)) {
       return json({ error: "Le contenu du fichier ne correspond pas au format image annoncé." }, 415);
     }
     const key = privatePhotoKey(user.uid, docId);
