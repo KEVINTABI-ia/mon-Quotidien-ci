@@ -6569,7 +6569,6 @@ async function connecterPartenaire(){
 
     if (!abonnementActif && !essaiActif) {
       if (dossier.statutAbonnementPartenaire === "Essai" && dateFinEssai && dateFinEssai <= maintenant) {
-        await documentPartenaire.ref.update({ statutAbonnementPartenaire: "Expiré" });
         dossier.statutAbonnementPartenaire = "Expiré";
       }
       const champsConnexion=document.getElementById("champsConnexionPartenaire");
