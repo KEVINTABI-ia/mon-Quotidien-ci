@@ -69,3 +69,73 @@ test("autorise le dépôt uniquement pour le propriétaire d’un dossier en att
   assert.equal(uploadOwnerMatches({ fields: { statut: { stringValue: "approuve" } } }, prive, uid, docId), false);
   assert.equal(uploadOwnerMatches(parent, { fields: { uid: { stringValue: uid }, photoKey: { stringValue: "private/autre/enfant-test-001/photo" } } }, uid, docId), false);
 });
+
+
+function mockUploadEnvironment(t, { parentStatus = "en_attente", ownerUid = "user-123", privateExists = true } = {}) {
+  const docId = "abcdefghij123";
+  const uid = "user-123";
+  const expectedKey = privatePhotoKey(uid, docId);
+  let putCount = 0;
+  t.mock.method(globalThis, "fetch", async (input) => {
+    const url = String(input);
+    if (url.includes("identitytoolkit.googleapis.com")) {
+      return Response.json({ users: [{ localId: uid }] });
+    }
+    if (url.includes("/declarations_enfants/" + docId + "/informations_privees/contact")) {
+      return privateExists
+        ? Response.json({ fields: { uid: { stringValue: ownerUid }, photoKey: { stringValue: expectedKey } } })
+        : new Response("not found", { status: 404 });
+    }
+    if (url.includes("/declarations_enfants/" + docId)) {
+      return Response.json({ fields: { statut: { stringValue: parentStatus } } });
+    }
+    throw new Error("Unexpected mocked fetch: " + url);
+  });
+  const env = {
+    FIREBASE_PROJECT_ID: "mon-transport-ci",
+    FIREBASE_WEB_API_KEY: "public-test-key",
+    ADMIN_UID: "admin-test",
+    ALLOWED_ORIGINS: "https://kevintabi-ia.github.io",
+    ENFANTS_BUCKET: {
+      async get() { return null; },
+      async put() { putCount++; return { etag: "test-etag" }; }
+    }
+  };
+  return { env, docId, getPutCount: () => putCount };
+}
+
+async function uploadTestRequest(docId) {
+  return new Request("https://worker.test/upload/" + docId, {
+    method: "POST",
+    headers: { Authorization: "Bearer test-id-token", "Content-Type": "image/png" },
+    body: Uint8Array.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])
+  });
+}
+
+test("refuse l’upload si le dossier Firestore n’existe pas", async (t) => {
+  const { env, docId, getPutCount } = mockUploadEnvironment(t, { privateExists: false });
+  const response = await worker.fetch(await uploadTestRequest(docId), env);
+  assert.equal(response.status, 403);
+  assert.equal(getPutCount(), 0);
+});
+
+test("refuse l’upload si le dossier n’est plus en attente", async (t) => {
+  const { env, docId, getPutCount } = mockUploadEnvironment(t, { parentStatus: "approuve" });
+  const response = await worker.fetch(await uploadTestRequest(docId), env);
+  assert.equal(response.status, 403);
+  assert.equal(getPutCount(), 0);
+});
+
+test("refuse l’upload si le dossier appartient à un autre utilisateur", async (t) => {
+  const { env, docId, getPutCount } = mockUploadEnvironment(t, { ownerUid: "autre-utilisateur" });
+  const response = await worker.fetch(await uploadTestRequest(docId), env);
+  assert.equal(response.status, 403);
+  assert.equal(getPutCount(), 0);
+});
+
+test("accepte l’upload pour le propriétaire d’un dossier en attente", async (t) => {
+  const { env, docId, getPutCount } = mockUploadEnvironment(t);
+  const response = await worker.fetch(await uploadTestRequest(docId), env);
+  assert.equal(response.status, 201);
+  assert.equal(getPutCount(), 1);
+});
