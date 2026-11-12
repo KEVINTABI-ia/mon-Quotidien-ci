@@ -28,6 +28,26 @@ describe("Mon Quotidien CI — règles Firebase Storage",function(){
   await assertSucceeds(uploadBytes(ref(testEnv.authenticatedContext(ADMIN_UID).storage(),path),jpeg,metadata));
   await assertSucceeds(getBytes(ref(testEnv.unauthenticatedContext().storage(),path)));
  });
+ it("interdit le remplacement des photos privées et publiques, même à l’administrateur",async()=>{
+  const privatePath="declarations_enfants_privees/storage-owner-test/dossier-immutable/photo.jpg";
+  const publicPath="declarations_enfants_publics/dossier-immutable/photo.jpg";
+  await testEnv.withSecurityRulesDisabled(async context=>{
+   await uploadBytes(ref(context.storage(),privatePath),jpeg,metadata);
+   await uploadBytes(ref(context.storage(),publicPath),jpeg,metadata);
+  });
+  const privateActors=[
+   testEnv.authenticatedContext(OWNER_UID).storage(),
+   testEnv.authenticatedContext(OTHER_UID).storage(),
+   testEnv.authenticatedContext(ADMIN_UID).storage()
+  ];
+  for(const storage of privateActors) await assertFails(uploadBytes(ref(storage,privatePath),jpeg,metadata));
+  const publicActors=[
+   testEnv.unauthenticatedContext().storage(),
+   testEnv.authenticatedContext(OWNER_UID).storage(),
+   testEnv.authenticatedContext(ADMIN_UID).storage()
+  ];
+  for(const storage of publicActors) await assertFails(uploadBytes(ref(storage,publicPath),jpeg,metadata));
+ });
  it("refuse les fichiers non image et les fichiers trop volumineux dans les zones privées",async()=>{
   const storage=testEnv.authenticatedContext(OWNER_UID).storage();
   await assertFails(uploadBytes(ref(storage,"declarations_enfants_privees/storage-owner-test/not-image/file.txt"),new Uint8Array([1,2,3]),{contentType:"text/plain"}));
