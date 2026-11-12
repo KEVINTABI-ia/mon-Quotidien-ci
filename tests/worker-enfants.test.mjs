@@ -14,9 +14,9 @@ const serviceAccount = JSON.stringify({
   private_key: adminPem
 });
 const b64 = bytes => btoa(Array.from(new Uint8Array(bytes),x=>String.fromCharCode(x)).join("")).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
-async function token(overrides={}, signingPair=pair) {
+async function token(overrides={}, signingPair=pair, headerOverrides={}) {
  const now=Math.floor(Date.now()/1000);
- const h=b64(new TextEncoder().encode(JSON.stringify({alg:"RS256",typ:"JWT",kid:"test-key"})));
+ const h=b64(new TextEncoder().encode(JSON.stringify({alg:"RS256",typ:"JWT",kid:"test-key",...headerOverrides})));
  const c=b64(new TextEncoder().encode(JSON.stringify({iss:"https://securetoken.google.com/mon-transport-ci",aud:"mon-transport-ci",sub:"user-123",user_id:"user-123",iat:now,exp:now+3600,auth_time:now-5,...overrides})));
  const input=h+"."+c;
  return input+"."+b64(await crypto.subtle.sign("RSASSA-PKCS1-v1_5",signingPair.privateKey,new TextEncoder().encode(input)));
@@ -166,7 +166,11 @@ test("valide signature, audience, émetteur et expiration des jetons Firebase", 
  const fetchKeys=async()=>Response.json({keys:[jwk]},{headers:{"cache-control":"public, max-age=3600"}});
  assert.equal((await verifyFirebaseIdToken(valid,"mon-transport-ci",fetchKeys)).uid,"user-123");
  assert.equal(await verifyFirebaseIdToken(await token({aud:"autre-projet"}),"mon-transport-ci",fetchKeys),null);
+ assert.equal(await verifyFirebaseIdToken(await token({iss:"https://securetoken.google.com/autre-projet"}),"mon-transport-ci",fetchKeys),null);
  assert.equal(await verifyFirebaseIdToken(await token({exp:Math.floor(Date.now()/1000)-1}),"mon-transport-ci",fetchKeys),null);
+ assert.equal(await verifyFirebaseIdToken(await token({iat:Math.floor(Date.now()/1000)+120}),"mon-transport-ci",fetchKeys),null);
+ assert.equal(await verifyFirebaseIdToken(await token({auth_time:Math.floor(Date.now()/1000)+120}),"mon-transport-ci",fetchKeys),null);
+ assert.equal(await verifyFirebaseIdToken(await token({},pair,{kid:"unknown-key"}),"mon-transport-ci",fetchKeys),null);
 });
 test("rejette une signature falsifiée", async () => {
  const impostor=await crypto.subtle.generateKey({name:"RSASSA-PKCS1-v1_5",modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:"SHA-256"},true,["sign","verify"]);
