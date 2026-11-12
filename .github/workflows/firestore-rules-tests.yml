@@ -1,4 +1,4 @@
-name: Firestore Rules Tests
+name: Firebase Rules Tests
 
 on:
   push:
