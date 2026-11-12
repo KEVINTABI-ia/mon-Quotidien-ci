@@ -24,8 +24,10 @@ jobs:
           node -e 'const a=require("./npm-audit.json"); for (const [name,v] of Object.entries(a.vulnerabilities || {})) { console.log("\\n" + name + " | " + v.severity + " | installed=" + (v.nodes || []).join(", ") + " | fixAvailable=" + JSON.stringify(v.fixAvailable)); for (const item of (v.via || [])) { if (typeof item === "string") console.log("  via dependency: " + item); else console.log("  advisory: " + item.title + " | range=" + item.range + " | url=" + item.url); } }'
       - name: Check inline JavaScript syntax
         run: node tests/check-inline-scripts.js
-      - name: Run Firestore emulator tests
-        run: npm test
+      - name: Run Cloudflare children Worker tests
+        run: npm run test:worker
+      - name: Run Firestore and Storage emulator tests
+        run: npm run test:rules && npm run test:storage
       - name: Smoke test deployed children Worker (read-only)
         if: github.event_name == 'pull_request' && github.event.pull_request.number == 125
         run: |
