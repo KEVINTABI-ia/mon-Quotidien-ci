@@ -9,7 +9,7 @@ on:
     branches:
       - main
       - feature-securiser-terrain-qr-idufci
-      - feat/paiements-desactivees-en-attente-api
+      - feat/paiements-desactives-en-attente-api
 
 jobs:
   firestore-rules:
