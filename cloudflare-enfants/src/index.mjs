@@ -138,6 +138,19 @@ async function handle(request, env) {
   if (request.method === "POST" && parts.length === 2 && parts[0] === "upload") {
     const docId = parts[1];
     if (!validDocId(docId)) return json({ error: "Identifiant de dossier invalide." }, 400);
+    const parentPath = "projects/" + encodeURIComponent(env.FIREBASE_PROJECT_ID) +
+      "/databases/(default)/documents/declarations_enfants/" + encodeURIComponent(docId);
+    const privatePath = parentPath + "/informations_privees/contact";
+    const [parentDoc, privateDoc] = await Promise.all([
+      getFirestoreDocument(parentPath, user.idToken),
+      getFirestoreDocument(privatePath, user.idToken)
+    ]);
+    const expectedKey = privatePhotoKey(user.uid, docId);
+    if (!parentDoc || stringField(parentDoc, "statut") !== "en_attente" ||
+        !privateDoc || stringField(privateDoc, "uid") !== user.uid ||
+        stringField(privateDoc, "photoKey") !== expectedKey) {
+      return json({ error: "Dossier en attente ou propriétaire introuvable." }, 403);
+    }
     const type = (request.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
     const declaredSize = Number(request.headers.get("Content-Length") || 0);
     if (!validImageType(type)) return json({ error: "Format accepté : JPG, PNG ou WEBP." }, 415);
