@@ -760,6 +760,12 @@ footer { color: #718076; }
 }
 
 
+
+/* IMAGE CLIQUABLE LIVRAISON ET EXPÉDITION SUR L'ACCUEIL */
+.carte-acces-colis-image{min-height:0!important;padding:0!important;background:none!important;box-shadow:none!important;border-radius:18px!important;overflow:hidden;width:100%;grid-column:1/-1}
+.bouton-image-livraison{display:block;width:100%;padding:0;margin:0;border:0;border-radius:18px;overflow:hidden;background:transparent;cursor:pointer;line-height:0;box-shadow:0 8px 20px rgba(28,63,40,.16)}
+.bouton-image-livraison img{display:block;width:100%;height:auto;max-height:280px;object-fit:contain;border-radius:18px}
+
 /* STYLE DU BOUTON COMMERCE ET BOUTIQUE (ancien style de l'automobiliste) */
 .bouton-commerce-accueil{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:0 0 13px;padding:16px;background:linear-gradient(120deg,#174B35,#16834A);color:#fff;border:0;border-left:5px solid #F28C28;border-radius:17px;text-align:left;box-shadow:0 5px 15px rgba(28,63,40,.10)}
 .bouton-commerce-accueil strong{display:block;font-size:16px}
@@ -2605,16 +2611,10 @@ function chargerPublicitesAccueil() {
     <p>Choisissez directement le service ou le réseau que vous recherchez.</p>
   </div>
   <div class="accueil-services-grid">
-    <section class="card carte-acces-colis" aria-label="Accès au service Livraison et expédition">
-  <div class="acces-colis-contenu">
-    <div class="acces-colis-texte">
-      <h2>Livraison et expédition</h2>
-      <p>Envoyez et récupérez vos colis facilement grâce à notre réseau de partenaires.</p>
-    </div>
-  </div>
-  <button type="button" class="primary bouton-acces-colis"
+    <section class="carte-acces-colis carte-acces-colis-image" aria-label="Accès au service Livraison et expédition">
+  <button type="button" class="bouton-image-livraison" aria-label="Ouvrir l’espace de commande Livraison et expédition"
     onclick="ouvrirSectionPleinEcran('transportColis','')">
-    Accéder au service Livraison et expédition →
+    <img src="./IMG_0466.jpeg" alt="Livraison et expédition" loading="lazy">
   </button>
 </section>
 
