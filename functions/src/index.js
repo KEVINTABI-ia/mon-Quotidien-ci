@@ -148,19 +148,21 @@ exports.waveWebhook = onRequest(
           return;
         }
         if (success && p.status !== "succeeded") {
+          const subRef = db.collection("subscriptions").doc(p.uid + "_" + p.serviceId);
+          // Firestore transactions require every read to happen before the first write.
+          const subSnap = await tx.get(subRef);
+          const now = admin.firestore.Timestamp.now();
+          const oldEnd = subSnap.exists ? subSnap.data().endAt : null;
+          const renewingEarly = !!oldEnd && oldEnd.toMillis() > now.toMillis();
+          const base = renewingEarly ? oldEnd.toMillis() : now.toMillis();
+          const endAt = admin.firestore.Timestamp.fromMillis(base + p.durationDays * 86400000);
           tx.update(paymentRef, {
             status: "succeeded", providerTransactionId: checkout.transaction_id || null,
             confirmedAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp()
           });
-          const subRef = db.collection("subscriptions").doc(p.uid + "_" + p.serviceId);
-          const subSnap = await tx.get(subRef);
-          const now = admin.firestore.Timestamp.now();
-          const oldEnd = subSnap.exists ? subSnap.data().endAt : null;
-          const base = oldEnd && oldEnd.toMillis() > now.toMillis() ? oldEnd.toMillis() : now.toMillis();
-          const endAt = admin.firestore.Timestamp.fromMillis(base + p.durationDays * 86400000);
           tx.set(subRef, {
             uid: p.uid, serviceId: p.serviceId, planId: p.planId, status: "active",
-            startAt: subSnap.exists && oldEnd && oldEnd.toMillis() > now.toMillis() ? subSnap.data().startAt : now,
+            startAt: renewingEarly ? subSnap.data().startAt : now,
             endAt, lastPaymentId: paymentId, updatedAt: admin.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
         }
