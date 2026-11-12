@@ -49,6 +49,7 @@ exports.createWaveCheckout = onRequest(
   { region: "europe-west1", secrets: [WAVE_API_KEY], cors: ["https://kevintabi-ia.github.io"] },
   async (req, res) => {
     if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" });
+    let createdPaymentRef = null;
     try {
       const user = await requireUser(req);
       const { serviceId, planId, successUrl, errorUrl } = req.body || {};
@@ -88,6 +89,7 @@ exports.createWaveCheckout = onRequest(
         return json(res, 503, { error: "plan_configuration_invalid" });
       }
       const paymentRef = db.collection("payments").doc();
+      createdPaymentRef = paymentRef;
       const clientReference = "MQCI-" + paymentRef.id;
       await paymentRef.create({
         uid: user.uid, serviceId, planId, provider: "wave", amountXof: plan.amountXof,
@@ -112,6 +114,17 @@ exports.createWaveCheckout = onRequest(
       });
       return json(res, 201, { paymentId: paymentRef.id, checkoutUrl: checkout.wave_launch_url });
     } catch (error) {
+      if (createdPaymentRef) {
+        try {
+          await createdPaymentRef.set({
+            status: "failed",
+            initializationError: error.status ? "provider_rejected" : "provider_unavailable",
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        } catch (writeError) {
+          logger.error("Could not mark failed checkout initialization", { paymentId: createdPaymentRef.id });
+        }
+      }
       logger.warn("createWaveCheckout rejected", { status: error.status || 500, message: error.message });
       return json(res, error.status || 500, { error: error.status ? "request_rejected" : "payment_initialization_failed" });
     }
@@ -125,8 +138,11 @@ exports.waveWebhook = onRequest(
     if (!verifyWaveSignature(req, WAVE_WEBHOOK_SECRET.value())) return res.sendStatus(401);
     let event;
     try { event = JSON.parse(req.rawBody.toString("utf8")); } catch { return res.sendStatus(400); }
-    const checkoutId = event?.data?.id || event?.id;
-    const eventId = event?.id || crypto.createHash("sha256").update(req.rawBody).digest("hex");
+    if (!["checkout.session.completed", "checkout.session.payment_failed"].includes(event?.type)) {
+      return res.sendStatus(200);
+    }
+    const checkoutId = event?.data?.id;
+    const eventId = event?.id;
     if (typeof checkoutId !== "string" || typeof eventId !== "string") return res.sendStatus(400);
     try {
       const receiptRef = db.collection("payment_webhooks").doc("wave_" + eventId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 140));
@@ -157,6 +173,13 @@ exports.waveWebhook = onRequest(
           tx.update(paymentRef, { status: "review_required", reviewReason: "provider_data_mismatch", updatedAt: admin.firestore.FieldValue.serverTimestamp() });
           tx.create(receiptRef, { provider: "wave", eventId, checkoutId, outcome: "mismatch", receivedAt: admin.firestore.FieldValue.serverTimestamp() });
           return;
+        }
+        if (!success && checkout.payment_status === "failed" && p.status !== "succeeded") {
+          tx.update(paymentRef, {
+            status: "failed",
+            failureCode: checkout.last_payment_error?.code || "payment_failed",
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
         }
         if (success && p.status !== "succeeded") {
           const subRef = db.collection("subscriptions").doc(p.uid + "_" + p.serviceId);
