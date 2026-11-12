@@ -80,7 +80,24 @@ async function firebaseUser(request, env) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ idToken: match[1] })
   });
-  if (!response.ok) return null;
+  if (!response.ok) {
+    let firebaseCode = "UNKNOWN";
+    try {
+      const errorData = await response.json();
+      const candidate = errorData?.error?.message;
+      if (typeof candidate === "string" && /^[A-Z0-9_]+$/.test(candidate)) {
+        firebaseCode = candidate;
+      }
+    } catch {
+      // Ne jamais journaliser le corps brut de la réponse Firebase.
+    }
+    console.warn(JSON.stringify({
+      event: "enfants_firebase_auth_rejected",
+      upstreamStatus: response.status,
+      firebaseCode
+    }));
+    return null;
+  }
   const data = await response.json();
   const user = data.users && data.users[0];
   if (!user || user.disabled === true || !user.localId) return null;
