@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validDocId, validImageType, matchesImageSignature, privatePhotoKey, publicPhotoKey, readBodyLimited } from "../cloudflare-enfants/src/index.mjs";
+import { validDocId, validImageType, matchesImageSignature, privatePhotoKey, publicPhotoKey, readBodyLimited, uploadOwnerMatches } from "../cloudflare-enfants/src/index.mjs";
 
 test("valide les identifiants de dossier sans accepter de chemin", () => {
   assert.equal(validDocId("Abcdefghij_123"), true);
@@ -55,4 +55,17 @@ test("accepte un flux dont la taille respecte la limite", async () => {
   });
   const request = new Request("https://example.test/upload/abcdefghij", { method: "POST", body, duplex: "half" });
   assert.deepEqual(Array.from(await readBodyLimited(request, 4)), [1, 2, 3, 4]);
+});
+
+test("autorise le dépôt uniquement pour le propriétaire d’un dossier en attente", () => {
+  const uid = "client-test-001";
+  const docId = "enfant-test-001";
+  const parent = { fields: { statut: { stringValue: "en_attente" } } };
+  const prive = { fields: { uid: { stringValue: uid }, photoKey: { stringValue: privatePhotoKey(uid, docId) } } };
+  assert.equal(uploadOwnerMatches(parent, prive, uid, docId), true);
+  assert.equal(uploadOwnerMatches(parent, prive, "autre-utilisateur", docId), false);
+  assert.equal(uploadOwnerMatches(parent, null, uid, docId), false);
+  assert.equal(uploadOwnerMatches(null, prive, uid, docId), false);
+  assert.equal(uploadOwnerMatches({ fields: { statut: { stringValue: "approuve" } } }, prive, uid, docId), false);
+  assert.equal(uploadOwnerMatches(parent, { fields: { uid: { stringValue: uid }, photoKey: { stringValue: "private/autre/enfant-test-001/photo" } } }, uid, docId), false);
 });
