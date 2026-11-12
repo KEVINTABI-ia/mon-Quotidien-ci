@@ -79,6 +79,9 @@ Le rapprochement quotidien doit comparer paiements internes, transactions opéra
 
 ## Tests avant production
 
+Depuis le dossier functions, exécuter `npm test` (7 tests unitaires couvrent les signatures, les timestamps, les corps bruts et les fins de mois).
+
+
 - Jeton Firebase absent ou invalide : rejet.
 - Formule inconnue/inactive : aucune session créée.
 - Signature Wave invalide ou timestamp hors fenêtre : HTTP 401.
