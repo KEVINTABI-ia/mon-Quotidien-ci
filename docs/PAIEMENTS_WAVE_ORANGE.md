@@ -4,12 +4,12 @@
 
 - Ajout d'un backend Firebase Functions v2 pour créer les sessions Wave, vérifier les webhooks signés et activer un abonnement côté serveur.
 - Orange Money CI n'est pas activé : ses identifiants, son contrat marchand et sa documentation technique CI doivent être fournis avant de coder l'adaptateur. Aucun endpoint d'un autre pays n'est supposé.
-- Les boutons et formulaires de paiement historiques de l'interface ne sont pas encore raccordés à ce backend. Ne pas annoncer les paiements automatiques comme disponibles avant ce raccordement et les tests.
+- Le formulaire d'abonnement automobiliste est maintenant raccordé au checkout Wave et la confirmation serveur met à jour la collection historique `abonnements_automobiliste`. Les autres formulaires historiques restent à migrer service par service.
 - Les remboursements et le rapprochement automatique restent à implémenter après validation des capacités exactes du contrat marchand.
 
 ## Architecture
 
-Le navigateur transmet uniquement un identifiant de service, un identifiant de formule et l'opérateur. Le backend lit le montant et la durée depuis le catalogue Firestore, puis crée une session Wave. Le montant envoyé au prestataire est toujours celui calculé côté serveur.
+Le navigateur transmet uniquement un identifiant de service et de formule. Pour l'abonnement automobiliste annuel, le backend relit la configuration administrateur `configuration_abonnements/globale.services.automobiliste`, applique le tarif promotionnel uniquement si ses dates sont valides, puis crée une session Wave. Pour les autres services, il lit le catalogue `payment_catalog/{serviceId}/plans/{planId}`. Le montant envoyé au prestataire est toujours calculé côté serveur.
 
 Le webhook Wave est vérifié sur le corps brut avec HMAC-SHA256. Le backend récupère ensuite la session via l'API Wave et vérifie la référence client, l'identifiant de session, le montant, la devise XOF et les états de paiement. La transaction Firestore active alors l'abonnement de façon atomique et idempotente.
 
@@ -28,7 +28,7 @@ La redirection du navigateur vers success_url ne confirme jamais un paiement.
 
 ## Catalogue de prix
 
-Le backend lit les documents de la forme payment_catalog/{serviceId}/plans/{planId}. Exemple de document :
+Pour les futurs services, le backend lit les documents de la forme payment_catalog/{serviceId}/plans/{planId}. Exemple de document :
 
     {
       "active": true,
@@ -92,4 +92,4 @@ Le rapprochement quotidien doit comparer paiements internes, transactions opéra
 
 ## Limites de cette livraison
 
-Cette livraison constitue le socle backend Wave et les règles de protection des collections de paiement. Elle ne raccorde pas encore les écrans de paiement, n'active pas Orange Money, ne traite pas les remboursements et ne migre pas les contrôles d'abonnement de tous les modules. Elle doit être testée dans un projet Firebase de préproduction avant déploiement.
+Cette livraison raccorde le parcours Wave de l'abonnement automobiliste et conserve la compatibilité avec la collection historique `abonnements_automobiliste`. Elle n'active pas Orange Money, ne traite pas les remboursements et ne migre pas les contrôles d'abonnement des autres modules. Elle doit être testée dans un projet Firebase de préproduction avant déploiement.
