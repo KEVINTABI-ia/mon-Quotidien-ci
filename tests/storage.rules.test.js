@@ -33,17 +33,24 @@ describe("Mon Quotidien CI — règles Firebase Storage",function(){
   await assertFails(uploadBytes(ref(storage,"declarations_enfants_privees/storage-owner-test/not-image/file.txt"),new Uint8Array([1,2,3]),{contentType:"text/plain"}));
   await assertFails(uploadBytes(ref(storage,"declarations_enfants_privees/storage-owner-test/too-large/photo.jpg"),new Uint8Array(8*1024*1024+1),metadata));
  });
- it("réserve la suppression des photos privées et publiques à l’administrateur",async()=>{
+ it("interdit définitivement la suppression des photos privées et publiques, même à l’administrateur",async()=>{
+  const privatePath="declarations_enfants_privees/storage-owner-test/never-delete-private.jpg";
+  const publicPath="declarations_enfants_publics/never-delete-public.jpg";
   await testEnv.withSecurityRulesDisabled(async context=>{
-   const storage=context.storage();
-   await uploadBytes(ref(storage,"declarations_enfants_privees/storage-owner-test/owner-delete-private.jpg"),jpeg,metadata);
-   await uploadBytes(ref(storage,"declarations_enfants_privees/storage-owner-test/admin-delete-private.jpg"),jpeg,metadata);
-   await uploadBytes(ref(storage,"declarations_enfants_publics/other-delete-public.jpg"),jpeg,metadata);
-   await uploadBytes(ref(storage,"declarations_enfants_publics/admin-delete-public.jpg"),jpeg,metadata);
+   await uploadBytes(ref(context.storage(),privatePath),jpeg,metadata);
+   await uploadBytes(ref(context.storage(),publicPath),jpeg,metadata);
   });
-  await assertFails(deleteObject(ref(testEnv.authenticatedContext(OWNER_UID).storage(),"declarations_enfants_privees/storage-owner-test/owner-delete-private.jpg")));
-  await assertSucceeds(deleteObject(ref(testEnv.authenticatedContext(ADMIN_UID).storage(),"declarations_enfants_privees/storage-owner-test/admin-delete-private.jpg")));
-  await assertFails(deleteObject(ref(testEnv.authenticatedContext(OTHER_UID).storage(),"declarations_enfants_publics/other-delete-public.jpg")));
-  await assertSucceeds(deleteObject(ref(testEnv.authenticatedContext(ADMIN_UID).storage(),"declarations_enfants_publics/admin-delete-public.jpg")));
+  const actors=[
+   testEnv.unauthenticatedContext().storage(),
+   testEnv.authenticatedContext(OWNER_UID).storage(),
+   testEnv.authenticatedContext(OTHER_UID).storage(),
+   testEnv.authenticatedContext(ADMIN_UID).storage()
+  ];
+  for(const storage of actors){
+   await assertFails(deleteObject(ref(storage,privatePath)));
+   await assertFails(deleteObject(ref(storage,publicPath)));
+  }
+  await assertSucceeds(getBytes(ref(testEnv.authenticatedContext(ADMIN_UID).storage(),privatePath)));
+  await assertSucceeds(getBytes(ref(testEnv.unauthenticatedContext().storage(),publicPath)));
  });
 });
