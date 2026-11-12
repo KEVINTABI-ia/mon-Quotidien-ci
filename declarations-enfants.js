@@ -34,7 +34,7 @@
   try{
    const id=db.collection("declarations_enfants").doc().id,uid=auth.currentUser.uid,path="declarations_enfants_privees/"+uid+"/"+id+"/"+Date.now()+"_"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
    await storage.ref(path).put(file,{contentType:file.type,customMetadata:{uid:uid,dossierId:id}});
-   const publicData={uid:uid,type:type,nom:v("mqciEnfantNom"),age:type==="perdu"?v("mqciEnfantAge"):"",photoUrl:"",telephonePublic:"",presencePublic:"",statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+   const publicData={type:type,nom:v("mqciEnfantNom"),age:type==="perdu"?v("mqciEnfantAge"):"",photoUrl:"",telephonePublic:"",presencePublic:"",statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
    const prive={uid:uid,photoPath:path,telephone:type==="perdu"?v("mqciEnfantTel"):"",adresseExacte:v("mqciEnfantAdresse"),nomDeclarant:v("mqciEnfantTrouvePar"),telephoneDeclarant:type==="retrouve"?v("mqciEnfantTel"):"",presence:type==="retrouve"?v("mqciEnfantPresence"):"",commissariat:v("mqciEnfantCommissariat"),lieuTrouve:v("mqciEnfantLieuPrecise"),commune:v("mqciEnfantCommune"),description:v("mqciEnfantDescription"),ageSaisi:type==="retrouve"?v("mqciEnfantAge"):"",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
    const ref=db.collection("declarations_enfants").doc(id);
    const batch=db.batch();batch.set(ref,publicData);batch.set(ref.collection("informations_privees").doc("contact"),prive);await batch.commit();
