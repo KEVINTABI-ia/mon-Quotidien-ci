@@ -916,6 +916,20 @@ describe("Mon Transport CI — règles Firestore", function () {
       await assertFails(updateDoc(doc(testEnv.authenticatedContext(CLIENT_UID).firestore(),"declarations_enfants","dossier-approuve"),{statut:"approuve",photoUrl:"https://example.test/fake.jpg",telephonePublic:"0100000000"}));
       await assertFails(deleteDoc(doc(testEnv.authenticatedContext(CLIENT_UID).firestore(),"declarations_enfants","dossier-approuve")));
     });
+    it("autorise la première publication admin puis rend la photo immuable et protège la fiche", async () => {
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        await context.firestore().doc("declarations_enfants/dossier-photo-immuable").set({type:"perdu",nom:"Enfant",age:"6",photoUrl:"",telephonePublic:"",presencePublic:"",statut:"en_attente"});
+      });
+      const {doc,updateDoc,deleteDoc}=require("firebase/firestore");
+      const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      const ref=doc(adminDb,"declarations_enfants","dossier-photo-immuable");
+      const photoUrl="https://example.test/photo-originale.jpg";
+      await assertSucceeds(updateDoc(ref,{statut:"approuve",photoUrl,telephonePublic:"0100000000"}));
+      await assertFails(updateDoc(ref,{photoUrl:"https://example.test/photo-remplacee.jpg"}));
+      await assertFails(updateDoc(ref,{photoUrl:""}));
+      await assertFails(deleteDoc(ref));
+      await assertSucceeds(updateDoc(ref,{nom:"Nom corrigé"}));
+    });
     it("permet à l’administrateur de modérer le dossier", async () => {
       await testEnv.withSecurityRulesDisabled(async context=>{
         await context.firestore().doc("declarations_enfants/dossier-a-moderer").set({type:"perdu",nom:"Enfant",age:"6",photoUrl:"",telephonePublic:"",presencePublic:"",statut:"en_attente"});
