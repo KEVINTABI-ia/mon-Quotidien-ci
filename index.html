@@ -11565,7 +11565,18 @@ window.mtcAfficherActeJudiciaire = function(type){
       #homeFamilyLauncher>.home-section-heading h2{font-size:15px!important}
       #homePopular .family-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}
       #homeActualites{background:#fff!important}
-      @media(max-width:380px){#homeQuickAccess{gap:6px}#homeQuickAccess .home-quick{min-height:80px}}
+      /* Champs de bienvenue intégrés à l'en-tête actuel */
+      #accueilHomeShell{padding-top:0!important}
+      header #homeWelcome{display:block!important;margin:12px 0 0!important;padding:0!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;color:#fff!important;overflow:visible!important}
+      header #homeWelcome:after{display:none!important}
+      header #homeWelcome h1{margin:8px 0 4px!important;color:#fff!important;font-size:20px!important}
+      header #homeWelcome .home-welcome-question{margin:0 0 8px!important;color:#fff!important;font-size:14px!important;font-weight:700!important}
+      header #homeWelcome .home-location-label{display:block;margin:8px 0 5px!important;color:#fff!important;font-size:12px!important}
+      header #homeWelcome .home-location-input,header #homeWelcome .home-search input{width:100%;min-height:43px!important;padding:10px 13px!important;border:1px solid #ffffffb5!important;border-radius:12px!important;background:#fff!important;color:#18352a!important;box-shadow:none!important;font-size:14px!important}
+      header #homeWelcome .home-search{margin-top:9px!important}
+      header #homeWelcome .home-search-icon{top:10px!important;color:#16834a!important}
+      #homeQuickAccess{display:none!important}
+      @media(max-width:380px){header #homeWelcome h1{font-size:19px!important}header #homeWelcome .home-location-input,header #homeWelcome .home-search input{min-height:41px!important}}
     `;
     document.head.appendChild(style);
 
@@ -11573,10 +11584,8 @@ window.mtcAfficherActeJudiciaire = function(type){
     shell.id='accueilHomeShell';
     shell.innerHTML=`
       <section class="home-welcome" id="homeWelcome">
-        <div class="home-welcome-kicker">MON QUOTIDIEN CI · PROXIMITÉ ET SIMPLICITÉ</div>
         <h1>Bonjour !</h1>
         <p class="home-welcome-question">Que recherchez-vous aujourd’hui ?</p>
-        <p>Retrouvez les services utiles de votre commune au même endroit.</p>
         <label class="home-location-label" for="mqciCommuneChoisie">📍 Ma commune ou mon quartier</label>
         <input id="mqciCommuneChoisie" class="home-location-input" type="text" list="mqciCommunesSuggestions" placeholder="Choisir ou saisir ma commune" autocomplete="address-level2">
         <datalist id="mqciCommunesSuggestions">
@@ -11588,15 +11597,7 @@ window.mtcAfficherActeJudiciaire = function(type){
         </div>
         <div id="mqciResultatsRecherche" class="mqci-search-results" aria-live="polite"></div>
       </section>
-      <section class="home-panel" id="homeQuickAccess" aria-label="Accès rapides">
-              <div class="home-section-heading" style="grid-column:1/-1"><div><h2>Accès rapides</h2><p>Les rubriques essentielles en un seul geste.</p></div></div>
-              <button class="home-quick" type="button" onclick="ouvrirFamilleAccueil('homeMobilite')"><span class="home-quick-icon">🚌</span><strong>Transport</strong></button>
-              <button class="home-quick" type="button" onclick="ouvrirFamilleAccueil('homeAutomobile')"><span class="home-quick-icon">🚘</span><strong>Automobile</strong></button>
-              <button class="home-quick" type="button" onclick="ouvrirSectionPleinEcran('transportColis','Livraison et expédition')"><span class="home-quick-icon">📦</span><strong>Colis</strong></button>
-              <button class="home-quick" type="button" onclick="ouvrirFamilleAccueil('homeLogement')"><span class="home-quick-icon">🏠</span><strong>Logement</strong></button>
-              <button class="home-quick" type="button" onclick="ouvrirEmploisOpportunites()"><span class="home-quick-icon">💼</span><strong>Emploi</strong></button>
-              <button class="home-quick" type="button" onclick="ouvrirFamilleAccueil('homeDemarches')"><span class="home-quick-icon">🛍️</span><strong>Commerce</strong></button>
-            </section>
+
       <section class="home-panel" id="homeFamilyLauncher" aria-label="Choisir une famille de services">
         <div class="home-section-heading"><div><h2>Toutes les familles de services</h2><p>Accédez également aux autres rubriques de Mon Quotidien CI.</p></div></div>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeMobilite')"><span class="family-entry-icon">🚌</span><strong>Mobilité et transport</strong><small>Gares, déplacements, colis et compagnies</small></button>
@@ -11677,6 +11678,10 @@ window.mtcAfficherActeJudiciaire = function(type){
         <div class="home-section-heading"><div><h2>➕ Autres services du quotidien</h2><p>Éducation, factures, prestations et autres services pratiques</p></div></div>
       </section>`;
     main.insertBefore(shell,recherche||main.firstChild);
+    const welcome=document.getElementById("homeWelcome");
+    const header=document.querySelector("header");
+    const tagline=header?.querySelector(".tagline-anime,.tagline");
+    if(welcome&&header){if(tagline&&tagline.parentNode===header)tagline.insertAdjacentElement("afterend",welcome);else header.appendChild(welcome);}
 
     const mobility=document.getElementById('homeMobilite');
     if(recherche) mobility.appendChild(recherche);
