@@ -11699,7 +11699,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     nav.addEventListener('click',function(e){
       const b=e.target.closest('button');if(!b)return;
       const action=b.dataset.nav;
-      if(action==='home'){window.scrollTo({top:0,behavior:'smooth'});nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
+      if(action==='home'){retourAccueilFamilles();window.scrollTo({top:0,behavior:'smooth'});nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
       else if(action==='services'){retourAccueilFamilles();window.scrollTo({top:0,behavior:'smooth'});nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
       else if(action==='annonces'){ouvrirFamilleAccueil('homeDemarches');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
       else if(action==='communaute'){retourAccueilFamilles();aller('homeActualites');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
@@ -12239,11 +12239,27 @@ body{font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial
 <script id="mqci-recherche-universelle-script">
 (function(){
   const normaliser=s=>String(s||"").toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+  function extraireCommune(q){
+    const n=normaliser(q);
+    const m=n.match(/\\b(?:a|dans|sur|pour|pres de)\\s+(.+)$/);
+    if(m)return m[1].replace(/\\b(abidjan|cote d ivoire)$/,"").trim();
+    return normaliser(document.getElementById("mqciCommuneChoisie")?.value||"");
+  }
+  function ouvrirAnnuaireAvecFiltres(rubrique,categorie,terme){
+    ouvrirAnnuaireInterne(rubrique,categorie);
+    const recherche=document.getElementById("annuaireRecherche");
+    const commune=document.getElementById("annuaireFiltreCommune");
+    const filtre=document.getElementById("annuaireFiltreCategorie");
+    if(recherche)recherche.value=terme;
+    if(commune)commune.value=extraireCommune(document.getElementById("mqciRechercheUniverselle")?.value||"");
+    if(filtre)filtre.value=categorie;
+    chargerAnnuaireInterne();
+  }
   const routes=[
-    {mots:["mecanicien","mecanique","garage","garagiste"],titre:"Mécaniciens et garages",desc:"Annuaire des mécaniciens référencés et validés",ouvrir:()=>ouvrirAnnuaireInterne("artisansProfessionnels","Mécanicien")},
+    {mots:["mecanicien","mecanique","garage","garagiste"],titre:"Mécaniciens et garages",desc:"Rechercher dans l’annuaire des professionnels validés",ouvrir:()=>ouvrirAnnuaireAvecFiltres("artisansProfessionnels","Mécanicien","Mécanicien")},
     {mots:["pharmacie","pharmacien","medicament"],titre:"Pharmacies et santé",desc:"Accéder au service santé et aux informations disponibles",ouvrir:()=>ouvrirSectionPleinEcran("servicesSante","Pharmacies et santé")},
-    {mots:["electricien","electricite","plombier","plomberie","reparation domicile"],titre:"Dépannage à domicile",desc:"Trouver un électricien, un plombier ou un technicien",ouvrir:()=>ouvrirAnnuaireInterne("depannageDomicile",normaliser(document.getElementById("mqciRechercheUniverselle")?.value).includes("plomb")?"Plomberie":"Électricité")},
-    {mots:["appartement","maison","studio","logement","location","louer","immobilier","terrain"],titre:"Logement et immobilier",desc:"Consulter les annonces de location et de vente",ouvrir:()=>{ouvrirSectionPleinEcran("logementImmobilier","Logement et immobilier");chargerAnnoncesLogementPubliques();}},
+    {mots:["electricien","electricite","plombier","plomberie","reparation domicile"],titre:"Dépannage à domicile",desc:"Rechercher les techniciens référencés par métier et commune",ouvrir:()=>ouvrirAnnuaireAvecFiltres("depannageDomicile",normaliser(document.getElementById("mqciRechercheUniverselle")?.value).includes("plomb")?"Plomberie":"Électricité",normaliser(document.getElementById("mqciRechercheUniverselle")?.value).includes("plomb")?"Plombier":"Électricien")},
+    {mots:["appartement","maison","studio","logement","location","louer","immobilier","terrain"],titre:"Logement et immobilier",desc:"Consulter les annonces et filtrer par commune",ouvrir:()=>{ouvrirSectionPleinEcran("logementImmobilier","Logement et immobilier");const c=document.getElementById("logementFilterCommune");if(c)c.value=extraireCommune(document.getElementById("mqciRechercheUniverselle")?.value||"");const q=normaliser(document.getElementById("mqciRechercheUniverselle")?.value||"");const cat=document.getElementById("logementFilterCategory");if(cat&&q.includes("appartement")&&q.includes("louer"))cat.value="Appartement à louer";chargerAnnoncesLogementPubliques();}},
     {mots:["gbaka","woro","woro woro","taxi","gare","adjam","transport","bouake","compagnie de voyage","car interurbain"],titre:"Mobilité et transport",desc:"Accéder aux gares, trajets et compagnies de voyage",ouvrir:()=>ouvrirFamilleAccueil("homeMobilite")},
     {mots:["livraison","colis","expedition","envoyer un colis","livreur"],titre:"Livraison et expédition",desc:"Accéder aux services de livraison et d’envoi de colis",ouvrir:()=>ouvrirSectionPleinEcran("transportColis","Livraison et expédition")},
     {mots:["boutique","commerce","magasin","marche"],titre:"Commerce et boutiques",desc:"Consulter les commerces et boutiques référencés",ouvrir:()=>{ouvrirResultatPleinEcran("Commerce et boutique");afficherMarchesCommune();}},
