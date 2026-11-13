@@ -11637,7 +11637,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       <section class="home-panel" id="homeQuotidien">
         <div class="home-section-heading"><div><h2>➕ Autres services du quotidien</h2><p>Éducation, factures, prestations et autres services pratiques</p></div></div>
       </section>`;
-    main.insertBefore(shell,recherche);
+    main.insertBefore(shell,recherche||main.firstChild);
 
     const mobility=document.getElementById('homeMobilite');
     if(recherche) mobility.appendChild(recherche);
