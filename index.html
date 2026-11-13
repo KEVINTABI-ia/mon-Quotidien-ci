@@ -11568,7 +11568,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     ['nouveauxServices','espaceEmploisOpportunites'].forEach(id=>{const el=document.getElementById(id);if(el)commerce.appendChild(el);});
     const citoyen=document.getElementById('homeVieCitoyenne');
     citoyen.appendChild(demarches);
-    ['objetsPerdusRetrouves','declarationEnfantPerdu'].forEach(id=>{const el=document.getElementById(id);if(el)document.getElementById('homeActualites').appendChild(el);});
+    ['objetsPerdusRetrouves'].forEach(id=>{const el=document.getElementById(id);if(el)document.getElementById('homeActualites').appendChild(el);});
     ['servicesMinistereTransport','demarchesJudiciaires','securiserTerrain','servicesPublicsDemarches'].forEach(id=>{const el=document.getElementById(id);if(el)citoyen.appendChild(el);});
     const other=document.getElementById('homeQuotidien');
     other.appendChild(quotidien);
