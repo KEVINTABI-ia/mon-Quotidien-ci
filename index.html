@@ -11680,10 +11680,10 @@ window.mtcAfficherActeJudiciaire = function(type){
     nav.id='accueilBottomNav';
     nav.setAttribute('aria-label','Navigation principale');
     nav.innerHTML=`
-      <button type="button" class="nav-active" data-nav="home"><span>⌂</span>Accueil</button>
+      <button type="button" data-nav="vie-citoyenne"><span>⚖️</span>Vie citoyenne</button>
       <button type="button" data-nav="services"><span>▦</span>Services</button>
-      <button type="button" data-nav="annonces"><span>📢</span>Annonces</button>
-      <button type="button" data-nav="communaute"><span>🗞️</span>Communauté</button>
+      <button type="button" data-nav="rechercher-trajet"><span>🧭</span>Rechercher trajet</button>
+      <button type="button" data-nav="livraison"><span>📦</span>Livraison</button>
       <button type="button" data-nav="compte"><span>👤</span>Compte</button>`;
     document.body.appendChild(nav);
     const compte=document.createElement('section');
@@ -11735,23 +11735,20 @@ window.mtcAfficherActeJudiciaire = function(type){
       const b=e.target.closest('button');if(!b)return;
       const action=b.dataset.nav;
       preparerChangementOnglet();
-      if(action==='home'){
+      if(action==='vie-citoyenne'){
         retourAccueilFamilles();
-        window.scrollTo({top:0,behavior:'smooth'});
+        ouvrirFamilleAccueil('homeVieCitoyenne');
       }else if(action==='services'){
         retourAccueilFamilles();
         const launcher=document.getElementById('homeFamilyLauncher');
         if(launcher)launcher.scrollIntoView({behavior:'smooth',block:'start'});
         else window.scrollTo({top:0,behavior:'smooth'});
-      }else if(action==='annonces'){
+      }else if(action==='rechercher-trajet'){
         retourAccueilFamilles();
-        ouvrirSectionPleinEcran('nouveauxServices','Petites annonces de ma commune');
-        choisirNouveauService('annonce');
-        chargerNouveauxServicesPublics('annonce');
-      }else if(action==='communaute'){
+        ouvrirSectionPleinEcran('rechercheGaresV2','Rechercher trajet');
+      }else if(action==='livraison'){
         retourAccueilFamilles();
-        const zone=document.getElementById('homeActualites');
-        if(zone)ouvrirElementPleinEcran(zone,'Communauté et informations locales');
+        ouvrirSectionPleinEcran('transportColis','Livraison et expédition');
       }else if(action==='compte'){
         retourAccueilFamilles();
         const identite=document.getElementById('mqciCompteIdentite');
@@ -11787,7 +11784,7 @@ function ouvrirFamilleAccueil(id){
  }
  window.scrollTo({top:0,behavior:'smooth'});
  const nav=document.getElementById('accueilBottomNav');
- if(nav)nav.querySelectorAll('button').forEach(b=>b.classList.toggle('nav-active',b.dataset.nav==='home'));
+ if(nav)nav.querySelectorAll('button').forEach(b=>b.classList.toggle('nav-active',b.dataset.nav===(id==='homeVieCitoyenne'?'vie-citoyenne':'services')));
 }
 function retourAccueilFamilles(){
  const shell=document.getElementById('accueilHomeShell');if(!shell)return;
@@ -11795,7 +11792,7 @@ function retourAccueilFamilles(){
  shell.querySelectorAll('.home-panel').forEach(p=>p.classList.remove('family-panel-active'));
  window.scrollTo({top:0,behavior:'smooth'});
  const nav=document.getElementById('accueilBottomNav');
- if(nav)nav.querySelectorAll('button').forEach(b=>b.classList.toggle('nav-active',b.dataset.nav==='home'));
+ if(nav)nav.querySelectorAll('button').forEach(b=>b.classList.toggle('nav-active',b.dataset.nav==='services'));
 }
 function ouvrirEmploisOpportunites(){if(typeof ouvrirSectionPleinEcran==='function')ouvrirSectionPleinEcran('espaceEmploisOpportunites','Emplois et opportunités');else{const s=document.getElementById('espaceEmploisOpportunites');if(s){s.style.display='block';s.scrollIntoView({behavior:'smooth'});}}chargerOffresEmploiPubliques();actualiserEspaceEmplois();}
 function actualiserEspaceEmplois(){const u=auth.currentUser,a=!!u&&u.uid===ADMIN_UID;const c=document.getElementById('emploisConnexion'),f=document.getElementById('emploisFormZone'),z=document.getElementById('emploisZoneAdmin'),t=document.getElementById('emploisEtatConnexion');if(c)c.style.display=u?'none':'block';if(f)f.style.display=u?'block':'none';if(z)z.style.display=a?'block':'none';if(t)t.textContent=u?(a?'Administrateur connecté : vos offres sont publiées immédiatement.':'Connecté : vos propositions seront soumises à validation.'):'Connectez-vous ou créez un compte pour proposer une offre.';if(a)chargerOffresEmploiAdmin();}
