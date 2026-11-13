@@ -11589,7 +11589,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     shell.id='accueilHomeShell';
     shell.innerHTML=`
       <section class="home-welcome" id="homeWelcome">
-        <h1>Bonjour !</h1>
+        <h1 id="mqciBonjourAccueil">Bonjour !</h1>
         <p class="home-welcome-question">Que recherchez-vous aujourd’hui ?</p>
         <label class="home-location-label" for="mqciCommuneChoisie">📍 Ma commune ou mon quartier</label>
         <input id="mqciCommuneChoisie" class="home-location-input" type="text" list="mqciCommunesSuggestions" placeholder="Choisir ou saisir ma commune" autocomplete="address-level2">
@@ -11678,6 +11678,14 @@ window.mtcAfficherActeJudiciaire = function(type){
     const header=document.querySelector("header");
     const tagline=header?.querySelector(".tagline-anime,.tagline");
     if(welcome&&header){if(tagline&&tagline.parentNode===header)tagline.insertAdjacentElement("afterend",welcome);else header.appendChild(welcome);}
+    // Le mot « Bonjour ! » reste visible pendant 60 secondes à l'arrivée sur l'accueil.
+    const bonjourAccueil=document.getElementById("mqciBonjourAccueil");
+    if(bonjourAccueil){
+      window.setTimeout(()=>{
+        bonjourAccueil.style.setProperty("display","none","important");
+        bonjourAccueil.setAttribute("aria-hidden","true");
+      },60000);
+    }
 
     const mobility=document.getElementById('homeMobilite');
     if(recherche) mobility.appendChild(recherche);
