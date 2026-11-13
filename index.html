@@ -3239,6 +3239,8 @@ function chargerPublicitesAccueil() {
     <p class="notice">Vous avez une information utile sur votre commune ? Envoyez-la à l’administration. Elle sera vérifiée avant toute publication.</p>
     <label for="propositionCommuneEmail">Adresse e-mail</label><input id="propositionCommuneEmail" type="email" autocomplete="email" placeholder="Votre adresse e-mail">
     <label for="propositionCommuneMotPasse">Mot de passe (6 caractères minimum)</label><input id="propositionCommuneMotPasse" type="password" autocomplete="current-password" placeholder="Mot de passe">
+    <button type="button" class="primary" onclick="mqciToggleForm('propositionCommuneFields',this)">Ouvrir le formulaire de proposition</button>
+    <div id="propositionCommuneFields" style="display:none">
     <label for="propositionCommuneTitre">Titre</label><input id="propositionCommuneTitre" maxlength="120" placeholder="Ex. : Coupure d’eau annoncée à Niangon">
     <label for="propositionCommuneVille">Commune / ville</label>
     <select id="propositionCommuneVille"><option value="">Choisir une commune</option><option>Abobo</option><option>Adjamé</option><option>Anyama</option><option>Attécoubé</option><option>Bingerville</option><option>Cocody</option><option>Koumassi</option><option>Marcory</option><option>Plateau</option><option>Port-Bouët</option><option>Treichville</option><option>Yopougon</option><option>Autre commune / ville</option></select>
@@ -3248,6 +3250,7 @@ function chargerPublicitesAccueil() {
     <label for="propositionCommuneLien">Lien de la source (facultatif)</label><input id="propositionCommuneLien" type="url" maxlength="500" placeholder="https://...">
     <button type="button" class="primary" onclick="envoyerPropositionCommune()">Envoyer ma proposition</button>
     <p id="propositionCommuneStatut" class="notice" aria-live="polite"></p>
+    </div>
   </div>
   <label for="communeDirectFiltre">Choisir une commune</label>
   <select id="communeDirectFiltre">
