@@ -11627,6 +11627,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       </section>
       <section class="home-panel" id="homePartners">
         <div class="home-section-heading"><div><h2>🤝 Partenaires vérifiés à proximité</h2><p>Retrouvez les professionnels référencés et validés sur Mon Quotidien CI.</p></div></div>
+        <div id="homePartnersListe" aria-live="polite"><p class="notice">Chargement des partenaires validés…</p></div>
         <div class="family-shortcuts">
           <button class="family-shortcut" type="button" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Mécanicien')"><span>🛠️</span>Artisans et professionnels</button>
           <button class="family-shortcut" type="button" onclick="ouvrirResultatPleinEcran('Commerce et boutique');afficherMarchesCommune()"><span>🏪</span>Commerces référencés</button>
@@ -12293,6 +12294,32 @@ body{font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial
     note.textContent=trouves.length?"Choisissez une rubrique pour poursuivre la recherche. Les résultats détaillés proviennent des annuaires et services existants.":"Aucune rubrique exacte détectée. Voici les services les plus proches.";
     zone.appendChild(note);
   }
+  window.chargerPartenairesAccueil=async function(){
+    const zone=document.getElementById("homePartnersListe");if(!zone||!window.db||!window.firebase)return;
+    zone.textContent="Chargement des partenaires validés…";
+    try{
+      const snap=await db.collection("demandes_nouveaux_services").where("type","==","annuaire").where("statut","==","approuve").where("abonnementFin",">",firebase.firestore.Timestamp.now()).limit(100).get();
+      const commune=normaliser(document.getElementById("mqciCommuneChoisie")?.value||"");
+      const docs=snap.docs.map(doc=>({id:doc.id,data:doc.data()})).filter(x=>!commune||normaliser(x.data.commune).includes(commune)).slice(0,4);
+      zone.replaceChildren();
+      if(!docs.length){
+        const p=document.createElement("p");p.className="notice";p.textContent=commune?"Aucun partenaire validé avec abonnement actif n’a été trouvé dans cette commune pour le moment.":"Les partenaires validés apparaîtront ici selon leur activité et leur abonnement.";zone.appendChild(p);return;
+      }
+      docs.forEach(x=>{
+        const d=x.data,card=document.createElement("article");card.className="card";card.style.cssText="padding:12px;margin:8px 0;border-radius:14px";
+        const name=document.createElement("strong");name.textContent=d.titre||"Professionnel référencé";
+        const meta=document.createElement("p");meta.className="notice";meta.textContent=[d.categorie,d.commune,d.quartier].filter(Boolean).join(" · ");
+        const desc=document.createElement("p");desc.textContent=d.description||"Fiche professionnelle validée sur Mon Quotidien CI.";
+        card.append(name,meta,desc);
+        const tel=String(d.telephone||"").replace(/[^+0-9]/g,"");
+        if(tel){const call=document.createElement("a");call.className="annuaire-contact-btn primary";call.href="tel:"+tel;call.textContent="Appeler";card.appendChild(call);}
+        zone.appendChild(card);
+      });
+    }catch(e){
+      console.error("Partenaires accueil:",e);
+      zone.textContent="Les partenaires ne peuvent pas être chargés pour le moment.";
+    }
+  };
   window.mqciActualiserCompte=function(){
     const z=document.getElementById("mqciCompteIdentite");if(!z)return;
     const u=window.auth&&auth.currentUser;
@@ -12302,10 +12329,11 @@ body{font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial
     const input=document.getElementById("mqciRechercheUniverselle");
     const commune=document.getElementById("mqciCommuneChoisie");
     if(input&&!input.dataset.mqciBound){input.dataset.mqciBound="1";input.addEventListener("input",rendreResultats);}
+    if(window.chargerPartenairesAccueil)chargerPartenairesAccueil();
     if(commune&&!commune.dataset.mqciBound){
       commune.dataset.mqciBound="1";
       try{commune.value=localStorage.getItem("mqci_commune_choisie")||"";}catch(e){}
-      commune.addEventListener("change",()=>{try{localStorage.setItem("mqci_commune_choisie",commune.value.trim());}catch(e){}});
+      commune.addEventListener("change",()=>{try{localStorage.setItem("mqci_commune_choisie",commune.value.trim());}catch(e){}if(window.chargerPartenairesAccueil)chargerPartenairesAccueil();});
     }
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
