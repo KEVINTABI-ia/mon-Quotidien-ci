@@ -4582,9 +4582,10 @@ const BENEFICIAIRE_PAIEMENT_MQCI="TA BI SERGE KEVIN";
 let coordonneesPaiementMQCI={numero:"",beneficiaire:"",actif:false};
 window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
 window.paiementsMQCIDisponibles=async function(){
- // Verrou temporaire : aucune API Wave ou Orange Money n'est encore intégrée.
- // Ne pas réactiver via Firestore avant une intégration et des tests serveur fiables.
- return false;
+ // Paiement manuel uniquement : l'utilisateur transmet une référence,
+ // puis l'administrateur vérifie le transfert avant toute activation.
+ // Aucun appel API ou paiement automatique n'est effectué ici.
+ return true;
 };
 window.chargerCoordonneesPaiementMQCI=async function(forcer=false){
  try{
@@ -4593,8 +4594,8 @@ window.chargerCoordonneesPaiementMQCI=async function(forcer=false){
   const numero=String(p.numero||NUMERO_PAIEMENT_MQCI).trim();
   const beneficiaire=String(p.beneficiaire||BENEFICIAIRE_PAIEMENT_MQCI).trim();
   if(!/^[+0-9 .()-]{8,24}$/.test(numero)||beneficiaire.length<2||beneficiaire.length>100)throw new Error("Coordonnées de paiement invalides.");
-  const actif=false;
-  coordonneesPaiementMQCI={numero:"",beneficiaire:"",actif};
+  const actif=true;
+  coordonneesPaiementMQCI={numero,beneficiaire,actif};
   window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
   return coordonneesPaiementMQCI;
  }catch(e){console.warn("Coordonnées de paiement indisponibles.",e);coordonneesPaiementMQCI={numero:"",beneficiaire:"",actif:false};window.MQCI_PAIEMENT=coordonneesPaiementMQCI;return coordonneesPaiementMQCI;}
