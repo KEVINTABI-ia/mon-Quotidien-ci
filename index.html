@@ -11490,7 +11490,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       #homeQuotidien #menuQuotidien{margin:0!important}
       #homeMobilite .carte-acces-recherche{margin:0 0 10px}
       #homeMobilite .accueil-services{margin:0}
-      #homeAutomobile #espaceAutomobiliste,#homeLogement #logementImmobilier{display:block!important;margin:0!important}
+      #homeAutomobile #espaceAutomobiliste,#homeLogement #logementImmobilier{margin:0!important}
       #homeSante .family-shortcuts{margin-bottom:12px}
       @media(max-width:380px){#accueilHomeShell{padding-left:9px;padding-right:9px}#accueilHomeShell .home-panel{padding:12px}#accueilHomeShell .family-shortcuts,#homeActualites .home-discovery-grid{gap:6px}#accueilHomeShell .family-shortcut{padding:8px;font-size:11px}}
     `;
@@ -11524,14 +11524,14 @@ window.mtcAfficherActeJudiciaire = function(type){
         <div class="home-section-heading"><div><h2>🏠 Logement et immobilier</h2><p>Locations, ventes, résidences et agences immobilières</p></div></div>
         <div class="family-shortcuts">
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier');chargerAnnoncesLogementPubliques()"><span>🔎</span>Consulter les logements</button>
-          <button class="family-shortcut" type="button" onclick="logementOpenAuth('auth');ouvrirSectionPleinEcran('logementImmobilier','Publier une annonce immobilière')"><span>➕</span>Publier une annonce</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier')"><span>➕</span>Publier une annonce</button>
         </div>
       </section>
       <section class="home-panel" id="homeSante">
         <div class="home-section-heading"><div><h2>🏥 Santé et proximité</h2><p>Pharmacies, santé, artisans et services près de vous</p></div></div>
         <div class="family-shortcuts">
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacies et santé')"><span>💊</span>Pharmacies et santé</button>
-          <button class="family-shortcut" type="button" onclick="ouvrirAnnuaireInterne('homeSante','Artisan')"><span>🧑🏽‍🔧</span>Artisans et professionnels</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Autre artisan')"><span>🧑🏽‍🔧</span>Artisans et professionnels</button>
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('depannageDomicile','Dépannage à domicile')"><span>🛠️</span>Services à domicile</button>
           <button class="family-shortcut" type="button" onclick="ouvrirRepertoireServicesQuotidiens('station','Stations-service')"><span>⛽</span>Services de proximité</button>
         </div>
@@ -11564,8 +11564,11 @@ window.mtcAfficherActeJudiciaire = function(type){
     if(logementModule) logement.appendChild(logementModule);
     const sante=document.getElementById('homeSante');
     ['servicesSante','annuaireInterne','depannageDomicile','artisansProfessionnels'].forEach(id=>{const el=document.getElementById(id);if(el)sante.appendChild(el);});
+    const commerce=document.getElementById('homeDemarches');
+    ['nouveauxServices','espaceEmploisOpportunites'].forEach(id=>{const el=document.getElementById(id);if(el)commerce.appendChild(el);});
     const citoyen=document.getElementById('homeVieCitoyenne');
     citoyen.appendChild(demarches);
+    ['objetsPerdusRetrouves','declarationEnfantPerdu'].forEach(id=>{const el=document.getElementById(id);if(el)document.getElementById('homeActualites').appendChild(el);});
     ['servicesMinistereTransport','demarchesJudiciaires','securiserTerrain','servicesPublicsDemarches'].forEach(id=>{const el=document.getElementById(id);if(el)citoyen.appendChild(el);});
     const other=document.getElementById('homeQuotidien');
     other.appendChild(quotidien);
