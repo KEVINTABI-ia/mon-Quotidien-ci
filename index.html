@@ -11549,6 +11549,23 @@ window.mtcAfficherActeJudiciaire = function(type){
       .family-view-back span{margin-right:8px}
       @media(max-width:380px){#homeFamilyLauncher{gap:7px}#homeFamilyLauncher .family-entry{min-height:102px;padding:11px 9px}#homeFamilyLauncher .family-entry strong{font-size:12px}}
       @media(max-width:380px){#accueilHomeShell{padding-left:9px;padding-right:9px}#accueilHomeShell .home-panel{padding:12px}#accueilHomeShell .family-shortcuts,#homeActualites .home-discovery-grid{gap:6px}#accueilHomeShell .family-shortcut{padding:8px;font-size:11px}}
+      /* Accueil inspiré de la maquette vidéo — navigation inférieure préservée */
+      #accueilHomeShell .home-welcome{background:#fff!important;color:#18352a!important;border:1px solid #e1eae4!important;box-shadow:0 4px 15px rgba(24,63,43,.05)!important;padding:16px!important}
+      #accueilHomeShell .home-welcome:after{display:none!important}
+      #accueilHomeShell .home-welcome-kicker{color:#16834a!important}
+      #accueilHomeShell .home-welcome h1{color:#18352a!important;font-size:21px!important}
+      #accueilHomeShell .home-welcome p{color:#68786e!important}
+      #accueilHomeShell .home-location-label{display:block;margin:12px 2px 5px;color:#315443;font-size:12px;font-weight:750}
+      #accueilHomeShell .home-location-input{width:100%;min-height:43px;padding:10px 12px;border:1px solid #dce7df;border-radius:12px;background:#f8fbf8;color:#18352a}
+      #accueilHomeShell .home-search input{border:1px solid #dce7df!important;background:#f8fbf8!important;box-shadow:none!important}
+      #homeQuickAccess{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+      #homeQuickAccess .home-quick{min-height:88px;padding:10px 5px;border:1px solid #e1eae4;border-radius:15px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#174b35;text-align:center;box-shadow:0 3px 10px rgba(23,61,41,.045)}
+      #homeQuickAccess .home-quick-icon{font-size:23px}
+      #homeQuickAccess .home-quick strong{font-size:11px;line-height:1.2}
+      #homeFamilyLauncher>.home-section-heading h2{font-size:15px!important}
+      #homePopular .family-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}
+      #homeActualites{background:#fff!important}
+      @media(max-width:380px){#homeQuickAccess{gap:6px}#homeQuickAccess .home-quick{min-height:80px}}
     `;
     document.head.appendChild(style);
 
@@ -11557,7 +11574,8 @@ window.mtcAfficherActeJudiciaire = function(type){
     shell.innerHTML=`
       <section class="home-welcome" id="homeWelcome">
         <div class="home-welcome-kicker">MON QUOTIDIEN CI · PROXIMITÉ ET SIMPLICITÉ</div>
-        <h1>Bonjour ! Que recherchez-vous aujourd’hui ?</h1>
+        <h1>Bonjour !</h1>
+        <p class="home-welcome-question">Que recherchez-vous aujourd’hui ?</p>
         <p>Retrouvez les services utiles de votre commune au même endroit.</p>
         <label class="home-location-label" for="mqciCommuneChoisie">📍 Ma commune ou mon quartier</label>
         <input id="mqciCommuneChoisie" class="home-location-input" type="text" list="mqciCommunesSuggestions" placeholder="Choisir ou saisir ma commune" autocomplete="address-level2">
@@ -11565,13 +11583,22 @@ window.mtcAfficherActeJudiciaire = function(type){
           <option value="Abobo"><option value="Adjamé"><option value="Anyama"><option value="Attécoubé"><option value="Bingerville"><option value="Cocody"><option value="Koumassi"><option value="Marcory"><option value="Plateau"><option value="Port-Bouët"><option value="Treichville"><option value="Songon"><option value="Yopougon"><option value="Bouaké"><option value="Daloa"><option value="Korhogo"><option value="San-Pédro"><option value="Yamoussoukro">
         </datalist>
         <div class="home-search" role="search">
-          <input id="mqciRechercheUniverselle" type="search" placeholder="Quel service recherchez-vous ?" aria-label="Rechercher un service, un métier ou un lieu" autocomplete="off">
+          <input id="mqciRechercheUniverselle" type="search" placeholder="Un service, un lieu, un professionnel…" aria-label="Rechercher un service, un métier ou un lieu" autocomplete="off">
           <span class="home-search-icon" aria-hidden="true">⌕</span>
         </div>
         <div id="mqciResultatsRecherche" class="mqci-search-results" aria-live="polite"></div>
       </section>
+      <section class="home-panel" id="homeQuickAccess" aria-label="Accès rapides">
+              <div class="home-section-heading" style="grid-column:1/-1"><div><h2>Accès rapides</h2><p>Les rubriques essentielles en un seul geste.</p></div></div>
+              <button class="home-quick" type="button" onclick="ouvrirFamilleAccueil('homeMobilite')"><span class="home-quick-icon">🚌</span><strong>Transport</strong></button>
+              <button class="home-quick" type="button" onclick="ouvrirFamilleAccueil('homeAutomobile')"><span class="home-quick-icon">🚘</span><strong>Automobile</strong></button>
+              <button class="home-quick" type="button" onclick="ouvrirSectionPleinEcran('transportColis','Livraison et expédition')"><span class="home-quick-icon">📦</span><strong>Colis</strong></button>
+              <button class="home-quick" type="button" onclick="ouvrirFamilleAccueil('homeLogement')"><span class="home-quick-icon">🏠</span><strong>Logement</strong></button>
+              <button class="home-quick" type="button" onclick="ouvrirEmploisOpportunites()"><span class="home-quick-icon">💼</span><strong>Emploi</strong></button>
+              <button class="home-quick" type="button" onclick="ouvrirFamilleAccueil('homeDemarches')"><span class="home-quick-icon">🛍️</span><strong>Commerce</strong></button>
+            </section>
       <section class="home-panel" id="homeFamilyLauncher" aria-label="Choisir une famille de services">
-        <div class="home-section-heading"><div><h2>Que souhaitez-vous faire ?</h2><p>Choisissez une rubrique pour accéder à son espace dédié.</p></div></div>
+        <div class="home-section-heading"><div><h2>Toutes les familles de services</h2><p>Accédez également aux autres rubriques de Mon Quotidien CI.</p></div></div>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeMobilite')"><span class="family-entry-icon">🚌</span><strong>Mobilité et transport</strong><small>Gares, déplacements, colis et compagnies</small></button>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeAutomobile')"><span class="family-entry-icon">🚘</span><strong>Automobile</strong><small>Dépannage, entretien, assurance et pièces</small></button>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeDemarches')"><span class="family-entry-icon">🛍️</span><strong>Commerce et emploi</strong><small>Boutiques, annonces et opportunités</small></button>
@@ -11580,10 +11607,10 @@ window.mtcAfficherActeJudiciaire = function(type){
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeVieCitoyenne')"><span class="family-entry-icon">⚖️</span><strong>Vie citoyenne</strong><small>Démarches, foncier, justice et solidarité</small></button>
       </section>
       <section class="home-panel" id="homePopular">
-        <div class="home-section-heading"><div><h2>⭐ Services les plus utilisés</h2><p>Accès rapide aux démarches et services du quotidien.</p></div></div>
+        <div class="home-section-heading"><div><h2>Services populaires</h2><p>Des professionnels et services recherchés près de vous.</p></div></div>
         <div class="family-shortcuts">
-          <button class="family-shortcut" type="button" onclick="ouvrirFamilleAccueil('homeMobilite')"><span>🚌</span>Gares et déplacements</button>
-          <button class="family-shortcut" type="button" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Mécanicien')"><span>🛠️</span>Mécanicien</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Mécanicien')"><span>🛠️</span>Trouver un mécanicien</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier');chargerAnnoncesLogementPubliques()"><span>🏠</span>Trouver un logement</button>
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacies et santé')"><span>💊</span>Pharmacies et santé</button>
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('transportColis','Livraison et expédition')"><span>📦</span>Livraison et colis</button>
         </div>
@@ -11629,7 +11656,7 @@ window.mtcAfficherActeJudiciaire = function(type){
         <div class="home-section-heading"><div><h2>⚖️ Vie citoyenne</h2><p>Démarches officielles, foncier, justice et solidarité</p></div></div>
       </section>
       <section class="home-panel" id="homeActualites">
-        <div class="home-section-heading"><div><h2>📍 Communauté et informations locales</h2><p>Un espace transversal pour suivre et partager la vie de votre commune</p></div></div>
+        <div class="home-section-heading"><div><h2>Actualités de ma commune</h2><p>Les informations et initiatives près de chez vous.</p></div></div>
         <div class="home-discovery-grid">
           <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('maCommuneDirect','Ma commune en direct');chargerMaCommuneDirect()"><span>📍</span><strong>Ma commune en direct</strong><small>Travaux, eau, électricité et informations locales</small></button>
           <button class="home-discovery-card" type="button" onclick="ouvrirEspaceCommunautaire()"><span>📰</span><strong>M’informer / Gbairai</strong><small>Actualités et échanges de la communauté</small></button>
