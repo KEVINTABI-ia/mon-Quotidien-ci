@@ -986,14 +986,18 @@ describe("Mon Transport CI — règles Firestore", function () {
       }));
     });
 
-    it("accepte une demande manuelle d’abonnement logement en attente", async () => {
+    it("accepte Wave et Orange Money pour le logement et refuse MTN MoMo et Moov Money", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
       const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
-      await assertSucceeds(setDoc(doc(db,"demandes_abonnement_logement","logement-paiement-manuel"),{
+      const base={
         uid:CLIENT_UID,nom:"Client test",email:"client@example.test",telephone:"0700000000",
-        formule:"mensuel",montant:3000,operateur:"Wave",reference:"REF-TEST-1234",
+        formule:"mensuel",montant:3000,reference:"REF-TEST-1234",
         statut:"a_verifier",createdAt:serverTimestamp()
-      }));
+      };
+      await assertFails(setDoc(doc(db,"demandes_abonnement_logement","logement-mtn-refuse"),{...base,operateur:"MTN MoMo"}));
+      await assertFails(setDoc(doc(db,"demandes_abonnement_logement","logement-moov-refuse"),{...base,operateur:"Moov Money"}));
+      await assertSucceeds(setDoc(doc(db,"demandes_abonnement_logement","logement-wave-accepte"),{...base,operateur:"Wave"}));
+      await assertSucceeds(setDoc(doc(db,"demandes_abonnement_logement","logement-orange-accepte"),{...base,operateur:"Orange Money"}));
     });
 
     it("accepte un renouvellement boutique en attente de vérification", async () => {
