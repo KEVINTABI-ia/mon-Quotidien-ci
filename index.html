@@ -1707,6 +1707,11 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 @media(prefers-reduced-motion:reduce){#mqci-splash-screen{transition:none}}
 </style>
 
+<style id="mqci-accueil-espacement-ajuste">
+#accueilHomeShell #homeQuotidien{margin-bottom:4px!important}
+#accueilHomeShell #homeQuotidien>.home-section-heading{margin-bottom:4px!important}
+details[aria-label="Contacts d’urgence"]{margin-top:0!important;margin-bottom:4px!important}
+</style>
 </head>
 <body>
 
@@ -11665,15 +11670,6 @@ window.mtcAfficherActeJudiciaire = function(type){
           <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Objets et documents perdus')"><span>🔎</span><strong>Objets et documents perdus</strong><small>Signaler un objet retrouvé ou réclamer un bien</small></button>
         </div>
       </section>
-      <section class="home-panel" id="homePartners">
-        <div class="home-section-heading"><div><h2>🤝 Partenaires vérifiés à proximité</h2><p>Retrouvez les professionnels référencés et validés sur Mon Quotidien CI.</p></div></div>
-        <div id="homePartnersListe" aria-live="polite"><p class="notice">Chargement des partenaires validés…</p></div>
-        <div class="family-shortcuts">
-          <button class="family-shortcut" type="button" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Mécanicien')"><span>🛠️</span>Artisans et professionnels</button>
-          <button class="family-shortcut" type="button" onclick="ouvrirResultatPleinEcran('Commerce et boutique');afficherMarchesCommune()"><span>🏪</span>Commerces référencés</button>
-        </div>
-        <p class="notice">Les fiches affichées comme partenaires actifs sont soumises aux validations de la plateforme. Confirmez directement les disponibilités et tarifs.</p>
-      </section>
       <section class="home-panel" id="homeQuotidien">
         <div class="home-section-heading"><div><h2>➕ Autres services du quotidien</h2><p>Éducation, factures, prestations et autres services pratiques</p></div></div>
       </section>`;
@@ -11711,7 +11707,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     if(transportIntro)transportIntro.textContent='Choisissez votre moyen de transport, une compagnie ou un service de livraison.';
 
     const pub=document.getElementById('espacePublicitaire');
-    if(pub)document.getElementById('homePartners').appendChild(pub);
+    if(pub)document.getElementById('homeActualites')?.appendChild(pub);
 
     const nav=document.createElement('nav');
     nav.id='accueilBottomNav';
