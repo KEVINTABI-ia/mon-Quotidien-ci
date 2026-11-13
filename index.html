@@ -11583,6 +11583,20 @@ window.mtcAfficherActeJudiciaire = function(type){
     const shell=document.createElement('div');
     shell.id='accueilHomeShell';
     shell.innerHTML=`
+      <section class="home-welcome" id="homeWelcome">
+        <h1>Bonjour !</h1>
+        <p class="home-welcome-question">Que recherchez-vous aujourd’hui ?</p>
+        <label class="home-location-label" for="mqciCommuneChoisie">📍 Ma commune ou mon quartier</label>
+        <input id="mqciCommuneChoisie" class="home-location-input" type="text" list="mqciCommunesSuggestions" placeholder="Choisir ou saisir ma commune" autocomplete="address-level2">
+        <datalist id="mqciCommunesSuggestions">
+          <option value="Abobo"><option value="Adjamé"><option value="Anyama"><option value="Attécoubé"><option value="Bingerville"><option value="Cocody"><option value="Koumassi"><option value="Marcory"><option value="Plateau"><option value="Port-Bouët"><option value="Treichville"><option value="Songon"><option value="Yopougon"><option value="Bouaké"><option value="Daloa"><option value="Korhogo"><option value="San-Pédro"><option value="Yamoussoukro">
+        </datalist>
+        <div class="home-search" role="search">
+          <input id="mqciRechercheUniverselle" type="search" placeholder="Un service, un lieu, un professionnel…" aria-label="Rechercher un service, un métier ou un lieu" autocomplete="off">
+          <span class="home-search-icon" aria-hidden="true">⌕</span>
+        </div>
+        <div id="mqciResultatsRecherche" class="mqci-search-results" aria-live="polite"></div>
+      </section>
 
       <section class="home-panel" id="homeFamilyLauncher" aria-label="Choisir une famille de services">
         <div class="home-section-heading"><div><h2>Toutes les familles de services</h2><p>Accédez également aux autres rubriques de Mon Quotidien CI.</p></div></div>
