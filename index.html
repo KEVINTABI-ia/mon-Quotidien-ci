@@ -7687,9 +7687,37 @@ function mqciFermerFormulairesHors(conteneurActif){
   });
 }
 
+var mqciHistoriqueNavigation = [];
+
+function actualiserLibelleRetourNavigation(){
+  const bouton=document.querySelector("#vuePleinEcran .vue-plein-ecran-entete > button");
+  if(bouton) bouton.textContent=mqciHistoriqueNavigation.length ? "← Retour au menu précédent" : "← Retour à l’accueil";
+}
+
+function retourNavigationPleinEcran(){
+  if(mqciHistoriqueNavigation.length){
+    const precedent=mqciHistoriqueNavigation.pop();
+    fermerVuePleinEcran();
+    if(precedent && precedent.element){
+      ouvrirElementPleinEcran(precedent.element,precedent.titre);
+      actualiserLibelleRetourNavigation();
+    }
+    return;
+  }
+  retourAccueil();
+}
+
 function ouvrirElementPleinEcran(element, titre){
   if(!element) return;
-  if(vuePleinEcranActive) fermerVuePleinEcran();
+  if(vuePleinEcranActive){
+    if(vuePleinEcranActive.element!==element){
+      mqciHistoriqueNavigation.push({
+        element:vuePleinEcranActive.element,
+        titre:document.getElementById("vuePleinEcranTitre")?.textContent || "Menu précédent"
+      });
+    }
+    fermerVuePleinEcran();
+  }
   mqciFermerFormulairesHors(element);
 
   const placeholder = document.createComment("emplacement d'origine");
@@ -7708,6 +7736,7 @@ function ouvrirElementPleinEcran(element, titre){
   document.body.style.overflow = "hidden";
   vuePleinEcranActive = {element, placeholder, displayInitial};
   contenu.scrollTop = 0;
+  actualiserLibelleRetourNavigation();
 }
 
 let abonnementAutomobilisteValide = false;
@@ -11103,7 +11132,7 @@ function demanderConfirmation(titre, message, libelleValidation) {
 </script>
 <div id="vuePleinEcran" aria-hidden="true">
   <div class="vue-plein-ecran-entete">
-    <button type="button" onclick="retourAccueil()">← Retour à l’accueil</button>
+    <button type="button" onclick="retourNavigationPleinEcran()">← Retour à l’accueil</button>
     <div class="vue-plein-ecran-titre" id="vuePleinEcranTitre"></div>
   </div>
   <div id="vuePleinEcranContenu"></div>
@@ -11658,7 +11687,7 @@ function ouvrirFamilleAccueil(id){
  if(!back){
   back=document.createElement('button');
   back.type='button';back.className='family-view-back';
-  back.innerHTML='<span aria-hidden="true">←</span> Retour aux six familles';
+  back.innerHTML='<span aria-hidden="true">←</span> Retour à l’accueil';
   back.addEventListener('click',retourAccueilFamilles);
   panel.insertBefore(back,panel.firstChild);
  }
