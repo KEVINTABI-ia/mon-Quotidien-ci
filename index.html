@@ -12251,8 +12251,9 @@ body{font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial
   const normaliser=s=>String(s||"").toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
   function extraireCommune(q){
     const n=normaliser(q);
-    const m=n.match(/\b(?:a|dans|sur|pour|pres de)\s+(.+)$/);
-    if(m)return m[1].replace(/\b(abidjan|cote d ivoire)$/,"").trim();
+    const morceaux=n.split(/\b(?:a|dans|sur|pour|pres de)\s+/);
+    const candidat=(morceaux[morceaux.length-1]||"").replace(/\b(abidjan|cote d ivoire)$/,"").trim();
+    if(candidat&&!["domicile","proximite","proche","moi","louer","location"].includes(candidat))return candidat;
     return normaliser(document.getElementById("mqciCommuneChoisie")?.value||"");
   }
   function ouvrirAnnuaireAvecFiltres(rubrique,categorie,terme){
@@ -12268,7 +12269,7 @@ body{font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial
   const routes=[
     {mots:["mecanicien","mecanique","garage","garagiste"],titre:"Mécaniciens et garages",desc:"Rechercher dans l’annuaire des professionnels validés",ouvrir:()=>ouvrirAnnuaireAvecFiltres("artisansProfessionnels","Mécanicien","Mécanicien")},
     {mots:["pharmacie","pharmacien","medicament"],titre:"Pharmacies et santé",desc:"Accéder au service santé et aux informations disponibles",ouvrir:()=>ouvrirSectionPleinEcran("servicesSante","Pharmacies et santé")},
-    {mots:["electricien","electricite","plombier","plomberie","reparation domicile"],titre:"Dépannage à domicile",desc:"Rechercher les techniciens référencés par métier et commune",ouvrir:()=>ouvrirAnnuaireAvecFiltres("depannageDomicile",normaliser(document.getElementById("mqciRechercheUniverselle")?.value).includes("plomb")?"Plomberie":"Électricité",normaliser(document.getElementById("mqciRechercheUniverselle")?.value).includes("plomb")?"Plombier":"Électricien")},
+    {mots:["electricien","electricite","plombier","plomberie","reparation domicile"],titre:"Dépannage à domicile",desc:"Rechercher les techniciens référencés par métier et commune",ouvrir:()=>ouvrirAnnuaireAvecFiltres("depannageDomicile",normaliser(document.getElementById("mqciRechercheUniverselle")?.value).includes("plomb")?"Plomberie":"Électricité",normaliser(document.getElementById("mqciRechercheUniverselle")?.value).includes("plomb")?"Plomberie":"Électricité")},
     {mots:["appartement","maison","studio","logement","location","louer","immobilier","terrain"],titre:"Logement et immobilier",desc:"Consulter les annonces et filtrer par commune",ouvrir:()=>{ouvrirSectionPleinEcran("logementImmobilier","Logement et immobilier");const c=document.getElementById("logementFilterCommune");if(c)c.value=extraireCommune(document.getElementById("mqciRechercheUniverselle")?.value||"");const q=normaliser(document.getElementById("mqciRechercheUniverselle")?.value||"");const cat=document.getElementById("logementFilterCategory");if(cat&&q.includes("appartement")&&q.includes("louer"))cat.value="Appartement à louer";chargerAnnoncesLogementPubliques();}},
     {mots:["gbaka","woro","woro woro","taxi","gare","adjam","transport","bouake","compagnie de voyage","car interurbain"],titre:"Mobilité et transport",desc:"Accéder aux gares, trajets et compagnies de voyage",ouvrir:()=>ouvrirFamilleAccueil("homeMobilite")},
     {mots:["livraison","colis","expedition","envoyer un colis","livreur"],titre:"Livraison et expédition",desc:"Accéder aux services de livraison et d’envoi de colis",ouvrir:()=>ouvrirSectionPleinEcran("transportColis","Livraison et expédition")},
