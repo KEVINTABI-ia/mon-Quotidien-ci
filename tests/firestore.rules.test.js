@@ -1081,6 +1081,11 @@ describe("Mon Transport CI — règles Firestore", function () {
       renouvellementReference:"REF-TEST-1234",
       renouvellementDemandeLe:serverTimestamp()
     }));
+    await assertFails(updateDoc(doc(db,"partenaires",PARTNER_UID),{
+      statutAbonnementPartenaire:"Actif",
+      dateExpirationAbonnement:serverTimestamp(),
+      renouvellementStatut:"confirme"
+    }));
   });
 
 });
