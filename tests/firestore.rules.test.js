@@ -946,14 +946,20 @@ describe("Mon Transport CI — règles Firestore", function () {
 
 
   describe("Paiements manuels — demandes en attente et validation administrative", () => {
-    it("accepte une demande publicitaire en attente, sans activer de publication payante", async () => {
+    it("accepte une demande publicitaire en attente et interdit au client de confirmer son paiement", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID).firestore();
-      const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
-      await assertSucceeds(setDoc(doc(db,"demandes_publicites","pub-paiement-manuel"),{
+      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
+      const ref=doc(db,"demandes_publicites","pub-paiement-manuel");
+      await assertSucceeds(setDoc(ref,{
         nom:"Annonceur test",telephone:"0700000000",activite:"Commerce",
         description:"Campagne publicitaire de test",forfait:"Découverte",
         forfaitTexte:"3 jours",dureeJours:3,montantFCFA:2000,
         statut:"en_attente",createdAt:serverTimestamp()
+      }));
+      await assertFails(updateDoc(ref,{statut:"paiement_confirme"}));
+      const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      await assertSucceeds(updateDoc(doc(adminDb,"demandes_publicites","pub-paiement-manuel"),{
+        statut:"paiement_confirme"
       }));
     });
 
@@ -967,7 +973,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       }));
       await assertFails(updateDoc(doc(db,"demandes_abonnement_automobiliste","auto-paiement-manuel"),{statut:"actif"}));
       const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
-      await assertSucceeds(updateDoc(doc(adminDb,"demandes_abonnement_automobiliste","auto-paiement-manuel"),{statut:"confirme"}));
+      await assertSucceeds(updateDoc(doc(adminDb,"demandes_abonnement_automobiliste","auto-paiement-manuel"),{statut:"approuve"}));
     });
 
     it("accepte une recharge Gbairai en attente de vérification", async () => {
