@@ -11769,6 +11769,11 @@ window.mtcAfficherActeJudiciaire = function(type){
 <script>
 (function(){function move(){const b=document.querySelector('#menuQuotidien .bouton-commerce-accueil'),z=document.getElementById('homeDemarches');if(b&&z)z.insertBefore(b,z.firstChild);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',move,{once:true});else move();})();
 function ouvrirFamilleAccueil(id){
+ // Fermer toute rubrique plein écran (ex. Livraison) avant d'afficher une famille.
+ if(typeof fermerVuePleinEcran==='function' && typeof vuePleinEcranActive!=='undefined' && vuePleinEcranActive){
+  fermerVuePleinEcran();
+ }
+ if(typeof mqciHistoriqueNavigation!=='undefined')mqciHistoriqueNavigation.length=0;
  const shell=document.getElementById('accueilHomeShell');
  const panel=document.getElementById(id);
  if(!shell||!panel)return;
