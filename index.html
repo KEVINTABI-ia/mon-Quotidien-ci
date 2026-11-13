@@ -3161,22 +3161,28 @@ function chargerPublicitesAccueil() {
   <button type="button" class="bouton-acces-admin" onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur')">🔐 Espace administrateur</button>
 </section>
 
+<style id="mqci-compte-profil-direct">
+.mqci-compte-panel h2{margin-bottom:14px}
+#mqci-home-account{border:0!important;box-shadow:none!important;background:transparent!important}
+#mqci-home-account-panel{padding:0!important}
+.mqci-photo-wrap{position:relative;flex:0 0 76px;width:76px;height:76px}
+.mqci-photo-camera{position:absolute;right:-3px;bottom:-3px;width:29px;height:29px;display:grid;place-items:center;margin:0!important;border:2px solid #fff;border-radius:50%;background:#F28C28;color:#fff;font-size:15px;box-shadow:0 2px 7px #18352a35;cursor:pointer}
+.mqci-compte-deconnexion{color:#A52A2A!important;background:#FFF4F2!important;border:1px solid #F1D3CF!important}
+#mqciComptePanel .mqci-compte-groupe{margin-top:16px}
+</style>
 <section id="mqci-home-account" class="card" style="margin:14px 16px;padding:0;overflow:hidden;">
-  <button type="button" id="mqci-home-account-toggle" aria-expanded="false" onclick="mqciAfficherMonCompte()" style="width:100%;text-align:left;background:#fff;color:#18352A;padding:17px 18px;display:flex;align-items:center;justify-content:space-between;">
-    <span>👤 Mon compte</span><span aria-hidden="true">⌄</span>
-  </button>
-  <div id="mqci-home-account-panel" style="display:none;padding:0 18px 18px;">
+  <div id="mqci-home-account-panel" style="display:block;padding:0 18px 18px;">
     <div style="display:flex;align-items:center;gap:14px;padding:14px 0;">
-      <img id="mqci-home-account-photo" alt="Photo de profil" src="" style="width:68px;height:68px;border-radius:50%;object-fit:cover;background:#E8F0EA;border:2px solid #16834A;display:none;">
-      <div id="mqci-home-account-avatar" aria-hidden="true" style="width:68px;height:68px;border-radius:50%;background:#E8F0EA;color:#16834A;display:flex;align-items:center;justify-content:center;font-size:28px;">👤</div>
+      <div class="mqci-photo-wrap">
+        <img id="mqci-home-account-photo" alt="Photo de profil" src="" style="width:76px;height:76px;border-radius:50%;object-fit:cover;background:#E8F0EA;border:2px solid #16834A;display:none;">
+        <div id="mqci-home-account-avatar" aria-hidden="true" style="width:76px;height:76px;border-radius:50%;background:#E8F0EA;color:#16834A;display:flex;align-items:center;justify-content:center;font-size:28px;">👤</div>
+        <label for="mqci-home-account-photo-input" class="mqci-photo-camera" aria-label="Ajouter ou modifier ma photo de profil"><span aria-hidden="true">📷</span></label>
+      </div>
       <div style="min-width:0;"><strong id="mqci-home-account-name" style="display:block;font-size:17px;">Chargement du profil…</strong><span class="notice">Votre profil personnel</span></div>
     </div>
-    <label for="mqci-home-account-photo-input">Ajouter ou modifier ma photo selfie</label>
-    <input id="mqci-home-account-photo-input" type="file" accept="image/jpeg,image/png,image/webp" capture="user" onchange="mqciEnregistrerPhotoProfil(this)" style="padding:10px;">
-    <p class="notice">Choisissez une photo de vous. Elle sera enregistrée dans votre profil privé et visible uniquement par vous et l’administrateur.</p>
+    <input id="mqci-home-account-photo-input" type="file" accept="image/jpeg,image/png,image/webp" capture="user" onchange="mqciEnregistrerPhotoProfil(this)" style="display:none;">
+    <p class="notice">Touchez l’appareil photo pour ajouter ou modifier votre photo de profil.</p>
     <p id="mqci-home-account-status" class="notice" aria-live="polite"></p>
-    <button type="button" class="primary" id="mqci-user-signout" onclick="mqciDeconnexionUtilisateur()">Se déconnecter</button>
-    <p id="mqci-user-signout-status" class="notice" aria-live="polite"></p>
   </div>
 </section>
 
@@ -11730,7 +11736,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     const compte=document.createElement('section');
     compte.id='mqciComptePanel';compte.className='card mqci-compte-panel';compte.style.display='none';
     compte.innerHTML=`
-      <h2>👤 Mon compte</h2>
+      <h2>👤 Mon espace personnel</h2>
       <p id="mqciCompteIdentite" class="notice">Connectez-vous pour retrouver les informations de votre compte.</p>
       <section class="mqci-compte-groupe">
         <h3>🤝 Mes activités</h3>
@@ -11743,6 +11749,8 @@ window.mtcAfficherActeJudiciaire = function(type){
         <h3>⚙️ Préférences</h3>
         <div class="mqci-compte-actions">
           <button type="button" class="family-shortcut" onclick="ouvrirSectionPleinEcran('parametresApplication','Paramètres et préférences')"><span>⚙️</span><span>Paramètres et préférences</span></button>
+          <button type="button" class="family-shortcut mqci-compte-deconnexion" id="mqci-user-signout" onclick="mqciDeconnexionUtilisateur()"><span>↪️</span><span>Se déconnecter</span></button>
+          <p id="mqci-user-signout-status" class="notice" aria-live="polite"></p>
         </div>
       </section>
     `;
