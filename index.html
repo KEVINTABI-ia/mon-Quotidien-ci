@@ -11565,6 +11565,20 @@ window.mtcAfficherActeJudiciaire = function(type){
       #homeFamilyLauncher>.home-section-heading h2{font-size:15px!important}
       #homePopular .family-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}
       #homeActualites{background:#fff!important}
+      /* Les champs commune et recherche sont intégrés à l’en-tête vert existant */
+      header.mqci-header-premium{padding-bottom:18px!important}
+      header.mqci-header-premium #homeWelcome{max-width:680px;margin:14px auto 0!important;padding:8px 16px 0!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;color:#fff!important;overflow:visible!important}
+      header.mqci-header-premium #homeWelcome:after{display:none!important}
+      header.mqci-header-premium #homeWelcome .home-welcome-kicker{display:none!important}
+      header.mqci-header-premium #homeWelcome h1{margin:0 0 3px!important;color:#fff!important;font-size:21px!important;font-weight:850!important}
+      header.mqci-header-premium #homeWelcome .home-welcome-question{margin:0 0 12px!important;color:#fff!important;font-size:14px!important;font-weight:650!important}
+      header.mqci-header-premium #homeWelcome>p:not(.home-welcome-question){display:none!important}
+      header.mqci-header-premium #homeWelcome .home-location-label{margin:0 2px 5px!important;color:#fff!important;font-size:12px!important;font-weight:750!important}
+      header.mqci-header-premium #homeWelcome .home-location-input,header.mqci-header-premium #homeWelcome .home-search input{width:100%;min-height:46px;padding:12px 14px!important;border:1px solid rgba(255,255,255,.8)!important;border-radius:12px!important;background:#fff!important;color:#18352a!important;box-shadow:none!important;font-size:14px!important}
+      header.mqci-header-premium #homeWelcome .home-search{margin-top:10px!important}
+      header.mqci-header-premium #homeWelcome .home-search-icon{top:10px!important;color:#16834a!important}
+      header.mqci-header-premium #homeWelcome #mqciResultatsRecherche{color:#18352a!important}
+      @media(max-width:480px){header.mqci-header-premium #homeWelcome{padding-left:2px!important;padding-right:2px!important}header.mqci-header-premium #homeWelcome h1{font-size:20px!important}}
       @media(max-width:380px){#homeQuickAccess{gap:6px}#homeQuickAccess .home-quick{min-height:80px}}
     `;
     document.head.appendChild(style);
@@ -11677,6 +11691,14 @@ window.mtcAfficherActeJudiciaire = function(type){
         <div class="home-section-heading"><div><h2>➕ Autres services du quotidien</h2><p>Éducation, factures, prestations et autres services pratiques</p></div></div>
       </section>`;
     main.insertBefore(shell,recherche||main.firstChild);
+
+    const accueilWelcome=document.getElementById('homeWelcome');
+    const enteteAccueil=document.querySelector('header.mqci-header-premium');
+    const bandeauDrapeau=enteteAccueil&&enteteAccueil.querySelector('.mqci-flag-stripe');
+    if(accueilWelcome&&enteteAccueil){
+      if(bandeauDrapeau) enteteAccueil.insertBefore(accueilWelcome,bandeauDrapeau);
+      else enteteAccueil.appendChild(accueilWelcome);
+    }
 
     const mobility=document.getElementById('homeMobilite');
     if(recherche) mobility.appendChild(recherche);
