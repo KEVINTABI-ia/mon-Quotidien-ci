@@ -11543,6 +11543,21 @@ window.mtcAfficherActeJudiciaire = function(type){
     const shell=document.createElement('div');
     shell.id='accueilHomeShell';
     shell.innerHTML=`
+      <section class="home-welcome" id="homeWelcome">
+        <div class="home-welcome-kicker">MON QUOTIDIEN CI · PROXIMITÉ ET SIMPLICITÉ</div>
+        <h1>Bonjour ! Que recherchez-vous aujourd’hui ?</h1>
+        <p>Retrouvez les services utiles de votre commune au même endroit.</p>
+        <label class="home-location-label" for="mqciCommuneChoisie">📍 Ma commune ou mon quartier</label>
+        <input id="mqciCommuneChoisie" class="home-location-input" type="text" list="mqciCommunesSuggestions" placeholder="Choisir ou saisir ma commune" autocomplete="address-level2">
+        <datalist id="mqciCommunesSuggestions">
+          <option value="Abobo"><option value="Adjamé"><option value="Anyama"><option value="Attécoubé"><option value="Bingerville"><option value="Cocody"><option value="Koumassi"><option value="Marcory"><option value="Plateau"><option value="Port-Bouët"><option value="Treichville"><option value="Songon"><option value="Yopougon"><option value="Bouaké"><option value="Daloa"><option value="Korhogo"><option value="San-Pédro"><option value="Yamoussoukro">
+        </datalist>
+        <div class="home-search" role="search">
+          <input id="mqciRechercheUniverselle" type="search" placeholder="Quel service recherchez-vous ?" aria-label="Rechercher un service, un métier ou un lieu" autocomplete="off">
+          <span class="home-search-icon" aria-hidden="true">⌕</span>
+        </div>
+        <div id="mqciResultatsRecherche" class="mqci-search-results" aria-live="polite"></div>
+      </section>
       <section class="home-panel" id="homeFamilyLauncher" aria-label="Choisir une famille de services">
         <div class="home-section-heading"><div><h2>Que souhaitez-vous faire ?</h2><p>Choisissez une rubrique pour accéder à son espace dédié.</p></div></div>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeMobilite')"><span class="family-entry-icon">🚌</span><strong>Mobilité et transport</strong><small>Gares, déplacements, colis et compagnies</small></button>
@@ -11551,6 +11566,15 @@ window.mtcAfficherActeJudiciaire = function(type){
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeLogement')"><span class="family-entry-icon">🏠</span><strong>Logement et immobilier</strong><small>Locations, ventes et résidences</small></button>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeSante')"><span class="family-entry-icon">🏥</span><strong>Santé et proximité</strong><small>Pharmacies, artisans et services locaux</small></button>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeVieCitoyenne')"><span class="family-entry-icon">⚖️</span><strong>Vie citoyenne</strong><small>Démarches, foncier, justice et solidarité</small></button>
+      </section>
+      <section class="home-panel" id="homePopular">
+        <div class="home-section-heading"><div><h2>⭐ Services les plus utilisés</h2><p>Accès rapide aux démarches et services du quotidien.</p></div></div>
+        <div class="family-shortcuts">
+          <button class="family-shortcut" type="button" onclick="ouvrirFamilleAccueil('homeMobilite')"><span>🚌</span>Gares et déplacements</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Mécanicien')"><span>🛠️</span>Mécanicien</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacies et santé')"><span>💊</span>Pharmacies et santé</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('transportColis','Livraison et expédition')"><span>📦</span>Livraison et colis</button>
+        </div>
       </section>
       <section class="home-panel" id="homeMobilite">
         <div class="home-section-heading"><div><h2>🚌 Mobilité et transport</h2><p>Gares, gbaka, cars, colis et compagnies de voyage</p></div></div>
@@ -11601,6 +11625,15 @@ window.mtcAfficherActeJudiciaire = function(type){
           <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Objets et documents perdus')"><span>🔎</span><strong>Objets et documents perdus</strong><small>Signaler un objet retrouvé ou réclamer un bien</small></button>
         </div>
       </section>
+      <section class="home-panel" id="homePartners">
+        <div class="home-section-heading"><div><h2>🤝 Partenaires vérifiés à proximité</h2><p>Retrouvez les professionnels référencés et validés sur Mon Quotidien CI.</p></div></div>
+        <div id="homePartnersListe" aria-live="polite"><p class="notice">Chargement des partenaires validés…</p></div>
+        <div class="family-shortcuts">
+          <button class="family-shortcut" type="button" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Mécanicien')"><span>🛠️</span>Artisans et professionnels</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirResultatPleinEcran('Commerce et boutique');afficherMarchesCommune()"><span>🏪</span>Commerces référencés</button>
+        </div>
+        <p class="notice">Les fiches affichées comme partenaires actifs sont soumises aux validations de la plateforme. Confirmez directement les disponibilités et tarifs.</p>
+      </section>
       <section class="home-panel" id="homeQuotidien">
         <div class="home-section-heading"><div><h2>➕ Autres services du quotidien</h2><p>Éducation, factures, prestations et autres services pratiques</p></div></div>
       </section>`;
@@ -11634,18 +11667,31 @@ window.mtcAfficherActeJudiciaire = function(type){
     if(transportIntro)transportIntro.textContent='Choisissez votre moyen de transport, une compagnie ou un service de livraison.';
 
     const pub=document.getElementById('espacePublicitaire');
-    if(pub)document.getElementById('homeActualites').appendChild(pub);
+    if(pub)document.getElementById('homePartners').appendChild(pub);
 
     const nav=document.createElement('nav');
     nav.id='accueilBottomNav';
     nav.setAttribute('aria-label','Navigation principale');
     nav.innerHTML=`
       <button type="button" class="nav-active" data-nav="home"><span>⌂</span>Accueil</button>
-      <button type="button" data-nav="transport"><span>🚌</span>Mobilité</button>
       <button type="button" data-nav="services"><span>▦</span>Services</button>
+      <button type="button" data-nav="annonces"><span>📢</span>Annonces</button>
       <button type="button" data-nav="communaute"><span>🗞️</span>Communauté</button>
-      <button type="button" data-nav="menu" aria-expanded="false" aria-controls="menuBasDroite"><span>☰</span>Menu</button>`;
+      <button type="button" data-nav="compte"><span>👤</span>Compte</button>`;
     document.body.appendChild(nav);
+    const compte=document.createElement('section');
+    compte.id='mqciComptePanel';compte.className='card';compte.style.display='none';
+    compte.innerHTML=`
+      <h2>👤 Mon compte</h2>
+      <p id="mqciCompteIdentite" class="notice">Connectez-vous pour retrouver les informations de votre compte.</p>
+      <div class="family-shortcuts">
+        <button type="button" class="family-shortcut" onclick="ouvrirSectionPleinEcran('parametresApplication','Paramètres')"><span>⚙️</span>Paramètres et préférences</button>
+        <button type="button" class="family-shortcut" onclick="ouvrirEspacePartenaire('accueil')"><span>🤝</span>Mon espace partenaire et abonnements</button>
+        <button type="button" class="family-shortcut" onclick="ouvrirSectionPleinEcran('transportColis','Mes commandes et historique')"><span>📦</span>Mes commandes et historique</button>
+        <button type="button" class="family-shortcut" onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur')"><span>🔐</span>Espace administrateur</button>
+      </div>
+    `;
+    main.appendChild(compte);
     const menuBas=document.createElement('div');
     menuBas.id='menuBasDroite';menuBas.hidden=true;
     menuBas.innerHTML=`
@@ -11663,11 +11709,11 @@ window.mtcAfficherActeJudiciaire = function(type){
     nav.addEventListener('click',function(e){
       const b=e.target.closest('button');if(!b)return;
       const action=b.dataset.nav;
-      if(action==='home'){window.scrollTo({top:0,behavior:'smooth'});nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
-      else if(action==='transport')ouvrirFamilleAccueil('homeMobilite');
-      else if(action==='services')ouvrirFamilleAccueil('homeSante');
-      else if(action==='communaute'){retourAccueilFamilles();aller('homeActualites');}
-      else if(action==='menu'){if(typeof basculerMenuBasDroite==='function')basculerMenuBasDroite();}
+      if(action==='home'){retourAccueilFamilles();window.scrollTo({top:0,behavior:'smooth'});nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
+      else if(action==='services'){retourAccueilFamilles();window.scrollTo({top:0,behavior:'smooth'});nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
+      else if(action==='annonces'){ouvrirSectionPleinEcran('nouveauxServices','Petites annonces de ma commune');choisirNouveauService('annonce');chargerNouveauxServicesPublics('annonce');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
+      else if(action==='communaute'){retourAccueilFamilles();aller('homeActualites');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
+      else if(action==='compte'){mqciActualiserCompte();ouvrirSectionPleinEcran('mqciComptePanel','Mon compte');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
     });
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initAccueilProfessionnel,{once:true});
@@ -12175,5 +12221,125 @@ async function chargerModerationCompagniesAdmin(){
 
 <script src="logement.js"></script>
 <script src="declarations-enfants.js"></script>
+
+<style id="mqci-nouvelle-charte-2026">
+:root{--vert:#16834A!important;--vert-fonce:#12663B!important;--bleu-nuit:#18352A!important;--or:#F28C28!important;--ivoire:#F6F8F6!important;--texte:#18352A!important;--secondaire:#64756B!important;--bordure:#DFE8E1!important}
+body{font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;background:#F6F8F6!important;color:#18352A!important}
+.mqci-header-premium{background:linear-gradient(135deg,#12663B,#16834A)!important}
+#accueilHomeShell{font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+#accueilHomeShell .home-welcome{background:linear-gradient(130deg,#12663B 0%,#16834A 78%,#24985F 100%)!important}
+#accueilHomeShell .home-welcome h1{color:#fff!important}
+#accueilHomeShell .home-location-label{display:block;margin:12px 0 5px;color:#f2fff5;font-size:11px;font-weight:800}
+#accueilHomeShell .home-location-input{min-height:40px;padding:10px 12px;border:1px solid #ffffff80;border-radius:12px;background:#ffffff;color:#18352A;font-size:13px}
+#accueilHomeShell .home-search{margin-top:10px}
+#accueilHomeShell .home-search input{padding-right:42px}
+#accueilHomeShell .mqci-search-results{display:grid;gap:7px;margin-top:7px}
+#accueilHomeShell .mqci-search-results:empty{display:none}
+#accueilHomeShell .mqci-search-result{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:11px 12px;border:1px solid #dce9df;border-radius:13px;background:#fff;color:#18352A;text-align:left}
+#accueilHomeShell .mqci-search-result strong{display:block;font-size:12px}
+#accueilHomeShell .mqci-search-result small{display:block;margin-top:2px;color:#64756B;font-size:10px;font-weight:500}
+#accueilHomeShell .mqci-search-result b{color:#16834A;font-size:19px}
+#accueilHomeShell .home-panel{border-color:#e1e9e2}
+#accueilHomeShell .family-entry,#accueilHomeShell .family-shortcut,#accueilHomeShell .home-discovery-card{border-radius:15px}
+#accueilBottomNav{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+#accueilBottomNav button{font-size:10px!important}
+#accueilBottomNav button.nav-active{background:#eaf5ed!important;color:#16834A!important}
+#homePartners .espace-publicitaire{margin-top:12px}
+</style>
+<script id="mqci-recherche-universelle-script">
+(function(){
+  const normaliser=s=>String(s||"").toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+  function extraireCommune(q){
+    const n=normaliser(q);
+    const morceaux=n.split(/\b(?:a|dans|sur|pour|pres de)\s+/);
+    const candidat=(morceaux[morceaux.length-1]||"").replace(/\b(abidjan|cote d ivoire)$/,"").trim();
+    if(candidat&&!["domicile","proximite","proche","moi","louer","location"].includes(candidat))return candidat;
+    return normaliser(document.getElementById("mqciCommuneChoisie")?.value||"");
+  }
+  function ouvrirAnnuaireAvecFiltres(rubrique,categorie,terme){
+    ouvrirAnnuaireInterne(rubrique,categorie);
+    const recherche=document.getElementById("annuaireRecherche");
+    const commune=document.getElementById("annuaireFiltreCommune");
+    const filtre=document.getElementById("annuaireFiltreCategorie");
+    if(recherche)recherche.value=terme;
+    if(commune)commune.value=extraireCommune(document.getElementById("mqciRechercheUniverselle")?.value||"");
+    if(filtre)filtre.value=categorie;
+    chargerAnnuaireInterne();
+  }
+  const routes=[
+    {mots:["mecanicien","mecanique","garage","garagiste"],titre:"Mécaniciens et garages",desc:"Rechercher dans l’annuaire des professionnels validés",ouvrir:()=>ouvrirAnnuaireAvecFiltres("artisansProfessionnels","Mécanicien","Mécanicien")},
+    {mots:["pharmacie","pharmacien","medicament"],titre:"Pharmacies et santé",desc:"Accéder au service santé et aux informations disponibles",ouvrir:()=>ouvrirSectionPleinEcran("servicesSante","Pharmacies et santé")},
+    {mots:["electricien","electricite","plombier","plomberie","reparation domicile"],titre:"Dépannage à domicile",desc:"Rechercher les techniciens référencés par métier et commune",ouvrir:()=>ouvrirAnnuaireAvecFiltres("depannageDomicile",normaliser(document.getElementById("mqciRechercheUniverselle")?.value).includes("plomb")?"Plomberie":"Électricité",normaliser(document.getElementById("mqciRechercheUniverselle")?.value).includes("plomb")?"Plomberie":"Électricité")},
+    {mots:["appartement","maison","studio","logement","location","louer","immobilier","terrain"],titre:"Logement et immobilier",desc:"Consulter les annonces et filtrer par commune",ouvrir:()=>{ouvrirSectionPleinEcran("logementImmobilier","Logement et immobilier");const c=document.getElementById("logementFilterCommune");if(c)c.value=extraireCommune(document.getElementById("mqciRechercheUniverselle")?.value||"");const q=normaliser(document.getElementById("mqciRechercheUniverselle")?.value||"");const cat=document.getElementById("logementFilterCategory");if(cat&&q.includes("appartement")&&q.includes("louer"))cat.value="Appartement à louer";chargerAnnoncesLogementPubliques();}},
+    {mots:["gbaka","woro","woro woro","taxi","gare","adjam","transport","bouake","compagnie de voyage","car interurbain"],titre:"Mobilité et transport",desc:"Accéder aux gares, trajets et compagnies de voyage",ouvrir:()=>ouvrirFamilleAccueil("homeMobilite")},
+    {mots:["livraison","colis","expedition","envoyer un colis","livreur"],titre:"Livraison et expédition",desc:"Accéder aux services de livraison et d’envoi de colis",ouvrir:()=>ouvrirSectionPleinEcran("transportColis","Livraison et expédition")},
+    {mots:["boutique","commerce","magasin","marche"],titre:"Commerce et boutiques",desc:"Consulter les commerces et boutiques référencés",ouvrir:()=>{ouvrirResultatPleinEcran("Commerce et boutique");afficherMarchesCommune();}},
+    {mots:["annonce","emploi","travail","recrutement","opportunite"],titre:"Annonces et emplois",desc:"Consulter les petites annonces et les opportunités",ouvrir:()=>ouvrirFamilleAccueil("homeDemarches")}
+  ];
+  function rendreResultats(){
+    const input=document.getElementById("mqciRechercheUniverselle"),zone=document.getElementById("mqciResultatsRecherche");
+    if(!input||!zone)return;
+    const q=normaliser(input.value);
+    zone.replaceChildren();
+    if(q.length<2)return;
+    const tokens=q.split(" ").filter(Boolean);
+    const trouves=routes.filter(r=>r.mots.some(m=>{const n=normaliser(m);return tokens.some(t=>n.includes(t)||t.includes(n));}));
+    const choix=trouves.length?trouves.slice(0,5):routes.slice(0,4);
+    choix.forEach(r=>{
+      const b=document.createElement("button");b.type="button";b.className="mqci-search-result";
+      const gauche=document.createElement("span"),titre=document.createElement("strong"),desc=document.createElement("small"),fleche=document.createElement("b");
+      titre.textContent=r.titre;desc.textContent=r.desc;fleche.textContent="›";gauche.append(titre,desc);b.append(gauche,fleche);
+      b.addEventListener("click",()=>r.ouvrir());zone.appendChild(b);
+    });
+    const note=document.createElement("small");note.className="notice";
+    note.textContent=trouves.length?"Choisissez une rubrique pour poursuivre la recherche. Les résultats détaillés proviennent des annuaires et services existants.":"Aucune rubrique exacte détectée. Voici les services les plus proches.";
+    zone.appendChild(note);
+  }
+  window.chargerPartenairesAccueil=async function(){
+    const zone=document.getElementById("homePartnersListe");if(!zone||!window.db||!window.firebase)return;
+    zone.textContent="Chargement des partenaires validés…";
+    try{
+      const snap=await db.collection("demandes_nouveaux_services").where("type","==","annuaire").where("statut","==","approuve").where("abonnementFin",">",firebase.firestore.Timestamp.now()).limit(100).get();
+      const commune=normaliser(document.getElementById("mqciCommuneChoisie")?.value||"");
+      const docs=snap.docs.map(doc=>({id:doc.id,data:doc.data()})).filter(x=>!commune||normaliser(x.data.commune).includes(commune)).slice(0,4);
+      zone.replaceChildren();
+      if(!docs.length){
+        const p=document.createElement("p");p.className="notice";p.textContent=commune?"Aucun partenaire validé avec abonnement actif n’a été trouvé dans cette commune pour le moment.":"Les partenaires validés apparaîtront ici selon leur activité et leur abonnement.";zone.appendChild(p);return;
+      }
+      docs.forEach(x=>{
+        const d=x.data,card=document.createElement("article");card.className="card";card.style.cssText="padding:12px;margin:8px 0;border-radius:14px";
+        const name=document.createElement("strong");name.textContent=d.titre||"Professionnel référencé";
+        const meta=document.createElement("p");meta.className="notice";meta.textContent=[d.categorie,d.commune,d.quartier].filter(Boolean).join(" · ");
+        const desc=document.createElement("p");desc.textContent=d.description||"Fiche professionnelle validée sur Mon Quotidien CI.";
+        card.append(name,meta,desc);
+        const tel=String(d.telephone||"").replace(/[^+0-9]/g,"");
+        if(tel){const call=document.createElement("a");call.className="annuaire-contact-btn primary";call.href="tel:"+tel;call.textContent="Appeler";card.appendChild(call);}
+        zone.appendChild(card);
+      });
+    }catch(e){
+      console.error("Partenaires accueil:",e);
+      zone.textContent="Les partenaires ne peuvent pas être chargés pour le moment.";
+    }
+  };
+  window.mqciActualiserCompte=function(){
+    const z=document.getElementById("mqciCompteIdentite");if(!z)return;
+    const u=window.auth&&auth.currentUser;
+    z.textContent=u?("Connecté : "+(u.displayName||u.email||"Utilisateur Mon Quotidien CI")):"Connectez-vous pour retrouver les informations de votre compte.";
+  };
+  function init(){
+    const input=document.getElementById("mqciRechercheUniverselle");
+    const commune=document.getElementById("mqciCommuneChoisie");
+    if(input&&!input.dataset.mqciBound){input.dataset.mqciBound="1";input.addEventListener("input",rendreResultats);}
+    if(window.chargerPartenairesAccueil)chargerPartenairesAccueil();
+    if(commune&&!commune.dataset.mqciBound){
+      commune.dataset.mqciBound="1";
+      try{commune.value=localStorage.getItem("mqci_commune_choisie")||"";}catch(e){}
+      commune.addEventListener("change",()=>{try{localStorage.setItem("mqci_commune_choisie",commune.value.trim());}catch(e){}if(window.chargerPartenairesAccueil)chargerPartenairesAccueil();});
+    }
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
+})();
+</script>
+
 </body>
 </html>
