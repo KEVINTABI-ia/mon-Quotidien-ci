@@ -11467,88 +11467,155 @@ window.mtcAfficherActeJudiciaire = function(type){
     const quotidien=document.getElementById('menuQuotidien');
     if(!main||!recherche||!mobilite||!demarches||!quotidien) return;
 
+    const style=document.createElement('style');
+    style.id='accueil-six-familles-css';
+    style.textContent=`
+      #accueilHomeShell{max-width:760px;margin:0 auto;padding:14px 12px 112px;display:grid;gap:14px}
+      #accueilHomeShell .home-panel{padding:15px;border:1px solid #dfe9e2;border-radius:20px;background:#fff;box-shadow:0 5px 18px rgba(24,63,43,.055);scroll-margin-top:14px}
+      #accueilHomeShell .home-section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin:0 0 12px}
+      #accueilHomeShell .home-section-heading h2{margin:0;color:#174b35;font-size:18px;line-height:1.2}
+      #accueilHomeShell .home-section-heading p{margin:5px 0 0;color:#68786e;font-size:12px;line-height:1.4}
+      #accueilHomeShell .family-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 2px}
+      #accueilHomeShell .family-shortcut{display:flex;align-items:center;gap:9px;min-height:58px;padding:10px;border:1px solid #e1eae4;border-radius:13px;background:#f8fbf8;color:#174b35;text-align:left;font-size:12px;font-weight:750;line-height:1.25}
+      #accueilHomeShell .family-shortcut span{font-size:21px;flex:0 0 auto}
+      #accueilHomeShell .family-shortcut:active{transform:scale(.985);background:#edf6ef}
+      #accueilHomeShell .family-intro{margin:0 0 10px;color:#64766b;font-size:12px;line-height:1.45}
+      #homeActualites{border:1px solid #d6e8dc;background:linear-gradient(145deg,#f4faf5,#fff)}
+      #homeActualites .home-discovery-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      #homeActualites .home-discovery-card{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-height:105px;padding:12px;border:1px solid #dce9df;border-radius:14px;background:#fff;color:#174b35;text-align:left}
+      #homeActualites .home-discovery-card>span{font-size:21px}
+      #homeActualites .home-discovery-card strong{font-size:12px;line-height:1.25}
+      #homeActualites .home-discovery-card small{font-size:10px;line-height:1.35;color:#68786e}
+      #homeDemarches .bouton-commerce-accueil{margin:0 0 10px}
+      #homeQuotidien #menuQuotidien{margin:0!important}
+      #homeMobilite .carte-acces-recherche{margin:0 0 10px}
+      #homeMobilite .accueil-services{margin:0}
+      #homeAutomobile #espaceAutomobiliste,#homeLogement #logementImmobilier{margin:0!important}
+      #homeSante .family-shortcuts{margin-bottom:12px}
+      @media(max-width:380px){#accueilHomeShell{padding-left:9px;padding-right:9px}#accueilHomeShell .home-panel{padding:12px}#accueilHomeShell .family-shortcuts,#homeActualites .home-discovery-grid{gap:6px}#accueilHomeShell .family-shortcut{padding:8px;font-size:11px}}
+    `;
+    document.head.appendChild(style);
+
     const shell=document.createElement('div');
     shell.id='accueilHomeShell';
     shell.innerHTML=`
-      <section class="home-panel" id="homeQuotidien">
-      </section>
       <section class="home-panel" id="homeMobilite">
-        <div class="home-section-heading"><div><h2>Transport et mobilité</h2><p>Gares, trajets, compagnies et livraison</p></div></div>
+        <div class="home-section-heading"><div><h2>🚌 Mobilité et transport</h2><p>Gares, gbaka, cars, colis et compagnies de voyage</p></div></div>
+      </section>
+      <section class="home-panel" id="homeAutomobile">
+        <div class="home-section-heading"><div><h2>🚘 Automobile</h2><p>Dépannage, entretien, assurance et pièces automobiles</p></div></div>
+        <div class="family-shortcuts">
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('nouveauxServices','Dépannage automobile');choisirNouveauService('depannage')"><span>🛠️</span>Dépannage et remorquage</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('recherchePiecesAuto','Recherche de pièces automobiles')"><span>⚙️</span>Pièces automobiles</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('verificationAssuranceAuto','Vérifier mon assurance auto')"><span>🛡️</span>Assurance automobile</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('espaceAutomobiliste','Espace de l’automobiliste')"><span>🧰</span>Entretien et documents</button>
+        </div>
       </section>
       <section class="home-panel" id="homeDemarches">
-        <button type="button" class="bouton-commerce-accueil" onclick="ouvrirResultatPleinEcran('Commerce et boutique'); afficherMarchesCommune()" aria-label="Ouvrir Commerce et boutique"><span style="display:flex;align-items:center;gap:12px;"><span style="font-size:29px;">🛍️</span><span><strong>Commerce et boutique</strong><small>Découvrez les commerces, boutiques et marchés par commune</small></span></span><span aria-hidden="true" style="font-size:24px;">›</span></button>
-        <div class="home-section-heading"><div><h2>Démarches et services officiels</h2><p>Accédez directement aux portails et parcours utiles</p></div></div>
+        <div class="home-section-heading"><div><h2>🛍️ Commerce et emploi</h2><p>Boutiques, annonces, commerces et opportunités professionnelles</p></div></div>
+        <div class="family-shortcuts">
+          <button class="family-shortcut" type="button" onclick="ouvrirResultatPleinEcran('Commerce et boutique');afficherMarchesCommune()"><span>🏪</span>Commerce et boutique</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('nouveauxServices','Petites annonces de ma commune');choisirNouveauService('annonce');chargerNouveauxServicesPublics('annonce')"><span>📢</span>Petites annonces</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirEmploisOpportunites()"><span>💼</span>Emplois et opportunités</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirEspacePartenaire('accueil')"><span>🤝</span>Devenir commerçant partenaire</button>
+        </div>
+      </section>
+      <section class="home-panel" id="homeLogement">
+        <div class="home-section-heading"><div><h2>🏠 Logement et immobilier</h2><p>Locations, ventes, résidences et agences immobilières</p></div></div>
+        <div class="family-shortcuts">
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier');chargerAnnoncesLogementPubliques()"><span>🔎</span>Consulter les logements</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier')"><span>➕</span>Publier une annonce</button>
+        </div>
+      </section>
+      <section class="home-panel" id="homeSante">
+        <div class="home-section-heading"><div><h2>🏥 Santé et proximité</h2><p>Pharmacies, santé, artisans et services près de vous</p></div></div>
+        <div class="family-shortcuts">
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacies et santé')"><span>💊</span>Pharmacies et santé</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Autre artisan')"><span>🧑🏽‍🔧</span>Artisans et professionnels</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('depannageDomicile','Dépannage à domicile')"><span>🛠️</span>Services à domicile</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirRepertoireServicesQuotidiens('station','Stations-service')"><span>⛽</span>Services de proximité</button>
+        </div>
+      </section>
+      <section class="home-panel" id="homeVieCitoyenne">
+        <div class="home-section-heading"><div><h2>⚖️ Vie citoyenne</h2><p>Démarches officielles, foncier, justice et solidarité</p></div></div>
       </section>
       <section class="home-panel" id="homeActualites">
-        <div class="home-section-heading"><div><h2>La vie de votre communauté</h2><p>Informations, emplois et opportunités</p></div></div>
+        <div class="home-section-heading"><div><h2>📍 Communauté et informations locales</h2><p>Un espace transversal pour suivre et partager la vie de votre commune</p></div></div>
         <div class="home-discovery-grid">
-          <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('maCommuneDirect','Ma commune en direct'); chargerMaCommuneDirect()"><span>📍</span><strong>Ma commune en direct</strong><small>Travaux, eau, électricité et vie locale</small></button>
-          <button class="home-discovery-card" type="button" onclick="ouvrirEspaceCommunautaire()"><span>📰</span><strong>M'informer / Gbairai</strong><small>Actualités et échanges de la communauté</small></button>
-          <button class="home-discovery-card" type="button" onclick="ouvrirEmploisOpportunites()"><span>💼</span><strong>Emplois et opportunités</strong><small>Offres d’emploi, stages et opportunités vérifiées</small></button>
-          <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier')"><span>🏠</span><strong>Logement et immobilier</strong><small>Maisons, chambres et agences dans votre commune</small></button>
-          <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Signaler et retrouver un objet ou un document perdu')"><span>🔎</span><strong>Objets et documents perdus</strong><small>Signalez un objet perdu ou consultez les biens retrouvés</small></button>
-          <button class="home-discovery-card" type="button" onclick="ouvrirDeclarationsEnfants()"><span>🧒</span><strong>Déclaration d’enfant perdu ou retrouvé</strong><small>Signaler un enfant disparu ou un enfant retrouvé</small></button>
+          <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('maCommuneDirect','Ma commune en direct');chargerMaCommuneDirect()"><span>📍</span><strong>Ma commune en direct</strong><small>Travaux, eau, électricité et informations locales</small></button>
+          <button class="home-discovery-card" type="button" onclick="ouvrirEspaceCommunautaire()"><span>📰</span><strong>M’informer / Gbairai</strong><small>Actualités et échanges de la communauté</small></button>
+          <button class="home-discovery-card" type="button" onclick="ouvrirEspaceSolidarite()"><span>🤝</span><strong>Dons et solidarité</strong><small>Entraide et initiatives solidaires</small></button>
+          <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Objets et documents perdus')"><span>🔎</span><strong>Objets et documents perdus</strong><small>Signaler un objet retrouvé ou réclamer un bien</small></button>
         </div>
+      </section>
+      <section class="home-panel" id="homeQuotidien">
+        <div class="home-section-heading"><div><h2>➕ Autres services du quotidien</h2><p>Éducation, factures, prestations et autres services pratiques</p></div></div>
       </section>`;
     main.insertBefore(shell,recherche);
+
     const mobility=document.getElementById('homeMobilite');
     mobility.appendChild(recherche);
-    mobility.appendChild(mobilite===null?document.createElement('span'):document.querySelector('.accueil-services'));
-    document.getElementById('homeDemarches').appendChild(demarches);
-    document.getElementById('homeQuotidien').appendChild(quotidien);
-    const pub=document.getElementById('espacePublicitaire');
-    if(pub) document.getElementById('homeActualites').appendChild(pub);
+    mobility.appendChild(mobilite);
+    const automobile=document.getElementById('homeAutomobile');
+    const espaceAuto=document.getElementById('espaceAutomobiliste');
+    if(espaceAuto) automobile.appendChild(espaceAuto);
+    const logement=document.getElementById('homeLogement');
+    const logementModule=document.getElementById('logementImmobilier');
+    if(logementModule) logement.appendChild(logementModule);
+    const sante=document.getElementById('homeSante');
+    ['servicesSante','annuaireInterne','depannageDomicile','artisansProfessionnels'].forEach(id=>{const el=document.getElementById(id);if(el)sante.appendChild(el);});
+    const commerce=document.getElementById('homeDemarches');
+    ['nouveauxServices','espaceEmploisOpportunites'].forEach(id=>{const el=document.getElementById(id);if(el)commerce.appendChild(el);});
+    const citoyen=document.getElementById('homeVieCitoyenne');
+    citoyen.appendChild(demarches);
+    ['objetsPerdusRetrouves'].forEach(id=>{const el=document.getElementById(id);if(el)document.getElementById('homeActualites').appendChild(el);});
+    ['servicesMinistereTransport','demarchesJudiciaires','securiserTerrain','servicesPublicsDemarches'].forEach(id=>{const el=document.getElementById(id);if(el)citoyen.appendChild(el);});
+    const other=document.getElementById('homeQuotidien');
+    other.appendChild(quotidien);
 
-    const transportTitle=mobilite.querySelector('.accueil-services-entete h2');
-    if(transportTitle) transportTitle.textContent='Voyager et envoyer un colis';
-    const transportIntro=mobilite.querySelector('.accueil-services-entete p');
-    if(transportIntro) transportIntro.textContent='Trouvez votre moyen de transport, une compagnie ou un service de livraison.';
     const dailyTitle=quotidien.querySelector('.daily-toggle');
-    if(dailyTitle) dailyTitle.innerHTML='🌞 Tous les services du quotidien <span class="daily-toggle-chevron" aria-hidden="true">⌄</span>';
+    if(dailyTitle){dailyTitle.innerHTML='Voir tous les autres services <span class="daily-toggle-chevron" aria-hidden="true">⌄</span>';dailyTitle.setAttribute('aria-label','Afficher les autres services du quotidien');}
+    const transportTitle=mobility.querySelector('.accueil-services-entete h2');
+    if(transportTitle)transportTitle.textContent='Voyager et envoyer un colis';
+    const transportIntro=mobility.querySelector('.accueil-services-entete p');
+    if(transportIntro)transportIntro.textContent='Choisissez votre moyen de transport, une compagnie ou un service de livraison.';
+
+    const pub=document.getElementById('espacePublicitaire');
+    if(pub)document.getElementById('homeActualites').appendChild(pub);
 
     const nav=document.createElement('nav');
     nav.id='accueilBottomNav';
     nav.setAttribute('aria-label','Navigation principale');
     nav.innerHTML=`
       <button type="button" class="nav-active" data-nav="home"><span>⌂</span>Accueil</button>
-      <button type="button" data-nav="transport"><span>🚍</span>Transport</button>
-      <button type="button" data-nav="services"><span>▦</span>Explorer</button>
+      <button type="button" data-nav="transport"><span>🚌</span>Mobilité</button>
+      <button type="button" data-nav="services"><span>▦</span>Services</button>
       <button type="button" data-nav="communaute"><span>🗞️</span>Communauté</button>
       <button type="button" data-nav="menu" aria-expanded="false" aria-controls="menuBasDroite"><span>☰</span>Menu</button>`;
     document.body.appendChild(nav);
     const menuBas=document.createElement('div');
-    menuBas.id='menuBasDroite';
-    menuBas.hidden=true;
+    menuBas.id='menuBasDroite';menuBas.hidden=true;
     menuBas.innerHTML=`
-      <button type="button" onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur'); fermerMenuBasDroite()">🔐 Espace administrateur</button>
-      <button type="button" onclick="ouvrirSectionPleinEcran('parametresApplication','Paramètres de l’application'); fermerMenuBasDroite()">⚙️ Paramètres</button>
-      <button type="button" onclick="ouvrirEspaceSolidarite(); fermerMenuBasDroite()">🤝 Dons et solidarité</button>
-      <button type="button" onclick="ouvrirEspacePartenaire('accueil'); fermerMenuBasDroite()">🤝 Espace partenaire</button>
-      <button type="button" onclick="signalerProblemeGeneral(); fermerMenuBasDroite()">⚠️ Signaler un problème</button>`;
+      <button type="button" onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur');fermerMenuBasDroite()">🔐 Espace administrateur</button>
+      <button type="button" onclick="ouvrirSectionPleinEcran('parametresApplication','Paramètres de l’application');fermerMenuBasDroite()">⚙️ Paramètres</button>
+      <button type="button" onclick="ouvrirEspacePartenaire('accueil');fermerMenuBasDroite()">🤝 Espace partenaire</button>
+      <button type="button" onclick="signalerProblemeGeneral();fermerMenuBasDroite()">⚠️ Signaler un problème</button>`;
     document.body.appendChild(menuBas);
 
     function aller(id){
       const cible=document.getElementById(id);
-      if(cible) cible.scrollIntoView({behavior:'smooth',block:'start'});
+      if(cible)cible.scrollIntoView({behavior:'smooth',block:'start'});
       nav.querySelectorAll('button').forEach(b=>b.classList.toggle('nav-active',b.dataset.nav===id));
     }
     nav.addEventListener('click',function(e){
-      const b=e.target.closest('button'); if(!b)return;
+      const b=e.target.closest('button');if(!b)return;
       const action=b.dataset.nav;
       if(action==='home'){window.scrollTo({top:0,behavior:'smooth'});nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
-      else if(action==='transport') {aller('homeMobilite');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
-      else if(action==='services') {aller('homeQuotidien');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
-      else if(action==='communaute') {if(typeof ouvrirEspaceCommunautaire==='function')ouvrirEspaceCommunautaire();}
-      else if(action==='menu'){basculerMenuBasDroite();}
+      else if(action==='transport')aller('homeMobilite');
+      else if(action==='services')aller('homeAutomobile');
+      else if(action==='communaute')aller('homeActualites');
+      else if(action==='menu'){if(typeof basculerMenuBasDroite==='function')basculerMenuBasDroite();}
     });
-    shell.querySelectorAll('[data-home-action]').forEach(b=>b.addEventListener('click',function(){
-      const a=b.dataset.homeAction;
-      if(a==='transport') {if(typeof ouvrirSectionPleinEcran==='function')ouvrirSectionPleinEcran('rechercheGaresV2','Où souhaitez-vous aller ?');}
-      if(a==='demarches') {if(typeof ouvrirSectionPleinEcran==='function')ouvrirSectionPleinEcran('servicesMinistereTransport','Services du ministère des Transports');}
-      if(a==='sante') {if(typeof ouvrirSectionPleinEcran==='function')ouvrirSectionPleinEcran('servicesSante','Pharmacie et santé');}
-      if(a==='communaute') {if(typeof ouvrirEspaceCommunautaire==='function')ouvrirEspaceCommunautaire();}
-    }));
-
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initAccueilProfessionnel,{once:true});
   else initAccueilProfessionnel();
