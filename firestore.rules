@@ -1499,7 +1499,7 @@ service cloud.firestore {
         && ((request.resource.data.formule == "mensuel" && request.resource.data.montant == 3000)
           || (request.resource.data.formule == "trimestriel" && request.resource.data.montant == 8000)
           || (request.resource.data.formule == "semestriel" && request.resource.data.montant == 15000))
-        && request.resource.data.operateur in ["Orange Money","Wave","MTN MoMo","Moov Money"]
+        && request.resource.data.operateur in ["Orange Money","Wave"]
         && request.resource.data.reference is string && request.resource.data.reference.size() >= 4 && request.resource.data.reference.size() <= 100
         && request.resource.data.statut == "a_verifier"
         && request.resource.data.createdAt == request.time;
