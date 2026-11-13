@@ -3151,7 +3151,12 @@ function chargerPublicitesAccueil() {
   </div>
 </details>
 
-<section id="mqci-home-account" class="card" style="margin:14px 16px;padding:0;overflow:hidden;" hidden>
+<section class="carte-acces-admin" aria-label="Accès administrateur" style="margin:12px 16px;padding:14px;border:1px solid #DCE8DF;border-radius:14px;background:#fff;text-align:center;">
+  <p style="margin:0 0 10px;color:#68786E;font-size:13px;">Gestion et administration de Mon Quotidien CI</p>
+  <button type="button" class="bouton-acces-admin" onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur')">🔐 Espace administrateur</button>
+</section>
+
+<section id="mqci-home-account" class="card" style="margin:14px 16px;padding:0;overflow:hidden;">
   <button type="button" id="mqci-home-account-toggle" aria-expanded="false" onclick="mqciAfficherMonCompte()" style="width:100%;text-align:left;background:#fff;color:#18352A;padding:17px 18px;display:flex;align-items:center;justify-content:space-between;">
     <span>👤 Mon compte</span><span aria-hidden="true">⌄</span>
   </button>
@@ -11704,18 +11709,13 @@ window.mtcAfficherActeJudiciaire = function(type){
           <button type="button" class="family-shortcut" onclick="ouvrirSectionPleinEcran('parametresApplication','Paramètres et préférences')"><span>⚙️</span><span>Paramètres et préférences</span></button>
         </div>
       </section>
-      <section class="mqci-compte-groupe">
-        <h3>🔐 Administration</h3>
-        <div class="mqci-compte-actions">
-          <button type="button" class="family-shortcut" onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur')"><span>🔐</span><span>Espace administrateur</span></button>
-        </div>
-      </section>
     `;
     main.appendChild(compte);
+    const profilAccueil=document.getElementById('mqci-home-account');
+    if(profilAccueil)compte.appendChild(profilAccueil);
     const menuBas=document.createElement('div');
     menuBas.id='menuBasDroite';menuBas.hidden=true;
     menuBas.innerHTML=`
-      <button type="button" onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur');fermerMenuBasDroite()">🔐 Espace administrateur</button>
       <button type="button" onclick="ouvrirSectionPleinEcran('parametresApplication','Paramètres de l’application');fermerMenuBasDroite()">⚙️ Paramètres</button>
       <button type="button" onclick="ouvrirEspacePartenaire('accueil');fermerMenuBasDroite()">🤝 Espace partenaire</button>
       <button type="button" onclick="signalerProblemeGeneral();fermerMenuBasDroite()">⚠️ Signaler un problème</button>`;
