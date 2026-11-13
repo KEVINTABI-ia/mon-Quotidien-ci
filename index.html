@@ -11494,7 +11494,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     const mobilite=document.querySelector('.accueil-services');
     const demarches=document.querySelector('.acces-prioritaires');
     const quotidien=document.getElementById('menuQuotidien');
-    if(!main||!recherche||!mobilite||!demarches||!quotidien) return;
+    if(!main||!demarches||!quotidien) return;
 
     const style=document.createElement('style');
     style.id='accueil-six-familles-css';
@@ -11640,8 +11640,8 @@ window.mtcAfficherActeJudiciaire = function(type){
     main.insertBefore(shell,recherche);
 
     const mobility=document.getElementById('homeMobilite');
-    mobility.appendChild(recherche);
-    mobility.appendChild(mobilite);
+    if(recherche) mobility.appendChild(recherche);
+    if(mobilite) mobility.appendChild(mobilite);
     const automobile=document.getElementById('homeAutomobile');
     const espaceAuto=document.getElementById('espaceAutomobiliste');
     if(espaceAuto) automobile.appendChild(espaceAuto);
