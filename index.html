@@ -12241,8 +12241,8 @@ body{font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial
   const normaliser=s=>String(s||"").toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
   function extraireCommune(q){
     const n=normaliser(q);
-    const m=n.match(/\\b(?:a|dans|sur|pour|pres de)\\s+(.+)$/);
-    if(m)return m[1].replace(/\\b(abidjan|cote d ivoire)$/,"").trim();
+    const m=n.match(/\b(?:a|dans|sur|pour|pres de)\s+(.+)$/);
+    if(m)return m[1].replace(/\b(abidjan|cote d ivoire)$/,"").trim();
     return normaliser(document.getElementById("mqciCommuneChoisie")?.value||"");
   }
   function ouvrirAnnuaireAvecFiltres(rubrique,categorie,terme){
