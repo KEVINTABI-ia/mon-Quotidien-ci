@@ -11711,7 +11711,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       const action=b.dataset.nav;
       if(action==='home'){retourAccueilFamilles();window.scrollTo({top:0,behavior:'smooth'});nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
       else if(action==='services'){retourAccueilFamilles();window.scrollTo({top:0,behavior:'smooth'});nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
-      else if(action==='annonces'){ouvrirFamilleAccueil('homeDemarches');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
+      else if(action==='annonces'){ouvrirSectionPleinEcran('nouveauxServices','Petites annonces de ma commune');choisirNouveauService('annonce');chargerNouveauxServicesPublics('annonce');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
       else if(action==='communaute'){retourAccueilFamilles();aller('homeActualites');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
       else if(action==='compte'){mqciActualiserCompte();ouvrirSectionPleinEcran('mqciComptePanel','Mon compte');nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
     });
