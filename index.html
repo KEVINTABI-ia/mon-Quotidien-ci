@@ -3011,7 +3011,7 @@ function chargerPublicitesAccueil() {
       <h3>Renouveler mon abonnement de publication</h3>
       <p>3 000 FCFA / mois · 8 000 FCFA / 3 mois · 15 000 FCFA / 6 mois. Publications illimitées pendant la période payée.</p>
       <label>Formule</label><select id="logementPlan"><option value="mensuel">1 mois – 3 000 FCFA</option><option value="trimestriel">3 mois – 8 000 FCFA</option><option value="semestriel">6 mois – 15 000 FCFA</option></select>
-      <label>Opérateur de paiement</label><select id="logementPaymentOperator"><option value="">Choisir</option><option>Orange Money</option><option>Wave</option><option>MTN MoMo</option><option>Moov Money</option></select>
+      <label>Opérateur de paiement</label><select id="logementPaymentOperator"><option value="">Choisir</option><option>Orange Money</option><option>Wave</option></select>
       <label>Référence de transaction</label><input id="logementPaymentReference">
       <button class="primary" type="button" onclick="logementRequestPlan()">Envoyer ma demande de renouvellement</button>
     </div>
@@ -4582,9 +4582,10 @@ const BENEFICIAIRE_PAIEMENT_MQCI="TA BI SERGE KEVIN";
 let coordonneesPaiementMQCI={numero:"",beneficiaire:"",actif:false};
 window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
 window.paiementsMQCIDisponibles=async function(){
- // Verrou temporaire : aucune API Wave ou Orange Money n'est encore intégrée.
- // Ne pas réactiver via Firestore avant une intégration et des tests serveur fiables.
- return false;
+ // Paiement manuel uniquement : l'utilisateur transmet une référence,
+ // puis l'administrateur vérifie le transfert avant toute activation.
+ // Aucun appel API ou paiement automatique n'est effectué ici.
+ return true;
 };
 window.chargerCoordonneesPaiementMQCI=async function(forcer=false){
  try{
@@ -4593,8 +4594,10 @@ window.chargerCoordonneesPaiementMQCI=async function(forcer=false){
   const numero=String(p.numero||NUMERO_PAIEMENT_MQCI).trim();
   const beneficiaire=String(p.beneficiaire||BENEFICIAIRE_PAIEMENT_MQCI).trim();
   if(!/^[+0-9 .()-]{8,24}$/.test(numero)||beneficiaire.length<2||beneficiaire.length>100)throw new Error("Coordonnées de paiement invalides.");
-  const actif=false;
-  coordonneesPaiementMQCI={numero:"",beneficiaire:"",actif};
+  // Le paiement manuel est actif indépendamment de l'état des API.
+  // apiActive reste explicitement désactivé : aucune intégration automatique n'est appelée.
+  const actif=true;
+  coordonneesPaiementMQCI={numero,beneficiaire,actif,mode:"manuel",apiActive:false};
   window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
   return coordonneesPaiementMQCI;
  }catch(e){console.warn("Coordonnées de paiement indisponibles.",e);coordonneesPaiementMQCI={numero:"",beneficiaire:"",actif:false};window.MQCI_PAIEMENT=coordonneesPaiementMQCI;return coordonneesPaiementMQCI;}
@@ -4702,8 +4705,8 @@ async function sauvegarderConfigurationAbonnementsAdmin(){
   services[id]={libelle:CONFIG_ABONNEMENTS_DEFAUT[id].libelle,actif:lire('actif').checked,prix,duree,unite,essai,promotionActive:lire('promo').checked,promotionPrix,promotionDebut:debut,promotionFin:fin,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
  }
  try{
-  await db.collection("configuration_abonnements").doc("globale").set({services,paiement:{numero:numeroPaiement,beneficiaire:beneficiairePaiement,actif:false},updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.uid},{merge:true});
-  configurationAbonnementsCachee=services;configurationAbonnementsPromise=null;coordonneesPaiementMQCI={numero:"",beneficiaire:"",actif:false};window.MQCI_PAIEMENT=coordonneesPaiementMQCI;alert("Paramètres enregistrés. Les paiements restent désactivés en attendant l’intégration des API.");await chargerConfigurationAbonnementsAdmin();
+  await db.collection("configuration_abonnements").doc("globale").set({services,paiement:{numero:numeroPaiement,beneficiaire:beneficiairePaiement,actif:true,mode:"manuel",apiActive:false},updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.uid},{merge:true});
+  configurationAbonnementsCachee=services;configurationAbonnementsPromise=null;coordonneesPaiementMQCI={numero:numeroPaiement,beneficiaire:beneficiairePaiement,actif:true,mode:"manuel",apiActive:false};window.MQCI_PAIEMENT=coordonneesPaiementMQCI;alert("Paramètres enregistrés. Le paiement manuel Wave / Orange Money est actif ; les paiements automatiques par API restent désactivés.");await chargerConfigurationAbonnementsAdmin();
  }catch(e){console.error(e);alert("Enregistrement impossible : "+e.message+" Vérifie les règles Firestore.");}
 }
 
