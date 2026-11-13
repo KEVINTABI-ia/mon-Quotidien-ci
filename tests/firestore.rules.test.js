@@ -1030,8 +1030,9 @@ describe("Mon Transport CI — règles Firestore", function () {
   describe("Contrôles complémentaires — paiements et parcours gratuits", () => {
     it("accepte une inscription de compagnie en attente de validation administrative", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
-      await assertSucceeds(setDoc(doc(db,"compagnies","compagnie-paiement-manuel"),{
+      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
+      const compagnieRef=doc(db,"compagnies","compagnie-paiement-manuel");
+      await assertSucceeds(setDoc(compagnieRef,{
         uid:CLIENT_UID,nom:"Compagnie test",agence:"Agence principale",
         localisation:"Yopougon, Abidjan",telephone:"0700000000",email:"client@example.test",
         destinations:[{ville:"Bouaké"}],
@@ -1041,6 +1042,9 @@ describe("Mon Transport CI — règles Firestore", function () {
         moyenPaiement:"Wave",referencePaiement:"REF-TEST-1234",
         statutAbonnement:"En attente",dateCreation:serverTimestamp(),
         dateDebut:null,dateExpiration:null
+      }));
+      await assertFails(updateDoc(compagnieRef,{
+        statutAbonnement:"Actif",dateDebut:serverTimestamp(),dateExpiration:serverTimestamp()
       }));
     });
 
