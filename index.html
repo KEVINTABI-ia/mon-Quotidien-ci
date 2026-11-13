@@ -1864,6 +1864,8 @@ details[aria-label="Contacts d’urgence"]{margin-top:0!important;margin-bottom:
     </div>
     <div id="ramassageUsagerEspace" style="display:none">
       <p id="ramassageUserWelcome" class="notice"></p>
+      <button type="button" class="primary" onclick="mqciToggleForm('ramassageRequestFields',this)">Ouvrir le formulaire de recherche de ramassage</button>
+      <div id="ramassageRequestFields" style="display:none">
       <h3>Publier ma recherche de ramassage</h3>
       <label>Commune de départ</label><input id="demandeRamassageCommune" placeholder="Ex. Yopougon">
       <label>Quartier ou point de ramassage</label><input id="demandeRamassageDepart" placeholder="Ex. Bagnon">
@@ -1872,6 +1874,7 @@ details[aria-label="Contacts d’urgence"]{margin-top:0!important;margin-bottom:
       <label>Heure souhaitée</label><input id="demandeRamassageHeure" type="time">
       <label>Nombre de places recherchées</label><input id="demandeRamassagePlaces" type="number" min="1" max="10" value="1">
       <button class="primary" type="button" onclick="publierDemandeRamassage()">Publier ma recherche</button>
+      </div>
       <hr>
       <h3>Compagnies et places disponibles</h3>
       <div id="listeOffresRamassage"><p class="notice">Connectez-vous pour consulter les offres.</p></div>
@@ -2138,7 +2141,7 @@ details[aria-label="Contacts d’urgence"]{margin-top:0!important;margin-bottom:
 </div>
 
 <div id="gestionCommunautaire" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🗞️ Gestion de la communauté</h3>
-<h4>Publier une information</h4><textarea id="nouvelleInformationCommunautaire" rows="4" maxlength="1500" placeholder="Rédige l’information"></textarea><button class="primary" onclick="publierInformationCommunautaire()">Publier l’information</button><p id="statutInformationCommunautaire" class="notice"></p>
+<h4>Publier une information</h4><button type="button" class="primary" onclick="mqciToggleForm('adminInfoFormFields',this)">Nouvelle information</button><div id="adminInfoFormFields" style="display:none;"><textarea id="nouvelleInformationCommunautaire" rows="4" maxlength="1500" placeholder="Rédige l’information"></textarea><button class="primary" onclick="publierInformationCommunautaire()">Publier l’information</button><p id="statutInformationCommunautaire" class="notice"></p></div>
 <h4>Informations publiées</h4><div id="listeInformationsAdmin"></div>
 <h4>Déclarations d’enfants — modération obligatoire</h4><button type="button" class="primary" onclick="chargerDeclarationsEnfantsAdmin()">Actualiser les déclarations</button><div id="declarationsEnfantsAdminListe"></div><h4>Recharges du tchat — 100 FCFA / 15 messages</h4><div id="listeRechargesGbairaiAdmin"></div><h4>Messages du tchat — 24 heures</h4><div id="listeMessagesGbairaiAdmin"></div><h4>Annonces et offres — 2 000 FCFA / 15 jours · 3 500 FCFA / 30 jours</h4><div id="listeAnnoncesAdmin"></div></div>
 </section>
@@ -2994,7 +2997,8 @@ function chargerPublicitesAccueil() {
   </div>
   <div id="logementPartnerSpace" style="display:none;margin-top:14px">
     <h3 id="logementWelcome"></h3><p id="logementSubscriptionStatus" class="notice"></p>
-    <div id="logementPublishForm">
+    <button type="button" class="primary" onclick="mqciToggleForm('logementPublishForm',this)">Ouvrir le formulaire de publication</button>
+    <div id="logementPublishForm" style="display:none">
       <h3>Publier une nouvelle annonce</h3>
       <label>Titre</label><input id="logementAdTitle" maxlength="120">
       <label>Type de bien</label><select id="logementAdCategory"><option value="">Choisir</option><option>Hôtel</option><option>Résidence meublée</option><option>Chambre à louer</option><option>Studio à louer</option><option>Appartement à louer</option><option>Maison à louer</option><option>Appartement à vendre</option><option>Maison à vendre</option><option>Terrain à vendre</option></select>
@@ -3235,6 +3239,8 @@ function chargerPublicitesAccueil() {
     <p class="notice">Vous avez une information utile sur votre commune ? Envoyez-la à l’administration. Elle sera vérifiée avant toute publication.</p>
     <label for="propositionCommuneEmail">Adresse e-mail</label><input id="propositionCommuneEmail" type="email" autocomplete="email" placeholder="Votre adresse e-mail">
     <label for="propositionCommuneMotPasse">Mot de passe (6 caractères minimum)</label><input id="propositionCommuneMotPasse" type="password" autocomplete="current-password" placeholder="Mot de passe">
+    <button type="button" class="primary" onclick="mqciToggleForm('propositionCommuneFields',this)">Ouvrir le formulaire de proposition</button>
+    <div id="propositionCommuneFields" style="display:none">
     <label for="propositionCommuneTitre">Titre</label><input id="propositionCommuneTitre" maxlength="120" placeholder="Ex. : Coupure d’eau annoncée à Niangon">
     <label for="propositionCommuneVille">Commune / ville</label>
     <select id="propositionCommuneVille"><option value="">Choisir une commune</option><option>Abobo</option><option>Adjamé</option><option>Anyama</option><option>Attécoubé</option><option>Bingerville</option><option>Cocody</option><option>Koumassi</option><option>Marcory</option><option>Plateau</option><option>Port-Bouët</option><option>Treichville</option><option>Yopougon</option><option>Autre commune / ville</option></select>
@@ -3244,6 +3250,7 @@ function chargerPublicitesAccueil() {
     <label for="propositionCommuneLien">Lien de la source (facultatif)</label><input id="propositionCommuneLien" type="url" maxlength="500" placeholder="https://...">
     <button type="button" class="primary" onclick="envoyerPropositionCommune()">Envoyer ma proposition</button>
     <p id="propositionCommuneStatut" class="notice" aria-live="polite"></p>
+    </div>
   </div>
   <label for="communeDirectFiltre">Choisir une commune</label>
   <select id="communeDirectFiltre">
@@ -3301,6 +3308,8 @@ function chargerPublicitesAccueil() {
   </div>
   <div id="terrainDemandeZone" style="display:none">
     <p id="terrainCompteActif" class="terrain-note"></p>
+    <button type="button" class="primary" onclick="mqciToggleForm('terrainFormFields',this)">Ouvrir le formulaire de demande</button>
+    <div id="terrainFormFields" style="display:none">
     <label for="terrainNomContact">Nom complet</label><input id="terrainNomContact" maxlength="100" placeholder="Votre nom complet">
     <label for="terrainTelephone">Téléphone</label><input id="terrainTelephone" type="tel" maxlength="25" placeholder="Votre numéro de téléphone">
     <label for="terrainObjetDemande">Votre besoin</label><select id="terrainObjetDemande"><option value="verification_lotissement">Vérifier un lotissement</option><option value="verification_parcelle">Vérifier une parcelle</option><option value="comprendre_document">Comprendre un document foncier</option><option value="suivi_demande">Suivre une démarche foncière</option></select>
@@ -3308,6 +3317,7 @@ function chargerPublicitesAccueil() {
     <button type="button" class="primary" onclick="envoyerDemandeTerrain()">Envoyer ma demande</button>
     <button type="button" onclick="deconnecterCompteTerrain()">Se déconnecter</button>
     <h3>Mes demandes</h3><div id="mesDemandesTerrain"><p class="terrain-note">Chargement...</p></div>
+    </div>
   </div>
   <p class="terrain-note">Le dépôt de fichiers fonciers sera activé après configuration et test du stockage privé. N'envoyez pas encore de copie de document via cette rubrique.</p>
   <p><a href="https://sigfu.gouv.ci/parcelles" target="_blank" rel="noopener noreferrer">Consulter le portail officiel SIGFU – Parcelles</a></p>
@@ -3365,6 +3375,7 @@ function chargerPublicitesAccueil() {
 <div id="emploisListePublique"><p class="notice">Chargement des offres...</p></div><hr><h3>Proposer une offre d’emploi ou une opportunité</h3>
 <p id="emploisEtatConnexion" class="notice">Connectez-vous ou créez un compte pour proposer une offre.</p>
 <div id="emploisConnexion"><label>Adresse e-mail</label><input id="emploisEmail" type="email" placeholder="Votre adresse e-mail"><label>Mot de passe</label><input id="emploisMotDePasse" type="password" placeholder="6 caractères minimum"><div class="modes"><button type="button" class="primary" onclick="connecterEmplois()">Se connecter</button><button type="button" onclick="creerCompteEmplois()">Créer un compte</button></div></div>
+<button id="ouvrirEmploisFormBtn" type="button" class="primary" style="display:none" onclick="mqciToggleForm('emploisFormZone',this)">Ouvrir le formulaire de publication</button>
 <div id="emploisFormZone" style="display:none;"><label>Intitulé du poste / opportunité</label><input id="emploiTitre" maxlength="120" placeholder="Ex. Assistant comptable"><label>Entreprise / organisme</label><input id="emploiEntreprise" maxlength="120" placeholder="Nom de l'entreprise"><label>Type d’opportunité</label><select id="emploiCategorie"><option>Emploi</option><option>Stage</option><option>Formation</option><option>Appel à candidatures</option><option>Autre opportunité</option></select><label>Commune / localité</label><input id="emploiCommune" maxlength="80" placeholder="Ex. Cocody, Abidjan"><label>Contact de candidature</label><input id="emploiTelephone" type="tel" maxlength="25" placeholder="Téléphone ou WhatsApp"><label>Description et conditions</label><textarea id="emploiDescription" rows="5" maxlength="1800" placeholder="Décrivez le poste, les compétences demandées et les modalités de candidature"></textarea><button class="primary" type="button" onclick="soumettreOffreEmploi()">Envoyer pour validation</button><p id="emploiStatutEnvoi" class="notice" aria-live="polite"></p></div>
 <div id="emploisZoneAdmin" style="display:none;margin-top:18px;border-top:2px solid #D5A84B;padding-top:14px;"><h3>🔐 Administration des offres d’emploi</h3><p>Les offres proposées par les utilisateurs apparaissent ici en attente. Leur publication nécessite une validation.</p><button type="button" class="primary" onclick="chargerOffresEmploiAdmin()">Actualiser les demandes</button><div id="emploisListeAdmin"></div><h4>Publication directe par l’administrateur</h4><p class="notice">L’administrateur peut publier directement une offre en remplissant le formulaire ci-dessus.</p><button type="button" onclick="publierOffreEmploiAdmin()">Publier directement</button></div>
 </section>
@@ -11844,7 +11855,7 @@ function retourAccueilFamilles(){
  if(nav)nav.querySelectorAll('button').forEach(b=>b.classList.toggle('nav-active',b.dataset.nav==='services'));
 }
 function ouvrirEmploisOpportunites(){if(typeof ouvrirSectionPleinEcran==='function')ouvrirSectionPleinEcran('espaceEmploisOpportunites','Emplois et opportunités');else{const s=document.getElementById('espaceEmploisOpportunites');if(s){s.style.display='block';s.scrollIntoView({behavior:'smooth'});}}chargerOffresEmploiPubliques();actualiserEspaceEmplois();}
-function actualiserEspaceEmplois(){const u=auth.currentUser,a=!!u&&u.uid===ADMIN_UID;const c=document.getElementById('emploisConnexion'),f=document.getElementById('emploisFormZone'),z=document.getElementById('emploisZoneAdmin'),t=document.getElementById('emploisEtatConnexion');if(c)c.style.display=u?'none':'block';if(f)f.style.display=u?'block':'none';if(z)z.style.display=a?'block':'none';if(t)t.textContent=u?(a?'Administrateur connecté : vos offres sont publiées immédiatement.':'Connecté : vos propositions seront soumises à validation.'):'Connectez-vous ou créez un compte pour proposer une offre.';if(a)chargerOffresEmploiAdmin();}
+function actualiserEspaceEmplois(){const u=auth.currentUser,a=!!u&&u.uid===ADMIN_UID;const c=document.getElementById('emploisConnexion'),f=document.getElementById('emploisFormZone'),z=document.getElementById('emploisZoneAdmin'),t=document.getElementById('emploisEtatConnexion'),b=document.getElementById('ouvrirEmploisFormBtn');if(c)c.style.display=u?'none':'block';if(f)f.style.display='none';if(b)b.style.display=u?'inline-flex':'none';if(z)z.style.display=a?'block':'none';if(t)t.textContent=u?(a?'Administrateur connecté : ouvrez le formulaire pour publier directement.':'Connecté : ouvrez le formulaire pour proposer une offre.'):'Connectez-vous ou créez un compte pour proposer une offre.';if(a)chargerOffresEmploiAdmin();}
 async function connecterEmplois(){try{await auth.signInWithEmailAndPassword(document.getElementById('emploisEmail').value.trim(),document.getElementById('emploisMotDePasse').value);actualiserEspaceEmplois();chargerOffresEmploiPubliques();}catch(e){alert('Connexion impossible : '+e.message);}}
 async function creerCompteEmplois(){const m=document.getElementById('emploisMotDePasse').value;if(m.length<6)return alert('Le mot de passe doit contenir au moins 6 caractères.');try{await auth.createUserWithEmailAndPassword(document.getElementById('emploisEmail').value.trim(),m);actualiserEspaceEmplois();}catch(e){alert('Création du compte impossible : '+e.message);}}
 function lireOffreEmploi(){const v=id=>(document.getElementById(id)?.value||'').trim();const d={titre:v('emploiTitre'),entreprise:v('emploiEntreprise'),categorie:v('emploiCategorie'),commune:v('emploiCommune'),telephone:v('emploiTelephone'),description:v('emploiDescription')};if(d.titre.length<3||d.entreprise.length<2||d.commune.length<2||d.telephone.length<6||d.description.length<20)throw Error('Complétez les champs. La description doit contenir au moins 20 caractères.');return d;}
@@ -12434,5 +12445,20 @@ body{font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial
 })();
 </script>
 
+<script>
+// Les formulaires de saisie restent fermés tant que l'utilisateur ne les ouvre pas.
+function mqciToggleForm(id, bouton){
+  const zone=document.getElementById(id);
+  if(!zone)return;
+  const ouverture=zone.style.display==='none'||getComputedStyle(zone).display==='none';
+  zone.style.display=ouverture?'block':'none';
+  if(bouton){
+    const libelle=bouton.dataset.openLabel||bouton.textContent.trim();
+    if(!bouton.dataset.openLabel)bouton.dataset.openLabel=libelle;
+    bouton.textContent=ouverture?'Fermer le formulaire':libelle;
+    if(ouverture)zone.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+}
+</script>
 </body>
 </html>
