@@ -11492,6 +11492,19 @@ window.mtcAfficherActeJudiciaire = function(type){
       #homeMobilite .accueil-services{margin:0}
       #homeAutomobile #espaceAutomobiliste,#homeLogement #logementImmobilier{margin:0!important}
       #homeSante .family-shortcuts{margin-bottom:12px}
+      #homeFamilyLauncher{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      #homeFamilyLauncher .family-entry{min-height:112px;padding:14px 11px;border:1px solid #dce9df;border-radius:17px;background:linear-gradient(145deg,#fff,#f4faf5);box-shadow:0 4px 14px rgba(23,61,41,.07);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;text-align:left;color:#174b35}
+      #homeFamilyLauncher .family-entry .family-entry-icon{font-size:27px}
+      #homeFamilyLauncher .family-entry strong{font-size:13px;line-height:1.25}
+      #homeFamilyLauncher .family-entry small{font-size:10px;line-height:1.35;color:#68786e}
+      #homeFamilyLauncher .family-entry:active{transform:scale(.98);background:#edf6ef}
+      #accueilHomeShell.family-view-active #homeFamilyLauncher{display:none}
+      #accueilHomeShell.family-view-active .home-panel{display:none}
+      #accueilHomeShell.family-view-active .home-panel.family-panel-active{display:block}
+      #accueilHomeShell.family-view-active #homeActualites,#accueilHomeShell.family-view-active #homeQuotidien{display:none}
+      .family-view-back{width:100%;margin:0 0 14px;padding:12px 14px;border:1px solid #dce9df;border-radius:13px;background:#f1f7f2;color:#175b3b;text-align:left;font-weight:800}
+      .family-view-back span{margin-right:8px}
+      @media(max-width:380px){#homeFamilyLauncher{gap:7px}#homeFamilyLauncher .family-entry{min-height:102px;padding:11px 9px}#homeFamilyLauncher .family-entry strong{font-size:12px}}
       @media(max-width:380px){#accueilHomeShell{padding-left:9px;padding-right:9px}#accueilHomeShell .home-panel{padding:12px}#accueilHomeShell .family-shortcuts,#homeActualites .home-discovery-grid{gap:6px}#accueilHomeShell .family-shortcut{padding:8px;font-size:11px}}
     `;
     document.head.appendChild(style);
@@ -11499,6 +11512,15 @@ window.mtcAfficherActeJudiciaire = function(type){
     const shell=document.createElement('div');
     shell.id='accueilHomeShell';
     shell.innerHTML=`
+      <section class="home-panel" id="homeFamilyLauncher" aria-label="Choisir une famille de services">
+        <div class="home-section-heading"><div><h2>Que souhaitez-vous faire ?</h2><p>Choisissez une rubrique pour accéder à son espace dédié.</p></div></div>
+        <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeMobilite')"><span class="family-entry-icon">🚌</span><strong>Mobilité et transport</strong><small>Gares, déplacements, colis et compagnies</small></button>
+        <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeAutomobile')"><span class="family-entry-icon">🚘</span><strong>Automobile</strong><small>Dépannage, entretien, assurance et pièces</small></button>
+        <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeDemarches')"><span class="family-entry-icon">🛍️</span><strong>Commerce et emploi</strong><small>Boutiques, annonces et opportunités</small></button>
+        <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeLogement')"><span class="family-entry-icon">🏠</span><strong>Logement et immobilier</strong><small>Locations, ventes et résidences</small></button>
+        <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeSante')"><span class="family-entry-icon">🏥</span><strong>Santé et proximité</strong><small>Pharmacies, artisans et services locaux</small></button>
+        <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeVieCitoyenne')"><span class="family-entry-icon">⚖️</span><strong>Vie citoyenne</strong><small>Démarches, foncier, justice et solidarité</small></button>
+      </section>
       <section class="home-panel" id="homeMobilite">
         <div class="home-section-heading"><div><h2>🚌 Mobilité et transport</h2><p>Gares, gbaka, cars, colis et compagnies de voyage</p></div></div>
       </section>
@@ -11611,9 +11633,9 @@ window.mtcAfficherActeJudiciaire = function(type){
       const b=e.target.closest('button');if(!b)return;
       const action=b.dataset.nav;
       if(action==='home'){window.scrollTo({top:0,behavior:'smooth'});nav.querySelectorAll('button').forEach(x=>x.classList.toggle('nav-active',x===b));}
-      else if(action==='transport')aller('homeMobilite');
-      else if(action==='services')aller('homeAutomobile');
-      else if(action==='communaute')aller('homeActualites');
+      else if(action==='transport')ouvrirFamilleAccueil('homeMobilite');
+      else if(action==='services')ouvrirFamilleAccueil('homeSante');
+      else if(action==='communaute'){retourAccueilFamilles();aller('homeActualites');}
       else if(action==='menu'){if(typeof basculerMenuBasDroite==='function')basculerMenuBasDroite();}
     });
   }
@@ -11624,6 +11646,32 @@ window.mtcAfficherActeJudiciaire = function(type){
 
 <script>
 (function(){function move(){const b=document.querySelector('#menuQuotidien .bouton-commerce-accueil'),z=document.getElementById('homeDemarches');if(b&&z)z.insertBefore(b,z.firstChild);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',move,{once:true});else move();})();
+function ouvrirFamilleAccueil(id){
+ const shell=document.getElementById('accueilHomeShell');
+ const panel=document.getElementById(id);
+ if(!shell||!panel)return;
+ shell.classList.add('family-view-active');
+ shell.querySelectorAll('.home-panel').forEach(p=>p.classList.toggle('family-panel-active',p===panel));
+ let back=panel.querySelector('.family-view-back');
+ if(!back){
+  back=document.createElement('button');
+  back.type='button';back.className='family-view-back';
+  back.innerHTML='<span aria-hidden="true">←</span> Retour aux six familles';
+  back.addEventListener('click',retourAccueilFamilles);
+  panel.insertBefore(back,panel.firstChild);
+ }
+ window.scrollTo({top:0,behavior:'smooth'});
+ const nav=document.getElementById('accueilBottomNav');
+ if(nav)nav.querySelectorAll('button').forEach(b=>b.classList.toggle('nav-active',b.dataset.nav==='home'));
+}
+function retourAccueilFamilles(){
+ const shell=document.getElementById('accueilHomeShell');if(!shell)return;
+ shell.classList.remove('family-view-active');
+ shell.querySelectorAll('.home-panel').forEach(p=>p.classList.remove('family-panel-active'));
+ window.scrollTo({top:0,behavior:'smooth'});
+ const nav=document.getElementById('accueilBottomNav');
+ if(nav)nav.querySelectorAll('button').forEach(b=>b.classList.toggle('nav-active',b.dataset.nav==='home'));
+}
 function ouvrirEmploisOpportunites(){if(typeof ouvrirSectionPleinEcran==='function')ouvrirSectionPleinEcran('espaceEmploisOpportunites','Emplois et opportunités');else{const s=document.getElementById('espaceEmploisOpportunites');if(s){s.style.display='block';s.scrollIntoView({behavior:'smooth'});}}chargerOffresEmploiPubliques();actualiserEspaceEmplois();}
 function actualiserEspaceEmplois(){const u=auth.currentUser,a=!!u&&u.uid===ADMIN_UID;const c=document.getElementById('emploisConnexion'),f=document.getElementById('emploisFormZone'),z=document.getElementById('emploisZoneAdmin'),t=document.getElementById('emploisEtatConnexion');if(c)c.style.display=u?'none':'block';if(f)f.style.display=u?'block':'none';if(z)z.style.display=a?'block':'none';if(t)t.textContent=u?(a?'Administrateur connecté : vos offres sont publiées immédiatement.':'Connecté : vos propositions seront soumises à validation.'):'Connectez-vous ou créez un compte pour proposer une offre.';if(a)chargerOffresEmploiAdmin();}
 async function connecterEmplois(){try{await auth.signInWithEmailAndPassword(document.getElementById('emploisEmail').value.trim(),document.getElementById('emploisMotDePasse').value);actualiserEspaceEmplois();chargerOffresEmploiPubliques();}catch(e){alert('Connexion impossible : '+e.message);}}
