@@ -945,7 +945,7 @@ describe("Mon Transport CI — règles Firestore", function () {
   });
 
 
-  describe("Verrou serveur des paiements — API non intégrées", () => {
+  describe("Paiements manuels — demandes en attente et validation administrative", () => {
     it("accepte une demande publicitaire en attente, sans activer de publication payante", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID).firestore();
       const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
@@ -959,12 +959,15 @@ describe("Mon Transport CI — règles Firestore", function () {
 
     it("accepte une demande manuelle d'abonnement automobiliste en attente", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
+      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
       await assertSucceeds(setDoc(doc(db,"demandes_abonnement_automobiliste","auto-paiement-manuel"),{
         uid:CLIENT_UID,email:"client@example.test",operateur:"Wave",
         referencePaiement:"REF-TEST-1234",nomPayeur:"Client test",
         montantFCFA:1000,dureeMois:12,statut:"en_attente",createdAt:serverTimestamp()
       }));
+      await assertFails(updateDoc(doc(db,"demandes_abonnement_automobiliste","auto-paiement-manuel"),{statut:"actif"}));
+      const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      await assertSucceeds(updateDoc(doc(adminDb,"demandes_abonnement_automobiliste","auto-paiement-manuel"),{statut:"confirme"}));
     });
 
     it("accepte une recharge Gbairai en attente de vérification", async () => {
