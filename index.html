@@ -11724,6 +11724,15 @@ window.mtcAfficherActeJudiciaire = function(type){
     const other=document.getElementById('homeQuotidien');
     other.appendChild(quotidien);
 
+    const raccourciPartenaire=document.createElement('section');
+    raccourciPartenaire.id='homePartenaireAcces';
+    raccourciPartenaire.className='home-panel';
+    raccourciPartenaire.innerHTML=`
+      <button type="button" class="family-shortcut" style="width:100%;margin:0;" onclick="ouvrirEspacePartenaire('accueil')">
+        <span>🤝</span><span>Mon espace partenaire et abonnements</span>
+      </button>`;
+    other.insertAdjacentElement('afterend',raccourciPartenaire);
+
     const dailyTitle=quotidien.querySelector('.daily-toggle');
     if(dailyTitle){dailyTitle.innerHTML='Voir tous les autres services <span class="daily-toggle-chevron" aria-hidden="true">⌄</span>';dailyTitle.setAttribute('aria-label','Afficher les autres services du quotidien');}
     const transportTitle=mobility.querySelector('.accueil-services-entete h2');
@@ -11752,7 +11761,6 @@ window.mtcAfficherActeJudiciaire = function(type){
       <section class="mqci-compte-groupe">
         <h3>🤝 Mes activités</h3>
         <div class="mqci-compte-actions">
-          <button type="button" class="family-shortcut" onclick="ouvrirEspacePartenaire('accueil')"><span>🤝</span><span>Mon espace partenaire et abonnements</span></button>
           <button type="button" class="family-shortcut" onclick="ouvrirSectionPleinEcran('transportColis','Mes commandes et historique')"><span>📦</span><span>Mes commandes et historique</span></button>
         </div>
       </section>
