@@ -998,18 +998,9 @@ service cloud.firestore {
         && request.resource.data.dureeJours <= 365
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time;
-      allow read: if estAdmin()
-        || (estConnecte() && resource.data.uid == request.auth.uid)
-        || (pharmacienApprouve() && resource.data.get("pharmacieAssigneeUid", "") == request.auth.uid);
-      allow update: if estAdmin()
-        || (pharmacienApprouve()
-          && resource.data.get("pharmacieAssigneeUid", "") == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","prixPropose","reponsePharmacie","updatedAt"])
-          && request.resource.data.statut in ["a_traiter","pharmacie_confirmee","indisponible","en_preparation","prete_a_livrer"]
-          && (request.resource.data.prixPropose == null || (request.resource.data.prixPropose is int && request.resource.data.prixPropose >= 0 && request.resource.data.prixPropose <= 10000000))
-          && request.resource.data.reponsePharmacie is string && request.resource.data.reponsePharmacie.size() <= 500
-          && request.resource.data.updatedAt == request.time);
-      allow delete: if estAdmin();
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update, delete: if estAdmin();
+
     }
 
     match /avis_boutiques/{avisId} {
@@ -1069,18 +1060,9 @@ service cloud.firestore {
         && request.resource.data.dureeMois == abonnementChamp("automobiliste", "duree", 12)
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time;
-      allow read: if estAdmin()
-        || (estConnecte() && resource.data.uid == request.auth.uid)
-        || (pharmacienApprouve() && resource.data.get("pharmacieAssigneeUid", "") == request.auth.uid);
-      allow update: if estAdmin()
-        || (pharmacienApprouve()
-          && resource.data.get("pharmacieAssigneeUid", "") == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","prixPropose","reponsePharmacie","updatedAt"])
-          && request.resource.data.statut in ["a_traiter","pharmacie_confirmee","indisponible","en_preparation","prete_a_livrer"]
-          && (!("prixPropose" in request.resource.data.keys()) || request.resource.data.prixPropose == null || (request.resource.data.prixPropose is int && request.resource.data.prixPropose >= 0 && request.resource.data.prixPropose <= 10000000))
-          && request.resource.data.reponsePharmacie is string && request.resource.data.reponsePharmacie.size() <= 500
-          && request.resource.data.updatedAt == request.time);
-      allow delete: if estAdmin();
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update, delete: if estAdmin();
+
     }
 
     match /abonnements_automobiliste/{uid} {
@@ -1654,8 +1636,18 @@ service cloud.firestore {
         && (request.resource.data.documentPath == "" || request.resource.data.documentPath.matches("^demandes_pharmacie_documents/" + request.auth.uid + "/" + demandeId + "/[A-Za-z0-9._-]+$"))
         && request.resource.data.statut == "a_traiter"
         && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
-      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
-      allow update, delete: if estAdmin();
+      allow read: if estAdmin()
+        || (estConnecte() && resource.data.uid == request.auth.uid)
+        || (pharmacienApprouve() && resource.data.get("pharmacieAssigneeUid", "") == request.auth.uid);
+      allow update: if estAdmin()
+        || (pharmacienApprouve()
+          && resource.data.get("pharmacieAssigneeUid", "") == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","prixPropose","reponsePharmacie","updatedAt"])
+          && request.resource.data.statut in ["a_traiter","pharmacie_confirmee","indisponible","en_preparation","prete_a_livrer"]
+          && (!("prixPropose" in request.resource.data.keys()) || request.resource.data.prixPropose == null || (request.resource.data.prixPropose is int && request.resource.data.prixPropose >= 0 && request.resource.data.prixPropose <= 10000000))
+          && request.resource.data.reponsePharmacie is string && request.resource.data.reponsePharmacie.size() <= 500
+          && request.resource.data.updatedAt == request.time);
+      allow delete: if estAdmin();
     }
     match /{document=**} {
       allow read, write: if false;
