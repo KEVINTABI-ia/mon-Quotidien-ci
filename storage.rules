@@ -27,7 +27,10 @@ service firebase.storage {
         && fileName.matches('^[A-Za-z0-9._-]{1,180}$')
         && request.resource.size <= 8 * 1024 * 1024
         && request.resource.contentType.matches('(image/(jpeg|png|webp)|application/pdf)');
-      allow read: if estAdmin();
+      allow read: if estAdmin()
+        || (request.auth != null
+          && firestore.get(/databases/(default)/documents/pharmacies_professionnelles/$(request.auth.uid)).data.statut == "approuve"
+          && firestore.get(/databases/(default)/documents/demandes_pharmacie/$(demandeId)).data.pharmacieAssigneeUid == request.auth.uid);
       allow update, delete: if false;
     }
     match /trajet_partage_documents/{uid}/{fileName} {
