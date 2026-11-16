@@ -1596,6 +1596,24 @@ service cloud.firestore {
       allow delete: if estAdmin();
     }
 
+
+    match /demandes_pharmacie/{demandeId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasOnly(["uid","nom","telephone","commune","adresse","produits","documentPath","statut","createdAt","updatedAt"])
+        && request.resource.data.keys().hasAll(["uid","nom","telephone","commune","adresse","produits","documentPath","statut","createdAt","updatedAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 2 && request.resource.data.nom.size() <= 100
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 24
+        && request.resource.data.commune is string && request.resource.data.commune.size() >= 2 && request.resource.data.commune.size() <= 60
+        && request.resource.data.adresse is string && request.resource.data.adresse.size() >= 5 && request.resource.data.adresse.size() <= 350
+        && request.resource.data.produits is string && request.resource.data.produits.size() >= 2 && request.resource.data.produits.size() <= 1200
+        && request.resource.data.documentPath is string && request.resource.data.documentPath.size() <= 500
+        && (request.resource.data.documentPath == "" || request.resource.data.documentPath.matches("^demandes_pharmacie_documents/" + request.auth.uid + "/" + demandeId + "/[A-Za-z0-9._-]+$"))
+        && request.resource.data.statut == "a_traiter"
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update, delete: if estAdmin();
+    }
     match /{document=**} {
       allow read, write: if false;
     }
