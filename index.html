@@ -2978,6 +2978,7 @@ function chargerPublicitesAccueil() {
   <p style="margin:0 0 13px;font-size:13px;color:#68786E;">Les services pratiques, la santé et les services près de vous.</p>
   <div class="grille-services-quotidiens">
 <button type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacie et santé')" class="tuile-quotidien">💊 Pharmacie et santé<small>Pharmacies de garde, centres de santé, urgences et laboratoires</small></button>
+<button type="button" onclick="ouvrirSectionPleinEcran('pharmacieDomicile','Pharmacie à domicile')" class="tuile-quotidien">🛵 Pharmacie à domicile<small>Envoyez votre ordonnance ou demandez un médicament avec livraison</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('educationFormation','Éducation et formation')" class="tuile-quotidien">🎓 Éducation et formation<small>Écoles, universités et formations</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('depannageDomicile','Dépannage à domicile')" class="tuile-quotidien">🛠️ Dépannage à domicile<small>Plomberie, électricité et réparations</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('agricultureElevage','Agriculture et élevage')" class="tuile-quotidien">🌱 Agriculture et élevage<small>Producteurs, fournisseurs et matériel</small></button>
@@ -3220,6 +3221,23 @@ function chargerPublicitesAccueil() {
   </div>
 </section>
 
+
+<section class="card" id="pharmacieDomicile" style="display:none;">
+ <h2>🛵 Pharmacie à domicile</h2>
+ <p>Envoyez une demande de médicament ou joignez votre ordonnance. Une pharmacie devra vérifier l’ordonnance, la disponibilité et le prix avant toute confirmation.</p>
+ <div style="background:#FFF7E9;border:1px solid #F4D6A7;border-radius:13px;padding:13px;margin:12px 0;"><strong>Service en phase de mise en place</strong><p style="margin:5px 0 0;font-size:13px;">Cette demande n’est ni une validation médicale, ni une commande confirmée, ni un paiement.</p></div>
+ <form id="mqciPharmacieForm" onsubmit="mqciSoumettreDemandePharmacie(event)">
+  <label for="mqciPharmacieNom">Nom du demandeur</label><input id="mqciPharmacieNom" maxlength="100" required autocomplete="name" placeholder="Votre nom">
+  <label for="mqciPharmacieTelephone">Téléphone</label><input id="mqciPharmacieTelephone" type="tel" maxlength="24" required placeholder="Ex. : 07 00 00 00 00">
+  <label for="mqciPharmacieCommune">Commune</label><select id="mqciPharmacieCommune" required><option value="">Choisir une commune</option><option>Abobo</option><option>Adjamé</option><option>Anyama</option><option>Attécoubé</option><option>Bingerville</option><option>Cocody</option><option>Koumassi</option><option>Marcory</option><option>Plateau</option><option>Port-Bouët</option><option>Treichville</option><option>Yopougon</option><option>Autre</option></select>
+  <label for="mqciPharmacieAdresse">Adresse ou repère de livraison</label><textarea id="mqciPharmacieAdresse" rows="2" maxlength="350" required placeholder="Quartier, rue et repère"></textarea>
+  <label for="mqciPharmacieProduit">Médicament(s) demandé(s)</label><textarea id="mqciPharmacieProduit" rows="3" maxlength="1200" required placeholder="Nom, dosage et quantité si connus"></textarea>
+  <label for="mqciPharmacieOrdonnance">Ordonnance (photo ou PDF)</label><input id="mqciPharmacieOrdonnance" type="file" accept="image/jpeg,image/png,image/webp,application/pdf">
+  <p class="notice">JPG, PNG, WEBP ou PDF, 8 Mo maximum. Document conservé dans un espace privé.</p>
+  <button id="mqciPharmacieSubmit" class="primary" type="submit">Envoyer ma demande</button><p id="mqciPharmacieStatus" class="notice" aria-live="polite"></p>
+ </form>
+ <div style="border-top:1px solid #E3EAE4;margin-top:18px;padding-top:14px;"><h3>📋 Mes demandes</h3><button type="button" class="mode" onclick="mqciChargerMesDemandesPharmacie()">Actualiser mes demandes</button><div id="mqciPharmacieHistorique" class="notice" aria-live="polite">Connectez-vous pour consulter vos demandes.</div></div>
+</section>
 <section class="card" id="pharmaciesProches" style="display:none;">
   <h2>💊 Pharmacie la plus proche</h2>
   <p>Trouvez une pharmacie autour de votre position ou consultez les pharmacies de garde.</p>
@@ -12500,6 +12518,27 @@ function mqciToggleForm(id, bouton){
     bouton.textContent=ouverture?'Fermer le formulaire':libelle;
     if(ouverture)zone.scrollIntoView({behavior:'smooth',block:'nearest'});
   }
+}
+</script>
+
+<script>
+async function mqciSoumettreDemandePharmacie(event){
+ event.preventDefault();const user=auth.currentUser,status=document.getElementById("mqciPharmacieStatus"),button=document.getElementById("mqciPharmacieSubmit");
+ if(!user){status.textContent="Connectez-vous pour envoyer une demande.";return;}
+ const file=document.getElementById("mqciPharmacieOrdonnance").files[0]||null,allowed=["image/jpeg","image/png","image/webp","application/pdf"];
+ if(file&&(!allowed.includes(file.type)||file.size>8*1024*1024)){status.textContent="Fichier non accepté. JPG, PNG, WEBP ou PDF de 8 Mo maximum.";return;}
+ button.disabled=true;status.textContent="Envoi en cours…";
+ try{
+  const ref=db.collection("demandes_pharmacie").doc();let documentPath="";
+  if(file){documentPath="demandes_pharmacie_documents/"+user.uid+"/"+ref.id+"/"+Date.now()+"_"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");await storage.ref(documentPath).put(file,{contentType:file.type});}
+  await ref.set({uid:user.uid,nom:document.getElementById("mqciPharmacieNom").value.trim(),telephone:document.getElementById("mqciPharmacieTelephone").value.trim(),commune:document.getElementById("mqciPharmacieCommune").value,adresse:document.getElementById("mqciPharmacieAdresse").value.trim(),produits:document.getElementById("mqciPharmacieProduit").value.trim(),documentPath,statut:"a_traiter",createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  status.textContent="Demande enregistrée. Elle doit encore être vérifiée par l’équipe. Référence : "+ref.id;document.getElementById("mqciPharmacieForm").reset();await mqciChargerMesDemandesPharmacie();
+ }catch(e){console.error("Demande pharmacie",e);status.textContent="Échec de l’envoi : "+(e.message||"erreur inconnue");}finally{button.disabled=false;}
+}
+async function mqciChargerMesDemandesPharmacie(){
+ const zone=document.getElementById("mqciPharmacieHistorique"),user=auth.currentUser;if(!zone)return;if(!user){zone.textContent="Connectez-vous pour consulter vos demandes.";return;}zone.textContent="Chargement…";
+ try{const snap=await db.collection("demandes_pharmacie").where("uid","==",user.uid).limit(30).get();if(snap.empty){zone.textContent="Aucune demande enregistrée.";return;}zone.replaceChildren();snap.forEach(d=>{const x=d.data(),card=document.createElement("div");card.style.cssText="border:1px solid #E3EAE4;border-radius:12px;padding:12px;margin:9px 0;background:#fff";const title=document.createElement("strong");title.textContent="Demande "+d.id.slice(0,8);const detail=document.createElement("p");detail.style.margin="5px 0";detail.textContent=(x.commune||"")+" · "+(x.statut||"a_traiter")+" · "+(x.produits||"");card.append(title,detail);zone.appendChild(card);});}
+ catch(e){console.error(e);zone.textContent="Impossible de charger vos demandes : "+(e.message||e);}
 }
 </script>
 </body>
