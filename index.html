@@ -2175,6 +2175,15 @@ details[aria-label="Contacts d’urgence"]{margin-top:0!important;margin-bottom:
 <h4>Publier une information</h4><button type="button" class="primary" onclick="mqciToggleForm('adminInfoFormFields',this)">Nouvelle information</button><div id="adminInfoFormFields" style="display:none;"><textarea id="nouvelleInformationCommunautaire" rows="4" maxlength="1500" placeholder="Rédige l’information"></textarea><button class="primary" onclick="publierInformationCommunautaire()">Publier l’information</button><p id="statutInformationCommunautaire" class="notice"></p></div>
 <h4>Informations publiées</h4><div id="listeInformationsAdmin"></div>
 <h4>Déclarations d’enfants — modération obligatoire</h4><button type="button" class="primary" onclick="chargerDeclarationsEnfantsAdmin()">Actualiser les déclarations</button><div id="declarationsEnfantsAdminListe"></div><h4>Recharges du tchat — 100 FCFA / 15 messages</h4><div id="listeRechargesGbairaiAdmin"></div><h4>Messages du tchat — 24 heures</h4><div id="listeMessagesGbairaiAdmin"></div><h4>Annonces et offres — 2 000 FCFA / 15 jours · 3 500 FCFA / 30 jours</h4><div id="listeAnnoncesAdmin"></div></div>
+
+<div id="gestionPharmaciesAdmin" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;">
+ <h3>💊 Pharmacies à domicile — validation et attribution</h3>
+ <p class="notice">Vérifie les informations et références d’autorisation avant d’approuver un établissement. Attribue ensuite chaque demande à une pharmacie approuvée. Les ordonnances restent privées.</p>
+ <button type="button" class="primary" onclick="mqciChargerGestionPharmaciesAdmin()">Actualiser les dossiers et demandes</button>
+ <h4>Établissements à vérifier</h4><div id="mqciAdminPharmaciesListe" aria-live="polite">Appuie sur Actualiser.</div>
+ <h4>Demandes clients</h4><div id="mqciAdminDemandesPharmacieListe" aria-live="polite">Appuie sur Actualiser.</div>
+ <p id="mqciAdminPharmacieStatus" class="notice" aria-live="polite"></p>
+</div>
 </section>
 
 </section>
@@ -4794,6 +4803,7 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionValidationAnnuaires",groupe:"Professionnels",icone:"📒",titre:"Annuaires professionnels",description:"Valider les inscriptions avant publication.",notification:"annuaire"},
   {id:"gestionLogementAdmin",groupe:"Vie communautaire",icone:"🏠",titre:"Logement",description:"Modérer les annonces et vérifier les abonnements."},
   {id:"gestionPartenaires",groupe:"Professionnels",icone:"👥",titre:"Partenaires",description:"Gérer les partenaires de services."},
+  {id:"gestionPharmaciesAdmin",groupe:"Professionnels",icone:"💊",titre:"Pharmacies à domicile",description:"Approuver les pharmacies et attribuer les demandes clients."},
   {id:"gestionCommandesPartenaires",groupe:"Professionnels",icone:"📦",titre:"Commandes partenaires",description:"Suivre et attribuer les commandes."},
   {id:"gestionPublicites",groupe:"Publications et communication",icone:"📣",titre:"Publicités",description:"Gérer les campagnes publicitaires."},
   {id:"gestionCommunautaire",groupe:"Publications et communication",icone:"🗞️",titre:"Informations et Gbairai",description:"Publier les informations communautaires."},
@@ -4840,6 +4850,7 @@ function ouvrirRubriqueAdmin(id){
   RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display=r.id===id?"block":"none";});
   const cible=document.getElementById(id);
   if(!cible)return;
+  if(id==="gestionPharmaciesAdmin") mqciChargerGestionPharmaciesAdmin();
   if(id==="gestionValidationDepannage") chargerNouveauxServicesAdmin("depannage");
   if(id==="gestionValidationCommerce") chargerNouveauxServicesAdmin("commerce");
   if(id==="gestionValidationBoutiques"){chargerNouveauxServicesAdmin("boutique");chargerArticlesBoutiquesAdmin();chargerDemandesRenouvellementBoutiquesAdmin();}
@@ -12549,6 +12560,52 @@ function mqciAfficherInscriptionPharmacie(){document.getElementById("mqciPharmac
 async function mqciInscrirePharmacie(ev){ev.preventDefault();const u=auth.currentUser,st=document.getElementById("mqciProInscriptionStatus"),b=document.getElementById("mqciProSubmit");if(!u){st.textContent="Connectez-vous avant de soumettre l’établissement.";return;}b.disabled=true;try{const ref=db.collection("pharmacies_professionnelles").doc(u.uid),old=await ref.get();if(old.exists){st.textContent="Un dossier existe déjà pour ce compte. Contactez l’administration.";return;}await ref.set({uid:u.uid,nom:document.getElementById("mqciProNom").value.trim(),responsable:document.getElementById("mqciProResponsable").value.trim(),telephone:document.getElementById("mqciProTelephone").value.trim(),email:document.getElementById("mqciProEmail").value.trim(),commune:document.getElementById("mqciProCommune").value.trim(),adresse:document.getElementById("mqciProAdresse").value.trim(),referenceAutorisation:document.getElementById("mqciProAutorisation").value.trim(),statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});st.textContent="Dossier transmis. L’accès sera activé après vérification administrative.";}catch(e){st.textContent="Échec : "+(e.message||e);}finally{b.disabled=false;}}
 async function mqciChargerEspacePharmacien(){const u=auth.currentUser;if(!u){alert("Connectez-vous à votre compte.");return;}document.getElementById("mqciPharmacieProAccueil").style.display="none";document.getElementById("mqciPharmacieProInscription").style.display="none";document.getElementById("mqciPharmacieProDashboard").style.display="block";try{const p=await db.collection("pharmacies_professionnelles").doc(u.uid).get();if(!p.exists||p.data().statut!=="approuve"){document.getElementById("mqciPharmacienDemandes").textContent="Dossier absent ou en attente de validation administrative.";return;}document.getElementById("mqciPharmacienTitre").textContent="Demandes attribuées – "+p.data().nom;await mqciChargerDemandesAttribuees();}catch(e){document.getElementById("mqciPharmacienDemandes").textContent="Accès impossible : "+(e.message||e);}}
 async function mqciChargerDemandesAttribuees(){const u=auth.currentUser,z=mqciPharmacienDemandes;if(!u)return;z.textContent="Chargement…";try{const p=await db.collection("pharmacies_professionnelles").doc(u.uid).get();if(!p.exists||p.data().statut!=="approuve"){z.textContent="Compte pharmacie non approuvé.";return;}const q=await db.collection("demandes_pharmacie").where("pharmacieAssigneeUid","==",u.uid).limit(50).get();if(q.empty){z.textContent="Aucune demande attribuée.";return;}z.replaceChildren();q.forEach(d=>{const x=d.data(),c=document.createElement("article");c.style.cssText="border:1px solid #D5E2D9;border-radius:14px;padding:14px;margin:12px 0";const title=document.createElement("h4");title.textContent="Demande "+d.id.slice(0,8)+" · "+x.statut;c.append(title);const info=document.createElement("p");info.textContent=(x.nom||"Client")+" · "+(x.telephone||"")+" · "+(x.commune||"")+" · "+(x.adresse||"");c.append(info);const products=document.createElement("p");products.textContent="Médicaments : "+x.produits;c.append(products);if(x.documentPath){const doc=document.createElement("button");doc.className="mode";doc.textContent="Ouvrir l’ordonnance";doc.onclick=async()=>{try{window.open(await storage.ref(x.documentPath).getDownloadURL(),"_blank","noopener");}catch(e){alert("Accès au document refusé : "+e.message);}};c.append(doc);}const price=document.createElement("input");price.type="number";price.min="0";price.max="10000000";price.placeholder="Prix proposé en FCFA";price.value=typeof x.prixPropose==="number"?x.prixPropose:"";c.append(price);const msg=document.createElement("textarea");msg.rows=2;msg.maxLength=500;msg.placeholder="Message au client";msg.value=x.reponsePharmacie||"";c.append(msg);const status=document.createElement("select");[["a_traiter","À traiter"],["pharmacie_confirmee","Disponible – prix proposé"],["indisponible","Indisponible"],["en_preparation","En préparation"],["prete_a_livrer","Prête à livrer"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;status.append(o);});status.value=x.statut||"a_traiter";c.append(status);const save=document.createElement("button");save.className="primary";save.textContent="Enregistrer la réponse";save.onclick=async()=>{save.disabled=true;try{const n=price.value===""?null:Number(price.value);if(n!==null&&(!Number.isInteger(n)||n<0||n>10000000))throw Error("Prix invalide");await d.ref.update({statut:status.value,prixPropose:n,reponsePharmacie:msg.value.trim(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});alert("Réponse enregistrée.");await mqciChargerDemandesAttribuees();}catch(e){alert("Mise à jour impossible : "+e.message);save.disabled=false;}};c.append(save);z.append(c);});}catch(e){z.textContent="Impossible de charger : "+(e.message||e);}}
+</script>
+
+<script>
+function mqciAdminPharmacieAutorise(){return !!(window.auth&&auth.currentUser&&auth.currentUser.uid===ADMIN_UID);}
+async function mqciChargerGestionPharmaciesAdmin(){
+ const pharmaciesZone=document.getElementById("mqciAdminPharmaciesListe"),demandesZone=document.getElementById("mqciAdminDemandesPharmacieListe"),status=document.getElementById("mqciAdminPharmacieStatus");
+ if(!mqciAdminPharmacieAutorise()){status.textContent="Accès réservé à l’administrateur.";return;}
+ pharmaciesZone.textContent="Chargement des établissements…";demandesZone.textContent="Chargement des demandes…";status.textContent="";
+ try{
+  const [ps,ds]=await Promise.all([db.collection("pharmacies_professionnelles").limit(100).get(),db.collection("demandes_pharmacie").limit(100).get()]);
+  const pharmacies=[];ps.forEach(doc=>pharmacies.push({id:doc.id,...doc.data()}));
+  const approuvees=pharmacies.filter(p=>p.statut==="approuve");
+  pharmaciesZone.replaceChildren();
+  if(!pharmacies.length)pharmaciesZone.textContent="Aucune candidature reçue.";
+  pharmacies.forEach(p=>{
+   const card=document.createElement("article");card.style.cssText="border:1px solid #DCE7DE;border-radius:13px;padding:13px;margin:10px 0;background:#fff";
+   const title=document.createElement("strong");title.textContent=p.nom||"Pharmacie sans nom";
+   const details=document.createElement("p");details.style.whiteSpace="pre-line";details.textContent="Responsable : "+(p.responsable||"—")+"\nTéléphone : "+(p.telephone||"—")+" · "+(p.email||"")+"\nAdresse : "+(p.adresse||"")+" · "+(p.commune||"")+"\nAutorisation : "+(p.referenceAutorisation||"—")+"\nStatut : "+(p.statut||"inconnu");card.append(title,details);
+   if(p.statut==="en_attente"){
+    const approve=document.createElement("button");approve.type="button";approve.className="primary";approve.textContent="Approuver";approve.onclick=()=>mqciAdminStatutPharmacie(p.id,"approuve");
+    const reject=document.createElement("button");reject.type="button";reject.style.cssText="margin:8px;background:#FFF0EF;color:#A52A2A";reject.textContent="Refuser";reject.onclick=()=>mqciAdminStatutPharmacie(p.id,"refuse");card.append(approve,reject);
+   }
+   pharmaciesZone.append(card);
+  });
+  demandesZone.replaceChildren();
+  if(ds.empty)demandesZone.textContent="Aucune demande client enregistrée.";
+  ds.forEach(doc=>{
+   const d=doc.data(),card=document.createElement("article");card.style.cssText="border:1px solid #DCE7DE;border-radius:13px;padding:13px;margin:10px 0;background:#fff";
+   const title=document.createElement("strong");title.textContent="Demande "+doc.id.slice(0,10)+" · "+(d.statut||"a_traiter");
+   const details=document.createElement("p");details.textContent=(d.nom||"Client")+" · "+(d.telephone||"")+" · "+(d.commune||"")+" · "+(d.adresse||"")+" — "+(d.produits||"");card.append(title,details);
+   const current=document.createElement("p");current.className="notice";current.textContent="Pharmacie attribuée : "+(d.pharmacieAssigneeUid||"Aucune");card.append(current);
+   if(approuvees.length){
+    const select=document.createElement("select");select.setAttribute("aria-label","Pharmacie à attribuer");
+    approuvees.forEach(p=>{const opt=document.createElement("option");opt.value=p.id;opt.textContent=(p.nom||p.id)+" — "+(p.commune||"");if(p.id===d.pharmacieAssigneeUid)opt.selected=true;select.append(opt);});card.append(select);
+    const assign=document.createElement("button");assign.type="button";assign.className="primary";assign.textContent="Attribuer à cette pharmacie";assign.onclick=async()=>{if(!mqciAdminPharmacieAutorise())return;assign.disabled=true;try{await doc.ref.update({pharmacieAssigneeUid:select.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});status.textContent="Demande attribuée.";await mqciChargerGestionPharmaciesAdmin();}catch(e){status.textContent="Attribution impossible : "+(e.message||e);assign.disabled=false;}};card.append(assign);
+   }else{const no=document.createElement("p");no.className="notice";no.textContent="Aucune pharmacie approuvée : approuve d’abord un établissement.";card.append(no);}
+   demandesZone.append(card);
+  });
+ }catch(e){console.error("Gestion pharmacies admin",e);status.textContent="Chargement impossible : "+(e.message||e);pharmaciesZone.textContent="Erreur de lecture.";demandesZone.textContent="Erreur de lecture."}
+}
+async function mqciAdminStatutPharmacie(uid,statut){
+ const status=document.getElementById("mqciAdminPharmacieStatus");if(!mqciAdminPharmacieAutorise()){status.textContent="Accès réservé à l’administrateur.";return;}
+ const action=statut==="approuve"?"approuver":"refuser";if(!confirm("Confirmer la décision : "+action+" cette pharmacie ?"))return;
+ try{await db.collection("pharmacies_professionnelles").doc(uid).update({statut,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});status.textContent="Décision enregistrée.";await mqciChargerGestionPharmaciesAdmin();}
+ catch(e){status.textContent="Mise à jour impossible : "+(e.message||e);}
+}
 </script>
 </body>
 </html>
