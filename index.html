@@ -1742,6 +1742,78 @@ details[aria-label="Contacts d’urgence"]{margin-top:0!important;margin-bottom:
 }
 </style>
 
+
+<style id="mqci-interface-orange-money">
+:root{
+ --mqci-orange:#F28C28;--mqci-green:#16834A;--mqci-ink:#202522;
+ --mqci-line:#dedfdf;--mqci-bg:#f7f8f7;
+}
+body{background:var(--mqci-bg)!important;color:var(--mqci-ink)!important;padding-bottom:calc(82px + env(safe-area-inset-bottom))!important}
+header.mqci-header-premium{
+ background:#fff!important;color:var(--mqci-ink)!important;border-radius:0!important;
+ box-shadow:none!important;padding:16px 18px 10px!important;overflow:visible!important;
+}
+header.mqci-header-premium:after{display:none!important}
+.mqci-header-orbit,.mqci-header-footer,.mqci-flag-stripe{display:none!important}
+.mqci-brand-lockup{display:flex!important;align-items:center!important;gap:11px!important}
+.mqci-brand-mark{width:46px!important;height:46px!important;border-radius:13px!important;background:#fff!important;border:1px solid var(--mqci-line)!important;box-shadow:0 2px 7px #0000000c!important}
+.mqci-brand-mark img{width:100%!important;height:100%!important;object-fit:contain!important}
+.mqci-brand-eyebrow{color:#778079!important;font-size:8px!important;letter-spacing:1px!important}
+.mqci-brand-name{color:#202522!important;font-size:17px!important;font-weight:900!important}
+.mqci-brand-name em{color:var(--mqci-orange)!important}
+.mqci-brand-promise{color:#737b75!important;font-size:10px!important}
+.mqci-header-actions{display:flex;align-items:center;gap:9px;margin:13px 0 2px}
+.mqci-header-actions button{width:42px;height:42px;min-height:42px;padding:0;border:1px solid var(--mqci-line);border-radius:50%;background:#fff;color:#202522;font-size:19px;box-shadow:none}
+.mqci-header-actions button:last-child{margin-left:auto;background:#f1f2f1}
+#accueilHomeShell{padding:4px 15px 112px!important;max-width:720px!important;margin:0 auto!important}
+header #homeWelcome{
+ display:block!important;margin:10px 0 16px!important;padding:7px 2px 13px!important;
+ background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;color:var(--mqci-ink)!important
+}
+header #homeWelcome h1{font-size:25px!important;line-height:1.2!important;color:var(--mqci-ink)!important;font-weight:850!important;margin:6px 0 12px!important}
+header #homeWelcome .home-welcome-question{color:#252a26!important;font-size:15px!important;font-weight:750!important;margin:0 0 9px!important}
+header #homeWelcome .home-location-label{color:#606b63!important;font-size:12px!important;font-weight:700!important}
+header #homeWelcome .home-location-input,header #homeWelcome .home-search input{
+ min-height:47px!important;border:1px solid var(--mqci-line)!important;border-radius:12px!important;
+ background:#fff!important;color:#202522!important;box-shadow:none!important;font-size:14px!important
+}
+header #homeWelcome .home-search{margin-top:10px!important}
+header #homeWelcome .home-search-icon{color:var(--mqci-orange)!important}
+.home-section-heading{margin:18px 2px 11px!important;align-items:center!important}
+.home-section-heading h2{font-size:19px!important;color:#202522!important;font-weight:850!important}
+.home-section-heading p{color:#778079!important;font-size:11px!important}
+#homeFamilyLauncher{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important}
+#homeFamilyLauncher>.home-section-heading{grid-column:1/-1}
+#homeFamilyLauncher .family-entry{
+ min-width:0!important;min-height:116px!important;padding:13px 8px!important;
+ border:1px solid var(--mqci-line)!important;border-radius:17px!important;background:#fff!important;
+ box-shadow:0 2px 7px #00000008!important;display:flex!important;flex-direction:column!important;
+ align-items:center!important;justify-content:center!important;text-align:center!important;gap:7px!important;color:#252a26!important
+}
+#homeFamilyLauncher .family-entry .family-entry-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:#fff2e7;color:var(--mqci-orange);font-size:25px!important}
+#homeFamilyLauncher .family-entry strong{font-size:11px!important;line-height:1.2!important;color:#202522!important}
+#homeFamilyLauncher .family-entry small{font-size:9px!important;line-height:1.25!important;color:#778079!important}
+.home-panel{border-radius:18px!important}
+.home-discovery-card,.family-shortcut{
+ background:#fff!important;border:1px solid var(--mqci-line)!important;border-radius:15px!important;
+ box-shadow:0 2px 7px #00000008!important;color:#242a25!important
+}
+#accueilBottomNav{
+ background:rgba(255,255,255,.98)!important;border-top:1px solid #e6e7e6!important;
+ box-shadow:0 -4px 16px #0000000b!important;padding:7px 6px calc(7px + env(safe-area-inset-bottom))!important
+}
+#accueilBottomNav button{min-height:54px!important;border-radius:28px!important;color:#515a54!important;font-size:9px!important;gap:5px!important}
+#accueilBottomNav button span{font-size:20px!important}
+#accueilBottomNav button.nav-active{background:#f1f2f1!important;color:var(--mqci-orange)!important}
+button.primary,.mqci-auth-primary{background:var(--mqci-orange)!important;color:#fff!important;border:0!important;border-radius:13px!important;box-shadow:0 4px 10px #f28c2826!important}
+input,select,textarea{border-radius:12px!important}
+@media(max-width:370px){
+ #homeFamilyLauncher{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ header #homeWelcome h1{font-size:22px!important}
+ .mqci-brand-name{font-size:15px!important}
+}
+</style>
+
 </head>
 <body>
 
