@@ -1130,4 +1130,43 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
   });
 
+
+  describe("Pharmacies professionnelles et demandes attribuées", () => {
+    const PHARMACY_UID = "pharmacy-test-001";
+    const REQUEST_ID = "pharmacy-request-test-001";
+    it("autorise une candidature pharmacie en attente, mais interdit l’auto-approbation", async () => {
+      const db=testEnv.authenticatedContext(PHARMACY_UID,{email:"pharmacy@example.test"}).firestore();
+      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
+      const ref=doc(db,"pharmacies_professionnelles",PHARMACY_UID);
+      await assertSucceeds(setDoc(ref,{uid:PHARMACY_UID,nom:"Pharmacie test",responsable:"Pharmacien test",telephone:"0700000000",email:"pharmacy@example.test",commune:"Yopougon",adresse:"Yopougon, Abidjan",referenceAutorisation:"AGREMENT-TEST",statut:"en_attente",createdAt:serverTimestamp(),updatedAt:serverTimestamp()}));
+      await assertFails(updateDoc(ref,{statut:"approuve",updatedAt:serverTimestamp()}));
+    });
+    it("limite les demandes aux clients, à l’administrateur et à la pharmacie explicitement assignée", async () => {
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        const db=context.firestore();
+        await db.doc("pharmacies_professionnelles/"+PHARMACY_UID).set({uid:PHARMACY_UID,nom:"Pharmacie test",statut:"approuve"});
+        await db.doc("demandes_pharmacie/"+REQUEST_ID).set({uid:CLIENT_UID,nom:"Client test",telephone:"0700000000",commune:"Yopougon",adresse:"Yopougon, Abidjan",produits:"Médicament test",documentPath:"",statut:"a_traiter",createdAt:Timestamp.now(),updatedAt:Timestamp.now(),pharmacieAssigneeUid:PHARMACY_UID});
+      });
+      const {doc,getDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
+      const pharmacyDb=testEnv.authenticatedContext(PHARMACY_UID).firestore();
+      await assertSucceeds(getDoc(doc(pharmacyDb,"demandes_pharmacie",REQUEST_ID)));
+      await assertSucceeds(updateDoc(doc(pharmacyDb,"demandes_pharmacie",REQUEST_ID),{statut:"pharmacie_confirmee",prixPropose:2500,reponsePharmacie:"Disponible",updatedAt:serverTimestamp()}));
+      await assertFails(updateDoc(doc(pharmacyDb,"demandes_pharmacie",REQUEST_ID),{uid:PHARMACY_UID,updatedAt:serverTimestamp()}));
+      const otherDb=testEnv.authenticatedContext(OTHER_UID).firestore();
+      await assertFails(getDoc(doc(otherDb,"demandes_pharmacie",REQUEST_ID)));
+      const clientDb=testEnv.authenticatedContext(CLIENT_UID).firestore();
+      await assertSucceeds(getDoc(doc(clientDb,"demandes_pharmacie",REQUEST_ID)));
+    });
+    it("interdit à une pharmacie non approuvée d’accéder aux demandes attribuées", async () => {
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        const db=context.firestore();
+        await db.doc("pharmacies_professionnelles/pending-pharmacy").set({uid:"pending-pharmacy",statut:"en_attente"});
+        await db.doc("demandes_pharmacie/pending-request").set({uid:CLIENT_UID,nom:"Client",telephone:"0700000000",commune:"Cocody",adresse:"Cocody",produits:"Test",documentPath:"",statut:"a_traiter",createdAt:Timestamp.now(),updatedAt:Timestamp.now(),pharmacieAssigneeUid:"pending-pharmacy"});
+      });
+      const db=testEnv.authenticatedContext("pending-pharmacy").firestore();
+      const {doc,getDoc}=require("firebase/firestore");
+      await assertFails(getDoc(doc(db,"demandes_pharmacie","pending-request")));
+    });
+  });
+
 });
