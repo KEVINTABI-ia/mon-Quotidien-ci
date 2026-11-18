@@ -12188,9 +12188,10 @@ async function chargerArticlesBoutiquesAccueil(){
   articles.sort((a,b)=>b.prix-a.prix);
   const visibles=articles.slice(0,20);
   if(!visibles.length){zone.innerHTML='<p class="notice">Aucun article publié pour le moment. Les articles apparaîtront ici après validation par l’administrateur.</p>';return;}
-  zone.innerHTML='<div aria-label="Articles des boutiques et commerces" tabindex="0" style="display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:8px 2px 14px;">'+visibles.map((p,i)=>{
+  zone.style.cssText="display:block;width:100%;max-width:100%;min-width:0;overflow:hidden;box-sizing:border-box;";
+  zone.innerHTML='<div aria-label="Articles des boutiques et commerces" tabindex="0" style="display:flex!important;flex-flow:row nowrap!important;align-items:stretch;justify-content:flex-start!important;gap:12px;width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;padding:8px 2px 14px;">'+visibles.map((p,i)=>{
    const nom=echapperTextePublicite(p.nom),boutique=echapperTextePublicite(p.boutiqueNom),photo=echapperTextePublicite(p.photoUrl||"");
-   return '<article class="card" style="box-sizing:border-box;flex:0 0 min(72vw,230px);width:min(72vw,230px);max-width:230px;padding:10px;margin:0;scroll-snap-align:start;">'
+   return '<article class="card" style="display:block!important;box-sizing:border-box!important;flex:0 0 min(72%,230px)!important;width:min(72%,230px)!important;min-width:0!important;max-width:230px!important;padding:10px;margin:0;scroll-snap-align:start;">'
     +(photo?'<img src="'+photo+'" alt="'+nom+'" loading="lazy" style="display:block;width:100%;height:145px;object-fit:cover;border-radius:9px;margin:0 auto 9px;">':'<div style="height:145px;display:flex;align-items:center;justify-content:center;background:#F1F6F2;border-radius:9px;font-size:34px;">🛍️</div>')
     +'<strong style="display:block;">'+nom+'</strong><p style="margin:5px 0;color:#17663D;font-weight:800;">'+Number(p.prix).toLocaleString("fr-FR")+' FCFA</p>'
     +'<p class="notice" style="margin:4px 0 10px;">'+boutique+'</p><button type="button" class="primary" style="width:100%;" data-article-index="'+i+'">Commander</button></article>';
