@@ -12151,20 +12151,19 @@ async function chargerAnnoncesValideesAccueil(){
  const zone=document.getElementById("annoncesValideesAccueil");if(!zone)return;
  zone.innerHTML='<p class="notice">Chargement des annonces validées...</p>';
  try{
-  const [annonces,offres]=await Promise.all([
-   db.collection("demandes_nouveaux_services").where("type","==","annonce").where("statut","==","approuve").limit(60).get(),
-   db.collection("annonces_offres").where("statut","==","publiee").limit(60).get()
-  ]);
-  const items=[...annonces.docs.map(doc=>({id:doc.id,source:"annonce",data:doc.data()})),...offres.docs.filter(doc=>doc.data().typeAnnonce==="emploi").map(doc=>({id:doc.id,source:"emploi",data:doc.data()}))].sort((a,b)=>(b.data.createdAt?.toMillis?.()||0)-(a.data.createdAt?.toMillis?.()||0)).slice(0,12);
-  if(!items.length){zone.innerHTML='<p class="notice">Aucune annonce validée pour le moment. Revenez bientôt.</p>';return;}
+  const snap=await db.collection("demandes_nouveaux_services").where("type","==","annonce").where("statut","==","approuve").limit(100).get();
+  const items=snap.docs.map(doc=>({id:doc.id,data:doc.data()}))
+   .filter(item=>item.data.photoUrl&&String(item.data.telephone||"").trim())
+   .sort((a,b)=>(b.data.createdAt?.toMillis?.()||0)-(a.data.createdAt?.toMillis?.()||0)).slice(0,12);
+  if(!items.length){zone.innerHTML='<p class="notice">Aucune affiche validée avec un contact disponible pour le moment.</p>';return;}
   zone.innerHTML=items.map(item=>{
-   const d=item.data,titre=echapperTextePublicite(d.titre||"Annonce");
-   const categorie=echapperTextePublicite(item.source==="emploi"?(d.categorie||"Offre d’emploi"):(d.categorie||"Petite annonce"));
-   const commune=echapperTextePublicite(d.commune||"Côte d’Ivoire"),description=echapperTextePublicite(d.description||"");
+   const d=item.data;
+   const photo=echapperTextePublicite(d.photoUrl);
    const contact=String(d.telephone||"").replace(/[^+0-9]/g,"");
-   const photo=d.photoUrl?'<img src="'+echapperTextePublicite(d.photoUrl)+'" alt="Illustration de l’annonce" loading="lazy" style="width:100%;max-width:150px;height:110px;object-fit:cover;border-radius:10px;margin-bottom:8px;">':"";
-   const entreprise=item.source==="emploi"&&d.entreprise?'<p>'+echapperTextePublicite(d.entreprise)+'</p>':"";
-   return '<article class="card" style="padding:13px;margin:10px 0;">'+photo+'<strong>'+titre+'</strong><p>'+categorie+' · '+commune+'</p>'+entreprise+(description?'<p style="white-space:pre-wrap;">'+description+'</p>':"")+(contact?'<a class="primary" style="display:inline-block;text-decoration:none;margin-top:8px;" href="tel:'+contact+'">📞 Contacter</a>':"")+'<p class="notice" style="margin-bottom:0;">✓ Validée par l’administration</p></article>';
+   return '<article class="card" style="padding:10px;margin:12px 0;text-align:center;">'
+    +'<img src="'+photo+'" alt="Affiche de l’annonce" loading="lazy" style="display:block;width:100%;height:auto;max-height:520px;object-fit:contain;border-radius:10px;margin:0 auto 10px;">'
+    +'<a class="primary" style="display:block;text-decoration:none;text-align:center;margin-top:8px;" href="tel:'+contact+'">📞 Contacter</a>'
+    +'</article>';
   }).join("");
  }catch(e){console.error("Annonces validées accueil :",e);zone.innerHTML='<p class="notice">Impossible de charger les annonces pour le moment.</p>';}
 }
