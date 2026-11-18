@@ -12004,7 +12004,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     other.insertAdjacentElement('afterend',raccourciPartenaire);
 
     const dailyTitle=quotidien.querySelector('.daily-toggle');
-    if(dailyTitle){dailyTitle.innerHTML='Voir tous les autres services <span class="daily-toggle-chevron" aria-hidden="true">⌄</span>';dailyTitle.setAttribute('aria-label','Afficher les autres services du quotidien');}
+    if(dailyTitle){dailyTitle.innerHTML='Autre service du quotidien <span class="daily-toggle-chevron" aria-hidden="true">⌄</span>';dailyTitle.setAttribute('aria-label','Afficher les autres services du quotidien');}
     const transportTitle=mobility.querySelector('.accueil-services-entete h2');
     if(transportTitle)transportTitle.textContent='Voyager et envoyer un colis';
     const transportIntro=mobility.querySelector('.accueil-services-entete p');
@@ -12018,7 +12018,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     nav.setAttribute('aria-label','Navigation principale');
     nav.innerHTML=`
       <button type="button" data-nav="vie-citoyenne"><span>⚖️</span>Vie citoyenne</button>
-      <button type="button" data-nav="services"><span>▦</span>Services</button>
+      <button type="button" data-nav="services"><span>▦</span>Autre service</button>
       <button type="button" data-nav="rechercher-trajet"><span>🧭</span>Rechercher trajet</button>
       <button type="button" data-nav="livraison"><span>📦</span>Livraison</button>
       <button type="button" data-nav="compte"><span>👤</span>Compte</button>`;
@@ -12073,9 +12073,11 @@ window.mtcAfficherActeJudiciaire = function(type){
         ouvrirFamilleAccueil('homeVieCitoyenne');
       }else if(action==='services'){
         retourAccueilFamilles();
-        const launcher=document.getElementById('homeFamilyLauncher');
-        if(launcher)launcher.scrollIntoView({behavior:'smooth',block:'start'});
-        else window.scrollTo({top:0,behavior:'smooth'});
+        const dailyButton=document.querySelector('#menuQuotidien .daily-toggle');
+        const dailyPanel=document.getElementById('dailyServicesPanel');
+        if(dailyButton)dailyButton.setAttribute('aria-expanded','true');
+        if(dailyPanel)dailyPanel.hidden=false;
+        ouvrirSectionPleinEcran('menuQuotidien','Autre service du quotidien');
       }else if(action==='rechercher-trajet'){
         retourAccueilFamilles();
         ouvrirSectionPleinEcran('rechercheGaresV2','Rechercher trajet');
@@ -12813,6 +12815,7 @@ async function mqciAdminStatutPharmacie(uid,statut){
  catch(e){status.textContent="Mise à jour impossible : "+(e.message||e);}
 }
 </script>
+<style id="mqci-autres-services-hors-accueil">#homeQuotidien{display:none!important}</style>
 </body>
 </html>
 
