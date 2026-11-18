@@ -11960,6 +11960,10 @@ window.mtcAfficherActeJudiciaire = function(type){
       <section class="home-panel" id="homeQuotidien">
         <div class="home-section-heading"><div><h2>📢 Annonces validées</h2><p>Petites annonces et offres publiées après validation de l’administrateur.</p></div></div>
         <div id="annoncesValideesAccueil"><p class="notice">Chargement des annonces validées...</p></div>
+      </section>
+      <section class="home-panel" id="homeArticlesBoutiques">
+        <div class="home-section-heading"><div><h2>🛍️ Articles des boutiques et commerces</h2><p>Découvrez les articles publiés par les boutiques et commerces partenaires.</p></div></div>
+        <div id="articlesBoutiquesAccueil"><p class="notice">Chargement des articles publiés...</p></div>
       </section>`;
     main.insertBefore(shell,recherche||main.firstChild);
     const welcome=document.getElementById("homeWelcome");
@@ -11995,6 +11999,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     const other=document.getElementById('homeQuotidien');
     other.appendChild(quotidien);
      chargerAnnoncesValideesAccueil();
+     chargerArticlesBoutiquesAccueil();
 
     const raccourciPartenaire=document.createElement('section');
     raccourciPartenaire.id='homePartenaireAcces';
@@ -12166,6 +12171,32 @@ async function chargerAnnoncesValideesAccueil(){
     +'</article>';
   }).join("")+'</div><p class="notice" style="text-align:center;margin-top:4px;">Faites glisser les annonces horizontalement pour les parcourir</p>';
  }catch(e){console.error("Annonces validées accueil :",e);zone.innerHTML='<p class="notice">Impossible de charger les annonces pour le moment.</p>';}
+}
+async function chargerArticlesBoutiquesAccueil(){
+ const zone=document.getElementById("articlesBoutiquesAccueil");if(!zone)return;
+ zone.innerHTML='<p class="notice">Chargement des articles publiés...</p>';
+ try{
+  const maintenant=Date.now();
+  const [boutiquesSnap,articlesSnap]=await Promise.all([
+   db.collection("demandes_nouveaux_services").where("type","==","commerce").where("statut","==","approuve").limit(200).get(),
+   db.collection("articles_boutiques").where("statut","==","approuve").limit(500).get()
+  ]);
+  const boutiques=boutiquesSnap.docs.filter(doc=>{const d=doc.data(),abonnementActif=d.abonnementFin&&typeof d.abonnementFin.toDate==="function"&&d.abonnementFin.toDate().getTime()>maintenant;return d.visibleManuellement!==false&&(d.modePartenaire===true||abonnementActif);}).map(doc=>({id:doc.id,...doc.data()}));
+  const parId=new Map(boutiques.map(b=>[b.id,b])),articles=[];
+  boutiques.forEach(b=>(Array.isArray(b.produits)?b.produits:[]).forEach((p,index)=>{const nom=String(p.nom||"").trim(),prix=Number(p.prix);if(nom&&Number.isFinite(prix)&&prix>0)articles.push({boutiqueId:b.id,index,nom,prix,boutiqueNom:b.titre||b.categorie||"Commerce",photoUrl:p.photoUrl||"",description:p.description||""});}));
+  articlesSnap.docs.forEach(doc=>{const p=doc.data(),b=parId.get(p.boutiqueId);if(!b||p.disponible===false)return;articles.push({boutiqueId:b.id,index:doc.id,nom:p.nom||"Article",prix:Number(p.prix||0),categorie:p.categorie||"",description:p.description||"",photoUrl:p.photoUrl||"",boutiqueNom:b.titre||p.boutiqueNom||b.categorie||"Commerce"});});
+  articles.sort((a,b)=>b.prix-a.prix);
+  const visibles=articles.slice(0,20);
+  if(!visibles.length){zone.innerHTML='<p class="notice">Aucun article publié pour le moment. Les articles apparaîtront ici après validation par l’administrateur.</p>';return;}
+  zone.innerHTML='<div aria-label="Articles des boutiques et commerces" tabindex="0" style="display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:8px 2px 14px;">'+visibles.map((p,i)=>{
+   const nom=echapperTextePublicite(p.nom),boutique=echapperTextePublicite(p.boutiqueNom),photo=echapperTextePublicite(p.photoUrl||"");
+   return '<article class="card" style="box-sizing:border-box;flex:0 0 min(72vw,230px);width:min(72vw,230px);max-width:230px;padding:10px;margin:0;scroll-snap-align:start;">'
+    +(photo?'<img src="'+photo+'" alt="'+nom+'" loading="lazy" style="display:block;width:100%;height:145px;object-fit:cover;border-radius:9px;margin:0 auto 9px;">':'<div style="height:145px;display:flex;align-items:center;justify-content:center;background:#F1F6F2;border-radius:9px;font-size:34px;">🛍️</div>')
+    +'<strong style="display:block;">'+nom+'</strong><p style="margin:5px 0;color:#17663D;font-weight:800;">'+Number(p.prix).toLocaleString("fr-FR")+' FCFA</p>'
+    +'<p class="notice" style="margin:4px 0 10px;">'+boutique+'</p><button type="button" class="primary" style="width:100%;" data-article-index="'+i+'">Commander</button></article>';
+  }).join("")+'</div><p class="notice" style="text-align:center;margin-top:4px;">Faites glisser pour découvrir les articles</p>';
+  zone.querySelectorAll("[data-article-index]").forEach(btn=>btn.addEventListener("click",()=>{const p=visibles[Number(btn.dataset.articleIndex)];if(p)ouvrirCommandeBoutique(p.boutiqueId,p.index);}));
+ }catch(e){console.error("Articles boutiques accueil :",e);zone.innerHTML='<p class="notice">Impossible de charger les articles pour le moment.</p>';}
 }
 async function supprimerAnnonceAdmin(id){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
