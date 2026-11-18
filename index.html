@@ -1871,6 +1871,33 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
  color:#34483b!important;font-weight:650!important;text-shadow:none!important
 }
 </style>
+<style id="familles-services-plein-ecran-fix">
+/* Les familles deviennent de vrais écrans indépendants du défilement de l'accueil. */
+#accueilHomeShell.family-view-active{
+  position:fixed!important;
+  inset:0 0 calc(66px + env(safe-area-inset-bottom)) 0!important;
+  z-index:5400!important;
+  width:100%!important;
+  max-width:none!important;
+  height:auto!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:max(16px,env(safe-area-inset-top)) 14px 24px!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  background:#f4f7f4!important;
+}
+#accueilHomeShell.family-view-active .home-panel.family-panel-active{
+  display:block!important;
+  width:100%!important;
+  min-height:100%;
+  margin:0!important;
+  box-sizing:border-box;
+}
+#accueilBottomNav{z-index:5500!important}
+</style>
 </head>
 <body>
 
