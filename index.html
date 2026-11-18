@@ -12972,3 +12972,71 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
   #accueilHomeShell #homeFamilyLauncher>.family-entry small{font-size:10px!important}
 }
 </style>
+
+
+<style id="mqci-accueil-carrousels-debordement-fix">
+/* Empêche les contenus chargés après coup d'élargir toute la page d'accueil. */
+#accueilHomeShell{
+  display:block!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  overflow-x:clip!important;
+}
+#accueilHomeShell>.home-panel,
+#accueilHomeShell #homeQuotidien,
+#accueilHomeShell #homeArticlesBoutiques{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+#accueilHomeShell #annoncesValideesAccueil,
+#accueilHomeShell #articlesBoutiquesAccueil{
+  display:block!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+#accueilHomeShell .annonces-accueil-defilement,
+#accueilHomeShell #articlesBoutiquesAccueil>div[aria-label="Articles des boutiques et commerces"]{
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:nowrap!important;
+  justify-content:flex-start!important;
+  align-items:stretch!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  overscroll-behavior-x:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+#accueilHomeShell .annonces-accueil-defilement>.card{
+  box-sizing:border-box!important;
+  flex:0 0 min(82%,320px)!important;
+  width:min(82%,320px)!important;
+  min-width:0!important;
+  max-width:320px!important;
+}
+#accueilHomeShell #articlesBoutiquesAccueil>div[aria-label="Articles des boutiques et commerces"]>.card{
+  box-sizing:border-box!important;
+  flex:0 0 min(72%,230px)!important;
+  width:min(72%,230px)!important;
+  min-width:0!important;
+  max-width:230px!important;
+}
+#accueilHomeShell #annoncesValideesAccueil img,
+#accueilHomeShell #articlesBoutiquesAccueil img{
+  max-width:100%!important;
+}
+@supports not (overflow:clip){
+  #accueilHomeShell{overflow-x:hidden!important}
+}
+</style>
