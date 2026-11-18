@@ -1898,6 +1898,47 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
 }
 #accueilBottomNav{z-index:5500!important}
 </style>
+<style id="mqci-familles-remplacement-ecran-fix">
+/* Une famille sélectionnée remplace l'accueil : seul son menu reste visible. */
+#accueilHomeShell.family-view-active{
+  position:static!important;
+  inset:auto!important;
+  width:100%!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+  padding:0!important;
+  background:transparent!important;
+}
+#accueilHomeShell.family-view-active #homeFamilyLauncher,
+#accueilHomeShell.family-view-active .home-panel:not(.family-panel-active){
+  display:none!important;
+}
+#accueilHomeShell.family-view-active .home-panel.family-panel-active{
+  position:fixed!important;
+  inset:0 0 calc(68px + env(safe-area-inset-bottom)) 0!important;
+  z-index:5401!important;
+  display:block!important;
+  width:100vw!important;
+  max-width:none!important;
+  min-width:0!important;
+  min-height:0!important;
+  height:auto!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:max(18px,env(safe-area-inset-top)) 16px 30px!important;
+  box-sizing:border-box!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+  border:0!important;
+  border-radius:0!important;
+  background:#f6f8f6!important;
+  box-shadow:none!important;
+}
+#accueilBottomNav{z-index:5500!important}
+</style>
 </head>
 <body>
 
