@@ -768,7 +768,12 @@ service cloud.firestore {
             && request.resource.data.abonnement == "inactif")
         && request.resource.data.createdAt == request.time;
       allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
-      allow update, delete: if estAdmin();
+      // L'administration peut approuver le dossier, mais aucun client ni administrateur
+      // via le SDK navigateur ne peut activer ou prolonger l'abonnement payant.
+      allow update: if estAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut"])
+        && request.resource.data.statut == "approuve";
+      allow delete: if estAdmin();
     }
 
     match /offres_ramassage/{offreId} {
