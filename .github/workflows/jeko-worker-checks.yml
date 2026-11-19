@@ -1,0 +1,31 @@
+name: Cloudflare Jèko Worker checks
+on:
+  pull_request:
+    paths:
+      - "cloudflare/**"
+      - ".github/workflows/jeko-worker-checks.yml"
+      - "index.html"
+  push:
+    branches: [main]
+    paths:
+      - "cloudflare/**"
+      - ".github/workflows/jeko-worker-checks.yml"
+      - "index.html"
+permissions:
+  contents: read
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check Worker module syntax
+        run: node --input-type=module --check < cloudflare/worker.js
+      - name: Ensure browser calls use Worker endpoints
+        run: |
+          grep -q "mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout" index.html
+          grep -q "mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/status" index.html
+          ! grep -q "cloudfunctions.net/createJekoCheckout" index.html
+          ! grep -q "cloudfunctions.net/getJekoPaymentStatus" index.html

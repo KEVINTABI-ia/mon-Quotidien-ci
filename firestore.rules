@@ -1710,6 +1710,16 @@ service cloud.firestore {
       allow delete: if estAdmin();
     }
 
+    // Paiements Jèko : seules les Cloud Functions Admin SDK peuvent écrire ces documents.
+    match /payments/{paymentId} {
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+    match /payment_webhooks/{eventId} {
+      allow read: if estAdmin();
+      allow create, update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

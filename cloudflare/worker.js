@@ -1,0 +1,268 @@
+const FIREBASE_PROJECT_ID = "mon-transport-ci";
+const FIREBASE_API_KEY = "AIzaSyBJFCyGS-cEaEm0_c_-p0CzunNcME9-u7Q";
+const JEKO_API_BASE = "https://api.jeko.africa";
+const FIREBASE_CERTS = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com";
+const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const DATASTORE_SCOPE = "https://www.googleapis.com/auth/datastore";
+const APP_RETURN_URL = "https://kevintabi-ia.github.io/mon-Quotidien-ci/";
+
+let firebaseCertCache;
+let firebaseCertExpiry = 0;
+let oauthTokenCache;
+
+const json = (body, status = 200) => new Response(JSON.stringify(body), {
+  status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
+});
+const b64url = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
+const decodeB64url = value => Uint8Array.from(atob(value.replace(/-/g,"+").replace(/_/g,"/") + "=".repeat((4-value.length%4)%4)), c=>c.charCodeAt(0));
+const decodeJson = value => JSON.parse(new TextDecoder().decode(decodeB64url(value)));
+const toB64 = value => btoa(unescape(encodeURIComponent(value)));
+const fromB64 = value => decodeURIComponent(escape(atob(value)));
+const TIMESTAMP_FIELDS = new Set(["createdAt","updatedAt","confirmedAt","receivedAt","dateActivation","dateExpiration","lastProviderCheckAt"]);
+const fields = obj => ({ fields: Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,TIMESTAMP_FIELDS.has(k)&&typeof v==="string"?{timestampValue:new Date(v).toISOString()}:toFirestore(v)])) });
+function toFirestore(v) {
+  if (v === null) return { nullValue: null };
+  if (typeof v === "boolean") return { booleanValue: v };
+  if (typeof v === "number") return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (typeof v === "string") return { stringValue: v };
+  if (v instanceof Date) return { timestampValue: v.toISOString() };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(toFirestore) } };
+  return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k,x])=>[k,toFirestore(x)])) } };
+}
+function fromFirestore(v) {
+  if (!v) return null;
+  if ("stringValue" in v) return v.stringValue;
+  if ("integerValue" in v) return Number(v.integerValue);
+  if ("doubleValue" in v) return v.doubleValue;
+  if ("booleanValue" in v) return v.booleanValue;
+  if ("timestampValue" in v) return new Date(v.timestampValue);
+  if ("nullValue" in v) return null;
+  if ("arrayValue" in v) return (v.arrayValue.values || []).map(fromFirestore);
+  if ("mapValue" in v) return Object.fromEntries(Object.entries(v.mapValue.fields || {}).map(([k,x])=>[k,fromFirestore(x)]));
+  return null;
+}
+function docData(doc) {
+  return doc ? Object.fromEntries(Object.entries(doc.fields || {}).map(([k,v])=>[k,fromFirestore(v)])) : null;
+}
+function pemBytes(pem) {
+  return Uint8Array.from(atob(pem.replace(/-----[^-]+-----/g,"").replace(/\s/g,"")), c=>c.charCodeAt(0));
+}
+async function signJwt(payload, privateKeyPem) {
+  const header = b64url(new TextEncoder().encode(JSON.stringify({alg:"RS256",typ:"JWT"})));
+  const body = b64url(new TextEncoder().encode(JSON.stringify(payload)));
+  const input = header + "." + body;
+  const key = await crypto.subtle.importKey("pkcs8", pemBytes(privateKeyPem), {name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"}, false, ["sign"]);
+  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(input));
+  return input + "." + b64url(sig);
+}
+async function serviceToken(env) {
+  if (oauthTokenCache && oauthTokenCache.exp > Date.now()+60000) return oauthTokenCache.token;
+  const sa = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  if (sa.project_id !== FIREBASE_PROJECT_ID || !sa.client_email || !sa.private_key) throw new Error("service_account_configuration_invalid");
+  const now = Math.floor(Date.now()/1000);
+  const assertion = await signJwt({iss:sa.client_email,scope:DATASTORE_SCOPE,aud:GOOGLE_TOKEN_URL,iat:now,exp:now+3600},sa.private_key);
+  const response = await fetch(GOOGLE_TOKEN_URL,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"urn:ietf:params:oauth:grant-type:jwt-bearer",assertion})});
+  const data = await response.json();
+  if (!response.ok || !data.access_token) throw new Error("google_oauth_failed");
+  oauthTokenCache = {token:data.access_token,exp:Date.now()+Number(data.expires_in||3600)*1000};
+  return data.access_token;
+}
+async function firestore(env, path, init={}) {
+  const token = await serviceToken(env);
+  const endpoint=new URL("https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents/"+path);
+  if(init.method==="PATCH"&&typeof init.body==="string") {
+    try { for(const key of Object.keys(JSON.parse(init.body).fields||{})) endpoint.searchParams.append("updateMask.fieldPaths",key); } catch {}
+  }
+  const response = await fetch(endpoint.toString(),{
+    ...init, headers:{authorization:"Bearer "+token,"content-type":"application/json",...(init.headers||{})}
+  });
+  const data = await response.json().catch(()=>({}));
+  if (!response.ok) {
+    if (response.status===404) return null;
+    throw new Error("firestore_"+response.status);
+  }
+  return data;
+}
+async function getDoc(env,path) { return firestore(env,path); }
+function resourceName(path) { return "projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents/"+path; }
+async function commitWrites(env,writes) {
+  const token=await serviceToken(env);
+  const response=await fetch("https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents:commit",{
+    method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({writes})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok) throw new Error("firestore_commit_"+response.status);
+  return data;
+}
+function updateWrite(path,data,updateTime,exists) {
+  const write={update:{name:resourceName(path),...fields(data)},updateMask:{fieldPaths:Object.keys(data)}};
+  write.currentDocument=updateTime?{updateTime}:exists===false?{exists:false}:{exists:true};
+  return write;
+}
+function createWrite(path,data) {
+  return {update:{name:resourceName(path),...fields(data)},currentDocument:{exists:false}};
+}
+
+async function firebaseUser(token) {
+  const response=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key="+FIREBASE_API_KEY,{
+    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({idToken:token})
+  });
+  if(!response.ok) return null;
+  const data=await response.json();
+  const user=data.users?.[0];
+  if(!user?.localId||user.disabled===true) return null;
+  return {sub:user.localId,email:user.email||null};
+}
+async function requireUser(request) {
+  const token=(request.headers.get("authorization")||"").match(/^Bearer\s+(.+)$/i)?.[1];
+  if(!token) return null;
+  try { return await firebaseUser(token); } catch { return null; }
+}
+async function jeko(env,path,init={}) {
+  const response=await fetch(JEKO_API_BASE+path,{...init,headers:{
+    "X-API-KEY":env.JEKO_API_KEY,"X-API-KEY-ID":env.JEKO_API_KEY_ID,"content-type":"application/json",...(init.headers||{})
+  },signal:AbortSignal.timeout(15000)});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok) throw new Error("jeko_provider_"+response.status);
+  return data;
+}
+async function createCheckout(request,env) {
+  const user=await requireUser(request);
+  if(!user) return json({error:"unauthorized"},401);
+  let body={}; try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const methods=["orange","wave","mtn","moov","djamo"];
+  if(!methods.includes(body.paymentMethod)) return json({error:"invalid_payment_method"},400);
+  const cfgDoc=await getDoc(env,"configuration_abonnements/globale");
+  const services=docData(cfgDoc)?.services||{};
+  const cfg=services.automobiliste||{};
+  const duration=Number(cfg.duree??12), unit=cfg.unite||"mois", base=Number(cfg.prix??1000);
+  if(cfg.actif===false) return json({error:"plan_unavailable"},409);
+  if(duration!==12||unit!=="mois"||!Number.isSafeInteger(base)||base<1||base>10000000) return json({error:"plan_configuration_invalid"},503);
+  const now=new Date(), start=cfg.promotionDebut?new Date(cfg.promotionDebut+"T00:00:00Z"):null, end=cfg.promotionFin?new Date(cfg.promotionFin+"T23:59:59Z"):null, promo=Number(cfg.promotionPrix||0);
+  const amountXof=cfg.promotionActive===true&&promo>0&&promo<=base&&start&&end&&now>=start&&now<=end?promo:base;
+  const id=crypto.randomUUID().replace(/-/g,"");
+  const reference="MQCI-"+id;
+  const path="payments/"+id;
+  const initial={uid:user.sub,serviceId:"automobiliste",planId:"annuel",provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationMonths:12,status:"pending",clientReference:reference,createdAt:now.toISOString(),updatedAt:now.toISOString()};
+  await firestore(env,path,{method:"PATCH",body:JSON.stringify(fields(initial))});
+  try {
+    const checkout=await jeko(env,"/partner_api/payment_requests",{method:"POST",body:JSON.stringify({
+      storeId:env.JEKO_STORE_ID,amountCents:amountXof*100,currency:"XOF",reference,
+      paymentDetails:{type:"redirect",data:{paymentMethod:body.paymentMethod,successUrl:APP_RETURN_URL+"?payment=return&paymentId="+id,errorUrl:APP_RETURN_URL+"?payment=error&paymentId="+id}}
+    })});
+    const checkoutId=checkout.id||checkout.paymentRequestId;
+    const redirect=checkout.redirectUrl||checkout.paymentUrl||checkout.url;
+    if(typeof checkoutId!=="string"||typeof redirect!=="string"||!/^https:\/\//i.test(redirect)) throw new Error("jeko_response_invalid");
+    await firestore(env,path,{method:"PATCH",body:JSON.stringify(fields({providerPaymentRequestId:checkoutId,checkoutUrl:redirect,updatedAt:new Date().toISOString()}))});
+    return json({paymentId:id,checkoutUrl:redirect},201);
+  } catch(e) {
+    await firestore(env,path,{method:"PATCH",body:JSON.stringify(fields({status:"failed",initializationError:"provider_unavailable",updatedAt:new Date().toISOString()}))}).catch(()=>{});
+    return json({error:"payment_initialization_failed"},502);
+  }
+}
+function safeHexEqual(a,b) {
+  if(!/^[a-f0-9]{64}$/i.test(a)||!/^[a-f0-9]{64}$/i.test(b)) return false;
+  const x=Uint8Array.from(a.match(/../g),v=>parseInt(v,16)),y=Uint8Array.from(b.match(/../g),v=>parseInt(v,16));
+  let diff=0;for(let i=0;i<x.length;i++)diff|=x[i]^y[i];return diff===0;
+}
+async function verifyHmac(raw,signature,secret) {
+  const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+  return safeHexEqual(signature,Array.from(new Uint8Array(await crypto.subtle.sign("HMAC",key,raw))).map(v=>v.toString(16).padStart(2,"0")).join(""));
+}
+function addMonthsClamped(date,months) {
+  const d=new Date(date), day=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+months);
+  const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(day,last));return d;
+}
+async function webhook(request,env) {
+  if(request.method!=="POST") return new Response("Method Not Allowed",{status:405});
+  const raw=await request.arrayBuffer(), signature=request.headers.get("Jeko-Signature")||"";
+  if(!await verifyHmac(raw,signature,env.JEKO_WEBHOOK_SECRET)) return new Response("Unauthorized",{status:401});
+  const event=request.headers.get("Jeko-Event")||"";
+  if(event!=="TRANSACTION_COMPLETED"&&event!=="transaction.completed") return new Response("OK",{status:200});
+  let tx;try{tx=JSON.parse(new TextDecoder().decode(raw));}catch{return new Response("Bad Request",{status:400});}
+  const details=tx.transactionDetails||{}, reference=details.reference, transactionId=tx.id||details.transactionId, requestId=details.id;
+  if(typeof reference!=="string"||!reference.startsWith("MQCI-")||typeof transactionId!=="string"||typeof requestId!=="string") return new Response("OK",{status:200});
+  const paymentId=reference.slice(5), paymentPath="payments/"+paymentId, paymentDoc=await getDoc(env,paymentPath);
+  if(!paymentDoc) return new Response("OK",{status:200});
+  const payment=docData(paymentDoc);
+  const amount=tx.amount?.amount;
+  const valid=payment.provider==="jeko"&&payment.clientReference===reference&&payment.providerPaymentRequestId===requestId&&
+    tx.storeId===env.JEKO_STORE_ID&&tx.transactionType==="payment"&&tx.amount?.currency==="XOF"&&
+    Number.isSafeInteger(amount)&&amount===payment.amountCents;
+  if(!valid) {
+    await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"provider_data_mismatch",updatedAt:new Date().toISOString()}))});
+    return new Response("OK",{status:200});
+  }
+  const receiptId="jeko_"+Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(transactionId)))).map(v=>v.toString(16).padStart(2,"0")).join("");
+  const receiptPath="payment_webhooks/"+receiptId;
+  const receipt=await getDoc(env,receiptPath);
+  if(receipt) return new Response("OK",{status:200});
+  const now=new Date();
+  const receiptData={provider:"jeko",transactionId,outcome:tx.status==="error"?"failed":"processed",receivedAt:now.toISOString()};
+  if(tx.status==="error") {
+    await commitWrites(env,[
+      updateWrite(paymentPath,{status:"failed",updatedAt:now.toISOString()},paymentDoc.updateTime),
+      createWrite(receiptPath,receiptData)
+    ]);
+    return new Response("OK",{status:200});
+  }
+  if(tx.status!=="success") return new Response("OK",{status:200});
+  if(payment.status==="succeeded") return new Response("OK",{status:200});
+  const subPath="abonnements_automobiliste/"+payment.uid, subDoc=await getDoc(env,subPath), sub=docData(subDoc)||{};
+  const oldEnd=sub.dateExpiration?new Date(sub.dateExpiration):null;
+  const renewing=oldEnd&&oldEnd>now, end=addMonthsClamped(renewing?oldEnd:now,12);
+  const subData={uid:payment.uid,statut:"actif",montantFCFA:payment.amountXof,dureeMois:12,dateActivation:sub.dateActivation||now.toISOString(),dateExpiration:end.toISOString(),paymentId,operateur:"Jèko"};
+  const writes=[
+    updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
+    updateWrite(subPath,subData,subDoc?.updateTime,subDoc?undefined:false),
+    createWrite(receiptPath,receiptData)
+  ];
+  try { await commitWrites(env,writes); }
+  catch(e) {
+    // A concurrent webhook may have committed first. Confirm receipt before returning success.
+    if(!(await getDoc(env,receiptPath))) throw e;
+  }
+  return new Response("OK",{status:200});
+}
+async function paymentStatus(request,env) {
+  const user=await requireUser(request);if(!user)return json({error:"unauthorized"},401);
+  const url=new URL(request.url),id=url.searchParams.get("paymentId");
+  if(!id||!/^[a-f0-9]{32}$/i.test(id)) return json({error:"invalid_payment_id"},400);
+  const doc=await getDoc(env,"payments/"+id),payment=docData(doc);
+  if(!payment||payment.uid!==user.sub||payment.provider!=="jeko") return json({error:"payment_not_found"},404);
+  if(payment.status==="pending"&&payment.providerPaymentRequestId) {
+    const last=payment.lastProviderCheckAt?new Date(payment.lastProviderCheckAt).getTime():0;
+    if(Date.now()-last>10000) {
+      try { const provider=await jeko(env,"/partner_api/payment_requests/"+encodeURIComponent(payment.providerPaymentRequestId));
+        const checkedAt=new Date().toISOString();
+        if(provider.status==="error") {payment.status="failed";await firestore(env,"payments/"+id,{method:"PATCH",body:JSON.stringify(fields({status:"failed",lastProviderCheckAt:checkedAt,updatedAt:checkedAt}))});}
+        else await firestore(env,"payments/"+id,{method:"PATCH",body:JSON.stringify(fields({lastProviderCheckAt:checkedAt}))});
+      } catch {}
+    }
+  }
+  return json({paymentId:id,status:payment.status,amountXof:payment.amountXof,currency:payment.currency});
+}
+export default {
+  async fetch(request,env) {
+    const url=new URL(request.url), origin=request.headers.get("origin")||"";
+    if(origin==="https://kevintabi-ia.github.io"&&request.method==="OPTIONS") {
+      return new Response(null,{status:204,headers:{
+        "Access-Control-Allow-Origin":origin,"Access-Control-Allow-Methods":"GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers":"Authorization, Content-Type","Access-Control-Max-Age":"86400","Vary":"Origin"
+      }});
+    }
+    let response;
+    if(url.pathname==="/health"&&request.method==="GET") response=json({ok:true,service:"mon-quotidien-jeko",mode:"production-locked"});
+    else if(url.pathname==="/webhook") response=await webhook(request,env);
+    else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
+    else if(url.pathname==="/api/jeko/status"&&request.method==="GET") response=await paymentStatus(request,env);
+    else response=json({error:"not_found"},404);
+    if(origin==="https://kevintabi-ia.github.io") {
+      const headers=new Headers(response.headers);
+      headers.set("Access-Control-Allow-Origin",origin);
+      headers.set("Vary","Origin");
+      response=new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+    }
+    return response;
+  }
+};
