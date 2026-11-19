@@ -50,6 +50,9 @@ Les périodes d'essai gratuites restent inchangées. Les paiements hors abonneme
 - [x] Deuxième verticale backend — renouvellement boutique partenaire, avec contrôle de propriété/dossier approuvé, formule configurée, verrou anti-doublon, webhook Jèko et activation atomique.
 - [x] Deuxième verticale interface — choix de formule et paiement Jèko depuis l'espace partenaire ; validation manuelle admin désactivée.
 - [x] Deuxième verticale sécurité — blocage des demandes de renouvellement manuelles et des écritures navigateur des dates/champs d'abonnement boutique.
+- [x] Troisième verticale backend — renouvellement des partenaires colis, contrôle du compte approuvé/actif, échéance essai/abonnement, verrou anti-doublon et webhook atomique.
+- [x] Troisième verticale interface — espace partenaire basculé vers catalogue et checkout Jèko ; confirmation et activation manuelles désactivées.
+- [x] Troisième verticale sécurité — règles partenaires empêchant les écritures navigateur des champs d'abonnement payant ; essai gratuit administrateur conservé.
 - [ ] Étendre les étapes précédentes aux autres rubriques.
 - [ ] Étape 6 — Tests de non-régression, tests webhook simulés, puis un seul paiement réel contrôlé par rubrique avant activation générale.
 
@@ -84,7 +87,7 @@ Les règles Firestore conservent la création de l'essai gratuit initial, mais i
 
 ## Portée actuelle de la migration exécutable
 
-Deux verticales sont câblées en source (catalogue, checkout, webhook, interface et règles) : **renouvellement petites annonces** et **renouvellement des boutiques en mode partenaire déjà approuvées**. Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les créations/abonnements initiaux des boutiques classiques et partenaires, ainsi que les autres catégories, restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
+Trois verticales sont câblées en source (catalogue, checkout, webhook, interface et règles) : **renouvellement petites annonces**, **renouvellement des boutiques en mode partenaire déjà approuvées** et **renouvellement des partenaires colis**. Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les créations/abonnements initiaux des boutiques classiques et partenaires, ainsi que les autres catégories, restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
 
 ## Deuxième verticale : boutiques partenaires
 
@@ -93,3 +96,11 @@ Le Worker accepte désormais `serviceId: "boutique_renewal"` avec `boutiqueId` e
 Le webhook signé valide les données du prestataire, prolonge l'échéance avec un calcul de mois calendaires, met à jour le paiement et écrit le reçu dans un commit Firestore atomique. L'espace partenaire propose les formules Jèko et redirige vers le checkout ; les anciennes demandes de renouvellement manuelles ne peuvent plus être créées ni validées depuis le navigateur. Les anciennes demandes restent lisibles pour historique.
 
 Limite : cette verticale couvre les **renouvellements des boutiques en mode partenaire déjà approuvées**. Elle ne migre pas encore les créations/abonnements initiaux des boutiques classiques ni l'activation initiale des partenaires, qui doivent être traités séparément. Aucun paiement réel n'a été réalisé et la branche n'est pas déployée.
+
+## Troisième verticale : partenaires colis
+
+Le Worker accepte `serviceId: "partenaire_colis"` et une formule parmi `partenaires_colis_1mois`, `partenaires_colis_3mois` et `partenaires_colis_6mois`. Il vérifie que le compte connecté possède un dossier partenaire approuvé et actif, que la période d'essai ou l'abonnement n'est pas encore en cours, puis lit le prix et la durée dans la configuration Firestore. Un verrou de paiement empêche les doublons et les paiements en cours/ambigus bloquent une nouvelle tentative.
+
+Le webhook Jèko signé active la formule, calcule l'échéance, conserve l'historique des abonnements et écrit le reçu dans un commit atomique. L'espace partenaire propose désormais le checkout Jèko ; les anciennes demandes Wave/Orange et la confirmation manuelle sont désactivées. L'administration conserve l'action de démarrage de l'essai gratuit de 21 jours, mais ne peut plus activer manuellement une période payante depuis le navigateur.
+
+Cette verticale couvre le renouvellement payant des partenaires colis approuvés (y compris la première formule après l'essai, si le dossier est déjà approuvé). Elle ne remplace pas le processus d'approbation initial du dossier.
