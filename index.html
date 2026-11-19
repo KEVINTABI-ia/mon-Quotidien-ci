@@ -3371,7 +3371,7 @@ function chargerPublicitesAccueil() {
 <label>Votre nom et prénoms</label><input id="orReclamantNom" maxlength="100">
 <label>Votre numéro de téléphone</label><input id="orReclamantTel" type="tel" maxlength="25">
 <label>Votre lieu de résidence</label><input id="orResidence" maxlength="180">
-<div style="margin:14px 0;padding:12px;border-radius:10px;background:#FFF7E8;border:1px solid #EBD6A8;"><strong>Frais de mise en relation : 1 500 FCFA</strong>
+<div style="margin:14px 0;padding:12px;border-radius:10px;background:#FFF7E8;border:1px solid #EBD6A8;"><strong>Frais de mise en relation : 1 000 FCFA</strong>
 <p id="coordonneesPaiementReclamation">Chargement des coordonnées de paiement...</p>
 <label>Moyen de paiement</label><select id="orOperateur"><option>Wave</option><option>Orange Money</option></select>
 <label>Numéro de référence de la transaction</label><input id="orReference" maxlength="100">
@@ -4813,7 +4813,7 @@ async function envoyerReclamationObjet(){
     await db.collection("demandes_recuperation_objets").add({
       objetId,nomComplet:nom,telephone:tel,residence,
       operateur,referenceTransaction:reference,heureTransaction:heure,
-      montantFCFA:1500,statut:"a_verifier",
+      montantFCFA:1000,statut:"a_verifier",
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
     statut.textContent="Demande transmise à l’administrateur. Le paiement sera vérifié avant la mise en relation.";
@@ -4845,7 +4845,7 @@ async function chargerObjetsPerdusAdmin(){
     if(ds.empty)demandes.innerHTML="<p class='notice'>Aucune demande de récupération reçue.</p>";
     else demandes.innerHTML=ds.docs.map(doc=>{
       const d=doc.data(),date=d.createdAt&&d.createdAt.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"";
-      return '<article class="card" style="padding:12px;margin:10px 0;"><strong>Demande · '+echapperTextePublicite(d.statut||"")+'</strong><p>Bien concerné : '+echapperTextePublicite(d.objetId||"")+'</p><p>Demandeur : '+echapperTextePublicite(d.nomComplet||"")+'<br>Téléphone : '+echapperTextePublicite(d.telephone||"")+'<br>Résidence : '+echapperTextePublicite(d.residence||"")+'</p><p>Paiement : '+echapperTextePublicite(d.operateur||"")+' · 1 500 FCFA<br>Référence : <strong>'+echapperTextePublicite(d.referenceTransaction||"")+'</strong><br>Heure : '+echapperTextePublicite(d.heureTransaction||"")+'</p><small>'+date+'</small><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button type="button" onclick="traiterReclamationObjet(\''+doc.id+'\',\'paiement_verifie\')">Paiement vérifié</button><button type="button" onclick="traiterReclamationObjet(\''+doc.id+'\',\'traitee\')">Mise en relation effectuée</button></div></article>';
+      return '<article class="card" style="padding:12px;margin:10px 0;"><strong>Demande · '+echapperTextePublicite(d.statut||"")+'</strong><p>Bien concerné : '+echapperTextePublicite(d.objetId||"")+'</p><p>Demandeur : '+echapperTextePublicite(d.nomComplet||"")+'<br>Téléphone : '+echapperTextePublicite(d.telephone||"")+'<br>Résidence : '+echapperTextePublicite(d.residence||"")+'</p><p>Paiement : '+echapperTextePublicite(d.operateur||"")+' · 1 000 FCFA<br>Référence : <strong>'+echapperTextePublicite(d.referenceTransaction||"")+'</strong><br>Heure : '+echapperTextePublicite(d.heureTransaction||"")+'</p><small>'+date+'</small><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button type="button" onclick="traiterReclamationObjet(\''+doc.id+'\',\'paiement_verifie\')">Paiement vérifié</button><button type="button" onclick="traiterReclamationObjet(\''+doc.id+'\',\'traitee\')">Mise en relation effectuée</button></div></article>';
     }).join("");
   }catch(e){console.error(e);zone.innerHTML="<p class='notice'>Erreur de chargement. Vérifiez les règles Firestore.</p>";demandes.innerHTML="<p class='notice'>Demandes indisponibles.</p>";}
 }
@@ -4872,8 +4872,8 @@ const CONFIG_ABONNEMENTS_DEFAUT={
  automobiliste:{libelle:"Abonnement automobiliste annuel",actif:true,prix:1000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques_15j:{libelle:"Boutiques — formule 15 jours",actif:true,prix:4000,duree:15,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques_30j:{libelle:"Ancienne formule boutique 30 jours",actif:true,prix:7000,duree:30,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
- boutiques_1mois:{libelle:"Boutiques et commerces 1 mois",actif:true,prix:2500,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
- boutiques_2mois:{libelle:"Boutiques et commerces 2 mois",actif:true,prix:4500,duree:2,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ boutiques_1mois:{libelle:"Boutiques et commerces 1 mois",actif:true,prix:3000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ boutiques_2mois:{libelle:"Boutiques et commerces 2 mois",actif:true,prix:5000,duree:2,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques_3mois:{libelle:"Boutiques et commerces 3 mois",actif:true,prix:7000,duree:3,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  partenaires_colis:{libelle:"Partenaires colis — période d’essai",actif:true,prix:0,duree:21,unite:"jours",essai:21,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  partenaires_colis_1mois:{libelle:"Partenaires colis — abonnement 1 mois",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
@@ -4912,6 +4912,12 @@ window.chargerCoordonneesPaiementMQCI=async function(forcer=false){
 };
 let configurationAbonnementsCachee={};
 let configurationAbonnementsPromise=null;
+const TARIFS_MQCI_CONFIRMES={boutiques_1mois:3000,boutiques_2mois:5000};
+function fusionnerConfigurationAbonnement(id,enregistree={}){
+ const config={...CONFIG_ABONNEMENTS_DEFAUT[id],...(enregistree||{})};
+ if(Object.prototype.hasOwnProperty.call(TARIFS_MQCI_CONFIRMES,id))config.prix=TARIFS_MQCI_CONFIRMES[id];
+ return config;
+}
 async function obtenirConfigurationAbonnement(id,forcerLectureServeur=false){
  if(!CONFIG_ABONNEMENTS_DEFAUT[id])throw new Error("Service d'abonnement non configuré.");
  if(forcerLectureServeur)configurationAbonnementsPromise=null;
@@ -4920,7 +4926,7 @@ async function obtenirConfigurationAbonnement(id,forcerLectureServeur=false){
   configurationAbonnementsPromise=lecture.then(s=>s.exists?(s.data().services||{}):{}).catch(e=>{console.warn("Configuration abonnements indisponible.",e);throw e;});
  }
  const services=await configurationAbonnementsPromise;
- return {...CONFIG_ABONNEMENTS_DEFAUT[id],...(services[id]||{})};
+ return fusionnerConfigurationAbonnement(id,services[id]);
 }
 function tarifAbonnementEffectif(c){
  const maintenant=new Date(),debut=c.promotionDebut?new Date(c.promotionDebut+"T00:00:00"):null,fin=c.promotionFin?new Date(c.promotionFin+"T23:59:59"):null;
@@ -4954,7 +4960,7 @@ async function initialiserFormulaireAbonnementBoutique(){
 }
 
 function valeurConfigAbonnement(id,champ){
- const cfg=configurationAbonnementsCachee[id]||CONFIG_ABONNEMENTS_DEFAUT[id];
+ const cfg=fusionnerConfigurationAbonnement(id,configurationAbonnementsCachee[id]);
  return cfg&&cfg[champ]!==undefined?cfg[champ]:CONFIG_ABONNEMENTS_DEFAUT[id]?.[champ];
 }
 async function chargerConfigurationAbonnementsAdmin(){
@@ -4977,7 +4983,7 @@ async function chargerConfigurationAbonnementsAdmin(){
   paiementCard.innerHTML='<h4>Coordonnées communes de réception des paiements</h4><p>Ces coordonnées seront affichées dans les rubriques payantes de Mon Quotidien CI. Les tarifs de chaque service restent indépendants.</p><label>Numéro Wave et Orange Money</label><input id="cfgPaiementNumero" type="tel" maxlength="24" value="'+echapperAttributPaiement(coordonneesPaiementMQCI.numero)+'"><label>Nom du bénéficiaire</label><input id="cfgPaiementBeneficiaire" maxlength="100" value="'+echapperAttributPaiement(coordonneesPaiementMQCI.beneficiaire)+'">';
   zone.appendChild(paiementCard);
   Object.keys(CONFIG_ABONNEMENTS_DEFAUT).forEach(id=>{
-   const c={...CONFIG_ABONNEMENTS_DEFAUT[id],...(configurationAbonnementsCachee[id]||{})};
+   const c=fusionnerConfigurationAbonnement(id,configurationAbonnementsCachee[id]);
    const card=document.createElement("section");card.className="card";card.style.cssText="padding:14px;margin:12px 0;border:1px solid #ddd;border-radius:12px";
    card.innerHTML='<h4>'+c.libelle+'</h4>'+
     '<label><input type="checkbox" id="cfg_'+id+'_actif" '+(c.actif?'checked':'')+'> Autoriser les nouvelles souscriptions et renouvellements</label>'+
