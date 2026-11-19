@@ -130,3 +130,15 @@ test("webhook garde la compatibilité des paiements en attente créés avant le 
     amountXof:25000,amountCents:2500000,durationMonths:12
   }),true);
 });
+
+import { verifyHmac } from "../cloudflare/worker.js";
+
+test("webhook vérifie le HMAC-SHA256 sur le corps brut", async () => {
+  const raw = new TextEncoder().encode('{"id":"tx-test","status":"success"}');
+  const secret = "test-webhook-secret";
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), {name:"HMAC",hash:"SHA-256"}, false, ["sign"]);
+  const signature = Array.from(new Uint8Array(await crypto.subtle.sign("HMAC", key, raw))).map(v=>v.toString(16).padStart(2,"0")).join("");
+  assert.equal(await verifyHmac(raw, signature, secret), true);
+  assert.equal(await verifyHmac(raw, "00".repeat(32), secret), false);
+  assert.equal(await verifyHmac(new TextEncoder().encode('{"id":"changed"}'), signature, secret), false);
+});
