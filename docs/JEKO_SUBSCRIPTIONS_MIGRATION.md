@@ -87,7 +87,7 @@ Les règles Firestore conservent la création de l'essai gratuit initial, mais i
 
 ## Portée actuelle de la migration exécutable
 
-Cinq verticales sont câblées en source (catalogue, checkout, webhook, interface et règles) : **renouvellement petites annonces**, **renouvellement des boutiques en mode partenaire déjà approuvées**, **renouvellement des partenaires colis**, **inscription/renouvellement des compagnies de voyage** et **renouvellement de l'annuaire professionnel**. Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les abonnements initiaux des boutiques classiques et partenaires, ainsi que les abonnements initiaux des boutiques classiques et partenaires restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
+Cinq verticales sont câblées en source (catalogue, checkout, webhook, interface et règles) : **renouvellement petites annonces**, **inscription/renouvellement des boutiques classiques et partenaires**, **renouvellement des partenaires colis**, **inscription/renouvellement des compagnies de voyage** et **renouvellement de l'annuaire professionnel**. Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les abonnements initiaux des boutiques classiques et partenaires, ainsi que les abonnements initiaux des boutiques classiques et partenaires restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
 
 ## Deuxième verticale : boutiques partenaires
 
@@ -120,3 +120,9 @@ L'inscription reste gratuite et conserve son premier mois d'essai après approba
 Le Worker exige un compte Firebase authentifié, la propriété du dossier, le type `annuaire`, le statut `approuve` et une échéance effectivement expirée. Le montant de 1 000 FCFA et la durée de 30 jours sont fixés côté serveur d'après la règle métier existante. Un verrou empêche les tentatives simultanées ; le webhook signé valide le paiement et réactive la visibilité dans un commit atomique.
 
 Les règles Firestore réservent les champs d'abonnement payant au Worker. Elles préservent uniquement la transition administrative initiale vers l'essai gratuit de 30 jours ; les renouvellements payants ne peuvent plus être activés depuis l'interface admin. Le retour Jèko actualise l'espace annuaire. Aucun paiement réel n'a été effectué.
+
+## Extension boutiques classiques et partenaires
+
+Les nouvelles inscriptions de boutiques classiques ne demandent plus de coordonnées Wave/Orange ni de référence manuelle. Le formulaire conserve le choix de formule, mais le dossier est soumis sans paiement et sans activation. Après vérification, l'administrateur approuve le dossier en état `a_payer` ; cette étape n'active pas la visibilité. Le propriétaire se connecte à son espace boutique et règle la formule avec Jèko. Le même checkout sert aux renouvellements après expiration, qu'il s'agisse d'une boutique classique ou d'une boutique en mode partenaire.
+
+Le Worker vérifie le propriétaire, le statut approuvé, l'échéance ou l'état `a_payer`, puis lit le tarif et la durée depuis `configuration_abonnements/globale`. Les paiements historiques `a_verifier` sont bloqués pour examen séparé. Le webhook signé active la visibilité et écrit les dates et le reçu atomiquement. Les validations manuelles d'activation/renouvellement sont désactivées dans l'administration. L'essai gratuit de 30 jours des boutiques en mode partenaire est conservé et reste une approbation distincte du paiement.
