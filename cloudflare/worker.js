@@ -86,7 +86,13 @@ async function firestore(env, path, init={}) {
 async function getDoc(env,path) { return firestore(env,path); }
 function resourceName(path) { return "projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents/"+path; }
 async function commitWrites(env,writes) {
-  return firestore(env,":commit",{method:"POST",body:JSON.stringify({writes})});
+  const token=await serviceToken(env);
+  const response=await fetch("https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents:commit",{
+    method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({writes})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok) throw new Error("firestore_commit_"+response.status);
+  return data;
 }
 function updateWrite(path,data,updateTime,exists) {
   const write={update:{name:resourceName(path),...fields(data)},updateMask:{fieldPaths:Object.keys(data)}};
