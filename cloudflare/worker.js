@@ -451,7 +451,7 @@ async function webhook(request,env) {
   }
   if(payment.serviceId==="ramassage") {
     const profilePath=payment.targetPath,profileDoc=await getDoc(env,profilePath),profile=docData(profileDoc);
-    if(!profileDoc||!profile||profile.uid!==payment.uid||profile.role!=="compagnie"||profile.statut!=="approuve"||profile.renouvellementJekoPaymentId!==paymentId||payment.planId!=="ramassage"||payment.amountXof!==2000||!Number.isSafeInteger(payment.durationDays)||payment.durationDays<1||payment.durationDays>365){
+    if(!profileDoc||!profile||profile.uid!==payment.uid||profile.role!=="compagnie"||profile.statut!=="approuve"||profile.renouvellementJekoPaymentId!==paymentId||payment.planId!=="ramassage"||payment.amountXof!==2000||payment.durationDays!==30){
       await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"ramassage_target_or_plan_invalid",updatedAt:now.toISOString()}))});
       return new Response("OK",{status:200});
     }
@@ -687,13 +687,7 @@ async function paymentStatus(request,env) {
   }
   return json({paymentId:id,status:payment.status,amountXof:payment.amountXof,currency:payment.currency,serviceId:payment.serviceId||"automobiliste"});
 }
-async function subscriptionPlans(request,env) {
-  const authResult=await requireUser(request,env);
-  if(!authResult.user) return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
-  const cfgDoc=await getDoc(env,"configuration_abonnements/globale");
-  const services=docData(cfgDoc)?.services||{};
-  const url=new URL(request.url);
-  const requested=url.searchParams.get("serviceId")||"";
+export function buildSubscriptionPlans(requested,services={},now=new Date()) {
   const definitions={
     automobiliste:["automobiliste"],
     petites_annonces:["petites_annonces"],
@@ -703,35 +697,48 @@ async function subscriptionPlans(request,env) {
     logement:["mensuel","trimestriel","semestriel"],
     ramassage:["ramassage"]
   };
-  // Ces montants/durées sont la source tarifaire du checkout logement.
-  // Le catalogue doit donc exposer exactement les mêmes valeurs, sans dépendre
-  // d'anciennes clés de configuration administrable.
   const logementDefaults={
     mensuel:{label:"1 mois",price:3000,duration:1,unit:"mois"},
     trimestriel:{label:"3 mois",price:8000,duration:3,unit:"mois"},
     semestriel:{label:"6 mois",price:15000,duration:6,unit:"mois"}
   };
-  if(!Object.prototype.hasOwnProperty.call(definitions,requested)) return json({error:"unsupported_subscription_service"},400);
-  const now=new Date();
+  const ramassageDefaults={
+    ramassage:{label:"30 jours",price:2000,duration:30,unit:"jours"}
+  };
+  if(!Object.prototype.hasOwnProperty.call(definitions,requested)) return null;
   const plans=definitions[requested].map(key=>{
-    const logementPlan=requested==="logement"?logementDefaults[key]:null;
-    const cfg=requested==="logement"?{}:(services[key]||{});
-    const duration=Number(cfg.duree??logementPlan?.duration??0),unit=cfg.unite==="mois"||logementPlan?.unit==="mois"?"mois":"jours";
-    const base=requested==="ramassage"&&key==="ramassage"?2000:Number(cfg.prix??logementPlan?.price??0),promo=Number(cfg.promotionPrix??0);
+    const fixedPlan=requested==="logement"?logementDefaults[key]:(requested==="ramassage"?ramassageDefaults[key]:null);
+    const sourceCfg=services[key]||{};
+    const cfg=fixedPlan?{actif:sourceCfg.actif}:sourceCfg;
+    const duration=Number(cfg.duree??fixedPlan?.duration??0);
+    const unit=cfg.unite==="mois"||fixedPlan?.unit==="mois"?"mois":"jours";
+    const base=requested==="ramassage"?2000:Number(cfg.prix??fixedPlan?.price??0);
+    const promo=Number(cfg.promotionPrix??0);
     const start=cfg.promotionDebut?new Date(cfg.promotionDebut+"T00:00:00Z"):null;
     const end=cfg.promotionFin?new Date(cfg.promotionFin+"T23:59:59Z"):null;
     const promotionActive=cfg.promotionActive===true&&promo>0&&promo<=base&&start&&end&&now>=start&&now<=end;
     const price=promotionActive?promo:base;
     const valid=cfg.actif!==false&&Number.isSafeInteger(duration)&&duration>0&&Number.isSafeInteger(price)&&price>0&&price<=10000000;
     return {
-      planId:key,label:typeof cfg.libelle==="string"?cfg.libelle:(logementPlan?.label||key),
+      planId:key,label:typeof cfg.libelle==="string"?cfg.libelle:(fixedPlan?.label||key),
       active:cfg.actif!==false,available:valid,priceXof:valid?price:null,
       regularPriceXof:Number.isSafeInteger(base)&&base>0?base:null,
       duration:valid?duration:null,unit,
-      trialDays:Number.isSafeInteger(Number(cfg.essai))&&Number(cfg.essai)>0?Number(cfg.essai):0,
+      trialDays:requested==="ramassage"?30:(Number.isSafeInteger(Number(cfg.essai))&&Number(cfg.essai)>0?Number(cfg.essai):0),
       promotional:promotionActive
     };
   });
+  return plans;
+}
+async function subscriptionPlans(request,env) {
+  const authResult=await requireUser(request,env);
+  if(!authResult.user) return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
+  const cfgDoc=await getDoc(env,"configuration_abonnements/globale");
+  const services=docData(cfgDoc)?.services||{};
+  const url=new URL(request.url);
+  const requested=url.searchParams.get("serviceId")||"";
+  const now=new Date(),plans=buildSubscriptionPlans(requested,services,now);
+  if(!plans) return json({error:"unsupported_subscription_service"},400);
   return json({serviceId:requested,currency:"XOF",provider:"jeko",plans,checkedAt:now.toISOString()});
 }
 export default {
