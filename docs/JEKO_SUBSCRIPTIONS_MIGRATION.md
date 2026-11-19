@@ -44,9 +44,10 @@ Les périodes d'essai gratuites restent inchangées. Les paiements hors abonneme
 - [x] Étape 1 — Contrat de données et première brique catalogue : endpoint authentifié `GET /api/jeko/subscription-plans?serviceId=...`. Il lit `configuration_abonnements/globale`, expose uniquement les formules actives, calcule la promotion côté serveur et masque les tarifs invalides ou nuls. Il n'initie aucun paiement.
 - [x] Première verticale backend — checkout Jèko et activation webhook pour le renouvellement des petites annonces. Le Worker vérifie le propriétaire, l'expiration, l'absence de demande en attente, puis lit prix/durée dans Firestore. Le webhook vérifie les données Jèko et met à jour le document d'abonnement avec une écriture atomique idempotente.
 - [ ] Étape 2 — Étendre le checkout générique aux autres formules et rubriques.
-- [ ] Étape 3 — Activation webhook pour chaque cible, transactions atomiques et idempotence.
-- [ ] Étape 4 — Migration des interfaces : suppression des coordonnées Wave/Orange et références manuelles ; bouton « Payer avec Jèko ».
-- [ ] Étape 5 — Règles Firestore : bloquer les anciens chemins d'activation, conserver les créations de dossiers et essais gratuits.
+- [x] Première verticale webhook — petites annonces, écriture atomique et idempotence.
+- [x] Première verticale interface — renouvellement petites annonces via catalogue et checkout Jèko ; suppression du formulaire Wave/Orange et de la référence manuelle.
+- [x] Première verticale sécurité — règles Firestore empêchant l'activation ou la modification des dates/paiements par le client ou l'administrateur via le SDK navigateur. L'essai gratuit initial reste autorisé.
+- [ ] Étendre les étapes précédentes aux autres rubriques.
 - [ ] Étape 6 — Tests de non-régression, tests webhook simulés, puis un seul paiement réel contrôlé par rubrique avant activation générale.
 
 ## Critères d'acceptation
@@ -71,3 +72,13 @@ Le Worker accepte désormais `serviceId: "petites_annonces"` sur `POST /api/jeko
 Après confirmation du webhook signé et validation de la référence, de la demande, du magasin, de la devise et du montant, le Worker prolonge l'abonnement et marque le paiement confirmé dans une seule écriture Firestore atomique, protégée contre les webhooks répétés.
 
 **Important :** cette étape backend n'a pas encore remplacé les formulaires Wave/Orange dans `index.html` ni les règles Firestore. Ne pas proposer le renouvellement petites annonces en production via ce nouveau flux tant que ces deux éléments ne sont pas migrés et testés. Les autres rubriques ne sont pas encore migrées.
+
+## Interfaces et règles de sécurité — petites annonces
+
+L'interface de gestion des petites annonces propose maintenant le catalogue Jèko puis le checkout Jèko, avec Wave, Orange Money, MTN Money, Moov Money et Djamo comme moyens disponibles au sein du parcours Jèko. Les champs de référence manuelle et les coordonnées de transfert ne sont plus demandés. La liste administrative des anciens renouvellements en attente est désormais informative et ne propose plus de bouton de confirmation manuelle.
+
+Les règles Firestore conservent la création de l'essai gratuit initial, mais interdisent les modifications navigateur des statuts, dates d'expiration et champs de paiement de l'abonnement, y compris par un administrateur connecté depuis l'interface. Le Worker avec Admin SDK est l'unique chemin d'activation. Les anciennes demandes en attente restent dans les données et doivent être traitées séparément ; elles ne sont pas automatiquement validées.
+
+## Portée actuelle de la migration exécutable
+
+Seule la verticale **renouvellement d'un abonnement petites annonces déjà existant et expiré** est entièrement câblée en source (catalogue, checkout, webhook, interface et règles). Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les autres catégories restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
