@@ -2909,10 +2909,16 @@ function chargerPublicitesAccueil() {
     <p id="etatAbonnementAuto" class="notice" aria-live="polite">Vérification de votre abonnement...</p>
     <label for="operateurAbonnementAuto">Moyen de paiement</label>
     <select id="operateurAbonnementAuto" style="width:100%;padding:12px;margin:5px 0 10px;">
-      <option value="Wave">Wave</option><option value="Orange Money" disabled>Orange Money (bientôt disponible)</option>
+      <option value="wave">Wave (paiement direct)</option>
+      <option value="jeko:wave">Wave via Jèko</option>
+      <option value="jeko:orange">Orange Money via Jèko</option>
+      <option value="jeko:mtn">MTN MoMo via Jèko</option>
+      <option value="jeko:moov">Moov Money via Jèko</option>
+      <option value="jeko:djamo">Djamo via Jèko</option>
+      <option value="jeko:jeko">Portefeuille Jèko</option>
     </select>
-    <p class="notice">Vous serez redirigé vers la page sécurisée Wave. Votre abonnement sera activé uniquement après confirmation automatique du paiement.</p>
-    <button type="button" onclick="envoyerDemandeAbonnementAuto()" style="width:100%;background:#087C62;color:white;">Payer avec Wave</button>
+    <p class="notice">Choisissez votre moyen de paiement. Vous serez redirigé vers la page sécurisée du prestataire. L’abonnement sera activé uniquement après confirmation serveur.</p>
+    <button type="button" onclick="envoyerDemandeAbonnementAuto()" style="width:100%;background:#087C62;color:white;">Continuer vers le paiement sécurisé</button>
     <button type="button" onclick="deconnecterCompteAbonnementAuto()" style="width:100%;margin-top:8px;">Se déconnecter</button>
   </div>
   <p class="notice" style="margin-top:12px;">Mon Quotidien CI ne vous demandera jamais votre code secret Wave ou Mobile Money.</p>
@@ -3581,7 +3587,7 @@ auth.onAuthStateChanged(function(user){
     if(user&&window.__mqciAuthFlowInProgress)return;
     gate.hidden=!!user;
   }
-  if(user)verifierRetourPaiementWave(user);
+  if(user)verifierRetourPaiement(user);
 });
 
 
@@ -7839,43 +7845,46 @@ async function envoyerDemandeAbonnementAuto(){
   const zone=document.getElementById("etatAbonnementAuto");
   if(!user)return alert("Connectez-vous d'abord.");
   if(mqciWaveCheckoutEnCours)return;
-  const operateur=document.getElementById("operateurAbonnementAuto")?.value || "Wave";
-  if(operateur!=="Wave"){
-    if(zone)zone.textContent="Orange Money sera disponible dès que l'accès API marchand Orange CI sera configuré.";
+  const choix=document.getElementById("operateurAbonnementAuto")?.value || "wave";
+  const viaJeko=choix.startsWith("jeko:");
+  const paymentMethod=viaJeko?choix.slice(5):null;
+  if(!viaJeko&&choix!=="wave"){
+    if(zone)zone.textContent="Moyen de paiement non disponible.";
     return;
   }
   const bouton=document.querySelector('button[onclick="envoyerDemandeAbonnementAuto()"]');
   mqciWaveCheckoutEnCours=true;
   if(bouton){bouton.disabled=true;bouton.textContent="Préparation du paiement…";}
-  if(zone)zone.textContent="Vérification du tarif et création sécurisée de la session Wave…";
+  if(zone)zone.textContent="Vérification du tarif et création sécurisée de la session de paiement…";
   try{
     const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
     if(!cfg.actif)throw new Error("Les nouvelles souscriptions automobilistes sont temporairement suspendues.");
     if(cfg.unite!=="mois"||Number(cfg.duree)!==12)throw new Error("La formule automobiliste doit être annuelle.");
     const token=await user.getIdToken();
-    const response=await fetch("https://europe-west1-mon-transport-ci.cloudfunctions.net/createWaveCheckout",{
+    const response=await fetch("https://europe-west1-mon-transport-ci.cloudfunctions.net/"+(viaJeko?"createJekoCheckout":"createWaveCheckout"),{
       method:"POST",
       headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
       body:JSON.stringify({
         serviceId:"automobiliste",planId:"annuel",
+        ...(viaJeko?{paymentMethod}:{}),
         successUrl:location.origin+location.pathname+"?payment=return",
         errorUrl:location.origin+location.pathname+"?payment=error"
       })
     });
     const data=await response.json().catch(()=>({}));
-    if(!response.ok||!data.checkoutUrl)throw new Error(data.error==="plan_unavailable"?"Cette formule n'est pas encore activée côté serveur. Contactez l'administration.":"Impossible de créer le paiement Wave. Réessayez dans quelques instants.");
-    if(zone)zone.textContent="Session Wave créée. Redirection sécurisée…";
+    if(!response.ok||!data.checkoutUrl)throw new Error(data.error==="plan_unavailable"?"Cette formule n'est pas encore activée côté serveur. Contactez l'administration.":"Impossible de créer le paiement. Réessayez dans quelques instants.");
+    if(zone)zone.textContent="Session de paiement créée. Redirection sécurisée…";
     window.location.assign(data.checkoutUrl);
   }catch(e){
-    console.error("Création checkout Wave:",e);
+    console.error("Création checkout:",e);
     if(zone)zone.textContent=e.message||"Paiement indisponible.";
     else alert(e.message||"Paiement indisponible.");
     mqciWaveCheckoutEnCours=false;
-    if(bouton){bouton.disabled=false;bouton.textContent="Payer avec Wave";}
+    if(bouton){bouton.disabled=false;bouton.textContent="Continuer vers le paiement sécurisé";}
   }
 }
 
-async function verifierRetourPaiementWave(user){
+async function verifierRetourPaiement(user){
   const params=new URLSearchParams(window.location.search);
   const paymentState=params.get("payment");
   const paymentId=params.get("paymentId");
@@ -7888,7 +7897,7 @@ async function verifierRetourPaiementWave(user){
     return;
   }
   if(!paymentId)return;
-  if(zone)zone.textContent="Retour de Wave reçu. Vérification de la confirmation officielle…";
+  if(zone)zone.textContent="Retour du prestataire reçu. Vérification de la confirmation officielle…";
   try{
     const token=await user.getIdToken(true);
     for(let attempt=0;attempt<8;attempt++){
@@ -7897,7 +7906,7 @@ async function verifierRetourPaiementWave(user){
       });
       const data=await response.json().catch(()=>({}));
       if(response.ok&&data.status==="succeeded"){
-        if(zone)zone.textContent="Paiement confirmé par Wave. Activation de votre abonnement…";
+        if(zone)zone.textContent="Paiement confirmé par le prestataire. Activation de votre abonnement…";
         await actualiserEtatAbonnementAutomobiliste();
         params.delete("payment");params.delete("paymentId");
         history.replaceState({},document.title,location.pathname+(params.toString()?"?"+params.toString():""));
@@ -7911,7 +7920,7 @@ async function verifierRetourPaiementWave(user){
     }
     if(zone)zone.textContent="Paiement reçu en attente de confirmation du prestataire. Actualisez cet écran dans un instant; aucun accès n'est activé avant confirmation.";
   }catch(e){
-    console.error("Vérification du paiement Wave:",e);
+    console.error("Vérification du paiement:",e);
     if(zone)zone.textContent="Impossible de vérifier le paiement pour le moment. Réessayez dans quelques instants.";
   }
 }
