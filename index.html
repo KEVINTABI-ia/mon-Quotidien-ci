@@ -4924,31 +4924,6 @@ const CONFIG_ABONNEMENTS_DEFAUT={
  compagnie_professionnelle_annuel:{libelle:"Compagnie de voyage — Professionnelle annuelle",actif:true,prix:100000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  ramassage:{libelle:"Compagnies de ramassage",actif:true,prix:2000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
 };
-const NUMERO_PAIEMENT_MQCI="0757522319";
-const BENEFICIAIRE_PAIEMENT_MQCI="TA BI SERGE KEVIN";
-let coordonneesPaiementMQCI={numero:"",beneficiaire:"",actif:false};
-window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
-window.paiementsMQCIDisponibles=async function(){
- // Paiement manuel uniquement : l'utilisateur transmet une référence,
- // puis l'administrateur vérifie le transfert avant toute activation.
- // Aucun appel API ou paiement automatique n'est effectué ici.
- return true;
-};
-window.chargerCoordonneesPaiementMQCI=async function(forcer=false){
- try{
-  const snap=await db.collection("configuration_abonnements").doc("globale").get(forcer?{source:"server"}:undefined);
-  const p=snap.exists?(snap.data().paiement||{}):{};
-  const numero=String(p.numero||NUMERO_PAIEMENT_MQCI).trim();
-  const beneficiaire=String(p.beneficiaire||BENEFICIAIRE_PAIEMENT_MQCI).trim();
-  if(!/^[+0-9 .()-]{8,24}$/.test(numero)||beneficiaire.length<2||beneficiaire.length>100)throw new Error("Coordonnées de paiement invalides.");
-  // Le paiement manuel est actif indépendamment de l'état des API.
-  // apiActive reste explicitement désactivé : aucune intégration automatique n'est appelée.
-  const actif=true;
-  coordonneesPaiementMQCI={numero,beneficiaire,actif,mode:"manuel",apiActive:false};
-  window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
-  return coordonneesPaiementMQCI;
- }catch(e){console.warn("Coordonnées de paiement indisponibles.",e);coordonneesPaiementMQCI={numero:"",beneficiaire:"",actif:false};window.MQCI_PAIEMENT=coordonneesPaiementMQCI;return coordonneesPaiementMQCI;}
-};
 let configurationAbonnementsCachee={};
 let configurationAbonnementsPromise=null;
 async function obtenirConfigurationAbonnement(id,forcerLectureServeur=false){
@@ -4972,28 +4947,6 @@ function tarifAbonnementEffectif(c){
  return c.promotionActive&&c.promotionPrix>0&&c.promotionPrix<=c.prix&&debut&&fin&&maintenant>=debut&&maintenant<=fin?Number(c.promotionPrix):Number(c.prix);
 }
 function dureeAbonnementEnJours(c){const n=Number(c.duree||1);return c.unite==="mois"?Math.round(n*30):n;}
-function genererFormulairePaiementCommun(prefix,options={}){
- const duree=options.duree!==false,coordId=options.coordId||("coordonneesPaiement_"+prefix);
- return '<div style="padding:12px;background:#F0F7F1;border:1px solid #DCEBDD;border-radius:10px;margin:12px 0;">'+
-  (options.titre?'<strong>'+options.titre+'</strong>':'')+
-  (duree?'<label for="'+prefix+'DureeAbonnement">Formule / durée</label><select id="'+prefix+'DureeAbonnement" required><option value="">Chargement des formules...</option></select>':'')+
-  '<p id="'+coordId+'">Chargement des coordonnées de paiement...</p>'+
-  '<label for="'+prefix+'PaiementMoyen">Moyen de paiement</label><select id="'+prefix+'PaiementMoyen" required><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select>'+
-  '<label for="'+prefix+'PaiementReference">Référence de la transaction</label><input id="'+prefix+'PaiementReference" maxlength="80" placeholder="Référence reçue après paiement" required>'+
-  '<small>Votre demande sera transmise à l’administration. La visibilité sera rétablie uniquement après vérification du paiement.</small></div>';
-}
-async function initialiserFormulairePaiementCommun(prefix,ids,coordId){
- try{
-  const paiement=await window.chargerCoordonneesPaiementMQCI(),zone=document.getElementById(coordId||("coordonneesPaiement_"+prefix));
-  const select=document.getElementById(prefix+"DureeAbonnement");
-  if(!paiement.actif){if(zone)zone.textContent="Paiements temporairement indisponibles : intégration des API Wave et Orange Money en attente.";if(select){select.innerHTML='<option value="">Paiements indisponibles</option>';select.disabled=true;}return;}
-  if(zone)zone.textContent="Wave : "+paiement.numero+" · Orange Money : "+paiement.numero+" · Titulaire : "+paiement.beneficiaire;
-  if(!select)return;
-  const formules=await Promise.all(ids.map(async id=>({id,c:await obtenirConfigurationAbonnement(id)})));
-  const options=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&dureeAbonnementEnJours(x.c)>0).map(x=>{const jours=dureeAbonnementEnJours(x.c),prix=tarifAbonnementEffectif(x.c);return '<option value="'+jours+'" data-montant="'+prix+'" data-config="'+x.id+'">'+Number(x.c.duree)+' '+(x.c.unite==="mois"?"mois":"jours")+' — '+prix.toLocaleString("fr-FR")+' FCFA'+(prix<x.c.prix?' (promotion)':'')+'</option>';});
-  select.innerHTML=options.length?'<option value="">Choisir une formule</option>'+options.join(""):'<option value="">Formules indisponibles</option>';select.disabled=!options.length;
- }catch(e){console.error("Formulaire de paiement commun",e);const select=document.getElementById(prefix+"DureeAbonnement");if(select)select.disabled=true;const zone=document.getElementById(coordId||("coordonneesPaiement_"+prefix));if(zone)zone.textContent="Coordonnées ou formules de paiement indisponibles.";}
-}
 function genererFormulairePlanBoutiqueJeko(){
  return '<div style="padding:12px;background:#F0F7F1;border:1px solid #DCEBDD;border-radius:10px;margin:12px 0;"><strong>Formule d’abonnement</strong><label for="nsDureeAbonnement">Choisissez une formule</label><select id="nsDureeAbonnement" required><option value="">Chargement des formules...</option></select><p class="notice">Le dossier sera d’abord vérifié. Après approbation, vous réglerez cette formule exclusivement avec Jèko depuis votre espace boutique.</p></div>';
 }
@@ -5018,16 +4971,9 @@ async function chargerConfigurationAbonnementsAdmin(){
  try{
   const snap=await db.collection("configuration_abonnements").doc("globale").get();
   configurationAbonnementsCachee=snap.exists?(snap.data().services||{}):{};
-  const paiement=snap.exists?(snap.data().paiement||{}):{};
-  coordonneesPaiementMQCI={
-   numero:String(paiement.numero||NUMERO_PAIEMENT_MQCI),
-   beneficiaire:String(paiement.beneficiaire||BENEFICIAIRE_PAIEMENT_MQCI)
-  };
-  window.MQCI_PAIEMENT=coordonneesPaiementMQCI;
   zone.innerHTML="";
   const paiementCard=document.createElement("section");paiementCard.className="card";paiementCard.style.cssText="padding:14px;margin:12px 0;border:2px solid #16834A;border-radius:12px";
-  const echapperAttributPaiement=v=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  paiementCard.innerHTML='<h4>Coordonnées communes de réception des paiements</h4><p>Ces coordonnées seront affichées dans les rubriques payantes de Mon Quotidien CI. Les tarifs de chaque service restent indépendants.</p><label>Numéro Wave et Orange Money</label><input id="cfgPaiementNumero" type="tel" maxlength="24" value="'+echapperAttributPaiement(coordonneesPaiementMQCI.numero)+'"><label>Nom du bénéficiaire</label><input id="cfgPaiementBeneficiaire" maxlength="100" value="'+echapperAttributPaiement(coordonneesPaiementMQCI.beneficiaire)+'">';
+  paiementCard.innerHTML='<h4>Paiements des abonnements — Jèko uniquement</h4><p>Les abonnements et renouvellements payants sont réglés depuis chaque rubrique via le checkout Jèko. Aucun numéro de transfert, référence manuelle ou validation administrative ne doit être utilisé pour activer un abonnement. Les confirmations proviennent exclusivement du webhook Jèko.</p>';
   zone.appendChild(paiementCard);
   Object.keys(CONFIG_ABONNEMENTS_DEFAUT).forEach(id=>{
    const c={...CONFIG_ABONNEMENTS_DEFAUT[id],...(configurationAbonnementsCachee[id]||{})};
@@ -5052,9 +4998,7 @@ async function chargerConfigurationAbonnementsAdmin(){
 async function sauvegarderConfigurationAbonnementsAdmin(){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
  const services={};
- const numeroPaiement=document.getElementById("cfgPaiementNumero")?.value.trim()||"";
- const beneficiairePaiement=document.getElementById("cfgPaiementBeneficiaire")?.value.trim()||"";
- if(!/^[+0-9 .()-]{8,24}$/.test(numeroPaiement)||beneficiairePaiement.length<2||beneficiairePaiement.length>100)return alert("Vérifie le numéro de paiement et le nom du bénéficiaire.");
+
  for(const id of Object.keys(CONFIG_ABONNEMENTS_DEFAUT)){
   const lire=suffixe=>document.getElementById('cfg_'+id+'_'+suffixe);
   const prix=Number(lire('prix').value),duree=Number(lire('duree').value),essai=Number(lire('essai').value),promotionPrix=Number(lire('promoPrix').value);
@@ -5066,8 +5010,8 @@ async function sauvegarderConfigurationAbonnementsAdmin(){
   services[id]={libelle:CONFIG_ABONNEMENTS_DEFAUT[id].libelle,actif:lire('actif').checked,prix,duree,unite,essai,promotionActive:lire('promo').checked,promotionPrix,promotionDebut:debut,promotionFin:fin,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
  }
  try{
-  await db.collection("configuration_abonnements").doc("globale").set({services,paiement:{numero:numeroPaiement,beneficiaire:beneficiairePaiement,actif:true,mode:"manuel",apiActive:false},updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.uid},{merge:true});
-  configurationAbonnementsCachee=services;configurationAbonnementsPromise=null;coordonneesPaiementMQCI={numero:numeroPaiement,beneficiaire:beneficiairePaiement,actif:true,mode:"manuel",apiActive:false};window.MQCI_PAIEMENT=coordonneesPaiementMQCI;alert("Paramètres enregistrés. Le paiement manuel Wave / Orange Money est actif ; les paiements automatiques par API restent désactivés.");await chargerConfigurationAbonnementsAdmin();
+  await db.collection("configuration_abonnements").doc("globale").set({services,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.uid},{merge:true});
+  configurationAbonnementsCachee=services;configurationAbonnementsPromise=null;alert("Tarifs et durées enregistrés. Les abonnements payants restent réglés exclusivement via Jèko.");await chargerConfigurationAbonnementsAdmin();
  }catch(e){console.error(e);alert("Enregistrement impossible : "+e.message+" Vérifie les règles Firestore.");}
 }
 
@@ -8067,13 +8011,9 @@ async function actualiserTarifPublicAutomobiliste(){
   try{
     const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
     if(!cfg.actif){zone.innerHTML="<strong>Les nouvelles souscriptions sont temporairement suspendues.</strong>";return;}
-    const paiement=await window.chargerCoordonneesPaiementMQCI();
     const montant=tarifAbonnementEffectif(cfg),duree=Number(cfg.duree),unite=cfg.unite==="mois"?(duree===12?"an":"mois"):"jours";
     zone.innerHTML="<strong>Tarif actuel : "+montant.toLocaleString("fr-FR")+" FCFA / "+duree+" "+unite+"</strong>"+
-      '<p style="margin:8px 0 4px;">Wave : <strong>'+echapperTextePublicite(paiement.numero)+'</strong></p>'+
-      '<p style="margin:4px 0;">Orange Money : <strong>'+echapperTextePublicite(paiement.numero)+'</strong></p>'+
-      '<p style="margin:4px 0;">Titulaire : <strong>'+echapperTextePublicite(paiement.beneficiaire)+'</strong></p>'+
-      '<p style="font-size:13px;margin-bottom:0;">Effectuez le transfert du montant indiqué, puis saisissez la référence de la transaction. L’accès sera activé après vérification manuelle.</p>';
+      '<p style="font-size:13px;margin:8px 0 0;">Le règlement de l’abonnement se fait exclusivement via Jèko. Choisissez votre moyen de paiement dans le formulaire ci-dessous. L’accès est activé uniquement après confirmation du webhook Jèko.</p>';
   }catch(e){
     console.error("Lecture du tarif automobiliste impossible :",e);
     zone.textContent="Impossible de charger le tarif actuel. Vérifiez votre connexion puis rouvrez cette rubrique.";
