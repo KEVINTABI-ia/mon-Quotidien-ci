@@ -984,17 +984,19 @@ describe("Mon Transport CI — règles Firestore", function () {
       }));
     });
 
-    it("accepte une demande manuelle d'abonnement automobiliste en attente", async () => {
-      const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
-      await assertSucceeds(setDoc(doc(db,"demandes_abonnement_automobiliste","auto-paiement-manuel"),{
-        uid:CLIENT_UID,email:"client@example.test",operateur:"Wave",
-        referencePaiement:"REF-TEST-1234",nomPayeur:"Client test",
-        montantFCFA:1000,dureeMois:12,statut:"en_attente",createdAt:serverTimestamp()
-      }));
-      await assertFails(updateDoc(doc(db,"demandes_abonnement_automobiliste","auto-paiement-manuel"),{statut:"actif"}));
+    it("conserve les anciennes demandes manuelles automobiliste en lecture seule et interdit leur approbation", async () => {
       const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
-      await assertSucceeds(updateDoc(doc(adminDb,"demandes_abonnement_automobiliste","auto-paiement-manuel"),{statut:"approuve"}));
+      const {doc,updateDoc}=require("firebase/firestore");
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        await context.firestore().doc("demandes_abonnement_automobiliste/auto-paiement-manuel").set({
+          uid:CLIENT_UID,email:"client@example.test",operateur:"Wave",
+          referencePaiement:"REF-TEST-1234",nomPayeur:"Client test",
+          montantFCFA:1000,dureeMois:12,statut:"en_attente",createdAt:Timestamp.now()
+        });
+      });
+      const legacyRef=doc(adminDb,"demandes_abonnement_automobiliste","auto-paiement-manuel");
+      await assertFails(updateDoc(legacyRef,{statut:"approuve"}));
+      await assertSucceeds(updateDoc(legacyRef,{statut:"refuse"}));
     });
 
     it("accepte une recharge Gbairai en attente de vérification", async () => {
