@@ -700,21 +700,31 @@ async function subscriptionPlans(request,env) {
     boutiques:["boutiques_15j","boutiques_30j","boutiques_1mois","boutiques_2mois","boutiques_3mois"],
     partenaires_colis:["partenaires_colis_1mois","partenaires_colis_3mois","partenaires_colis_6mois"],
     compagnie_voyage:["compagnie_essentielle_mensuel","compagnie_essentielle_annuel","compagnie_professionnelle_mensuel","compagnie_professionnelle_annuel"],
+    logement:["mensuel","trimestriel","semestriel"],
     ramassage:["ramassage"]
+  };
+  // Ces montants/durées sont la source tarifaire du checkout logement.
+  // Le catalogue doit donc exposer exactement les mêmes valeurs, sans dépendre
+  // d'anciennes clés de configuration administrable.
+  const logementDefaults={
+    mensuel:{label:"1 mois",price:3000,duration:1,unit:"mois"},
+    trimestriel:{label:"3 mois",price:8000,duration:3,unit:"mois"},
+    semestriel:{label:"6 mois",price:15000,duration:6,unit:"mois"}
   };
   if(!Object.prototype.hasOwnProperty.call(definitions,requested)) return json({error:"unsupported_subscription_service"},400);
   const now=new Date();
   const plans=definitions[requested].map(key=>{
-    const cfg=services[key]||{};
-    const duration=Number(cfg.duree??0),unit=cfg.unite==="mois"?"mois":"jours";
-    const base=requested==="ramassage"&&key==="ramassage"?2000:Number(cfg.prix??0),promo=Number(cfg.promotionPrix??0);
+    const logementPlan=requested==="logement"?logementDefaults[key]:null;
+    const cfg=requested==="logement"?{}:(services[key]||{});
+    const duration=Number(cfg.duree??logementPlan?.duration??0),unit=cfg.unite==="mois"||logementPlan?.unit==="mois"?"mois":"jours";
+    const base=requested==="ramassage"&&key==="ramassage"?2000:Number(cfg.prix??logementPlan?.price??0),promo=Number(cfg.promotionPrix??0);
     const start=cfg.promotionDebut?new Date(cfg.promotionDebut+"T00:00:00Z"):null;
     const end=cfg.promotionFin?new Date(cfg.promotionFin+"T23:59:59Z"):null;
     const promotionActive=cfg.promotionActive===true&&promo>0&&promo<=base&&start&&end&&now>=start&&now<=end;
     const price=promotionActive?promo:base;
     const valid=cfg.actif!==false&&Number.isSafeInteger(duration)&&duration>0&&Number.isSafeInteger(price)&&price>0&&price<=10000000;
     return {
-      planId:key,label:typeof cfg.libelle==="string"?cfg.libelle:key,
+      planId:key,label:typeof cfg.libelle==="string"?cfg.libelle:(logementPlan?.label||key),
       active:cfg.actif!==false,available:valid,priceXof:valid?price:null,
       regularPriceXof:Number.isSafeInteger(base)&&base>0?base:null,
       duration:valid?duration:null,unit,
