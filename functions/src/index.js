@@ -208,17 +208,45 @@ exports.jekoWebhook = onRequest(
 );
 
 exports.getJekoPaymentStatus = onRequest(
-  { region: "europe-west1", cors: ["https://kevintabi-ia.github.io"] },
+  { region: "europe-west1", secrets: [JEKO_API_KEY, JEKO_API_KEY_ID], cors: ["https://kevintabi-ia.github.io"] },
   async (req, res) => {
     if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" });
     try {
       const user = await requireUser(req);
       const paymentId = req.query.paymentId;
       if (typeof paymentId !== "string" || !/^[A-Za-z0-9_-]{15,40}$/.test(paymentId)) return json(res, 400, { error: "invalid_payment_id" });
-      const snap = await db.collection("payments").doc(paymentId).get();
+      const paymentRef = db.collection("payments").doc(paymentId);
+      const snap = await paymentRef.get();
       if (!snap.exists || snap.data().uid !== user.uid || snap.data().provider !== "jeko") return json(res, 404, { error: "payment_not_found" });
-      const payment = snap.data();
-      return json(res, 200, { paymentId, status: payment.status, amountXof: payment.amountXof, currency: payment.currency });
+      let payment = snap.data();
+      // Jèko n'envoie pas de webhook pour un paiement échoué : interroger son statut,
+      // au plus une fois toutes les 10 secondes. Un statut "success" n'active jamais
+      // l'abonnement ici : seul le webhook signé peut le faire.
+      if (payment.status === "pending" && payment.providerPaymentRequestId) {
+        const lastCheck = payment.lastProviderCheckAt?.toMillis?.() || 0;
+        if (Date.now() - lastCheck >= 10000) {
+          try {
+            const provider = await jekoRequest("/partner_api/payment_requests/" + encodeURIComponent(payment.providerPaymentRequestId));
+            const providerStatus = provider.status || provider.transaction?.status;
+            await paymentRef.update({
+              lastProviderCheckAt: admin.firestore.FieldValue.serverTimestamp(),
+              ...(providerStatus === "error" ? {
+                status: "failed",
+                providerErrorReason: provider.errorReason || provider.transaction?.errorReason || "payment_failed",
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+              } : {})
+            });
+            if (providerStatus === "error") payment = { ...payment, status: "failed" };
+          } catch (providerError) {
+            logger.warn("Jèko status lookup unavailable", { paymentId, message: providerError.message });
+          }
+        }
+      }
+      return json(res, 200, {
+        paymentId, status: payment.status, amountXof: payment.amountXof,
+        currency: payment.currency,
+        confirmation: payment.status === "pending" ? "awaiting_signed_webhook" : payment.status
+      });
     } catch (error) {
       return json(res, error.status || 500, { error: "status_unavailable" });
     }
