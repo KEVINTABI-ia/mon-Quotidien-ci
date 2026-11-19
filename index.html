@@ -6666,9 +6666,7 @@ function afficherFormulaireInscriptionCompagnie(zone){
       <label>Formule d’abonnement</label><select id="partCompagnieFormule" onchange="actualiserPrixInscriptionCompagnie()"><option value="Essentielle">Essentielle</option><option value="Professionnelle">Professionnelle</option></select>
       <label>Périodicité</label><select id="partCompagniePeriodicite" onchange="actualiserPrixInscriptionCompagnie()"><option value="Mensuel">Mensuel</option><option value="Annuel">Annuel</option></select>
       <p id="partCompagniePrix" class="notice">Tarif : 5 000 FCFA / mois</p>
-      <label>Moyen de paiement</label><select id="partCompagniePaiement"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select>
-      <label>Référence de paiement</label><input id="partCompagnieReference" maxlength="80" placeholder="Référence de la transaction" required>
-      <p class="notice" id="partCompagnieCoordonneesPaiement">Chargement des coordonnées de paiement...</p><p class="notice">Le tarif et la durée sont déterminés par la formule choisie et les paramètres en vigueur. L’activation intervient après vérification par l’administration.</p>
+      <p class="notice">Aucun paiement n’est demandé au dépôt du dossier. Après vérification et approbation par l’administration, le titulaire règlera son abonnement exclusivement avec Jèko.</p>
       <button type="button" class="primary" onclick="envoyerInscriptionCompagnie()">Envoyer mon dossier</button>
       <p id="partCompagnieStatut" class="notice" aria-live="polite"></p>
     </div>`;
@@ -6682,28 +6680,28 @@ function actualiserPrixInscriptionCompagnie(){
   if(zone&&prix)zone.textContent="Tarif : "+prix.toLocaleString("fr-FR")+" FCFA / "+periodicite.toLowerCase();
 }
 async function envoyerInscriptionCompagnie(){
-  const user=auth.currentUser;
-  if(!(await window.paiementsMQCIDisponibles(true))){const zonePaiement=document.getElementById("partCompagnieStatut");if(zonePaiement)zonePaiement.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
-  const val=id=>document.getElementById(id)?.value.trim()||"";
-  const statut=document.getElementById("partCompagnieStatut");
-  if(!user){statut.textContent="Connectez-vous à votre compte utilisateur avant de déposer une demande partenaire.";return;}
-  const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),email=user.email||"",texte=val("partCompagnieDestinations"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite"),paiement=val("partCompagniePaiement"),reference=val("partCompagnieReference");
-  let destinations;
-  try{destinations=texte.split("\n").map(ligne=>{const p=ligne.split("|"),ville=(p[0]||"").trim(),prix=Number((p[1]||"").trim()),service=(p[2]||"").trim().toLowerCase(),services={premium:"Premium",express:"Express",standard:"Standard"};if(!ville||p.length<3||!Number.isFinite(prix)||prix<=0||!services[service])throw new Error("Format incorrect : Destination | Prix | Premium, Express ou Standard.");return {ville,prix,service:services[service]};});}
-  catch(e){statut.textContent=e.message;return;}
-  if(!nom||!agence||!localisation||!telephone||!email||!texte||!paiement||reference.length<4){statut.textContent="Complétez tous les champs obligatoires et la référence de paiement.";return;}
-  let cfg;
-  try{cfg=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));}catch(e){statut.textContent=e.message;return;}
-  if(!cfg.actif||cfg.unite!=="mois"){statut.textContent="Cette formule est temporairement indisponible.";return;}
-  const montant=tarifAbonnementEffectif(cfg),dureeMois=Number(cfg.duree);
-  if(!montant||!dureeMois){statut.textContent="Tarif ou durée non configuré.";return;}
-  statut.textContent="Envoi de votre demande...";
-  try{
-    let logo="";const fichier=document.getElementById("partCompagnieLogo")?.files?.[0];
-    if(fichier){logo=await compresserImage(fichier);if(logo.length>300000)throw new Error("Le logo est trop volumineux après compression.");}
-    await db.collection("compagnies").add({uid:user.uid,nom,agence,localisation,telephone,email,logo,destinations,formule,periodicite,montant,dureeMois,moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",dateCreation:firebase.firestore.FieldValue.serverTimestamp(),dateDebut:null,dateExpiration:null});
-    statut.textContent="Demande envoyée avec votre compte utilisateur. Votre session reste active. Activation après vérification du paiement.";
-  }catch(e){console.error("Demande compagnie:",e);statut.textContent="Envoi impossible : "+(e.message||"réessayez.");}
+ const user=auth.currentUser,statut=document.getElementById("partCompagnieStatut");
+ const val=id=>document.getElementById(id)?.value.trim()||"";
+ if(!user){statut.textContent="Connectez-vous à votre compte utilisateur avant de déposer une demande.";return;}
+ const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),email=user.email||val("partCompagnieEmail"),texte=val("partCompagnieDestinations"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite");
+ let destinations;
+ try{destinations=texte.split("\n").map(ligne=>{const p=ligne.split("|"),ville=(p[0]||"").trim(),prix=Number((p[1]||"").trim()),service=(p[2]||"").trim().toLowerCase(),services={premium:"Premium",express:"Express",standard:"Standard"};if(!ville||p.length<3||!Number.isFinite(prix)||prix<=0||!services[service])throw new Error("Format incorrect : Destination | Prix | Premium, Express ou Standard.");return {ville,prix,service:services[service]};});}
+ catch(e){statut.textContent=e.message;return;}
+ if(!nom||!agence||!localisation||!telephone||!email||!texte){statut.textContent="Complétez tous les champs obligatoires.";return;}
+ let cfg;
+ try{cfg=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));}catch(e){statut.textContent=e.message;return;}
+ if(!cfg.actif||cfg.unite!=="mois"){statut.textContent="Cette formule est temporairement indisponible.";return;}
+ const montant=tarifAbonnementEffectif(cfg),dureeMois=Number(cfg.duree);
+ if(!Number.isSafeInteger(montant)||montant<=0||!Number.isSafeInteger(dureeMois)||dureeMois<=0){statut.textContent="Tarif ou durée non configuré.";return;}
+ statut.textContent="Transmission du dossier pour vérification...";
+ try{
+  const old=await db.collection("compagnies").where("uid","==",user.uid).limit(1).get();
+  if(!old.empty)throw new Error("Un dossier compagnie existe déjà pour ce compte.");
+  let logo="";const fichier=document.getElementById("partCompagnieLogo")?.files?.[0];
+  if(fichier){logo=await compresserImage(fichier);if(logo.length>300000)throw new Error("Le logo est trop volumineux après compression.");}
+  await db.collection("compagnies").add({uid:user.uid,nom,agence,localisation,telephone,email,logo,destinations,formule,periodicite,montant,dureeMois,statutAbonnement:"Dossier à vérifier",dateCreation:firebase.firestore.FieldValue.serverTimestamp(),dateDebut:null,dateExpiration:null});
+  statut.textContent="Dossier transmis. Après approbation, vous pourrez régler votre formule exclusivement avec Jèko depuis votre espace compagnie.";
+ }catch(e){console.error("Demande compagnie:",e);statut.textContent="Envoi impossible : "+(e.message||"réessayez.");}
 }
 function validerMotDePasse(champ, idErreur) {
   const motDePasse = champ.value;
@@ -10376,12 +10374,10 @@ async function chargerCompagniesAdmin() {
 
       let bouton = "";
 
-if (compagnie.statutAbonnement === "En attente") {
-  bouton = `<button type="button" class="primary"
-    onclick="validerPaiementCompagnie('${doc.id}')">
-    Valider le paiement
-  </button>`;
+if (compagnie.statutAbonnement === "Dossier à vérifier") {
+  bouton = `<button type="button" class="primary" onclick="validerPaiementCompagnie('${doc.id}')">Approuver le dossier</button>`;
 }
+if (compagnie.statutAbonnement === "À payer") bouton = '<p class="notice">Dossier approuvé — paiement Jèko attendu du titulaire.</p>';
 
 if (
   compagnie.statutAbonnement === "Actif" ||
@@ -10589,7 +10585,14 @@ destinations,
 }
 async function validerPaiementCompagnie(id) {
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
- alert("L'activation manuelle est désactivée. Le titulaire de la compagnie doit régler via Jèko ; seul le webhook confirmé active l'abonnement.");
+ try{
+  const ref=db.collection("compagnies").doc(id),snap=await ref.get();
+  if(!snap.exists||snap.data().statutAbonnement!=="Dossier à vérifier")return alert("Ce dossier n'est plus en attente d'approbation.");
+  if(!(await demanderConfirmation("Approuver le dossier compagnie ?","Le titulaire devra ensuite payer son abonnement via Jèko. Aucun abonnement ne sera activé à cette étape.","Approuver le dossier")))return;
+  await ref.update({statutAbonnement:"À payer",dossierApprouveLe:firebase.firestore.FieldValue.serverTimestamp(),dossierApprouvePar:auth.currentUser.uid});
+  await chargerCompagniesAdmin();
+  alert("Dossier approuvé. Le titulaire peut maintenant payer avec Jèko.");
+ }catch(e){alert("Approbation impossible : "+e.message);}
 }
 async function demanderRenouvellementCompagnie(id) {
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
@@ -12549,7 +12552,7 @@ async function afficherEspaceCompagnie(id,c){
  let el=document.getElementById("zoneEspaceCompagnie");if(!el){el=document.createElement("div");el.id="zoneEspaceCompagnie";zone.appendChild(el);}
  window.compagnieRenouvellementCourante={formule:c.formule,periodicite:c.periodicite};
  el.innerHTML='<hr><h3>🏢 Espace compagnie – '+echapperTexteCompagnie(c.nom)+'</h3><p>Abonnement : '+echapperTexteCompagnie(c.statutAbonnement)+'</p>'+
- (c.statutAbonnement==="Expiré"?'<div class="card" style="padding:12px;margin:10px 0;"><h4>Renouveler l’abonnement</h4><p>Le règlement s’effectue exclusivement via Jèko.</p><button type="button" class="primary" onclick="ouvrirPaiementRenouvellementCompagnie(\''+id+'\')">Renouveler avec Jèko</button><div id="zonePaiementRenouvellementCompagnie"></div></div>':'')+
+ (["À payer","Expiré"].includes(c.statutAbonnement)?'<div class="card" style="padding:12px;margin:10px 0;"><h4>'+(c.statutAbonnement==="À payer"?"Régler l’abonnement":"Renouveler l’abonnement")+'</h4><p>Le règlement s’effectue exclusivement via Jèko.</p><button type="button" class="primary" onclick="ouvrirPaiementRenouvellementCompagnie(\''+id+'\')">Payer avec Jèko</button><div id="zonePaiementRenouvellementCompagnie"></div></div>':'')+
  '<button type="button" onclick="deconnecterPartenaire()">Se déconnecter de mon espace compagnie</button><h4>Gare principale</h4><img src="'+echapperTexteCompagnie(c.photoGarePrincipale||"")+'" style="width:100%;max-height:170px;object-fit:cover;border-radius:12px">'+
  '<label>Localisation précise</label><input id="espaceCompagnieLocalisation" value="'+echapperTexteCompagnie(c.localisation||"")+'">'+
  '<label>Contact public gare</label><input id="espaceCompagnieTelGare" value="'+echapperTexteCompagnie(c.telephoneGarePrincipale||"")+'">'+
