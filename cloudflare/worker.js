@@ -322,6 +322,12 @@ async function createCheckout(request,env) {
     amountXof=cfg.promotionActive===true&&promo>0&&promo<=base&&start&&end&&now>=start&&now<=end?promo:base;
     initial={uid:user.sub,serviceId,planId:"annuel",provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationMonths:12,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
   }
+  if(["automobiliste","petites_annonces","boutique_renewal","partenaire_colis","compagnie_voyage"].includes(serviceId)) {
+    initial.planAmountXof=amountXof;
+    if(Number.isSafeInteger(initial.durationMonths)) initial.planDurationMonths=initial.durationMonths;
+    if(Number.isSafeInteger(initial.durationDays)) initial.planDurationDays=initial.durationDays;
+    initial.planSnapshotVersion=1;
+  }
   const id=crypto.randomUUID().replace(/-/g,"");
   const reference="MQCI-"+id;
   initial.clientReference=reference;
@@ -376,6 +382,46 @@ function addMonthsClamped(date,months) {
   const d=new Date(date), day=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+months);
   const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(day,last));return d;
 }
+export function validateJekoPaymentPlan(payment) {
+  if(!payment||payment.provider!=="jeko"||payment.currency!=="XOF"||
+     !Number.isSafeInteger(payment.amountXof)||payment.amountXof<1||
+     !Number.isSafeInteger(payment.amountCents)||payment.amountCents!==payment.amountXof*100) return false;
+  const fixed={
+    logement_renewal:{mensuel:[3000,30],trimestriel:[8000,90],semestriel:[15000,180]},
+    ramassage:{ramassage:[2000,30]},
+    annuaire_renewal:{annuaire:[1000,30]},
+    automobiliste:{annuel:[null, null]}
+  };
+  if(payment.serviceId==="objet_retrouve") return payment.amountXof===1000;
+  if(payment.serviceId==="logement_renewal"||payment.serviceId==="ramassage"||payment.serviceId==="annuaire_renewal"){
+    const plan=fixed[payment.serviceId]?.[payment.planId];
+    return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1];
+  }
+  if(payment.serviceId==="automobiliste"){
+    return payment.planId==="annuel"&&payment.durationMonths===12;
+  }
+  const monthPlans={
+    partenaire_colis:{partenaires_colis_1mois:1,partenaires_colis_3mois:3,partenaires_colis_6mois:6},
+    boutique_renewal:{boutiques_1mois:1,boutiques_2mois:2,boutiques_3mois:3},
+    compagnie_voyage:{
+      compagnie_essentielle_mensuel:1,compagnie_essentielle_annuel:12,
+      compagnie_professionnelle_mensuel:1,compagnie_professionnelle_annuel:12
+    }
+  };
+  const expectedMonths=monthPlans[payment.serviceId]?.[payment.planId];
+  if(expectedMonths!==undefined) {
+    return payment.durationMonths===expectedMonths&&
+      Number.isSafeInteger(payment.planAmountXof)&&payment.planAmountXof===payment.amountXof&&
+      payment.planDurationMonths===payment.durationMonths;
+  }
+  if(payment.serviceId==="petites_annonces"){
+    return payment.planId==="petites_annonces"&&
+      Number.isSafeInteger(payment.durationDays)&&payment.durationDays>=1&&payment.durationDays<=365&&
+      Number.isSafeInteger(payment.planAmountXof)&&payment.planAmountXof===payment.amountXof&&
+      payment.planDurationDays===payment.durationDays;
+  }
+  return false;
+}
 async function webhook(request,env) {
   if(request.method!=="POST") return new Response("Method Not Allowed",{status:405});
   const raw=await request.arrayBuffer(), signature=request.headers.get("Jeko-Signature")||"";
@@ -394,6 +440,10 @@ async function webhook(request,env) {
     Number.isSafeInteger(amount)&&amount===payment.amountCents;
   if(!valid) {
     await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"provider_data_mismatch",updatedAt:new Date().toISOString()}))});
+    return new Response("OK",{status:200});
+  }
+  if(!validateJekoPaymentPlan(payment)) {
+    await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"subscription_plan_snapshot_mismatch",updatedAt:new Date().toISOString()}))});
     return new Response("OK",{status:200});
   }
   const receiptId="jeko_"+Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(transactionId)))).map(v=>v.toString(16).padStart(2,"0")).join("");
