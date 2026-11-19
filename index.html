@@ -7031,7 +7031,7 @@ function afficherEspacePartenaire(dossier, uid) {
   const actif = dossier.statutAbonnementPartenaire === "Actif" && finAbonnement && finAbonnement > new Date();
   const expire = !actif && !enEssai;
   const dateFin = actif ? finAbonnement : finEssai;
-  const renouvellementEnAttente = dossier.renouvellementStatut === "a_verifier";
+  const renouvellementEnAttente = dossier.renouvellementStatut === "a_verifier" || dossier.renouvellementJekoStatut === "pending";
 
   zone.innerHTML = `
     <hr>
