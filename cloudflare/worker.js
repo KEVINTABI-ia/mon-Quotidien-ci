@@ -182,6 +182,7 @@ async function createCheckout(request,env) {
     if(!partnerDoc||partner?.uid!==user.sub||partner?.statut!=="approuve"||(partner?.etatCompte||"actif")!=="actif")return json({error:"partner_not_eligible"},403);
     const nowMs=now.getTime(),trialEnd=partner.dateFinEssai instanceof Date?partner.dateFinEssai.getTime():(partner.dateFinEssai?new Date(partner.dateFinEssai).getTime():0),paidEnd=partner.dateExpirationAbonnement instanceof Date?partner.dateExpirationAbonnement.getTime():(partner.dateExpirationAbonnement?new Date(partner.dateExpirationAbonnement).getTime():0);
     if((partner.statutAbonnementPartenaire==="Essai"&&trialEnd>nowMs)||(partner.statutAbonnementPartenaire==="Actif"&&paidEnd>nowMs))return json({error:"subscription_still_active"},409);
+    if(partner.renouvellementStatut==="a_verifier")return json({error:"legacy_payment_requires_review"},409);
     if(partner.renouvellementJekoPaymentId){
       const previous=await getDoc(env,"payments/"+partner.renouvellementJekoPaymentId);
       const previousStatus=docData(previous)?.status;
