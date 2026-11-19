@@ -227,7 +227,7 @@ async function createCheckout(request,env) {
       if(previousStatus==="pending"||previousStatus==="initialization_unknown"||previousStatus==="review_required")return json({error:"existing_payment_requires_review"},409);
     }
     amountXof=1000;
-    initial={uid:user.sub,serviceId,annuaireId,targetPath:annuairePath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays:30,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),annuaireLockUpdateTime:annuaireDoc.updateTime};
+    initial={uid:user.sub,serviceId,planId:"annuaire",annuaireId,targetPath:annuairePath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays:30,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),annuaireLockUpdateTime:annuaireDoc.updateTime};
   } else if(serviceId==="compagnie_voyage") {
     const compagnieId=body.compagnieId;
     if(typeof compagnieId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(compagnieId))return json({error:"invalid_company_id"},400);
@@ -398,7 +398,7 @@ export function validateJekoPaymentPlan(payment) {
     return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1];
   }
   if(payment.serviceId==="automobiliste"){
-    return payment.planId==="annuel"&&payment.durationMonths===12;
+    return payment.planId==="annuel"&&payment.durationMonths===12&&Number.isSafeInteger(payment.planAmountXof)&&payment.planAmountXof===payment.amountXof&&payment.planDurationMonths===12;
   }
   const monthPlans={
     partenaire_colis:{partenaires_colis_1mois:1,partenaires_colis_3mois:3,partenaires_colis_6mois:6},
@@ -442,10 +442,6 @@ async function webhook(request,env) {
     await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"provider_data_mismatch",updatedAt:new Date().toISOString()}))});
     return new Response("OK",{status:200});
   }
-  if(!validateJekoPaymentPlan(payment)) {
-    await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"subscription_plan_snapshot_mismatch",updatedAt:new Date().toISOString()}))});
-    return new Response("OK",{status:200});
-  }
   const receiptId="jeko_"+Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(transactionId)))).map(v=>v.toString(16).padStart(2,"0")).join("");
   const receiptPath="payment_webhooks/"+receiptId;
   const receipt=await getDoc(env,receiptPath);
@@ -460,6 +456,10 @@ async function webhook(request,env) {
     return new Response("OK",{status:200});
   }
   if(tx.status!=="success") return new Response("OK",{status:200});
+  if(!validateJekoPaymentPlan(payment)) {
+    await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"subscription_plan_snapshot_mismatch",updatedAt:new Date().toISOString()}))});
+    return new Response("OK",{status:200});
+  }
   if(payment.status==="succeeded") return new Response("OK",{status:200});
   if(payment.serviceId==="objet_retrouve"){
     const objectDoc=await getDoc(env,"objets_retrouves/"+payment.objectId);
