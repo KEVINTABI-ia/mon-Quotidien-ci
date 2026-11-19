@@ -13205,17 +13205,34 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
 <div id="mqciJekoDiagnostic">
  <strong>Diagnostic Jèko (sans paiement)</strong>
  <p style="margin:6px 0;font-size:13px">Contrôle de connexion en lecture seule. Aucun paiement ne sera créé.</p>
- <button type="button" id="mqciJekoDiagnosticRun">Lancer le diagnostic</button>
+ <button type="button" id="mqciJekoDiagnosticRun">Tester l’API Jèko</button>
+ <button type="button" id="mqciJekoNetworkDiagnosticRun" style="margin-left:6px;background:#244B79">Tester le réseau HTTPS</button>
  <div id="mqciJekoDiagnosticResult" role="status" aria-live="polite"></div>
 </div>
 <script>
 (function(){
  const zone=document.getElementById("mqciJekoDiagnostic");
  const button=document.getElementById("mqciJekoDiagnosticRun");
+ const networkButton=document.getElementById("mqciJekoNetworkDiagnosticRun");
  const result=document.getElementById("mqciJekoDiagnosticResult");
- if(!zone||!button||!result||typeof auth==="undefined")return;
+ if(!zone||!button||!networkButton||!result||typeof auth==="undefined")return;
  auth.onAuthStateChanged(function(user){
   zone.style.display=(user&&typeof ADMIN_UID!=="undefined"&&user.uid===ADMIN_UID)?"block":"none";
+ });
+ networkButton.addEventListener("click",async function(){
+  const user=auth.currentUser;
+  if(!user){result.textContent="Session expirée. Reconnectez-vous.";return;}
+  button.disabled=true;networkButton.disabled=true;result.textContent="Test HTTPS en lecture seule…";
+  try{
+   const token=await user.getIdToken(true);
+   const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/network-diagnostic",{
+    method:"GET",headers:{"Authorization":"Bearer "+token}
+   });
+   const data=await response.json().catch(()=>({error:"invalid_json_response"}));
+   result.textContent="HTTP "+response.status+"\n"+JSON.stringify(data,null,2);
+  }catch(error){
+   result.textContent="Erreur réseau navigateur : "+(error&&error.message?error.message:"inconnue");
+  }finally{button.disabled=false;networkButton.disabled=false;}
  });
  button.addEventListener("click",async function(){
   const user=auth.currentUser;
