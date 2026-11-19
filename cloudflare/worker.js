@@ -182,9 +182,12 @@ async function createCheckout(request,env) {
     if(typeof compagnieId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(compagnieId))return json({error:"invalid_company_id"},400);
     const companyPath="compagnies/"+compagnieId,companyDoc=await getDoc(env,companyPath),company=docData(companyDoc);
     if(!companyDoc||company?.uid!==user.sub)return json({error:"company_not_found_or_not_authorized"},403);
-    if(!["Actif","Expiré"].includes(company.statutAbonnement))return json({error:"company_not_renewable"},409);
-    const expiry=company.dateExpiration instanceof Date?company.dateExpiration:(company.dateExpiration?new Date(company.dateExpiration):null);
-    if(!expiry||!Number.isFinite(expiry.getTime())||expiry.getTime()>now.getTime())return json({error:"company_subscription_not_expired"},409);
+    const initialSubscription=company.statutAbonnement==="À payer";
+    if(!initialSubscription&&company.statutAbonnement!=="Expiré")return json({error:"company_not_renewable"},409);
+    if(!initialSubscription){
+      const expiry=company.dateExpiration instanceof Date?company.dateExpiration:(company.dateExpiration?new Date(company.dateExpiration):null);
+      if(!expiry||!Number.isFinite(expiry.getTime())||expiry.getTime()>now.getTime())return json({error:"company_subscription_not_expired"},409);
+    }
     if(company.renouvellementJekoPaymentId){
       const previous=await getDoc(env,"payments/"+company.renouvellementJekoPaymentId);
       const previousStatus=docData(previous)?.status;
@@ -369,7 +372,7 @@ async function webhook(request,env) {
   }
   if(payment.serviceId==="compagnie_voyage") {
     const companyPath=payment.targetPath,companyDoc=await getDoc(env,companyPath),company=docData(companyDoc);
-    if(!companyDoc||!company||company.uid!==payment.uid||company.formule==null||!Number.isSafeInteger(payment.durationMonths)||payment.durationMonths<1||payment.durationMonths>12){
+    if(!companyDoc||!company||company.uid!==payment.uid||company.formule==null||company.renouvellementJekoPaymentId!==paymentId||!Number.isSafeInteger(payment.durationMonths)||payment.durationMonths<1||payment.durationMonths>12){
       await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"company_target_or_duration_invalid",updatedAt:now.toISOString()}))});
       return new Response("OK",{status:200});
     }
