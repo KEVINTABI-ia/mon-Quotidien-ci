@@ -2132,6 +2132,19 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
     </div>
     <div id="ramassageCompagnieEspace" style="display:none">
       <p id="ramassageCompanyStatus" class="notice"></p>
+      <div id="ramassageCompanyPayment" class="ramassage-panel" style="display:none">
+        <h3>Abonnement de la compagnie</h3>
+        <p>Forfait mensuel : <strong>2 000 FCFA</strong>. Le paiement est sécurisé par Jèko.</p>
+        <label for="ramassageJekoPaymentMethod">Moyen de paiement</label>
+        <select id="ramassageJekoPaymentMethod">
+          <option value="">Choisir un moyen de paiement</option>
+          <option value="wave">Wave</option><option value="orange">Orange Money</option>
+          <option value="mtn">MTN Money</option><option value="moov">Moov Money</option>
+          <option value="djamo">Djamo</option>
+        </select>
+        <button class="primary" type="button" onclick="payerAbonnementRamassage()">Payer 2 000 FCFA avec Jèko</button>
+        <p id="ramassageJekoPaymentStatus" class="ramassage-muted" aria-live="polite"></p>
+      </div>
       <div id="ramassageCompanyActions" style="display:none">
         <h3>Publier un trajet avec places disponibles</h3>
         <label>Commune de départ</label><input id="offreRamassageCommune" placeholder="Ex. Yopougon">
@@ -2150,7 +2163,7 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
       <button type="button" onclick="deconnecterRamassage()">Déconnexion</button>
     </div>
   </div>
-  <p class="notice">Les comptes des compagnies sont soumis à validation et à l'activation d'un abonnement mensuel par l'administration. Le paiement en ligne sera ajouté après validation du fonctionnement et du tarif de l'abonnement.</p>
+  <p class="notice">Les comptes des compagnies sont soumis à validation administrative. Après approbation du dossier, la compagnie règle son forfait mensuel de 2 000 FCFA par Jèko. Seul le webhook de paiement vérifié active l’abonnement.</p>
 </section>
 
 
@@ -4902,7 +4915,7 @@ const CONFIG_ABONNEMENTS_DEFAUT={
  compagnie_essentielle_annuel:{libelle:"Compagnie de voyage — Essentielle annuelle",actif:true,prix:50000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  compagnie_professionnelle_mensuel:{libelle:"Compagnie de voyage — Professionnelle mensuelle",actif:true,prix:10000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  compagnie_professionnelle_annuel:{libelle:"Compagnie de voyage — Professionnelle annuelle",actif:true,prix:100000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
- ramassage:{libelle:"Compagnies de ramassage",actif:true,prix:0,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ ramassage:{libelle:"Compagnies de ramassage",actif:true,prix:2000,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
 };
 const NUMERO_PAIEMENT_MQCI="0757522319";
 const BENEFICIAIRE_PAIEMENT_MQCI="TA BI SERGE KEVIN";
@@ -8147,7 +8160,8 @@ async function verifierRetourPaiementJeko(user){
  const annuaireZone=serviceId==="annuaire_renewal"?(document.getElementById("espaceAnnuaireCompte")||document.getElementById("zoneInscriptionAnnuairePartenaire")):null;
  const boutiqueZone=serviceId==="boutique_renewal"?(document.getElementById("boutiqueCompteConnecte")||document.getElementById("connexionBoutiqueStatut")):null;
  const logementZone=serviceId==="logement_renewal"?(document.getElementById("logementSubscriptionStatus")||document.getElementById("logementRenewal")):null;
- const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="annuaire_renewal"?annuaireZone:(serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:document.getElementById("etatAbonnementAuto")))));
+ const ramassageZone=serviceId==="ramassage"?(document.getElementById("ramassageJekoPaymentStatus")||document.getElementById("ramassageCompanyStatus")):null;
+ const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="annuaire_renewal"?annuaireZone:(serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:(serviceId==="ramassage"?ramassageZone:document.getElementById("etatAbonnementAuto"))))));
  if(paymentState==="error"){
   if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été finalisé. Aucune demande de récupération n’a été transmise.":serviceId==="compagnie_voyage"?"Le paiement n’a pas été finalisé. Aucun abonnement de compagnie n’a été activé.":serviceId==="annuaire_renewal"?"Le paiement n’a pas été finalisé. Votre fiche reste masquée si son abonnement est expiré.":serviceId==="boutique_renewal"?"Le paiement n’a pas été finalisé. Votre boutique reste masquée tant que le paiement n’est pas confirmé.":serviceId==="logement_renewal"?"Le paiement n’a pas été finalisé. La publication de vos annonces reste suspendue si l’abonnement est expiré.":"Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
   params.delete("payment");params.delete("paymentId");params.delete("serviceId");history.replaceState({},document.title,location.pathname+(params.toString()?"?"+params.toString():""));return;
@@ -8176,6 +8190,9 @@ async function verifierRetourPaiementJeko(user){
     }else if(serviceId==="logement_renewal"){
      if(zone)zone.textContent="Paiement confirmé par Jèko. Actualisation de votre espace Logement…";
      if(window.logementRefreshSpace)await window.logementRefreshSpace();
+    }else if(serviceId==="ramassage"){
+     if(zone)zone.textContent="Paiement de 2 000 FCFA confirmé par Jèko. Activation de votre abonnement…";
+     if(partnerAuth.currentUser)await afficherEspaceRamassage(partnerAuth.currentUser);
     }else{
      if(zone)zone.textContent="Paiement confirmé par Jèko. Activation de votre abonnement…";
      await actualiserEtatAbonnementAutomobiliste();
@@ -8428,7 +8445,9 @@ async function afficherEspaceRamassage(user,profil=null){
       ? p.dateExpirationAbonnement.toDate().getTime()
       : 0;
     const active=p.statut==="approuve"&&p.abonnement==="actif"&&expirationAbonnement>Date.now();
-    document.getElementById("ramassageCompanyStatus").textContent=active?"Compagnie approuvée — abonnement actif. Vous pouvez publier vos trajets et consulter les demandes.":p.statut!=="approuve"?"Votre dossier est en attente de validation par l'administration.":"Votre abonnement n'est pas encore actif. Contactez l'administration.";
+    const paymentBox=document.getElementById("ramassageCompanyPayment");
+    if(paymentBox)paymentBox.style.display=p.statut==="approuve"&&!active?"block":"none";
+    document.getElementById("ramassageCompanyStatus").textContent=active?"Compagnie approuvée — abonnement actif jusqu’au "+new Date(expirationAbonnement).toLocaleDateString("fr-FR")+". Vous pouvez publier vos trajets et consulter les demandes.":p.statut!=="approuve"?"Votre dossier est en attente de validation par l'administration.":"Votre dossier est approuvé. Réglez le forfait de 2 000 FCFA avec Jèko pour activer votre espace.";
     document.getElementById("ramassageCompanyActions").style.display=active?"block":"none";
     if(active)await chargerDemandesRamassage();
   }else{
@@ -8436,6 +8455,31 @@ async function afficherEspaceRamassage(user,profil=null){
     await chargerOffresRamassage();
   }
 }
+async function payerAbonnementRamassage(){
+  const user=partnerAuth.currentUser,method=document.getElementById("ramassageJekoPaymentMethod")?.value,zone=document.getElementById("ramassageJekoPaymentStatus");
+  if(!user){if(zone)zone.textContent="Connectez-vous à votre compte compagnie.";return;}
+  if(!["wave","orange","mtn","moov","djamo"].includes(method)){if(zone)zone.textContent="Choisissez un moyen de paiement.";return;}
+  const button=document.querySelector("#ramassageCompanyPayment button");
+  if(button){button.disabled=true;button.textContent="Préparation du paiement…";}
+  if(zone)zone.textContent="Vérification du dossier et création du paiement Jèko…";
+  try{
+    const token=await user.getIdToken(),response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{
+      method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+      body:JSON.stringify({serviceId:"ramassage",paymentMethod:method})
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.checkoutUrl){
+      const messages={ramassage_profile_not_approved:"Votre dossier doit d’abord être approuvé par l’administration.",ramassage_subscription_still_active:"Votre abonnement est encore actif.",existing_payment_requires_review:"Un paiement précédent doit être vérifié. Ne recommencez pas.",plan_configuration_invalid:"Le forfait est momentanément indisponible."};
+      throw new Error(messages[data.error]||data.diagnostic||"Initialisation du paiement Jèko impossible.");
+    }
+    if(zone)zone.textContent="Redirection vers le paiement sécurisé Jèko…";
+    window.location.assign(data.checkoutUrl);
+  }catch(e){
+    if(zone)zone.textContent=e.message||"Erreur de paiement.";
+    if(button){button.disabled=false;button.textContent="Payer 2 000 FCFA avec Jèko";}
+  }
+}
+
 async function publierDemandeRamassage(){
   const user=auth.currentUser;if(!user)return alert("Connectez-vous d'abord.");
   const val=id=>document.getElementById(id).value.trim();
@@ -8506,21 +8550,21 @@ async function chargerCompagniesRamassageAdmin(){
       const d=doc.data(),card=document.createElement("div");card.className="ramassage-list-item";
       const title=document.createElement("strong");title.textContent=d.nom||"Compagnie sans nom";
       const detail=document.createElement("p");detail.textContent=(d.email||"")+" · "+(d.telephone||"")+" · Dossier : "+(d.statut||"inconnu")+" · Abonnement : "+(d.abonnement||"inactif");
-      const approve=document.createElement("button");approve.type="button";approve.textContent="Approuver le dossier";approve.onclick=()=>modifierStatutCompagnieRamassage(doc.id,"approuve");
-      const activate=document.createElement("button");activate.type="button";activate.textContent="Activer l’abonnement (après vérification du paiement)";activate.style.marginTop="8px";activate.onclick=()=>activerAbonnementCompagnieRamassage(doc.id);
-      card.append(title,detail,approve,activate);zone.appendChild(card);
+      if(d.statut!=="approuve"){
+        const approve=document.createElement("button");approve.type="button";approve.textContent="Approuver le dossier";approve.onclick=()=>modifierStatutCompagnieRamassage(doc.id,"approuve");
+        card.append(title,detail,approve);
+      }else{
+        const status=document.createElement("p");status.textContent="Dossier approuvé. Activation du forfait exclusivement après confirmation Jèko.";card.append(title,detail,status);
+      }
+      zone.appendChild(card);
     });
   }catch(e){zone.textContent="Impossible de charger les compagnies : "+e.message;}
 }
 async function modifierStatutCompagnieRamassage(uid,statut){
   if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
-  try{await db.collection("comptes_ramassage").doc(uid).update({statut:statut});alert("Statut du dossier mis à jour.");await chargerCompagniesRamassageAdmin();}
+  if(statut!=="approuve")return alert("Seule l’approbation du dossier est autorisée ici. Le forfait est activé automatiquement après confirmation Jèko.");
+  try{await db.collection("comptes_ramassage").doc(uid).update({statut:"approuve"});alert("Dossier de la compagnie approuvé. Elle peut maintenant régler son forfait Jèko de 2 000 FCFA.");await chargerCompagniesRamassageAdmin();}
   catch(e){alert("Modification impossible : "+e.message);}
-}
-async function activerAbonnementCompagnieRamassage(uid){
-  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
-  try{const cfg=await obtenirConfigurationAbonnement("ramassage");if(!cfg.actif)return alert("Les nouvelles souscriptions des compagnies de ramassage sont suspendues.");const jours=dureeAbonnementEnJours(cfg),montant=tarifAbonnementEffectif(cfg);if(montant<=0||jours<=0)return alert("Configure d'abord un prix supérieur à zéro et une durée dans Gestion générale des abonnements.");if(!confirm("Confirmer la réception de "+montant.toLocaleString("fr-FR")+" FCFA pour "+jours+" jours ?"))return;const expiration=new Date(Date.now()+jours*86400000);await db.collection("comptes_ramassage").doc(uid).update({statut:"approuve",abonnement:"actif",montantAbonnement:montant,dureeAbonnementJours:jours,dateExpirationAbonnement:firebase.firestore.Timestamp.fromDate(expiration)});alert("Abonnement activé pour "+jours+" jours.");await chargerCompagniesRamassageAdmin();}
-  catch(e){alert("Activation impossible : "+e.message);}
 }
 
 async function deconnecterRamassage(){
