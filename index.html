@@ -13195,3 +13195,42 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
  #accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-image{height:174px!important;min-height:174px!important;max-height:174px!important}
 }
 </style>
+
+<!-- Diagnostic Jeko temporaire : réservé à l'administrateur, lecture seule. -->
+<style>
+#mqciJekoDiagnostic{position:fixed;z-index:99999;left:12px;right:12px;bottom:16px;max-width:520px;margin:auto;background:#fff;border:1px solid #d7e3da;border-radius:14px;padding:12px;box-shadow:0 4px 22px #0002;display:none}
+#mqciJekoDiagnostic button{background:#075B35;color:#fff;border:0;border-radius:9px;padding:11px 14px;font-weight:700}
+#mqciJekoDiagnosticResult{font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:8px}
+</style>
+<div id="mqciJekoDiagnostic">
+ <strong>Diagnostic Jèko (sans paiement)</strong>
+ <p style="margin:6px 0;font-size:13px">Contrôle de connexion en lecture seule. Aucun paiement ne sera créé.</p>
+ <button type="button" id="mqciJekoDiagnosticRun">Lancer le diagnostic</button>
+ <div id="mqciJekoDiagnosticResult" role="status" aria-live="polite"></div>
+</div>
+<script>
+(function(){
+ const zone=document.getElementById("mqciJekoDiagnostic");
+ const button=document.getElementById("mqciJekoDiagnosticRun");
+ const result=document.getElementById("mqciJekoDiagnosticResult");
+ if(!zone||!button||!result||typeof auth==="undefined")return;
+ auth.onAuthStateChanged(function(user){
+  zone.style.display=(user&&typeof ADMIN_UID!=="undefined"&&user.uid===ADMIN_UID)?"block":"none";
+ });
+ button.addEventListener("click",async function(){
+  const user=auth.currentUser;
+  if(!user){result.textContent="Session expirée. Reconnectez-vous.";return;}
+  button.disabled=true;result.textContent="Vérification de la connexion Jèko…";
+  try{
+   const token=await user.getIdToken(true);
+   const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/diagnostic",{
+    method:"GET",headers:{"Authorization":"Bearer "+token}
+   });
+   const data=await response.json().catch(()=>({error:"invalid_json_response"}));
+   result.textContent="HTTP "+response.status+"\n"+JSON.stringify(data,null,2);
+  }catch(error){
+   result.textContent="Erreur réseau navigateur : "+(error&&error.message?error.message:"inconnue");
+  }finally{button.disabled=false;}
+ });
+})();
+</script>
