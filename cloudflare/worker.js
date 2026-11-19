@@ -69,7 +69,11 @@ async function serviceToken(env) {
 }
 async function firestore(env, path, init={}) {
   const token = await serviceToken(env);
-  const response = await fetch("https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents/"+path,{
+  const endpoint=new URL("https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents/"+path);
+  if(init.method==="PATCH"&&typeof init.body==="string") {
+    try { for(const key of Object.keys(JSON.parse(init.body).fields||{})) endpoint.searchParams.append("updateMask.fieldPaths",key); } catch {}
+  }
+  const response = await fetch(endpoint.toString(),{
     ...init, headers:{authorization:"Bearer "+token,"content-type":"application/json",...(init.headers||{})}
   });
   const data = await response.json().catch(()=>({}));
