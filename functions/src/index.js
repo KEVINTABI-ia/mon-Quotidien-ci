@@ -3,13 +3,18 @@ const { defineSecret } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 const crypto = require("node:crypto");
-const { verifyWaveSignature: verifyWaveSignatureHeader, addMonthsClamped } = require("./payment-utils");
+const { verifyWaveSignature: verifyWaveSignatureHeader, verifyJekoSignature, addMonthsClamped } = require("./payment-utils");
 
 admin.initializeApp();
 const db = admin.firestore();
 const WAVE_API_KEY = defineSecret("WAVE_API_KEY");
 const WAVE_WEBHOOK_SECRET = defineSecret("WAVE_WEBHOOK_SECRET");
 const WAVE_API_BASE = "https://api.wave.com";
+const JEKO_API_BASE = "https://api.jeko.africa";
+const JEKO_API_KEY = defineSecret("JEKO_API_KEY");
+const JEKO_API_KEY_ID = defineSecret("JEKO_API_KEY_ID");
+const JEKO_STORE_ID = defineSecret("JEKO_STORE_ID");
+const JEKO_WEBHOOK_SECRET = defineSecret("JEKO_WEBHOOK_SECRET");
 
 const json = (res, status, body) => res.status(status).set("Cache-Control", "no-store").json(body);
 const bearer = req => (req.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1] || null;
@@ -256,6 +261,210 @@ exports.getPaymentStatus = onRequest(
       return json(res, 200, { paymentId, status: p.status, serviceId: p.serviceId, amountXof: p.amountXof, currency: p.currency });
     } catch (error) {
       return json(res, error.status || 500, { error: "status_unavailable" });
+    }
+  }
+);
+
+
+// Jèko Checkout — separate provider adapter; manual payment and Wave remain unchanged.
+async function jekoRequest(path, options = {}) {
+  const response = await fetch(JEKO_API_BASE + path, {
+    ...options,
+    headers: {
+      "X-API-KEY": JEKO_API_KEY.value(),
+      "X-API-KEY-ID": JEKO_API_KEY_ID.value(),
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    },
+    signal: AbortSignal.timeout(15000)
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    logger.error("Jèko API error", { status: response.status, code: body?.error || body?.message || "provider_error" });
+    throw Object.assign(new Error("Jèko n'a pas accepté la demande de paiement."), { status: 502 });
+  }
+  return body;
+}
+
+exports.createJekoCheckout = onRequest(
+  { region: "europe-west1", secrets: [JEKO_API_KEY, JEKO_API_KEY_ID, JEKO_STORE_ID], cors: ["https://kevintabi-ia.github.io"] },
+  async (req, res) => {
+    if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" });
+    let createdPaymentRef = null;
+    try {
+      const user = await requireUser(req);
+      const { serviceId, planId, successUrl, errorUrl, paymentMethod = "wave" } = req.body || {};
+      const methods = ["orange", "wave", "mtn", "moov", "djamo", "jeko"];
+      if (typeof serviceId !== "string" || typeof planId !== "string" ||
+          !/^[a-z0-9_-]{2,60}$/i.test(serviceId) || !/^[a-z0-9_-]{2,40}$/i.test(planId) ||
+          !validReturnUrl(successUrl) || !validReturnUrl(errorUrl) || !methods.includes(paymentMethod)) {
+        return json(res, 400, { error: "invalid_request" });
+      }
+
+      // Price and duration are read only from the server-managed catalogue.
+      const planSnap = await db.doc("payment_catalog/" + serviceId + "/plans/" + planId).get();
+      if (!planSnap.exists || planSnap.data().active !== true) return json(res, 404, { error: "plan_unavailable" });
+      const plan = planSnap.data();
+      if (!Number.isSafeInteger(plan.amountXof) || plan.amountXof < 1 || plan.amountXof > 10000000 ||
+          plan.currency !== "XOF" || typeof plan.label !== "string" ||
+          !Number.isSafeInteger(plan.durationDays) || plan.durationDays < 1 || plan.durationDays > 3660) {
+        logger.error("Invalid Jèko payment catalogue entry", { serviceId, planId });
+        return json(res, 503, { error: "plan_configuration_invalid" });
+      }
+
+      // Jèko expects centimes: 1 XOF = 100 cents.
+      const amountCents = plan.amountXof * 100;
+      if (!Number.isSafeInteger(amountCents) || amountCents < 100 || amountCents % 100 !== 0) {
+        return json(res, 503, { error: "plan_amount_invalid" });
+      }
+      const paymentRef = db.collection("payments").doc();
+      createdPaymentRef = paymentRef;
+      const clientReference = "MQCI-" + paymentRef.id;
+      await paymentRef.create({
+        uid: user.uid, serviceId, planId, provider: "jeko", amountXof: plan.amountXof,
+        durationDays: plan.durationDays, currency: "XOF", status: "pending", clientReference,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      const successReturn = new URL(successUrl);
+      successReturn.searchParams.set("paymentId", paymentRef.id);
+      const checkout = await jekoRequest("/partner_api/payment_requests", {
+        method: "POST",
+        body: JSON.stringify({
+          storeId: JEKO_STORE_ID.value(),
+          amountCents,
+          currency: "XOF",
+          reference: clientReference,
+          paymentDetails: {
+            type: "redirect",
+            data: { paymentMethod, successUrl: successReturn.toString(), errorUrl }
+          }
+        })
+      });
+      if (typeof checkout.id !== "string" || checkout.reference !== clientReference ||
+          checkout.storeId !== JEKO_STORE_ID.value() || typeof checkout.redirectUrl !== "string" ||
+          !/^https:\/\//i.test(checkout.redirectUrl)) {
+        throw new Error("Réponse Jèko incomplète ou incohérente.");
+      }
+      await paymentRef.update({
+        providerPaymentRequestId: checkout.id,
+        checkoutUrl: checkout.redirectUrl,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      return json(res, 201, { paymentId: paymentRef.id, checkoutUrl: checkout.redirectUrl });
+    } catch (error) {
+      if (createdPaymentRef) {
+        try {
+          await createdPaymentRef.set({
+            status: "failed",
+            initializationError: error.status ? "provider_rejected" : "provider_unavailable",
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        } catch (writeError) {
+          logger.error("Could not mark failed Jèko checkout initialization", { paymentId: createdPaymentRef.id });
+        }
+      }
+      logger.warn("createJekoCheckout rejected", { status: error.status || 500, message: error.message });
+      return json(res, error.status || 500, { error: error.status ? "request_rejected" : "payment_initialization_failed" });
+    }
+  }
+);
+
+exports.jekoWebhook = onRequest(
+  { region: "europe-west1", secrets: [JEKO_WEBHOOK_SECRET, JEKO_STORE_ID], cors: false },
+  async (req, res) => {
+    if (req.method !== "POST") return res.sendStatus(405);
+    if (!verifyJekoSignature(req.get("jeko-signature") || "", req.rawBody, JEKO_WEBHOOK_SECRET.value())) {
+      return res.sendStatus(401);
+    }
+    const eventName = req.get("jeko-event") || "";
+    const version = req.get("jeko-webhook-version") || "";
+    if (!version || !/^[a-zA-Z0-9._-]{1,40}$/.test(version)) return res.sendStatus(400);
+    let transaction;
+    try { transaction = JSON.parse(req.rawBody.toString("utf8")); } catch { return res.sendStatus(400); }
+    if (eventName !== "TRANSACTION_COMPLETED") return res.sendStatus(200);
+
+    const details = transaction?.transactionDetails || {};
+    const clientReference = details.reference;
+    const transactionId = transaction?.id;
+    const paymentRequestId = details.id;
+    if (typeof transactionId !== "string" || typeof clientReference !== "string" ||
+        typeof paymentRequestId !== "string") return res.sendStatus(400);
+
+    try {
+      const receiptKey = crypto.createHash("sha256").update(transactionId).digest("hex");
+      const receiptRef = db.collection("payment_webhooks").doc("jeko_" + receiptKey);
+      const paymentId = clientReference.startsWith("MQCI-") ? clientReference.slice(5) : "";
+      if (!paymentId) {
+        await receiptRef.set({
+          provider: "jeko", eventName, transactionId, outcome: "ignored",
+          receivedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        return res.sendStatus(200);
+      }
+      const paymentRef = db.collection("payments").doc(paymentId);
+      await db.runTransaction(async tx => {
+        const [paymentSnap, receiptSnap] = await Promise.all([tx.get(paymentRef), tx.get(receiptRef)]);
+        if (receiptSnap.exists) return;
+        if (!paymentSnap.exists) {
+          tx.create(receiptRef, { provider: "jeko", eventName, transactionId, outcome: "unmatched", receivedAt: admin.firestore.FieldValue.serverTimestamp() });
+          return;
+        }
+        const p = paymentSnap.data();
+        const amountXof = transaction?.amount?.amount;
+        const valid = p.provider === "jeko" && p.clientReference === clientReference &&
+          p.providerPaymentRequestId === paymentRequestId &&
+          transaction.storeId === JEKO_STORE_ID.value() &&
+          transaction.transactionType === "payment" &&
+          transaction.status === "success" &&
+          transaction.amount?.currency === "XOF" &&
+          Number.isSafeInteger(amountXof) && amountXof === p.amountXof;
+        if (!valid) {
+          tx.update(paymentRef, { status: "review_required", reviewReason: "provider_data_mismatch", updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+          tx.create(receiptRef, { provider: "jeko", eventName, transactionId, outcome: "mismatch", receivedAt: admin.firestore.FieldValue.serverTimestamp() });
+          return;
+        }
+        if (p.status !== "succeeded") {
+          const subRef = db.collection("subscriptions").doc(p.uid + "_" + p.serviceId);
+          const legacyAutoRef = db.collection("abonnements_automobiliste").doc(p.uid);
+          const subSnap = await tx.get(subRef);
+          const legacyAutoSnap = p.serviceId === "automobiliste" ? await tx.get(legacyAutoRef) : null;
+          const now = admin.firestore.Timestamp.now();
+          const oldEnd = subSnap.exists ? subSnap.data().endAt : null;
+          const legacyEnd = legacyAutoSnap?.exists ? legacyAutoSnap.data().dateExpiration : null;
+          const effectiveEnd = oldEnd && (!legacyEnd || oldEnd.toMillis() >= legacyEnd.toMillis()) ? oldEnd : legacyEnd;
+          const renewingEarly = !!effectiveEnd && effectiveEnd.toMillis() > now.toMillis();
+          const base = renewingEarly ? effectiveEnd.toMillis() : now.toMillis();
+          const endAt = admin.firestore.Timestamp.fromMillis(base + p.durationDays * 86400000);
+
+          tx.update(paymentRef, {
+            status: "succeeded", providerTransactionId: transactionId,
+            confirmedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          tx.set(subRef, {
+            uid: p.uid, serviceId: p.serviceId, planId: p.planId, status: "active",
+            startAt: renewingEarly ? (subSnap.data()?.startAt || now) : now,
+            endAt, lastPaymentId: paymentId, updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          if (p.serviceId === "automobiliste") {
+            tx.set(legacyAutoRef, {
+              uid: p.uid, statut: "actif", montantFCFA: p.amountXof, dureeJours: p.durationDays,
+              dateActivation: renewingEarly && legacyAutoSnap?.exists ? legacyAutoSnap.data().dateActivation || now : now,
+              dateExpiration: endAt, paymentId, operateur: "Jèko"
+            }, { merge: true });
+          }
+        }
+        tx.create(receiptRef, {
+          provider: "jeko", eventName, transactionId,
+          outcome: "processed", receivedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      });
+      return res.sendStatus(200);
+    } catch (error) {
+      logger.error("Jèko webhook processing failed", { message: error.message });
+      return res.sendStatus(500);
     }
   }
 );
