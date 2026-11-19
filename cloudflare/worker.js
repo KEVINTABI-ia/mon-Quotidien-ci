@@ -398,7 +398,7 @@ export function validateJekoPaymentPlan(payment) {
     return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1];
   }
   if(payment.serviceId==="automobiliste"){
-    return payment.planId==="annuel"&&payment.durationMonths===12&&Number.isSafeInteger(payment.planAmountXof)&&payment.planAmountXof===payment.amountXof&&payment.planDurationMonths===12;
+    return payment.planId==="annuel"&&payment.planSnapshotVersion===1&&payment.durationMonths===12&&Number.isSafeInteger(payment.planAmountXof)&&payment.planAmountXof===payment.amountXof&&payment.planDurationMonths===12;
   }
   const monthPlans={
     partenaire_colis:{partenaires_colis_1mois:1,partenaires_colis_3mois:3,partenaires_colis_6mois:6},
@@ -410,12 +410,12 @@ export function validateJekoPaymentPlan(payment) {
   };
   const expectedMonths=monthPlans[payment.serviceId]?.[payment.planId];
   if(expectedMonths!==undefined) {
-    return payment.durationMonths===expectedMonths&&
+    return payment.planSnapshotVersion===1&&payment.durationMonths===expectedMonths&&
       Number.isSafeInteger(payment.planAmountXof)&&payment.planAmountXof===payment.amountXof&&
       payment.planDurationMonths===payment.durationMonths;
   }
   if(payment.serviceId==="petites_annonces"){
-    return payment.planId==="petites_annonces"&&
+    return payment.planId==="petites_annonces"&&payment.planSnapshotVersion===1&&
       Number.isSafeInteger(payment.durationDays)&&payment.durationDays>=1&&payment.durationDays<=365&&
       Number.isSafeInteger(payment.planAmountXof)&&payment.planAmountXof===payment.amountXof&&
       payment.planDurationDays===payment.durationDays;
