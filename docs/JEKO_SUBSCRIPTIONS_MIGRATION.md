@@ -41,7 +41,7 @@ Les périodes d'essai gratuites restent inchangées. Les paiements hors abonneme
 
 ## Ordre d'implémentation
 
-- [ ] Étape 1 — Contrat de données, mappings des rubriques et tests de sécurité.
+- [x] Étape 1 — Contrat de données et première brique catalogue : endpoint authentifié `GET /api/jeko/subscription-plans?serviceId=...`. Il lit `configuration_abonnements/globale`, expose uniquement les formules actives, calcule la promotion côté serveur et masque les tarifs invalides ou nuls. Il n'initie aucun paiement.
 - [ ] Étape 2 — Checkout Worker générique et vérification serveur des formules.
 - [ ] Étape 3 — Activation webhook pour chaque cible, transactions atomiques et idempotence.
 - [ ] Étape 4 — Migration des interfaces : suppression des coordonnées Wave/Orange et références manuelles ; bouton « Payer avec Jèko ».
@@ -56,3 +56,9 @@ Les périodes d'essai gratuites restent inchangées. Les paiements hors abonneme
 - Un webhook répété n'ajoute pas deux périodes d'abonnement.
 - Un paiement échoué ou ambigu n'active rien.
 - Les essais gratuits, dossiers en attente et historiques sont préservés.
+
+## Endpoint catalogue ajouté dans la branche de migration
+
+`GET /api/jeko/subscription-plans?serviceId=...` accepte les identifiants `automobiliste`, `petites_annonces`, `boutiques`, `partenaires_colis`, `compagnie_voyage` et `ramassage`. Il exige un jeton Firebase valide. Les montants et durées viennent exclusivement de `configuration_abonnements/globale`; le navigateur ne peut pas les imposer. Les plans désactivés ou dont le tarif/durée ne sont pas valides ne sont pas proposés à l'achat. Un prix nul, notamment la configuration actuelle de ramassage, n'est pas transformé en paiement.
+
+Limite actuelle : cet endpoint ne crée pas encore de paiement. Les rubriques listées ne doivent pas encore être considérées comme migrées vers Jèko tant que le checkout, les cibles métier du webhook, les interfaces et les règles Firestore ne sont pas terminés.
