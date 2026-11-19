@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
-const { safeEqualHex, verifyWaveSignature, addMonthsClamped } = require("../src/payment-utils");
+const { safeEqualHex, verifyWaveSignature, verifyJekoSignature, addMonthsClamped } = require("../src/payment-utils");
 
 const secret = "wave-test-secret";
 const now = 1_800_000_000_000;
@@ -40,4 +40,17 @@ test("adds calendar months without overflowing month ends", () => {
   assert.equal(addMonthsClamped(new Date("2026-01-31T12:00:00.000Z"), 1).toISOString(), "2026-02-28T12:00:00.000Z");
   assert.equal(addMonthsClamped(new Date("2024-01-31T12:00:00.000Z"), 1).toISOString(), "2024-02-29T12:00:00.000Z");
   assert.equal(addMonthsClamped(new Date("2026-03-15T12:00:00.000Z"), 12).toISOString(), "2027-03-15T12:00:00.000Z");
+});
+
+test("accepts Jèko HMAC-SHA256 over the exact raw body", () => {
+  const signature = crypto.createHmac("sha256", secret).update(body).digest("hex");
+  assert.equal(verifyJekoSignature(signature, body, secret), true);
+});
+test("rejects altered Jèko body, timestamped headers and malformed signatures", () => {
+  const signature = crypto.createHmac("sha256", secret).update(body).digest("hex");
+  assert.equal(verifyJekoSignature(signature, Buffer.from(body.toString() + "\\n"), secret), false);
+  assert.equal(verifyJekoSignature("sha256=" + signature, body, secret), false);
+  assert.equal(verifyJekoSignature(signature.toUpperCase(), body, secret), true);
+  assert.equal(verifyJekoSignature("0".repeat(64), body, secret), false);
+  assert.equal(verifyJekoSignature(signature, body, ""), false);
 });
