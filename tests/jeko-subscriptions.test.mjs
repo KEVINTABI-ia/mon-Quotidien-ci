@@ -33,3 +33,19 @@ test("le catalogue Logement conserve ses trois formules de checkout", () => {
 test("un service inconnu n'expose aucun plan", () => {
   assert.equal(buildSubscriptionPlans("service_inconnu", {}), null);
 });
+
+test("le catalogue Petites annonces reprend les mêmes valeurs par défaut que le checkout", () => {
+  const [plan] = buildSubscriptionPlans("petites_annonces", {});
+  assert.equal(plan.planId, "petites_annonces");
+  assert.equal(plan.priceXof, 500);
+  assert.equal(plan.duration, 30);
+  assert.equal(plan.unit, "jours");
+});
+
+test("le catalogue Automobiliste reprend le forfait annuel par défaut du checkout", () => {
+  const [plan] = buildSubscriptionPlans("automobiliste", {});
+  assert.equal(plan.planId, "annuel");
+  assert.equal(plan.priceXof, 1000);
+  assert.equal(plan.duration, 12);
+  assert.equal(plan.unit, "mois");
+});
