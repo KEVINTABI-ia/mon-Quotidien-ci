@@ -143,7 +143,7 @@ async function createCheckout(request,env) {
   const id=crypto.randomUUID().replace(/-/g,"");
   const reference="MQCI-"+id;
   const path="payments/"+id;
-  const initial={uid:user.sub,serviceId:"automobiliste",planId:"annuel",provider:"jeko",amountXof,currency:"XOF",durationMonths:12,status:"pending",clientReference:reference,createdAt:now.toISOString(),updatedAt:now.toISOString()};
+  const initial={uid:user.sub,serviceId:"automobiliste",planId:"annuel",provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationMonths:12,status:"pending",clientReference:reference,createdAt:now.toISOString(),updatedAt:now.toISOString()};
   await firestore(env,path,{method:"PATCH",body:JSON.stringify(fields(initial))});
   try {
     const checkout=await jeko(env,"/partner_api/payment_requests",{method:"POST",body:JSON.stringify({
@@ -187,8 +187,8 @@ async function webhook(request,env) {
   const payment=docData(paymentDoc);
   const amount=tx.amount?.amount;
   const valid=payment.provider==="jeko"&&payment.clientReference===reference&&payment.providerPaymentRequestId===requestId&&
-    (!tx.storeId||tx.storeId===env.JEKO_STORE_ID)&&tx.transactionType==="payment"&&tx.amount?.currency==="XOF"&&
-    Number.isSafeInteger(amount)&&amount===payment.amountXof;
+    tx.storeId===env.JEKO_STORE_ID&&tx.transactionType==="payment"&&tx.amount?.currency==="XOF"&&
+    Number.isSafeInteger(amount)&&amount===payment.amountCents;
   if(!valid) {
     await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"provider_data_mismatch",updatedAt:new Date().toISOString()}))});
     return new Response("OK",{status:200});
