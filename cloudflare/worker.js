@@ -331,9 +331,9 @@ async function jekoDiagnostic(request,env) {
 async function jekoNetworkDiagnostic(request,env) {
   const authResult=await requireUser(request,env);
   if(!authResult.user) return json({ok:false,error:"unauthorized",diagnostic:authResult.diagnostic},401);
-  const probe=async(url)=>{
+  const probe=async(url,headers={})=>{
     try {
-      const response=await fetch(url,{method:"GET",redirect:"follow",signal:AbortSignal.timeout(10000)});
+      const response=await fetch(url,{method:"GET",headers,redirect:"manual",signal:AbortSignal.timeout(10000)});
       return {reachable:true,httpStatus:response.status,contentType:response.headers.get("content-type")||"unknown"};
     } catch(e) {
       const cause=e?.cause||null;
@@ -343,20 +343,35 @@ async function jekoNetworkDiagnostic(request,env) {
           causeName:typeof cause?.name==="string"?cause.name.slice(0,40):null}};
     }
   };
-  const [baseline,jekoRoot]=await Promise.all([
+  const base=JEKO_API_BASE+"/partner_api/stores";
+  const [baseline,jekoRoot,unauthenticatedApi]=await Promise.all([
     probe("https://www.google.com/generate_204"),
-    probe(JEKO_API_BASE+"/")
+    probe(JEKO_API_BASE+"/"),
+    probe(base)
   ]);
-  let authenticatedApi;
-  try {
-    const result=await jeko(env,"/partner_api/stores",{method:"GET"});
-    authenticatedApi={reachable:true,httpStatus:result.meta.status,contentType:result.meta.contentType};
-  } catch(e) {
-    authenticatedApi={reachable:!e?.networkFailure,httpStatus:Number.isInteger(e?.providerStatus)?e.providerStatus:null,
-      error:String(e?.message||"diagnostic_failed").slice(0,100),networkCause:e?.networkCause||null};
+  let headerValidation={ok:false};
+  let authenticatedNoContentType={reachable:false,error:"credentials_not_configured"};
+  let authenticatedWithContentType={reachable:false,error:"credentials_not_configured"};
+  if(env.JEKO_API_KEY&&env.JEKO_API_KEY_ID) {
+    const authHeaders={"X-API-KEY":env.JEKO_API_KEY,"X-API-KEY-ID":env.JEKO_API_KEY_ID};
+    try {
+      new Headers(authHeaders);
+      headerValidation={ok:true};
+      [authenticatedNoContentType,authenticatedWithContentType]=await Promise.all([
+        probe(base,authHeaders),
+        probe(base,{...authHeaders,"content-type":"application/json"})
+      ]);
+    } catch(e) {
+      headerValidation={ok:false,error:e?.name==="TypeError"?"invalid_header_value":"header_construction_error"};
+    }
   }
-  return json({ok:baseline.reachable&&jekoRoot.reachable&&authenticatedApi.reachable,
-    service:"jeko",check:"outbound_network_read_only",baseline,jekoRoot,authenticatedApi,checkedAt:new Date().toISOString()});
+  return json({
+    ok:baseline.reachable&&jekoRoot.reachable&&authenticatedNoContentType.reachable,
+    service:"jeko",check:"outbound_network_header_isolation",
+    baseline,jekoRoot,unauthenticatedApi,headerValidation,
+    authenticatedNoContentType,authenticatedWithContentType,
+    checkedAt:new Date().toISOString()
+  });
 }
 async function paymentStatus(request,env) {
   const authResult=await requireUser(request, env);const user=authResult.user;if(!user)return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
