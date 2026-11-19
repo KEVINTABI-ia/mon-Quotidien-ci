@@ -106,3 +106,16 @@ test("webhook refuse une devise ou des centimes incohérents", () => {
   assert.equal(validateJekoPaymentPlan({...base,currency:"USD"}),false);
   assert.equal(validateJekoPaymentPlan({...base,amountCents:2000}),false);
 });
+
+test("webhook accepte un abonnement automobiliste avec snapshot complet", () => {
+  assert.equal(validateJekoPaymentPlan({
+    provider:"jeko",currency:"XOF",serviceId:"automobiliste",planId:"annuel",
+    amountXof:1000,amountCents:100000,durationMonths:12,
+    planAmountXof:1000,planDurationMonths:12,planSnapshotVersion:1
+  }),true);
+  assert.equal(validateJekoPaymentPlan({
+    provider:"jeko",currency:"XOF",serviceId:"automobiliste",planId:"annuel",
+    amountXof:1000,amountCents:100000,durationMonths:12,
+    planAmountXof:1000,planDurationMonths:12
+  }),false);
+});
