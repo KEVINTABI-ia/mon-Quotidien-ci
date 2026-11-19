@@ -138,7 +138,7 @@ async function createCheckout(request,env) {
   let amountXof, initial;
   if(serviceId==="objet_retrouve"){
     const {objectId,nomComplet,telephone,residence}=body;
-    if(typeof objectId!=="string"||!objectId||typeof nomComplet!=="string"||nomComplet.trim().length<2||nomComplet.trim().length>100||
+    if(typeof objectId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(objectId)||typeof nomComplet!=="string"||nomComplet.trim().length<2||nomComplet.trim().length>100||
        typeof telephone!=="string"||telephone.trim().length<6||telephone.trim().length>25||
        typeof residence!=="string"||residence.trim().length<2||residence.trim().length>180) return json({error:"invalid_claim_details"},400);
     const objectDoc=await getDoc(env,"objets_retrouves/"+objectId);
