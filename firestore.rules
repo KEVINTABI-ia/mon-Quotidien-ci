@@ -968,7 +968,14 @@ service cloud.firestore {
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time;
       allow read: if estAdmin() || (resource.data.statut == "approuve" && (resource.data.type != "depannage" || estAbonneAutomobiliste()) && (resource.data.type != "annuaire" || (resource.data.abonnementFin is timestamp && resource.data.abonnementFin > request.time)));
-      allow update, delete: if estAdmin();
+      allow update: if estAdmin()
+        && !(resource.data.type == "commerce"
+          && request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            "abonnementDebut","abonnementFin","abonnementStatut","paiementStatut",
+            "montantAbonnement","dureeAbonnementJours","dernierPaiementFCFA",
+            "dernierPaiementConfirmeLe","renouvellementJekoPaymentId","renouvellementJekoStatut"
+          ]));
+      allow delete: if estAdmin();
     }
 
     match /demandes_renouvellement_boutiques/{demandeId} {
