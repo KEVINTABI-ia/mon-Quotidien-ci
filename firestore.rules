@@ -749,9 +749,15 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/comptes_ramassage/$(uid))
         && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.role == "compagnie"
         && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.statut == "approuve"
-        && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.abonnement == "actif"
-        && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.dateExpirationAbonnement is timestamp
-        && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.dateExpirationAbonnement > request.time;
+        && (
+          (get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.abonnement == "actif"
+            && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.dateExpirationAbonnement is timestamp
+            && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.dateExpirationAbonnement > request.time)
+          ||
+          (get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.abonnement == "essai"
+            && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.dateFinEssai is timestamp
+            && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.dateFinEssai > request.time)
+        );
     }
 
     match /comptes_ramassage/{uid} {
@@ -771,8 +777,15 @@ service cloud.firestore {
       // L'administration peut approuver le dossier, mais aucun client ni administrateur
       // via le SDK navigateur ne peut activer ou prolonger l'abonnement payant.
       allow update: if estAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut"])
-        && request.resource.data.statut == "approuve";
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","abonnement","dateDebutEssai","dateFinEssai"])
+        && request.resource.data.statut == "approuve"
+        && request.resource.data.abonnement == "essai"
+        && request.resource.data.dateDebutEssai is timestamp
+        && request.resource.data.dateDebutEssai == request.time
+        && request.resource.data.dateFinEssai is timestamp
+        && request.resource.data.dateFinEssai > request.time + duration.value(29, "d")
+        && request.resource.data.dateFinEssai < request.time + duration.value(31, "d")
+        && (resource.data.statut != "approuve" || !("dateFinEssai" in resource.data));
       allow delete: if estAdmin();
     }
 

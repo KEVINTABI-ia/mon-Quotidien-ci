@@ -180,9 +180,13 @@ async function createCheckout(request,env) {
   } else if(serviceId==="ramassage") {
     const profilePath="comptes_ramassage/"+user.sub,profileDoc=await getDoc(env,profilePath),profile=docData(profileDoc);
     if(!profileDoc||profile?.uid!==user.sub||profile?.role!=="compagnie"||profile?.statut!=="approuve")return json({error:"ramassage_profile_not_approved"},403);
+    const trialEnd=profile.dateFinEssai instanceof Date?profile.dateFinEssai:(profile.dateFinEssai?new Date(profile.dateFinEssai):null);
     const expiry=profile.dateExpirationAbonnement instanceof Date?profile.dateExpirationAbonnement:(profile.dateExpirationAbonnement?new Date(profile.dateExpirationAbonnement):null);
+    if(profile.abonnement==="essai"&&(!trialEnd||!Number.isFinite(trialEnd.getTime())))return json({error:"ramassage_trial_state_invalid"},409);
+    if(profile.abonnement==="essai"&&trialEnd.getTime()>now.getTime())return json({error:"ramassage_trial_still_active"},409);
     if(profile.abonnement==="actif"&&(!expiry||!Number.isFinite(expiry.getTime())))return json({error:"ramassage_subscription_state_invalid"},409);
     if(profile.abonnement==="actif"&&expiry.getTime()>now.getTime())return json({error:"ramassage_subscription_still_active"},409);
+    if(profile.abonnement!=="essai"&&profile.abonnement!=="actif")return json({error:"ramassage_trial_state_invalid"},409);
     if(profile.renouvellementJekoPaymentId){
       const previous=await getDoc(env,"payments/"+profile.renouvellementJekoPaymentId);
       const previousStatus=docData(previous)?.status;
@@ -451,7 +455,13 @@ async function webhook(request,env) {
       await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"ramassage_target_or_plan_invalid",updatedAt:now.toISOString()}))});
       return new Response("OK",{status:200});
     }
-    const oldEnd=profile.dateExpirationAbonnement instanceof Date?profile.dateExpirationAbonnement:(profile.dateExpirationAbonnement?new Date(profile.dateExpirationAbonnement):null);
+    const trialEnd=profile.dateFinEssai instanceof Date?profile.dateFinEssai:(profile.dateFinEssai?new Date(profile.dateFinEssai):null);
+    const paidEnd=profile.dateExpirationAbonnement instanceof Date?profile.dateExpirationAbonnement:(profile.dateExpirationAbonnement?new Date(profile.dateExpirationAbonnement):null);
+    if((profile.abonnement==="essai"&&(!trialEnd||!Number.isFinite(trialEnd.getTime())||trialEnd>now))||(profile.abonnement==="actif"&&(!paidEnd||!Number.isFinite(paidEnd.getTime())||paidEnd>now))){
+      await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"ramassage_trial_or_subscription_still_active",updatedAt:now.toISOString()}))});
+      return new Response("OK",{status:200});
+    }
+    const oldEnd=paidEnd;
     const start=oldEnd&&Number.isFinite(oldEnd.getTime())&&oldEnd>now?oldEnd:now;
     const end=new Date(start.getTime()+payment.durationDays*86400000);
     try{
