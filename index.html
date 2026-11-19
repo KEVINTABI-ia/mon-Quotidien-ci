@@ -12515,6 +12515,31 @@ async function envoyerInscriptionCompagnie(){
   status.textContent="Dossier transmis. Après approbation, vous pourrez régler votre abonnement exclusivement avec Jèko depuis votre espace compagnie.";
  }catch(e){status.textContent="Erreur : "+e.message;}
 }
+async function ouvrirPaiementRenouvellementCompagnie(id){
+ const zone=document.getElementById("zonePaiementRenouvellementCompagnie"),user=partnerAuth.currentUser;
+ if(!zone)return;if(!user){zone.textContent="Connectez-vous à l'espace de votre compagnie.";return;}
+ zone.textContent="Chargement de la formule et du tarif...";
+ try{
+  const token=await user.getIdToken(),r=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/subscription-plans?serviceId=compagnie_voyage",{headers:{Authorization:"Bearer "+token}});
+  const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error("Catalogue Jèko indisponible.");
+  const current=window.compagnieRenouvellementCourante||{},map={"Essentielle|Mensuel":"compagnie_essentielle_mensuel","Essentielle|Annuel":"compagnie_essentielle_annuel","Professionnelle|Mensuel":"compagnie_professionnelle_mensuel","Professionnelle|Annuel":"compagnie_professionnelle_annuel"},planId=map[current.formule+"|"+current.periodicite];
+  const plan=(data.plans||[]).find(p=>p.planId===planId&&p.available);
+  if(!plan)throw new Error("La formule actuelle est désactivée ou son tarif n'est pas configuré.");
+  zone.innerHTML='<p>Formule : '+echapperTexteCompagnie(plan.label)+' — '+Number(plan.priceXof).toLocaleString("fr-FR")+' FCFA</p><label>Moyen de paiement</label><select id="methodeJekoCompagnie"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select><button type="button" class="primary" onclick="demarrerPaiementRenouvellementCompagnie(\''+id+'\')">Continuer avec Jèko</button><p id="statutJekoCompagnie" class="notice" aria-live="polite"></p>';
+ }catch(e){zone.textContent=e.message||"Impossible de charger la formule.";}
+}
+async function demarrerPaiementRenouvellementCompagnie(id){
+ const user=partnerAuth.currentUser,method=document.getElementById("methodeJekoCompagnie")?.value,zone=document.getElementById("statutJekoCompagnie");
+ if(!user||!["wave","orange","mtn","moov","djamo"].includes(method)){if(zone)zone.textContent="Connexion ou moyen de paiement invalide.";return;}
+ if(zone)zone.textContent="Préparation du paiement Jèko...";
+ try{
+  const token=await user.getIdToken(),r=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceId:"compagnie_voyage",compagnieId:id,paymentMethod:method})});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok||!data.checkoutUrl){const messages={company_not_found_or_not_authorized:"Compagnie introuvable ou compte non autorisé.",company_not_renewable:"Cette compagnie ne peut pas être renouvelée dans son état actuel.",company_subscription_not_expired:"L'abonnement est encore actif.",existing_payment_requires_review:"Un paiement précédent doit être vérifié. Ne recommencez pas.",plan_configuration_invalid:"La formule est momentanément indisponible."};throw new Error(messages[data.error]||data.diagnostic||"Initialisation Jèko impossible.");}
+  if(zone)zone.textContent="Redirection vers Jèko...";
+  window.location.assign(data.checkoutUrl);
+ }catch(e){if(zone)zone.textContent=e.message||"Erreur de paiement.";}
+}
 async function afficherEspaceCompagnie(id,c){
  const zone=document.getElementById("connexionPartenaire")||document.getElementById("zoneMenuColisPartenaire");
  let el=document.getElementById("zoneEspaceCompagnie");if(!el){el=document.createElement("div");el.id="zoneEspaceCompagnie";zone.appendChild(el);}
