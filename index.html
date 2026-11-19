@@ -3375,18 +3375,15 @@ function chargerPublicitesAccueil() {
 <button type="button" class="primary" onclick="envoyerDeclarationObjet()">Envoyer la déclaration</button><p id="orStatutDeclaration" class="notice"></p></div>
 <div id="listeBiensRetrouves" style="display:none;margin:12px 0;"><h3>Biens retrouvés publiés</h3><div id="orResultatsPublics"></div></div>
 <div id="formulaireReclamationObjet" style="display:none;border:1px solid #D8E5DD;border-radius:12px;padding:13px;margin:12px 0;">
-<h3>🔐 Réclamer ce bien</h3><p class="notice">Vos coordonnées et informations de paiement seront transmises uniquement à l’administrateur.</p>
+<h3>🔐 Réclamer ce bien</h3><p class="notice">Vos coordonnées seront transmises uniquement à l’administrateur.</p>
 <input id="orObjetReclameId" type="hidden">
 <label>Votre nom et prénoms</label><input id="orReclamantNom" maxlength="100">
 <label>Votre numéro de téléphone</label><input id="orReclamantTel" type="tel" maxlength="25">
 <label>Votre lieu de résidence</label><input id="orResidence" maxlength="180">
-<div style="margin:14px 0;padding:12px;border-radius:10px;background:#FFF7E8;border:1px solid #EBD6A8;"><strong>Frais de mise en relation : 1 500 FCFA</strong>
-<p id="coordonneesPaiementReclamation">Chargement des coordonnées de paiement...</p>
-<label>Moyen de paiement</label><select id="orOperateur"><option>Wave</option><option>Orange Money</option></select>
-<label>Numéro de référence de la transaction</label><input id="orReference" maxlength="100">
-<label>Heure et date de la transaction</label><input id="orHeurePaiement" type="datetime-local">
-<p class="notice">La référence et l’heure sont obligatoires. Aucun téléchargement de capture d’écran n’est demandé. L’administrateur vérifiera le paiement.</p></div>
-<button type="button" class="primary" onclick="envoyerReclamationObjet()">Envoyer ma demande de récupération</button>
+<div style="margin:14px 0;padding:12px;border-radius:10px;background:#FFF7E8;border:1px solid #EBD6A8;"><strong>Frais de mise en relation : 1 000 FCFA</strong>
+<p>Le paiement est sécurisé par Jèko. Votre demande sera transmise à l’administrateur après confirmation du paiement.</p>
+<label>Moyen de paiement</label><select id="orOperateur"><option value="">Choisir un moyen de paiement</option><option value="orange">Orange Money</option><option value="wave">Wave</option><option value="mtn">MTN MoMo</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select></div>
+<button id="orBoutonPaiement" type="button" class="primary" onclick="envoyerReclamationObjet()">Payer 1 000 FCFA avec Jèko</button>
 <p id="orStatutReclamation" class="notice"></p></div></section>
 <details class="carte-acces-admin" aria-label="Contacts d’urgence" style="margin:0 16px 10px;padding:0;border:0;">
   <summary style="cursor:pointer;display:block;text-align:center;list-style:none;background:#B42318;color:#fff;padding:13px 16px;border-radius:12px;font-weight:700;">🚨 Contacts d’urgence</summary>
@@ -4798,37 +4795,37 @@ async function envoyerDeclarationObjet(){
     ["orTrouveurNom","orTrouveurTel","orNomDocument","orDescription","orLieu"].forEach(id=>document.getElementById(id).value="");
   }catch(e){console.error(e);statut.textContent="Envoi impossible. Vérifiez la connexion et réessayez.";}
 }
-async function ouvrirReclamationObjet(id){
+function ouvrirReclamationObjet(id){
   document.getElementById("orObjetReclameId").value=id;
   document.getElementById("formulaireReclamationObjet").style.display="block";
   document.getElementById("orStatutReclamation").textContent="";
   document.getElementById("formulaireReclamationObjet").scrollIntoView({behavior:"smooth",block:"start"});
-  const p=await window.chargerCoordonneesPaiementMQCI();const zone=document.getElementById("coordonneesPaiementReclamation");if(zone)zone.textContent="Wave : "+p.numero+" · Orange Money : "+p.numero+" · Bénéficiaire : "+p.beneficiaire;
 }
 async function envoyerReclamationObjet(){
-  const statutPaiement=document.getElementById("orStatutReclamation");if(!(await window.paiementsMQCIDisponibles(true))){if(statutPaiement)statutPaiement.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
+  const user=auth.currentUser,statut=document.getElementById("orStatutReclamation"),bouton=document.getElementById("orBoutonPaiement");
+  if(!user){statut.textContent="Connectez-vous pour poursuivre.";return;}
   const objetId=document.getElementById("orObjetReclameId").value;
   const nom=document.getElementById("orReclamantNom").value.trim();
   const tel=document.getElementById("orReclamantTel").value.trim();
   const residence=document.getElementById("orResidence").value.trim();
-  const operateur=document.getElementById("orOperateur").value;
-  const reference=document.getElementById("orReference").value.trim();
-  const heure=document.getElementById("orHeurePaiement").value;
-  const statut=document.getElementById("orStatutReclamation");
-  if(!objetId||!nom||!tel||!residence||!reference||!heure){statut.textContent="Tous les champs sont obligatoires, y compris la référence et l’heure du paiement.";return;}
-  statut.textContent="Envoi de votre demande...";
+  const paymentMethod=document.getElementById("orOperateur").value;
+  if(!objetId||nom.length<2||!tel||!residence||!paymentMethod){statut.textContent="Veuillez renseigner vos coordonnées et choisir un moyen de paiement.";return;}
+  if(bouton){bouton.disabled=true;bouton.textContent="Préparation du paiement…";}
+  statut.textContent="Vérification de l’objet et création du paiement sécurisé…";
   try{
-    const objet=await db.collection("objets_retrouves").doc(objetId).get();
-    if(!objet.exists||objet.data().statut!=="publie"){statut.textContent="Cette déclaration n’est plus disponible.";return;}
-    await db.collection("demandes_recuperation_objets").add({
-      objetId,nomComplet:nom,telephone:tel,residence,
-      operateur,referenceTransaction:reference,heureTransaction:heure,
-      montantFCFA:1500,statut:"a_verifier",
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    const token=await user.getIdToken();
+    const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{
+      method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+      body:JSON.stringify({serviceId:"objet_retrouve",objectId,nomComplet:nom,telephone:tel,residence,paymentMethod})
     });
-    statut.textContent="Demande transmise à l’administrateur. Le paiement sera vérifié avant la mise en relation.";
-    ["orReclamantNom","orReclamantTel","orResidence","orReference","orHeurePaiement"].forEach(id=>document.getElementById(id).value="");
-  }catch(e){console.error(e);statut.textContent="Envoi impossible. Vérifiez la connexion et réessayez.";}
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.checkoutUrl)throw new Error(data.error==="object_unavailable"?"Cet objet n’est plus disponible.":data.error==="invalid_claim_details"?"Vérifiez les coordonnées saisies.":"Jèko ne peut pas initialiser le paiement. Réessayez plus tard.");
+    statut.textContent="Paiement sécurisé prêt. Redirection vers Jèko…";
+    window.location.assign(data.checkoutUrl);
+  }catch(e){
+    console.error("Paiement Jèko objet retrouvé:",e);statut.textContent=e.message||"Initialisation du paiement impossible.";
+    if(bouton){bouton.disabled=false;bouton.textContent="Payer 1 000 FCFA avec Jèko";}
+  }
 }
 async function chargerObjetsPerdusAdmin(){
   if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;
@@ -4854,8 +4851,8 @@ async function chargerObjetsPerdusAdmin(){
     const ds=await db.collection("demandes_recuperation_objets").orderBy("createdAt","desc").limit(200).get();
     if(ds.empty)demandes.innerHTML="<p class='notice'>Aucune demande de récupération reçue.</p>";
     else demandes.innerHTML=ds.docs.map(doc=>{
-      const d=doc.data(),date=d.createdAt&&d.createdAt.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"";
-      return '<article class="card" style="padding:12px;margin:10px 0;"><strong>Demande · '+echapperTextePublicite(d.statut||"")+'</strong><p>Bien concerné : '+echapperTextePublicite(d.objetId||"")+'</p><p>Demandeur : '+echapperTextePublicite(d.nomComplet||"")+'<br>Téléphone : '+echapperTextePublicite(d.telephone||"")+'<br>Résidence : '+echapperTextePublicite(d.residence||"")+'</p><p>Paiement : '+echapperTextePublicite(d.operateur||"")+' · 1 500 FCFA<br>Référence : <strong>'+echapperTextePublicite(d.referenceTransaction||"")+'</strong><br>Heure : '+echapperTextePublicite(d.heureTransaction||"")+'</p><small>'+date+'</small><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button type="button" onclick="traiterReclamationObjet(\''+doc.id+'\',\'paiement_verifie\')">Paiement vérifié</button><button type="button" onclick="traiterReclamationObjet(\''+doc.id+'\',\'traitee\')">Mise en relation effectuée</button></div></article>';
+      const d=doc.data(),date=d.createdAt&&d.createdAt.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):(d.createdAt?new Date(d.createdAt).toLocaleString("fr-FR"):"");
+      const paiementJeko=d.operateur==="Jèko"||d.statut==="paiement_verifie";return '<article class="card" style="padding:12px;margin:10px 0;"><strong>Demande · '+echapperTextePublicite(d.statut||"")+'</strong><p>Bien concerné : '+echapperTextePublicite(d.objetId||"")+'</p><p>Demandeur : '+echapperTextePublicite(d.nomComplet||"")+'<br>Téléphone : '+echapperTextePublicite(d.telephone||"")+'<br>Résidence : '+echapperTextePublicite(d.residence||"")+'</p><p>Paiement : '+echapperTextePublicite(d.operateur||"")+' · '+Number(d.montantFCFA||1000).toLocaleString("fr-FR")+' FCFA<br>Référence : <strong>'+echapperTextePublicite(d.referenceTransaction||"")+'</strong><br>Heure : '+echapperTextePublicite(d.heureTransaction||"")+'</p><small>'+date+'</small><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">'+(paiementJeko?'<span class="notice">Paiement confirmé automatiquement par Jèko</span>':'<button type="button" onclick="traiterReclamationObjet(\''+doc.id+'\',\'paiement_verifie\')">Paiement vérifié</button>')+'<button type="button" onclick="traiterReclamationObjet(\''+doc.id+'\',\'traitee\')">Mise en relation effectuée</button></div></article>';
     }).join("");
   }catch(e){console.error(e);zone.innerHTML="<p class='notice'>Erreur de chargement. Vérifiez les règles Firestore.</p>";demandes.innerHTML="<p class='notice'>Demandes indisponibles.</p>";}
 }
@@ -8240,16 +8237,17 @@ async function verifierRetourPaiementJeko(user){
   const params=new URLSearchParams(window.location.search);
   const paymentState=params.get("payment");
   const paymentId=params.get("paymentId");
+  const serviceId=params.get("serviceId")||"automobiliste";
   if(paymentState!=="return"&&paymentState!=="error")return;
-  const zone=document.getElementById("etatAbonnementAuto");
+  const zone=document.getElementById(serviceId==="objet_retrouve"?"orStatutReclamation":"etatAbonnementAuto");
   if(paymentState==="error"){
-    if(zone)zone.textContent="Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
-    params.delete("payment");params.delete("paymentId");
+    if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été finalisé. Aucune demande de récupération n’a été transmise.":"Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
+    params.delete("payment");params.delete("paymentId");params.delete("serviceId");
     history.replaceState({},document.title,location.pathname+(params.toString()?"?"+params.toString():""));
     return;
   }
   if(!paymentId)return;
-  if(zone)zone.textContent="Retour de Jèko reçu. Vérification de la confirmation officielle…";
+  if(zone)zone.textContent=serviceId==="objet_retrouve"?"Retour de Jèko reçu. Vérification du paiement…":"Retour de Jèko reçu. Vérification de la confirmation officielle…";
   try{
     const token=await user.getIdToken(true);
     for(let attempt=0;attempt<10;attempt++){
@@ -8258,19 +8256,24 @@ async function verifierRetourPaiementJeko(user){
       });
       const data=await response.json().catch(()=>({}));
       if(response.ok&&data.status==="succeeded"){
-        if(zone)zone.textContent="Paiement confirmé par Jèko. Activation de votre abonnement…";
-        await actualiserEtatAbonnementAutomobiliste();
-        params.delete("payment");params.delete("paymentId");
+        if(serviceId==="objet_retrouve"){
+          if(zone)zone.textContent="Paiement de 1 000 FCFA confirmé par Jèko. Votre demande de récupération a été transmise à l’administrateur.";
+          ["orReclamantNom","orReclamantTel","orResidence"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+        }else{
+          if(zone)zone.textContent="Paiement confirmé par Jèko. Activation de votre abonnement…";
+          await actualiserEtatAbonnementAutomobiliste();
+        }
+        params.delete("payment");params.delete("paymentId");params.delete("serviceId");
         history.replaceState({},document.title,location.pathname+(params.toString()?"?"+params.toString():""));
         return;
       }
       if(response.ok&&["review_required","failed","expired"].includes(data.status)){
-        if(zone)zone.textContent="Le paiement nécessite une vérification. Votre abonnement n'a pas été activé.";
+        if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été confirmé. Aucune demande de récupération n’a été transmise.":"Le paiement nécessite une vérification. Votre abonnement n'a pas été activé.";
         return;
       }
       await new Promise(resolve=>setTimeout(resolve,1500));
     }
-    if(zone)zone.textContent="Paiement en attente de confirmation Jèko. Aucun accès n'est activé avant confirmation serveur. Actualisez cet écran dans un instant.";
+    if(zone)zone.textContent=serviceId==="objet_retrouve"?"Paiement en attente de confirmation Jèko. Votre demande ne sera transmise qu’après confirmation serveur. Actualisez dans un instant.":"Paiement en attente de confirmation Jèko. Aucun accès n'est activé avant confirmation serveur. Actualisez cet écran dans un instant.";
   }catch(e){
     console.error("Vérification du paiement Jèko:",e);
     if(zone)zone.textContent="Impossible de vérifier le paiement pour le moment. Réessayez dans quelques instants.";

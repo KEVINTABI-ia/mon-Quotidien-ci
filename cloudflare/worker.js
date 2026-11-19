@@ -132,23 +132,39 @@ async function createCheckout(request,env) {
   let body={}; try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
   const methods=["orange","wave","mtn","moov","djamo"];
   if(!methods.includes(body.paymentMethod)) return json({error:"invalid_payment_method"},400);
-  const cfgDoc=await getDoc(env,"configuration_abonnements/globale");
-  const services=docData(cfgDoc)?.services||{};
-  const cfg=services.automobiliste||{};
-  const duration=Number(cfg.duree??12), unit=cfg.unite||"mois", base=Number(cfg.prix??1000);
-  if(cfg.actif===false) return json({error:"plan_unavailable"},409);
-  if(duration!==12||unit!=="mois"||!Number.isSafeInteger(base)||base<1||base>10000000) return json({error:"plan_configuration_invalid"},503);
-  const now=new Date(), start=cfg.promotionDebut?new Date(cfg.promotionDebut+"T00:00:00Z"):null, end=cfg.promotionFin?new Date(cfg.promotionFin+"T23:59:59Z"):null, promo=Number(cfg.promotionPrix||0);
-  const amountXof=cfg.promotionActive===true&&promo>0&&promo<=base&&start&&end&&now>=start&&now<=end?promo:base;
+  const serviceId=body.serviceId||"automobiliste";
+  if(!["automobiliste","objet_retrouve"].includes(serviceId)) return json({error:"unsupported_service"},400);
+  const now=new Date();
+  let amountXof, initial;
+  if(serviceId==="objet_retrouve"){
+    const {objectId,nomComplet,telephone,residence}=body;
+    if(typeof objectId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(objectId)||typeof nomComplet!=="string"||nomComplet.trim().length<2||nomComplet.trim().length>100||
+       typeof telephone!=="string"||telephone.trim().length<6||telephone.trim().length>25||
+       typeof residence!=="string"||residence.trim().length<2||residence.trim().length>180) return json({error:"invalid_claim_details"},400);
+    const objectDoc=await getDoc(env,"objets_retrouves/"+objectId);
+    if(!objectDoc||docData(objectDoc)?.statut!=="publie") return json({error:"object_unavailable"},409);
+    amountXof=1000;
+    initial={uid:user.sub,serviceId,objectId,nomComplet:nomComplet.trim(),telephone:telephone.trim(),residence:residence.trim(),provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
+  } else {
+    const cfgDoc=await getDoc(env,"configuration_abonnements/globale");
+    const services=docData(cfgDoc)?.services||{};
+    const cfg=services.automobiliste||{};
+    const duration=Number(cfg.duree??12), unit=cfg.unite||"mois", base=Number(cfg.prix??1000);
+    if(cfg.actif===false) return json({error:"plan_unavailable"},409);
+    if(duration!==12||unit!=="mois"||!Number.isSafeInteger(base)||base<1||base>10000000) return json({error:"plan_configuration_invalid"},503);
+    const start=cfg.promotionDebut?new Date(cfg.promotionDebut+"T00:00:00Z"):null, end=cfg.promotionFin?new Date(cfg.promotionFin+"T23:59:59Z"):null, promo=Number(cfg.promotionPrix||0);
+    amountXof=cfg.promotionActive===true&&promo>0&&promo<=base&&start&&end&&now>=start&&now<=end?promo:base;
+    initial={uid:user.sub,serviceId,planId:"annuel",provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationMonths:12,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
+  }
   const id=crypto.randomUUID().replace(/-/g,"");
   const reference="MQCI-"+id;
+  initial.clientReference=reference;
   const path="payments/"+id;
-  const initial={uid:user.sub,serviceId:"automobiliste",planId:"annuel",provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationMonths:12,status:"pending",clientReference:reference,createdAt:now.toISOString(),updatedAt:now.toISOString()};
-  await firestore(env,path,{method:"PATCH",body:JSON.stringify(fields(initial))});
+  await commitWrites(env,[createWrite(path,initial)]);
   try {
     const checkout=await jeko(env,"/partner_api/payment_requests",{method:"POST",body:JSON.stringify({
       storeId:env.JEKO_STORE_ID,amountCents:amountXof*100,currency:"XOF",reference,
-      paymentDetails:{type:"redirect",data:{paymentMethod:body.paymentMethod,successUrl:APP_RETURN_URL+"?payment=return&paymentId="+id,errorUrl:APP_RETURN_URL+"?payment=error&paymentId="+id}}
+      paymentDetails:{type:"redirect",data:{paymentMethod:body.paymentMethod,successUrl:APP_RETURN_URL+"?payment=return&paymentId="+id+"&serviceId="+serviceId,errorUrl:APP_RETURN_URL+"?payment=error&paymentId="+id+"&serviceId="+serviceId}}
     })});
     const checkoutId=checkout.id||checkout.paymentRequestId;
     const redirect=checkout.redirectUrl||checkout.paymentUrl||checkout.url;
@@ -208,6 +224,25 @@ async function webhook(request,env) {
   }
   if(tx.status!=="success") return new Response("OK",{status:200});
   if(payment.status==="succeeded") return new Response("OK",{status:200});
+  if(payment.serviceId==="objet_retrouve"){
+    const objectDoc=await getDoc(env,"objets_retrouves/"+payment.objectId);
+    if(!objectDoc||docData(objectDoc)?.statut!=="publie"){
+      await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"object_no_longer_available",updatedAt:now.toISOString()}))});
+      return new Response("OK",{status:200});
+    }
+    const demandPath="demandes_recuperation_objets/"+paymentId;
+    const demandData={objetId:payment.objectId,nomComplet:payment.nomComplet,telephone:payment.telephone,residence:payment.residence,
+      operateur:"Jèko",referenceTransaction:transactionId,heureTransaction:now.toISOString(),montantFCFA:1000,
+      statut:"paiement_verifie",uid:payment.uid,paymentId,createdAt:now.toISOString()};
+    try{
+      await commitWrites(env,[
+        updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
+        createWrite(demandPath,demandData),
+        createWrite(receiptPath,receiptData)
+      ]);
+    }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
+    return new Response("OK",{status:200});
+  }
   const subPath="abonnements_automobiliste/"+payment.uid, subDoc=await getDoc(env,subPath), sub=docData(subDoc)||{};
   const oldEnd=sub.dateExpiration?new Date(sub.dateExpiration):null;
   const renewing=oldEnd&&oldEnd>now, end=addMonthsClamped(renewing?oldEnd:now,12);
@@ -240,7 +275,7 @@ async function paymentStatus(request,env) {
       } catch {}
     }
   }
-  return json({paymentId:id,status:payment.status,amountXof:payment.amountXof,currency:payment.currency});
+  return json({paymentId:id,status:payment.status,amountXof:payment.amountXof,currency:payment.currency,serviceId:payment.serviceId||"automobiliste"});
 }
 export default {
   async fetch(request,env) {
