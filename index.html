@@ -3136,27 +3136,19 @@ function chargerPublicitesAccueil() {
   </div>
   <div id="formulaireDemandeAbonnementAuto" style="display:none;padding:12px;border:1px solid #E2E9E4;border-radius:12px;margin-top:12px;">
     <p id="etatAbonnementAuto" class="notice" aria-live="polite">Vérification de votre abonnement...</p>
-    <label for="operateurAbonnementAuto">Moyen de paiement</label>
+    <label for="operateurAbonnementAuto">Moyen de paiement Jèko</label>
     <select id="operateurAbonnementAuto" onchange="actualiserModePaiementAbonnementAuto()" style="width:100%;padding:12px;margin:5px 0 10px;">
-      <option value="Wave">Wave — paiement manuel</option>
-      <option value="Orange Money">Orange Money — paiement manuel</option>
-      <option value="jeko:wave">Wave via Jèko Checkout</option>
-      <option value="jeko:orange">Orange Money via Jèko Checkout</option>
-      <option value="jeko:mtn">MTN MoMo via Jèko Checkout</option>
-      <option value="jeko:moov">Moov Money via Jèko Checkout</option>
-      <option value="jeko:djamo">Djamo via Jèko Checkout</option>
+      <option value="wave">Wave</option>
+      <option value="orange">Orange Money</option>
+      <option value="mtn">MTN Money</option>
+      <option value="moov">Moov Money</option>
+      <option value="djamo">Djamo</option>
     </select>
-    <div id="paiementManuelAbonnementAuto">
-      <label for="referenceAbonnementAuto">Référence de la transaction</label>
-      <input id="referenceAbonnementAuto" type="text" maxlength="80" placeholder="Référence affichée après le transfert" style="width:100%;padding:12px;margin:5px 0 10px;">
-      <label for="nomPayeurAbonnementAuto">Nom du payeur (facultatif)</label>
-      <input id="nomPayeurAbonnementAuto" type="text" maxlength="80" placeholder="Nom indiqué lors du paiement" style="width:100%;padding:12px;margin:5px 0 10px;">
-    </div>
-    <p id="aidePaiementAbonnementAuto" class="notice">Le paiement manuel reste disponible avec vérification par l’administration.</p>
-    <button id="boutonPaiementAbonnementAuto" type="button" onclick="envoyerDemandeAbonnementAuto()" style="width:100%;background:#087C62;color:white;">Envoyer ma demande de validation</button>
+    <p id="aidePaiementAbonnementAuto" class="notice">Le paiement et l'activation sont confirmés automatiquement par Jèko.</p>
+    <button id="boutonPaiementAbonnementAuto" type="button" onclick="envoyerDemandeAbonnementAuto()" style="width:100%;background:#087C62;color:white;">Payer avec Jèko</button>
     <button type="button" onclick="deconnecterCompteAbonnementAuto()" style="width:100%;margin-top:8px;">Se déconnecter</button>
   </div>
-  <p class="notice" style="margin-top:12px;">Ne transmettez jamais votre code secret Mobile Money. La validation peut nécessiter un délai de vérification.</p>
+  <p class="notice" style="margin-top:12px;">Ne transmettez jamais votre code secret Mobile Money. L'abonnement est activé uniquement après confirmation du paiement par Jèko.</p>
 </section>
 
 <section id="mesDocumentsAutomobiles" class="card" style="display:none;">
