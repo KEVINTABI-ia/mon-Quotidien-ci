@@ -157,9 +157,10 @@ async function createCheckout(request,env) {
     initial={uid:user.sub,serviceId,planId:"annuel",provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationMonths:12,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
   }
   const id=crypto.randomUUID().replace(/-/g,"");
-  const reference=initial.clientReference;
+  const reference="MQCI-"+id;
+  initial.clientReference=reference;
   const path="payments/"+id;
-  await firestore(env,path,{method:"PATCH",body:JSON.stringify(fields(initial))});
+  await commitWrites(env,[createWrite(path,initial)]);
   try {
     const checkout=await jeko(env,"/partner_api/payment_requests",{method:"POST",body:JSON.stringify({
       storeId:env.JEKO_STORE_ID,amountCents:amountXof*100,currency:"XOF",reference,
