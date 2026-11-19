@@ -18,7 +18,8 @@ const decodeB64url = value => Uint8Array.from(atob(value.replace(/-/g,"+").repla
 const decodeJson = value => JSON.parse(new TextDecoder().decode(decodeB64url(value)));
 const toB64 = value => btoa(unescape(encodeURIComponent(value)));
 const fromB64 = value => decodeURIComponent(escape(atob(value)));
-const fields = obj => ({ fields: Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,toFirestore(v)])) });
+const TIMESTAMP_FIELDS = new Set(["createdAt","updatedAt","confirmedAt","receivedAt","dateActivation","dateExpiration","lastProviderCheckAt"]);
+const fields = obj => ({ fields: Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,TIMESTAMP_FIELDS.has(k)&&typeof v==="string"?{timestampValue:new Date(v).toISOString()}:toFirestore(v)])) });
 function toFirestore(v) {
   if (v === null) return { nullValue: null };
   if (typeof v === "boolean") return { booleanValue: v };
@@ -80,22 +81,14 @@ async function firestore(env, path, init={}) {
 }
 async function getDoc(env,path) { return firestore(env,path); }
 async function firebaseUser(token) {
-  const parts = token.split(".");
-  if (parts.length!==3) return null;
-  const header = decodeJson(parts[0]), claims = decodeJson(parts[1]);
-  if (!header.kid || !claims.sub || claims.aud!==FIREBASE_PROJECT_ID || claims.iss!=="https://securetoken.google.com/"+FIREBASE_PROJECT_ID || claims.exp<=Date.now()/1000 || claims.iat>Date.now()/1000+60 || claims.auth_time>Date.now()/1000+60) return null;
-  if (!firebaseCertCache || firebaseCertExpiry<Date.now()) {
-    const response=await fetch(FIREBASE_CERTS);
-    if(!response.ok) return null;
-    firebaseCertCache=await response.json();
-    const cc=response.headers.get("cache-control")||"";
-    firebaseCertExpiry=Date.now()+(Number((cc.match(/max-age=(\d+)/)||[])[1]||300))*1000;
-  }
-  const cert=firebaseCertCache[header.kid];
-  if(!cert) return null;
-  const key=await crypto.subtle.importKey("spki",pemBytes(cert),{name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"},false,["verify"]);
-  const valid=await crypto.subtle.verify("RSASSA-PKCS1-v1_5",key,decodeB64url(parts[2]),new TextEncoder().encode(parts[0]+"."+parts[1]));
-  return valid ? claims : null;
+  const response=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key="+FIREBASE_API_KEY,{
+    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({idToken:token})
+  });
+  if(!response.ok) return null;
+  const data=await response.json();
+  const user=data.users?.[0];
+  if(!user?.localId||user.disabled===true) return null;
+  return {sub:user.localId,email:user.email||null};
 }
 async function requireUser(request) {
   const token=(request.headers.get("authorization")||"").match(/^Bearer\s+(.+)$/i)?.[1];
