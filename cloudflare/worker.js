@@ -165,7 +165,7 @@ async function createCheckout(request,env) {
   const methods=["orange","wave","mtn","moov","djamo"];
   if(!methods.includes(body.paymentMethod)) return json({error:"invalid_payment_method"},400);
   const serviceId=body.serviceId||"automobiliste";
-  if(!["automobiliste","objet_retrouve"].includes(serviceId)) return json({error:"unsupported_service"},400);
+  if(!["automobiliste","objet_retrouve","petites_annonces"].includes(serviceId)) return json({error:"unsupported_service"},400);
   const now=new Date();
   let amountXof, initial;
   if(serviceId==="objet_retrouve"){
@@ -177,6 +177,20 @@ async function createCheckout(request,env) {
     if(!objectDoc||docData(objectDoc)?.statut!=="publie") return json({error:"object_unavailable"},409);
     amountXof=1000;
     initial={uid:user.sub,serviceId,objectId,nomComplet:nomComplet.trim(),telephone:telephone.trim(),residence:residence.trim(),provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
+  } else if(serviceId==="petites_annonces") {
+    const subDoc=await getDoc(env,"abonnements_petites_annonces/"+user.sub);
+    const sub=docData(subDoc);
+    if(!subDoc||!sub?.dateExpiration) return json({error:"subscription_not_found"},409);
+    const expiry=sub.dateExpiration instanceof Date?sub.dateExpiration:new Date(sub.dateExpiration);
+    if(!Number.isFinite(expiry.getTime())||expiry.getTime()>now.getTime()) return json({error:"subscription_not_expired"},409);
+    if(sub.paiementStatut==="a_verifier"||sub.paiementStatut==="initialisation_inconnue") return json({error:"existing_payment_requires_review"},409);
+    const cfgDoc=await getDoc(env,"configuration_abonnements/globale");
+    const cfg=docData(cfgDoc)?.services?.petites_annonces||{};
+    const duration=Number(cfg.duree??30),unit=cfg.unite||"jours",base=Number(cfg.prix??500);
+    if(cfg.actif===false||unit!=="jours"||!Number.isSafeInteger(duration)||duration<1||duration>365||!Number.isSafeInteger(base)||base<1||base>10000000) return json({error:"plan_configuration_invalid"},503);
+    const start=cfg.promotionDebut?new Date(cfg.promotionDebut+"T00:00:00Z"):null,end=cfg.promotionFin?new Date(cfg.promotionFin+"T23:59:59Z"):null,promo=Number(cfg.promotionPrix||0);
+    amountXof=cfg.promotionActive===true&&promo>0&&promo<=base&&start&&end&&now>=start&&now<=end?promo:base;
+    initial={uid:user.sub,serviceId,planId:"petites_annonces",targetPath:"abonnements_petites_annonces/"+user.sub,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays:duration,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
   } else {
     const cfgDoc=await getDoc(env,"configuration_abonnements/globale");
     const services=docData(cfgDoc)?.services||{};
@@ -285,6 +299,30 @@ async function webhook(request,env) {
         createWrite(receiptPath,receiptData)
       ]);
     }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
+    return new Response("OK",{status:200});
+  }
+  if(payment.serviceId==="petites_annonces") {
+    const subPath="abonnements_petites_annonces/"+payment.uid;
+    const subDoc=await getDoc(env,subPath),sub=docData(subDoc);
+    if(!subDoc||!sub||!Number.isSafeInteger(payment.durationDays)||payment.durationDays<1||payment.durationDays>365) {
+      await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"subscription_target_or_duration_invalid",updatedAt:now.toISOString()}))});
+      return new Response("OK",{status:200});
+    }
+    const oldEnd=sub.dateExpiration instanceof Date?sub.dateExpiration:new Date(sub.dateExpiration);
+    if(!Number.isFinite(oldEnd.getTime())) {
+      await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"subscription_expiry_invalid",updatedAt:now.toISOString()}))});
+      return new Response("OK",{status:200});
+    }
+    const start=oldEnd>now?oldEnd:now;
+    const end=new Date(start.getTime()+payment.durationDays*86400000);
+    const nextSub={statut:"actif",paiementStatut:"confirme",dateExpiration:end,paiementMoyen:"Jèko",dernierPaiementFCFA:payment.amountXof,dernierPaiementLe:now,paymentId};
+    try {
+      await commitWrites(env,[
+        updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
+        updateWrite(subPath,nextSub,subDoc.updateTime),
+        createWrite(receiptPath,receiptData)
+      ]);
+    } catch(e) { if(!(await getDoc(env,receiptPath))) throw e; }
     return new Response("OK",{status:200});
   }
   const subPath="abonnements_automobiliste/"+payment.uid, subDoc=await getDoc(env,subPath), sub=docData(subDoc)||{};
