@@ -986,9 +986,9 @@ describe("Mon Transport CI — règles Firestore", function () {
       }));
     });
 
-    it("accepte Wave et Orange Money pour le logement et refuse MTN MoMo et Moov Money", async () => {
+    it("refuse les anciennes demandes manuelles de renouvellement Logement", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
+      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
       const base={
         uid:CLIENT_UID,nom:"Client test",email:"client@example.test",telephone:"0700000000",
         formule:"mensuel",montant:3000,reference:"REF-TEST-1234",
