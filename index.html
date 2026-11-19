@@ -4207,43 +4207,50 @@ async function ouvrirGestionAbonnementPetitesAnnonces(){
   if(!snap.exists){const cfg=await obtenirConfigurationAbonnement("petites_annonces");zone.innerHTML=cfg.actif&&Number(cfg.essai)>0?'<p class="notice">Votre période gratuite de '+Number(cfg.essai)+' jours sera activée lors de votre première annonce.</p>':'<p class="notice">Les nouvelles souscriptions sont temporairement suspendues.</p>';return;}
   const d=snap.data(),fin=d.dateExpiration?.toDate?.(),actif=!!fin&&fin.getTime()>Date.now();
   if(actif){zone.innerHTML='<p class="notice">Abonnement actif jusqu’au '+fin.toLocaleDateString("fr-FR")+'. Plusieurs annonces sont autorisées pendant cette période.</p>';return;}
-  if(d.paiementStatut==="a_verifier"){zone.innerHTML='<p class="notice">Votre paiement est en attente de vérification. La publication de nouvelles annonces sera débloquée après confirmation.</p>';return;}
-  const cfg=await obtenirConfigurationAbonnement("petites_annonces");if(!cfg.actif){zone.innerHTML='<p class="notice">Les renouvellements sont temporairement suspendus.</p>';return;}const paiement=await window.chargerCoordonneesPaiementMQCI();const montant=tarifAbonnementEffectif(cfg),jours=dureeAbonnementEnJours(cfg);zone.innerHTML='<div class="card" style="padding:12px;"><strong>Renouvellement : '+montant.toLocaleString("fr-FR")+' FCFA pour '+jours+' jours</strong><p>Wave : <strong>'+echapperTextePublicite(paiement.numero)+'</strong><br>Orange Money : <strong>'+echapperTextePublicite(paiement.numero)+'</strong><br>Titulaire : <strong>'+echapperTextePublicite(paiement.beneficiaire)+'</strong></p><label>Moyen de paiement</label><select id="nsRenouvellementMoyen"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select><label>Référence de transaction</label><input id="nsRenouvellementReference" maxlength="80" placeholder="Référence reçue après paiement"><button type="button" class="primary" onclick="envoyerRenouvellementPetitesAnnonces()">Envoyer pour vérification</button></div>';
+  await afficherRenouvellementPetitesAnnoncesJeko(zone,user);
  }catch(e){zone.textContent="Consultation impossible : "+(e.message||"réessayez.");}
 }
-async function envoyerRenouvellementPetitesAnnonces(){
- if(!(await window.paiementsMQCIDisponibles(true))){alert("Paiements temporairement indisponibles en attendant les API Wave et Orange Money.");return;}
- const cfg=await obtenirConfigurationAbonnement("petites_annonces");
- const user=auth.currentUser,zone=document.getElementById("zoneAbonnementPetitesAnnonces"),moyen=document.getElementById("nsRenouvellementMoyen")?.value||"",reference=document.getElementById("nsRenouvellementReference")?.value.trim()||"";
- if(!cfg.actif)return alert("Les nouvelles souscriptions et renouvellements de petites annonces sont temporairement suspendus.");
- if(!user||!["Wave","Orange Money"].includes(moyen)||reference.length<4)return alert("Choisissez un moyen de paiement et saisissez une référence valide.");
+async function afficherRenouvellementPetitesAnnoncesJeko(zone,user){
+ zone.innerHTML='<p class="notice">Chargement des formules Jèko...</p>';
  try{
-  const ref=db.collection("abonnements_petites_annonces").doc(user.uid),snap=await ref.get();
-  if(!snap.exists||snap.data().dateExpiration?.toDate?.().getTime()>Date.now())return alert("Le renouvellement n’est pas nécessaire pour le moment.");
-  await ref.update({paiementMoyen:moyen,paiementReference:reference,montantRenouvellement:tarifAbonnementEffectif(cfg),dureeRenouvellementJours:dureeAbonnementEnJours(cfg),paiementStatut:"a_verifier",demandeRenouvellementLe:firebase.firestore.FieldValue.serverTimestamp()});
-  zone.innerHTML='<p class="notice">Demande reçue. Le renouvellement sera activé après vérification manuelle du paiement.</p>';
- }catch(e){console.error(e);alert("Envoi impossible : "+e.message);}
+  const token=await user.getIdToken();
+  const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/subscription-plans?serviceId=petites_annonces",{headers:{Authorization:"Bearer "+token}});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error("Impossible de récupérer les formules Jèko.");
+  const plan=data.plans?.find(p=>p.planId==="petites_annonces"&&p.available);
+  if(!plan)throw new Error("Le renouvellement est indisponible : vérifiez la configuration du tarif et de la durée.");
+  zone.innerHTML='<div class="card" style="padding:12px;"><strong>Renouvellement petites annonces</strong><p>'+Number(plan.priceXof).toLocaleString("fr-FR")+' FCFA pour '+Number(plan.duration)+' '+(plan.unit==="mois"?"mois":"jours")+'</p><label>Moyen de paiement</label><select id="nsJekoPaymentMethod" style="width:100%;padding:12px;"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select><button type="button" class="primary" id="nsJekoCheckoutButton" onclick="demarrerRenouvellementPetitesAnnoncesJeko()">Payer avec Jèko</button><p id="nsJekoCheckoutStatus" class="notice" aria-live="polite"></p></div>';
+ }catch(e){zone.innerHTML='<p class="notice">'+echapperTextePublicite(e.message||"Le catalogue Jèko est indisponible.")+'</p>';}
+}
+async function demarrerRenouvellementPetitesAnnoncesJeko(){
+ const user=auth.currentUser,button=document.getElementById("nsJekoCheckoutButton"),status=document.getElementById("nsJekoCheckoutStatus");
+ const paymentMethod=document.getElementById("nsJekoPaymentMethod")?.value||"";
+ if(!user||!["wave","orange","mtn","moov","djamo"].includes(paymentMethod)){if(status)status.textContent="Connectez-vous et choisissez un moyen de paiement.";return;}
+ if(button){button.disabled=true;button.textContent="Préparation du paiement...";}
+ if(status)status.textContent="Vérification de votre abonnement et préparation du paiement Jèko...";
+ try{
+  const token=await user.getIdToken();
+  const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceId:"petites_annonces",paymentMethod})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.checkoutUrl){
+   const messages={subscription_not_found:"Aucun abonnement petites annonces n’a été trouvé.",subscription_not_expired:"Votre abonnement est encore actif.",existing_payment_requires_review:"Un paiement précédent nécessite une vérification. Ne recommencez pas le paiement.",plan_configuration_invalid:"La formule est momentanément indisponible."};
+   throw new Error(messages[data.error]||data.diagnostic||"Jèko n’a pas pu préparer le paiement.");
+  }
+  if(status)status.textContent="Redirection vers la page de paiement Jèko...";
+  window.location.assign(data.checkoutUrl);
+ }catch(e){
+  if(status)status.textContent=e.message||"Initialisation du paiement impossible.";
+  if(button){button.disabled=false;button.textContent="Réessayer avec Jèko";}
+ }
 }
 async function chargerPaiementsAnnoncesAdmin(){
  const zone=document.getElementById("listePaiementsAnnoncesAdmin");if(!zone)return;
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){zone.textContent="Accès administrateur requis.";return;}
- zone.textContent="Chargement...";
- try{
-  const snap=await db.collection("abonnements_petites_annonces").where("paiementStatut","==","a_verifier").limit(100).get();
-  if(snap.empty){zone.innerHTML='<p class="notice">Aucun renouvellement en attente.</p>';return;}
-  zone.innerHTML=snap.docs.map(doc=>{const d=doc.data();const montant=Number(d.montantRenouvellement||500),jours=Number(d.dureeRenouvellementJours||30);return '<article class="card" style="padding:12px;margin:8px 0;"><strong>Compte : '+echapperTextePublicite(d.email||d.uid)+'</strong><p>'+montant.toLocaleString("fr-FR")+' FCFA / '+jours+' jours · '+echapperTextePublicite(d.paiementMoyen||"")+' · Référence : '+echapperTextePublicite(d.paiementReference||"")+'</p><button type="button" class="primary" onclick="confirmerRenouvellementAnnonce(\''+doc.id+'\')">Confirmer le paiement et activer '+jours+' jours</button></article>';}).join("");
- }catch(e){console.error(e);zone.textContent="Erreur : "+e.message;}
+ zone.innerHTML='<p class="notice">Les anciens renouvellements par référence Wave/Orange ne sont plus validables depuis l’interface. Ils doivent être vérifiés au cas par cas ; aucun abonnement ne sera activé manuellement.</p>';
 }
 async function confirmerRenouvellementAnnonce(uid){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
- const ref=db.collection("abonnements_petites_annonces").doc(uid);
- try{
-  const snap=await ref.get();if(!snap.exists||snap.data().paiementStatut!=="a_verifier")return alert("Demande introuvable ou déjà traitée.");
-  const d=snap.data();if(!confirm("Confirmer la réception de "+Number(d.montantRenouvellement||500).toLocaleString("fr-FR")+" FCFA et activer "+Number(d.dureeRenouvellementJours||30)+" jours ?"))return;
-  const debut=Math.max(Date.now(),d.dateExpiration?.toDate?.().getTime()||0);
-  await ref.update({statut:"actif",paiementStatut:"confirme",dateExpiration:firebase.firestore.Timestamp.fromMillis(debut+Number(d.dureeRenouvellementJours||30)*86400000),dateConfirmationPaiement:firebase.firestore.FieldValue.serverTimestamp(),confirmePar:auth.currentUser.uid});
-  await chargerPaiementsAnnoncesAdmin();
- }catch(e){console.error(e);alert("Activation impossible : "+e.message);}
+ alert("La confirmation manuelle est désactivée. Seul un webhook Jèko vérifié peut activer un renouvellement.");
 }
 async function chargerNouveauxServicesPublics(type){
  const zone=document.getElementById("nouveauxServicesPublics");if(!zone)return;
