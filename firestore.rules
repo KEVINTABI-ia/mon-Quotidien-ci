@@ -930,7 +930,9 @@ service cloud.firestore {
             && getAfter(/databases/$(database)/documents/abonnements_petites_annonces/$(request.auth.uid)).data.dateExpiration > request.time))
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time;
-      allow read: if estAdmin() || (resource.data.statut == "approuve" && (resource.data.type != "depannage" || estAbonneAutomobiliste()) && (resource.data.type != "annuaire" || (resource.data.abonnementFin is timestamp && resource.data.abonnementFin > request.time)));
+      allow read: if estAdmin()
+        || (resource.data.type == "annuaire" && estConnecte() && resource.data.uid == request.auth.uid)
+        || (resource.data.statut == "approuve" && (resource.data.type != "depannage" || estAbonneAutomobiliste()) && (resource.data.type != "annuaire" || (resource.data.abonnementFin is timestamp && resource.data.abonnementFin > request.time)));
       allow update: if estAdmin()
         && !(resource.data.type == "commerce"
           && request.resource.data.diff(resource.data).affectedKeys().hasAny([
