@@ -143,19 +143,19 @@ service cloud.firestore {
     match /compagnies/{compagnieId} {
       allow read: if true;
       allow create: if estAdmin()
-        || (demandePaiementManuelEnAttente(request.resource.data.statutAbonnement) && estConnecte()
+        || (request.resource.data.statutAbonnement == "Dossier à vérifier" && estConnecte()
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.email == request.auth.token.get("email", "")
           && request.resource.data.keys().hasAll([
             "uid","nom","agence","localisation","telephone","email","destinations",
             "photoGarePrincipale","telephoneGarePrincipale","telephoneServiceCourrier",
-            "formule","periodicite","montant","dureeMois","moyenPaiement","referencePaiement",
+            "formule","periodicite","montant","dureeMois",
             "statutAbonnement","dateCreation","dateDebut","dateExpiration"
           ])
           && request.resource.data.keys().hasOnly([
             "uid","nom","agence","localisation","telephone","email","logo","destinations",
             "photoGarePrincipale","telephoneGarePrincipale","telephoneServiceCourrier",
-            "formule","periodicite","montant","dureeMois","moyenPaiement","referencePaiement",
+            "formule","periodicite","montant","dureeMois",
             "statutAbonnement","dateCreation","dateDebut","dateExpiration"
           ])
           && request.resource.data.uid == request.auth.uid
@@ -187,11 +187,7 @@ service cloud.firestore {
               && abonnementMontantAutorise("compagnie_professionnelle_annuel", request.resource.data.montant, 100000)
               && request.resource.data.dureeMois == abonnementChamp("compagnie_professionnelle_annuel", "duree", 12))
           )
-          && request.resource.data.moyenPaiement in ["Wave","Orange Money"]
-          && request.resource.data.referencePaiement is string
-          && request.resource.data.referencePaiement.size() >= 4
-          && request.resource.data.referencePaiement.size() <= 80
-          && request.resource.data.statutAbonnement == "En attente"
+          && request.resource.data.statutAbonnement == "Dossier à vérifier"
           && request.resource.data.dateCreation == request.time
           && request.resource.data.dateDebut == null
           && request.resource.data.dateExpiration == null
@@ -208,7 +204,13 @@ service cloud.firestore {
           && request.resource.data.telephoneServiceCourrier.size() >= 6
           && request.resource.data.telephoneServiceCourrier.size() <= 25
         );
-      allow update: if estAdmin()
+      allow update: if (estAdmin()
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            "dateDebut","dateExpiration","montant","dureeMois","dernierPaiementJekoLe",
+            "dernierPaiementJekoMontant","renouvellementJekoPaymentId","renouvellementJekoStatut"
+          ])
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["statutAbonnement"])
+            || request.resource.data.statutAbonnement in ["À payer","Dossier refusé","Expiré","Dossier à vérifier"]))
         || (estConnecte() && resource.data.uid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["photoGarePrincipale","telephoneGarePrincipale","telephoneServiceCourrier","localisation"])
           && request.resource.data.photoGarePrincipale is string && request.resource.data.photoGarePrincipale.size() > 30 && request.resource.data.photoGarePrincipale.size() <= 700000 && request.resource.data.photoGarePrincipale.matches("^data:image/jpeg;base64,.*$")
