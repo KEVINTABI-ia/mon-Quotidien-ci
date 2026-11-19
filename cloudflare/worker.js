@@ -128,18 +128,28 @@ async function requireUser(request, env) {
   catch(e) { return {user:null,diagnostic:e.authCode||"FIREBASE_AUTH_ERROR"}; }
 }
 async function jeko(env,path,init={}) {
-  const response=await fetch(JEKO_API_BASE+path,{...init,headers:{
-    "X-API-KEY":env.JEKO_API_KEY,"X-API-KEY-ID":env.JEKO_API_KEY_ID,"content-type":"application/json",...(init.headers||{})
-  },signal:AbortSignal.timeout(15000)});
-  const data=await response.json().catch(()=>({}));
+  let response;
+  try {
+    response=await fetch(JEKO_API_BASE+path,{...init,headers:{
+      "X-API-KEY":env.JEKO_API_KEY,"X-API-KEY-ID":env.JEKO_API_KEY_ID,"content-type":"application/json",...(init.headers||{})
+    },signal:AbortSignal.timeout(15000)});
+  } catch(e) {
+    const err=new Error(e?.name==="TimeoutError"?"jeko_network_timeout":"jeko_network_error");
+    err.networkFailure=true;
+    throw err;
+  }
+  const raw=await response.text();
+  let data={};
+  try { data=raw?JSON.parse(raw):{}; } catch { data={}; }
   if(!response.ok) {
     const providerCode=[data.code,data.errorCode,data.errorReason,data.error].find(v=>typeof v==="string"&&/^[A-Za-z0-9_.-]{1,80}$/.test(v))||"";
     const err=new Error("jeko_provider_"+response.status+(providerCode?"_"+providerCode:""));
     err.providerStatus=response.status;
     err.providerCode=providerCode||null;
+    err.ambiguous=response.status>=500;
     throw err;
   }
-  return data;
+  return {data,meta:{status:response.status,contentType:response.headers.get("content-type")||"unknown"}};
 }
 async function createCheckout(request,env) {
   const authResult=await requireUser(request, env);
@@ -178,20 +188,30 @@ async function createCheckout(request,env) {
   const path="payments/"+id;
   await commitWrites(env,[createWrite(path,initial)]);
   try {
-    const checkout=await jeko(env,"/partner_api/payment_requests",{method:"POST",body:JSON.stringify({
+    const providerResult=await jeko(env,"/partner_api/payment_requests",{method:"POST",body:JSON.stringify({
       storeId:env.JEKO_STORE_ID,amountCents:amountXof*100,currency:"XOF",reference,
       paymentDetails:{type:"redirect",data:{paymentMethod:body.paymentMethod,successUrl:APP_RETURN_URL+"?payment=return&paymentId="+id+"&serviceId="+serviceId,errorUrl:APP_RETURN_URL+"?payment=error&paymentId="+id+"&serviceId="+serviceId}}
     })});
+    const checkout=providerResult.data;
     const checkoutId=checkout.id||checkout.paymentRequestId;
     const redirect=checkout.redirectUrl||checkout.paymentUrl||checkout.url;
-    if(typeof checkoutId!=="string"||typeof redirect!=="string"||!/^https:\/\//i.test(redirect)) throw new Error("jeko_response_invalid");
+    if(typeof checkoutId!=="string"||typeof redirect!=="string"||!/^https:\/\//i.test(redirect)) {
+      const err=new Error("jeko_response_missing_checkout_fields");
+      err.providerStatus=providerResult.meta.status;
+      err.providerContentType=providerResult.meta.contentType;
+      err.providerResponseKeys=Object.keys(checkout||{}).slice(0,20);
+      err.ambiguous=true;
+      throw err;
+    }
     await firestore(env,path,{method:"PATCH",body:JSON.stringify(fields({providerPaymentRequestId:checkoutId,checkoutUrl:redirect,updatedAt:new Date().toISOString()}))});
     return json({paymentId:id,checkoutUrl:redirect},201);
   } catch(e) {
-    const diagnostic=typeof e?.message==="string"&&/^jeko_provider_[0-9]{3}(_[A-Za-z0-9_.-]{1,80})?$/.test(e.message)?e.message:"provider_network_or_response_error";
-    console.error("Jeko checkout initialization failed",{serviceId,diagnostic});
-    await firestore(env,path,{method:"PATCH",body:JSON.stringify(fields({status:"failed",initializationError:diagnostic,updatedAt:new Date().toISOString()}))}).catch(()=>{});
-    return json({error:"payment_initialization_failed",diagnostic},502);
+    const diagnostic=typeof e?.message==="string"&&/^(jeko_provider_[0-9]{3}(_[A-Za-z0-9_.-]{1,80})?|jeko_network_(timeout|error)|jeko_response_missing_checkout_fields)$/.test(e.message)?e.message:"jeko_unclassified_error";
+    const ambiguous=e?.ambiguous===true||e?.networkFailure===true;
+    console.error("Jeko checkout initialization failed",{serviceId,diagnostic,providerStatus:e?.providerStatus||null,providerContentType:e?.providerContentType||null,providerResponseKeys:e?.providerResponseKeys||null,ambiguous});
+    const status=ambiguous?"initialization_unknown":"failed";
+    await firestore(env,path,{method:"PATCH",body:JSON.stringify(fields({status,initializationError:diagnostic,updatedAt:new Date().toISOString()}))}).catch(()=>{});
+    return json({error:"payment_initialization_failed",diagnostic,checkRequired:ambiguous},502);
   }
 }
 function safeHexEqual(a,b) {
