@@ -7013,7 +7013,7 @@ function afficherEspacePartenaire(dossier, uid) {
     </div>
     ${expire ? (renouvellementEnAttente
       ? '<div class="notice" style="border:1px solid #D5A84B;padding:12px;margin:12px 0;"><strong>💳 Renouvellement en attente</strong><p>Votre demande a été reçue. L’administrateur vérifiera le paiement avant de réactiver votre abonnement.</p></div>'
-      : '<div class="notice" style="border:1px solid #D5A84B;padding:12px;margin:12px 0;"><strong>Votre abonnement a expiré.</strong><p>Choisissez une formule et transmettez la référence de votre paiement pour demander le renouvellement.</p><button type="button" class="primary" onclick="ouvrirFormulaireRenouvellementPartenaire()">Renouveler mon abonnement</button><div id="formulaireRenouvellementPartenaire"></div></div>') : ""}
+      : '<div class="notice" style="border:1px solid #D5A84B;padding:12px;margin:12px 0;"><strong>Votre abonnement a expiré.</strong><p>Choisissez une formule et réglez directement avec Jèko. Votre abonnement sera réactivé automatiquement après confirmation sécurisée du paiement.</p><button type="button" class="primary" onclick="ouvrirFormulaireRenouvellementPartenaire()">Renouveler avec Jèko</button><div id="formulaireRenouvellementPartenaire"></div></div>') : ""}
     <h3>📦 Mes commandes attribuées</h3>
     <button type="button" class="primary" onclick="chargerCommandesPartenaire()">Actualiser mes commandes</button>
     <div id="listeCommandesPartenaire"><p>Appuyez sur « Actualiser mes commandes » pour consulter vos missions.</p></div>
