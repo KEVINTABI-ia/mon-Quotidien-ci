@@ -132,3 +132,13 @@ Le Worker vérifie le propriétaire, le statut approuvé, l'échéance ou l'éta
 Le compte Logement conserve son essai gratuit initial de 30 jours. Après expiration, le propriétaire peut renouveler depuis son espace avec trois formules existantes : **3 000 FCFA / 30 jours**, **8 000 FCFA / 90 jours** et **15 000 FCFA / 180 jours**. Le moyen de paiement est choisi dans le checkout Jèko (Wave, Orange Money, MTN Money, Moov Money ou Djamo). Le paiement n'est plus soumis par référence manuelle.
 
 Le Worker vérifie l'identité du propriétaire, l'état du compte, l'expiration de l'essai/abonnement, la formule et le montant fixes côté serveur. Il bloque les tentatives simultanées ou ambiguës. Le webhook Jèko signé prolonge l'abonnement, enregistre le reçu et réactive la possibilité de publier. Les anciennes demandes manuelles restent visibles à l'administration pour historique/refus, mais ne peuvent plus être créées ni confirmées. Les règles Firestore empêchent également l'activation manuelle d'un abonnement Logement depuis le navigateur.
+
+## Septième verticale : compagnies de cars de ramassage
+
+Le dossier compagnie reste soumis à approbation administrative. L'approbation ne modifie que le statut du dossier et n'active pas le forfait. Après approbation, le propriétaire se connecte à son espace compagnie et choisit Wave, Orange Money, MTN Money, Moov Money ou Djamo dans le checkout Jèko.
+
+Le forfait est fixé à **2 000 FCFA pour un mois**. Le Worker vérifie le propriétaire, le rôle compagnie, l'approbation, l'état d'expiration et l'absence de paiement précédent en cours/ambigu. Le montant est imposé côté serveur ; le navigateur ne peut pas le remplacer. La durée mensuelle est lue depuis la configuration active, puis convertie en jours pour le document métier historique `comptes_ramassage/{uid}`.
+
+Le webhook Jèko vérifie la signature, la référence, la demande de paiement, le magasin, la devise et le montant exact de 200 000 centimes. Il active le forfait et écrit le reçu dans un commit Firestore atomique. Les règles Firestore permettent à l'administration d'approuver le dossier, mais interdisent à l'administrateur via le SDK navigateur et au propriétaire d'activer ou prolonger un abonnement payant. L'activation appartient au Worker après webhook valide.
+
+Aucun paiement réel n'a été effectué. La verticale est câblée en source, mais doit encore passer les tests Firestore, les tests de non-régression et une vérification de bout en bout Jèko avant fusion/déploiement.
