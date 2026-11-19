@@ -1395,7 +1395,12 @@ service cloud.firestore {
         && request.resource.data.finEssai <= request.time + duration.value(30, "d")
         && request.resource.data.createdAt == request.time;
       allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
-      allow update: if estAdmin();
+      allow update: if estAdmin()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          "statutAbonnement","debutAbonnement","finAbonnement",
+          "renouvellementJekoPaymentId","renouvellementJekoStatut",
+          "dernierPaiementJekoMontant","dernierPaiementJekoLe"
+        ]);
       allow delete: if estAdmin();
     }
     match /annonces_logement/{annonceId} {
@@ -1442,20 +1447,13 @@ service cloud.firestore {
       allow update, delete: if estAdmin();
     }
     match /demandes_abonnement_logement/{demandeId} {
-      allow create: if demandePaiementManuelEnAttente(request.resource.data.statut) && estConnecte()
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.keys().hasAll(["uid","nom","email","telephone","formule","montant","operateur","reference","statut","createdAt"])
-        && request.resource.data.keys().hasOnly(["uid","nom","email","telephone","formule","montant","operateur","reference","statut","createdAt"])
-        && request.resource.data.formule in ["mensuel","trimestriel","semestriel"]
-        && ((request.resource.data.formule == "mensuel" && request.resource.data.montant == 3000)
-          || (request.resource.data.formule == "trimestriel" && request.resource.data.montant == 8000)
-          || (request.resource.data.formule == "semestriel" && request.resource.data.montant == 15000))
-        && request.resource.data.operateur in ["Orange Money","Wave"]
-        && request.resource.data.reference is string && request.resource.data.reference.size() >= 4 && request.resource.data.reference.size() <= 100
-        && request.resource.data.statut == "a_verifier"
-        && request.resource.data.createdAt == request.time;
+      // Historical manual payment requests remain readable; no new manual requests or confirmations.
+      allow create: if false;
       allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
-      allow update, delete: if estAdmin();
+      allow update: if estAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","reviewedAt","reviewedBy"])
+        && request.resource.data.statut == "refuse";
+      allow delete: if estAdmin();
     }
 
 
