@@ -87,7 +87,7 @@ Les règles Firestore conservent la création de l'essai gratuit initial, mais i
 
 ## Portée actuelle de la migration exécutable
 
-Cinq verticales sont câblées en source (catalogue, checkout, webhook, interface et règles) : **renouvellement petites annonces**, **inscription/renouvellement des boutiques classiques et partenaires**, **renouvellement des partenaires colis**, **inscription/renouvellement des compagnies de voyage** et **renouvellement de l'annuaire professionnel**. Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les abonnements initiaux des boutiques classiques et partenaires, ainsi que les abonnements initiaux des boutiques classiques et partenaires restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
+Six verticales sont câblées en source (catalogue, checkout, webhook, interface et règles) : **renouvellement petites annonces**, **inscription/renouvellement des boutiques classiques et partenaires**, **renouvellement des partenaires colis**, **inscription/renouvellement des compagnies de voyage**, **renouvellement de l'annuaire professionnel** et **renouvellement des partenaires Logement**. Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les abonnements initiaux des boutiques classiques et partenaires, ainsi que les abonnements initiaux des boutiques classiques et partenaires restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
 
 ## Deuxième verticale : boutiques partenaires
 
@@ -126,3 +126,9 @@ Les règles Firestore réservent les champs d'abonnement payant au Worker. Elles
 Les nouvelles inscriptions de boutiques classiques ne demandent plus de coordonnées Wave/Orange ni de référence manuelle. Le formulaire conserve le choix de formule, mais le dossier est soumis sans paiement et sans activation. Après vérification, l'administrateur approuve le dossier en état `a_payer` ; cette étape n'active pas la visibilité. Le propriétaire se connecte à son espace boutique et règle la formule avec Jèko. Le même checkout sert aux renouvellements après expiration, qu'il s'agisse d'une boutique classique ou d'une boutique en mode partenaire.
 
 Le Worker vérifie le propriétaire, le statut approuvé, l'échéance ou l'état `a_payer`, puis lit le tarif et la durée depuis `configuration_abonnements/globale`. Les paiements historiques `a_verifier` sont bloqués pour examen séparé. Le webhook signé active la visibilité et écrit les dates et le reçu atomiquement. Les validations manuelles d'activation/renouvellement sont désactivées dans l'administration. L'essai gratuit de 30 jours des boutiques en mode partenaire est conservé et reste une approbation distincte du paiement.
+
+## Sixième verticale : partenaires Logement
+
+Le compte Logement conserve son essai gratuit initial de 30 jours. Après expiration, le propriétaire peut renouveler depuis son espace avec trois formules existantes : **3 000 FCFA / 30 jours**, **8 000 FCFA / 90 jours** et **15 000 FCFA / 180 jours**. Le moyen de paiement est choisi dans le checkout Jèko (Wave, Orange Money, MTN Money, Moov Money ou Djamo). Le paiement n'est plus soumis par référence manuelle.
+
+Le Worker vérifie l'identité du propriétaire, l'état du compte, l'expiration de l'essai/abonnement, la formule et le montant fixes côté serveur. Il bloque les tentatives simultanées ou ambiguës. Le webhook Jèko signé prolonge l'abonnement, enregistre le reçu et réactive la possibilité de publier. Les anciennes demandes manuelles restent visibles à l'administration pour historique/refus, mais ne peuvent plus être créées ni confirmées. Les règles Firestore empêchent également l'activation manuelle d'un abonnement Logement depuis le navigateur.
