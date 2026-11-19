@@ -15,7 +15,7 @@ const JEKO_API_BASE = "https://api.jeko.africa";
 const APP_RETURN_URL = "https://kevintabi-ia.github.io/mon-Quotidien-ci/";
 
 const json = (res, status, body) => res.status(status).set("Cache-Control", "no-store").json(body);
-const bearer = req => (req.get("authorization") || "").match(/^Bearer\\s+(.+)$/i)?.[1] || null;
+const bearer = req => (req.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1] || null;
 
 async function requireUser(req) {
   const token = bearer(req);
@@ -103,7 +103,7 @@ exports.createJekoCheckout = onRequest(
       });
       if (typeof checkout.id !== "string" || checkout.reference !== reference ||
           checkout.storeId !== JEKO_STORE_ID.value() || checkout.status !== "pending" ||
-          typeof checkout.redirectUrl !== "string" || !/^https:\\/\\//i.test(checkout.redirectUrl)) {
+          typeof checkout.storeId !== "string" || typeof checkout.redirectUrl !== "string" || !/^https:\/\/\//i.test(checkout.redirectUrl)) {
         throw new Error("Réponse Jèko incomplète ou incohérente.");
       }
       await paymentRef.update({
