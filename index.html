@@ -3955,7 +3955,45 @@ function afficherInscriptionAnnuaire(){
  const z=document.getElementById("zoneInscriptionAnnuairePartenaire")||document.getElementById("annuaireInscriptionZone");if(!z)return;z.style.display="block";
  const noms={educationFormation:"Éducation et formation",logementImmobilier:"Logement et immobilier",depannageDomicile:"Dépannage à domicile",agricultureElevage:"Agriculture et élevage",evenementsPrestations:"Événements et prestations",artisansProfessionnels:"Artisans et professionnels"};
  const choixRubrique=Object.keys(CATEGORIES_ANNUAIRE).map(k=>'<option value="'+k+'"'+(k===annuaireRubriqueActive?' selected':'')+'>'+noms[k]+'</option>').join("");
- z.innerHTML='<div class="card" style="padding:14px"><h3>Inscrire gratuitement mon activité</h3><p class="notice">Premier mois gratuit à compter de l’approbation administrative. Ensuite, abonnement obligatoire de 1 000 FCFA par mois pour rester visible dans l’annuaire.</p><label>Type d’activité professionnelle</label><select id="annuaireRubriquePartenaire" onchange="annuaireRubriqueActive=this.value;afficherInscriptionAnnuaire()">'+choixRubrique+'</select><label>Nom de l’établissement / professionnel</label><input id="annTitre" maxlength="100"><label>Catégorie</label><select id="annCategorie">'+CATEGORIES_ANNUAIRE[annuaireRubriqueActive].map(c=>'<option>'+c+'</option>').join("")+'</select><label>Commune</label><input id="annCommune" maxlength="60"><label>Quartier / adresse</label><input id="annQuartier" maxlength="120"><label>Téléphone / WhatsApp</label><input id="annTelephone" type="tel" maxlength="20"><label>Description</label><textarea id="annDescription" rows="4" maxlength="1000"></textarea><label>E-mail</label><input id="annEmail" type="email" maxlength="120"><label>Mot de passe (6 caractères minimum)</label><input id="annPassword" type="password" minlength="6"><button type="button" class="primary" onclick="envoyerInscriptionAnnuaire()">Envoyer mon inscription gratuite</button><p id="annStatut" class="notice"></p></div>';
+ z.innerHTML='<div class="card" style="padding:14px"><h3>Inscrire gratuitement mon activité</h3><p class="notice">Premier mois gratuit à compter de l’approbation administrative. Ensuite, abonnement obligatoire de 1 000 FCFA par mois pour rester visible dans l’annuaire.</p><label>Type d’activité professionnelle</label><select id="annuaireRubriquePartenaire" onchange="annuaireRubriqueActive=this.value;afficherInscriptionAnnuaire()">'+choixRubrique+'</select><label>Nom de l’établissement / professionnel</label><input id="annTitre" maxlength="100"><label>Catégorie</label><select id="annCategorie">'+CATEGORIES_ANNUAIRE[annuaireRubriqueActive].map(c=>'<option>'+c+'</option>').join("")+'</select><label>Commune</label><input id="annCommune" maxlength="60"><label>Quartier / adresse</label><input id="annQuartier" maxlength="120"><label>Téléphone / WhatsApp</label><input id="annTelephone" type="tel" maxlength="20"><label>Description</label><textarea id="annDescription" rows="4" maxlength="1000"></textarea><label>E-mail</label><input id="annEmail" type="email" maxlength="120"><label>Mot de passe (6 caractères minimum)</label><input id="annPassword" type="password" minlength="6"><button type="button" class="primary" onclick="envoyerInscriptionAnnuaire()">Envoyer mon inscription gratuite</button><button type="button" onclick="connecterEspaceAnnuaire()">Se connecter à mon espace professionnel</button><p id="annStatut" class="notice"></p><div id="espaceAnnuaireCompte"></div></div>';
+}
+async function connecterEspaceAnnuaire(){
+ const email=document.getElementById("annEmail")?.value.trim()||"",password=document.getElementById("annPassword")?.value||"",status=document.getElementById("annStatut");
+ if(!email||!password){if(status)status.textContent="Saisissez l’adresse e-mail et le mot de passe de votre compte.";return;}
+ try{
+  if(auth.currentUser&&auth.currentUser.email!==email)await auth.signOut();
+  if(!auth.currentUser)await auth.signInWithEmailAndPassword(email,password);
+  await chargerEspaceAnnuaire();
+ }catch(e){if(status)status.textContent="Connexion impossible : "+(e.code==="auth/wrong-password"||e.code==="auth/invalid-credential"?"Vérifiez votre mot de passe.":e.message);}
+}
+async function chargerEspaceAnnuaire(){
+ const zone=document.getElementById("espaceAnnuaireCompte")||document.getElementById("zoneInscriptionAnnuairePartenaire")||document.getElementById("annuaireInscriptionZone");
+ if(!zone)return;
+ const user=auth.currentUser;if(!user){zone.textContent="Connectez-vous à votre compte professionnel.";return;}
+ zone.innerHTML='<p class="notice">Chargement de votre abonnement...</p>';
+ try{
+  const snap=await db.collection("demandes_nouveaux_services").where("uid","==",user.uid).where("type","==","annuaire").limit(10).get();
+  if(snap.empty){zone.innerHTML='<p class="notice">Aucune inscription à l’annuaire n’est associée à ce compte.</p>';return;}
+  zone.innerHTML=snap.docs.map(doc=>{
+   const d=doc.data(),fin=d.abonnementFin?.toDate?d.abonnementFin.toDate():null,expire=!fin||fin.getTime()<=Date.now();
+   let statut=d.statut==="en_attente"?"Dossier en attente de validation":d.statut==="refuse"?"Dossier refusé":d.statut!=="approuve"?"Dossier non approuvé":expire?"Abonnement expiré":d.abonnementStatut==="essai_gratuit"?"Période gratuite":"Abonnement actif";
+   const date=fin?fin.toLocaleDateString("fr-FR"):"Non définie";
+   const payment= d.statut==="approuve"&&expire?'<label>Moyen de paiement Jèko</label><select id="methodeJekoAnnuaire_'+doc.id+'"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select><button type="button" class="primary" onclick="demarrerPaiementAnnuaire(\''+doc.id+'\')">Payer 1 000 FCFA avec Jèko</button>':'';
+   return '<article class="card" style="padding:12px;margin:10px 0;"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(statut)+'</p><p>Échéance : '+date+'</p>'+payment+'</article>';
+  }).join("");
+ }catch(e){zone.textContent="Impossible de charger votre espace : "+e.message;}
+}
+async function demarrerPaiementAnnuaire(id){
+ const user=auth.currentUser,method=document.getElementById("methodeJekoAnnuaire_"+id)?.value,zone=document.getElementById("espaceAnnuaireCompte");
+ if(!user||!["wave","orange","mtn","moov","djamo"].includes(method)){if(zone)zone.textContent="Connexion ou moyen de paiement invalide.";return;}
+ if(zone)zone.textContent="Préparation du paiement Jèko...";
+ try{
+  const token=await user.getIdToken(),r=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceId:"annuaire_renewal",annuaireId:id,paymentMethod:method})});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok||!data.checkoutUrl){const messages={annuaire_not_found_or_not_authorized:"Inscription introuvable ou compte non autorisé.",annuaire_subscription_not_expired:"Votre période gratuite ou votre abonnement est encore actif.",existing_payment_requires_review:"Un paiement précédent doit être vérifié. Ne recommencez pas."};throw new Error(messages[data.error]||data.diagnostic||"Initialisation Jèko impossible.");}
+  if(zone)zone.textContent="Redirection vers Jèko...";
+  window.location.assign(data.checkoutUrl);
+ }catch(e){if(zone)zone.textContent=e.message||"Erreur de paiement.";}
 }
 async function envoyerInscriptionAnnuaire(){
  const v=id=>document.getElementById(id)?.value.trim()||"",titre=v("annTitre"),categorie=v("annCategorie"),commune=v("annCommune"),quartier=v("annQuartier"),telephone=v("annTelephone"),description=v("annDescription"),email=v("annEmail"),password=document.getElementById("annPassword")?.value||"",statut=document.getElementById("annStatut");
@@ -3966,7 +4004,7 @@ async function envoyerInscriptionAnnuaire(){
   let user=auth.currentUser;if(user&&user.email!==email){await auth.signOut();user=null;}
   if(!user){try{user=(await auth.createUserWithEmailAndPassword(email,password)).user;}catch(e){if(e.code==="auth/email-already-in-use")user=(await auth.signInWithEmailAndPassword(email,password)).user;else throw e;}}
   await db.collection("demandes_nouveaux_services").add({uid:user.uid,type:"annuaire",rubrique:annuaireRubriqueActive,titre,categorie,commune,quartier,telephone,description,email,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-  statut.textContent="Dossier envoyé. Votre fiche sera visible après validation administrative.";
+  statut.textContent="Dossier envoyé. Votre fiche sera visible après validation administrative.";await chargerEspaceAnnuaire();
  }catch(e){console.error(e);statut.textContent="Envoi impossible : "+(e.code==="permission-denied"?"règles Firestore à mettre à jour.":e.message);}
 }
 async function chargerAnnuaireInterne(){
@@ -3988,7 +4026,7 @@ async function chargerAnnuairesAdmin(){
   if(snap.empty){z.innerHTML='<p class="notice">Aucune inscription.</p>';return;}
   z.innerHTML=snap.docs.map(doc=>{
    const d=doc.data(),fin=d.abonnementFin&&d.abonnementFin.toDate?d.abonnementFin.toDate():null,expire=!fin||fin.getTime()<=Date.now();
-   const infos=d.statut==="approuve"?'<p><strong>Abonnement :</strong> '+(d.abonnementStatut==="essai_gratuit"?"Premier mois gratuit":d.abonnementStatut==="actif"?"Payé":"À activer")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée — période expirée":"Visible jusqu’au "+fin.toLocaleDateString("fr-FR"))+'</p><p>Après l’essai : 1 000 FCFA / mois.</p><button type="button" onclick="renouvelerAbonnementAnnuaire(\''+doc.id+'\')">Confirmer paiement et activer 30 jours (1 000 FCFA)</button>':"";
+   const infos=d.statut==="approuve"?'<p><strong>Abonnement :</strong> '+(d.abonnementStatut==="essai_gratuit"?"Premier mois gratuit":d.abonnementStatut==="actif"?"Payé":"À activer")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée — période expirée":"Visible jusqu’au "+fin.toLocaleDateString("fr-FR"))+'</p><p>Après l’essai : 1 000 FCFA / mois.</p><p class="notice">Renouvellement : paiement de 1 000 FCFA à effectuer par le professionnel depuis son espace annuaire avec Jèko.</p>':"";
    const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'approuve\')">Approuver et démarrer 30 jours gratuits</button><button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'refuse\')">Refuser</button>':'<span class="notice">Statut : '+echapperTextePublicite(d.statut)+'</span>';
    return '<article class="card" style="padding:12px;margin:10px 0"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.rubrique)+' · '+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.quartier||"")+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+'</p>'+infos+actions+'</article>';
   }).join("");
@@ -4001,7 +4039,7 @@ async function traiterInscriptionAnnuaire(id,statut){
   const maj={statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()};
   if(statut==="approuve"){
    const debut=new Date(),fin=new Date(debut.getTime()+30*24*60*60*1000);
-   maj.abonnementDebut=firebase.firestore.Timestamp.fromDate(debut);
+   maj.abonnementDebut=firebase.firestore.FieldValue.serverTimestamp();
    maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);
    maj.abonnementStatut="essai_gratuit";
   }
@@ -4011,16 +4049,7 @@ async function traiterInscriptionAnnuaire(id,statut){
 }
 async function renouvelerAbonnementAnnuaire(id){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
- if(!(await window.paiementsMQCIDisponibles(true)))return alert("Renouvellements payants suspendus en attendant les API Wave et Orange Money.");
- if(!confirm("Confirmer que le paiement de 1 000 FCFA a été reçu et activer 30 jours supplémentaires ?"))return;
- try{
-  const ref=db.collection("demandes_nouveaux_services").doc(id),snap=await ref.get();
-  if(!snap.exists||snap.data().type!=="annuaire"||snap.data().statut!=="approuve")return alert("Inscription introuvable ou non approuvée.");
-  const d=snap.data(),maintenant=new Date(),ancienneFin=d.abonnementFin?.toDate?d.abonnementFin.toDate():maintenant;
-  const debut=ancienneFin>maintenant?ancienneFin:maintenant,fin=new Date(debut.getTime()+30*24*60*60*1000);
-  await ref.update({abonnementDebut:firebase.firestore.Timestamp.fromDate(debut),abonnementFin:firebase.firestore.Timestamp.fromDate(fin),abonnementStatut:"actif",dernierPaiementFCFA:1000,dernierPaiementConfirmeLe:firebase.firestore.FieldValue.serverTimestamp()});
-  await chargerAnnuairesAdmin();
- }catch(e){console.error(e);alert("Renouvellement impossible : "+e.message);}
+ alert("La validation manuelle est désactivée. Le professionnel doit régler les 1 000 FCFA depuis son espace annuaire avec Jèko.");
 }
 
 function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId){
@@ -8176,9 +8205,10 @@ async function verifierRetourPaiementJeko(user){
  const params=new URLSearchParams(window.location.search),paymentState=params.get("payment"),paymentId=params.get("paymentId"),serviceId=params.get("serviceId")||"automobiliste";
  if(paymentState!=="return"&&paymentState!=="error")return;
  const companyZone=serviceId==="compagnie_voyage"?(document.getElementById("zonePaiementRenouvellementCompagnie")||document.getElementById("connexionPartenaire")):null;
- const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:document.getElementById("etatAbonnementAuto"));
+ const annuaireZone=serviceId==="annuaire_renewal"?(document.getElementById("espaceAnnuaireCompte")||document.getElementById("zoneInscriptionAnnuairePartenaire")):null;
+ const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="annuaire_renewal"?annuaireZone:document.getElementById("etatAbonnementAuto")));
  if(paymentState==="error"){
-  if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été finalisé. Aucune demande de récupération n’a été transmise.":serviceId==="compagnie_voyage"?"Le paiement n’a pas été finalisé. Aucun abonnement de compagnie n’a été activé.":"Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
+  if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été finalisé. Aucune demande de récupération n’a été transmise.":serviceId==="compagnie_voyage"?"Le paiement n’a pas été finalisé. Aucun abonnement de compagnie n’a été activé.":serviceId==="annuaire_renewal"?"Le paiement n’a pas été finalisé. Votre fiche reste masquée si son abonnement est expiré.":"Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
   params.delete("payment");params.delete("paymentId");params.delete("serviceId");history.replaceState({},document.title,location.pathname+(params.toString()?"?"+params.toString():""));return;
  }
  if(!paymentId)return;
@@ -8197,6 +8227,9 @@ async function verifierRetourPaiementJeko(user){
      const companyUser=partnerAuth.currentUser||user;
      const companySnap=await partnerDb.collection("compagnies").where("uid","==",companyUser.uid).limit(1).get();
      if(!companySnap.empty)await afficherEspaceCompagnie(companySnap.docs[0].id,companySnap.docs[0].data());
+    }else if(serviceId==="annuaire_renewal"){
+     if(zone)zone.textContent="Paiement confirmé par Jèko. Votre fiche annuaire est de nouveau visible.";
+     await chargerEspaceAnnuaire();
     }else{
      if(zone)zone.textContent="Paiement confirmé par Jèko. Activation de votre abonnement…";
      await actualiserEtatAbonnementAutomobiliste();
