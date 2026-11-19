@@ -101,8 +101,6 @@ exports.createJekoCheckout = onRequest(
           }
         })
       });
-      if (typeof checkout.id !== "string" || checkout.reference !== reference || checkout.storeId !== JEKO_STORE_ID.value() || checkout.status !== "pending" || typeof checkout.redirectUrl !== "string" || !/^https:\/\/\//i.test(checkout.redirectUrl)) {
-          checkout.storeId !== JEKO_STORE_ID.value() || checkout.status !== "pending" ||
           typeof checkout.storeId !== "string" || typeof checkout.redirectUrl !== "string" || !/^https:\/\/\//i.test(checkout.redirectUrl)) {
         throw new Error("Réponse Jèko incomplète ou incohérente.");
       }
