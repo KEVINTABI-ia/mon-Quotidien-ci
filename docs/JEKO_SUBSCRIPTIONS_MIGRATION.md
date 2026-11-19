@@ -87,7 +87,7 @@ Les règles Firestore conservent la création de l'essai gratuit initial, mais i
 
 ## Portée actuelle de la migration exécutable
 
-Quatre verticales sont câblées en source (catalogue, checkout, webhook, interface et règles) : **renouvellement petites annonces**, **renouvellement des boutiques en mode partenaire déjà approuvées**, **renouvellement des partenaires colis** et **inscription/renouvellement des compagnies de voyage**. Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les abonnements initiaux des boutiques classiques et partenaires, ainsi que l'annuaire, restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
+Cinq verticales sont câblées en source (catalogue, checkout, webhook, interface et règles) : **renouvellement petites annonces**, **renouvellement des boutiques en mode partenaire déjà approuvées**, **renouvellement des partenaires colis**, **inscription/renouvellement des compagnies de voyage** et **renouvellement de l'annuaire professionnel**. Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les abonnements initiaux des boutiques classiques et partenaires, ainsi que les abonnements initiaux des boutiques classiques et partenaires restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
 
 ## Deuxième verticale : boutiques partenaires
 
@@ -112,3 +112,11 @@ L'inscription d'une compagnie ne demande plus de transfert Wave/Orange ni de ré
 Le Worker vérifie le propriétaire du dossier, son statut (paiement initial autorisé uniquement après approbation ; renouvellement uniquement après expiration), le plan configuré dans Firestore, le montant et la durée côté serveur. Il pose un verrou anti-doublon, puis le webhook Jèko signé vérifie le paiement et active l'abonnement avec les dates et le montant confirmés dans un commit atomique. Le verrou du dossier doit correspondre au paiement traité. Les règles Firestore n'autorisent plus la création d'un dossier avec moyen/référence de paiement manuels ; l'administrateur ne peut plus activer un abonnement payé en modifiant directement les dates ou le statut actif depuis le navigateur.
 
 Les demandes historiques en statut `En attente` ne sont pas automatiquement converties ni validées. Aucun paiement réel n'a été effectué. Le Worker, l'interface et les règles ne sont pas encore déployés.
+
+## Cinquième verticale : annuaire professionnel
+
+L'inscription reste gratuite et conserve son premier mois d'essai après approbation administrative. L'administrateur ne valide plus manuellement un paiement de renouvellement. Le professionnel peut se connecter à son espace annuaire depuis le formulaire d'inscription, consulter l'état et l'échéance de sa fiche, puis lancer le paiement de renouvellement de **1 000 FCFA pour 30 jours** via Jèko.
+
+Le Worker exige un compte Firebase authentifié, la propriété du dossier, le type `annuaire`, le statut `approuve` et une échéance effectivement expirée. Le montant de 1 000 FCFA et la durée de 30 jours sont fixés côté serveur d'après la règle métier existante. Un verrou empêche les tentatives simultanées ; le webhook signé valide le paiement et réactive la visibilité dans un commit atomique.
+
+Les règles Firestore réservent les champs d'abonnement payant au Worker. Elles préservent uniquement la transition administrative initiale vers l'essai gratuit de 30 jours ; les renouvellements payants ne peuvent plus être activés depuis l'interface admin. Le retour Jèko actualise l'espace annuaire. Aucun paiement réel n'a été effectué.
