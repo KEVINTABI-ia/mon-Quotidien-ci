@@ -697,22 +697,29 @@ export function buildSubscriptionPlans(requested,services={},now=new Date()) {
     logement:["mensuel","trimestriel","semestriel"],
     ramassage:["ramassage"]
   };
-  const logementDefaults={
-    mensuel:{label:"1 mois",price:3000,duration:1,unit:"mois"},
-    trimestriel:{label:"3 mois",price:8000,duration:3,unit:"mois"},
-    semestriel:{label:"6 mois",price:15000,duration:6,unit:"mois"}
-  };
-  const ramassageDefaults={
-    ramassage:{label:"30 jours",price:2000,duration:30,unit:"jours"}
+  const fixedDefaults={
+    automobiliste:{automobiliste:{label:"Annuel",price:1000,duration:12,unit:"mois"}},
+    petites_annonces:{petites_annonces:{label:"30 jours",price:500,duration:30,unit:"jours"}},
+    logement:{
+      mensuel:{label:"1 mois",price:3000,duration:1,unit:"mois"},
+      trimestriel:{label:"3 mois",price:8000,duration:3,unit:"mois"},
+      semestriel:{label:"6 mois",price:15000,duration:6,unit:"mois"}
+    },
+    ramassage:{ramassage:{label:"30 jours",price:2000,duration:30,unit:"jours"}}
   };
   if(!Object.prototype.hasOwnProperty.call(definitions,requested)) return null;
   const plans=definitions[requested].map(key=>{
-    const fixedPlan=requested==="logement"?logementDefaults[key]:(requested==="ramassage"?ramassageDefaults[key]:null);
+    const fixedPlan=fixedDefaults[requested]?.[key]||null;
     const sourceCfg=services[key]||{};
-    const cfg=fixedPlan?{actif:sourceCfg.actif}:sourceCfg;
-    const duration=Number(cfg.duree??fixedPlan?.duration??0);
-    const unit=cfg.unite==="mois"||fixedPlan?.unit==="mois"?"mois":"jours";
-    const base=requested==="ramassage"?2000:Number(cfg.prix??fixedPlan?.price??0);
+    const cfg=fixedPlan?{
+      ...sourceCfg,
+      duree:sourceCfg.duree??fixedPlan.duration,
+      unite:sourceCfg.unite??fixedPlan.unit,
+      prix:sourceCfg.prix??fixedPlan.price
+    }:sourceCfg;
+    const duration=Number(cfg.duree??0);
+    const unit=cfg.unite==="mois"?"mois":"jours";
+    const base=requested==="ramassage"?2000:Number(cfg.prix??0);
     const promo=Number(cfg.promotionPrix??0);
     const start=cfg.promotionDebut?new Date(cfg.promotionDebut+"T00:00:00Z"):null;
     const end=cfg.promotionFin?new Date(cfg.promotionFin+"T23:59:59Z"):null;
@@ -720,7 +727,7 @@ export function buildSubscriptionPlans(requested,services={},now=new Date()) {
     const price=promotionActive?promo:base;
     const valid=cfg.actif!==false&&Number.isSafeInteger(duration)&&duration>0&&Number.isSafeInteger(price)&&price>0&&price<=10000000;
     return {
-      planId:key,label:typeof cfg.libelle==="string"?cfg.libelle:(fixedPlan?.label||key),
+      planId:requested==="automobiliste"?"annuel":key,label:typeof cfg.libelle==="string"?cfg.libelle:(fixedPlan?.label||key),
       active:cfg.actif!==false,available:valid,priceXof:valid?price:null,
       regularPriceXof:Number.isSafeInteger(base)&&base>0?base:null,
       duration:valid?duration:null,unit,
