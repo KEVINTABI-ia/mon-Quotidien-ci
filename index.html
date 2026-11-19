@@ -4400,16 +4400,16 @@ async function connecterCompteBoutique(){
   const snap=await partnerDb.collection("demandes_nouveaux_services").where("uid","==",resultat.user.uid).where("type","==","commerce").where("statut","==","approuve").limit(10).get();
   const boutique=snap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0))[0];
   if(!boutique){await partnerAuth.signOut();boutiqueSessionPartenaire=false;statut.textContent="Aucune boutique approuvée n'est liée à ce compte.";return;}
-  const d=boutique.data(),fin=d.abonnementFin&&d.abonnementFin.toDate?d.abonnementFin.toDate():null,actif=!!fin&&fin.getTime()>Date.now();
-  if(!actif&&d.modePartenaire!==true){await partnerAuth.signOut();boutiqueSessionPartenaire=false;statut.textContent="Aucune boutique approuvée avec un abonnement actif n'est liée à ce compte.";return;}
-  statut.textContent=actif?"Connexion réussie.":"Votre période gratuite ou votre abonnement est terminé. Votre boutique n'est plus visible.";
+  const d=boutique.data(),fin=d.abonnementFin&&d.abonnementFin.toDate?d.abonnementFin.toDate():null,actif=!!fin&&fin.getTime()>Date.now(),paiementInitial=d.abonnementStatut==="a_payer"||d.paiementStatut==="a_payer",expirationConfirmee=!!fin&&fin.getTime()<=Date.now();
+  if(!actif&&d.modePartenaire!==true&&!paiementInitial&&!expirationConfirmee){await partnerAuth.signOut();boutiqueSessionPartenaire=false;statut.textContent="Aucune boutique approuvée avec un abonnement payable n'est liée à ce compte.";return;}
+  statut.textContent=actif?"Connexion réussie.":paiementInitial?"Dossier approuvé. Paiement Jèko requis pour activer la visibilité.":"Votre abonnement est terminé. Votre boutique n'est plus visible.";
   const zone=document.getElementById("boutiqueCompteConnecte");
   if(zone){
    let contenu='<p>Connecté à : <strong>'+echapperTextePublicite(d.titre)+'</strong></p><button type="button" onclick="deconnecterCompteBoutique()">Se déconnecter de mon espace boutique</button>';
    if(actif){
     contenu+='<button type="button" class="primary" onclick="ouvrirFormulaireArticleBoutique(\''+boutique.id+'\')">➕ Ajouter un article</button><div id="formArticleBoutique_'+boutique.id+'"></div><h4>Mes articles</h4><div id="mesArticlesBoutique_'+boutique.id+'"></div><button type="button" onclick="chargerCommandesBoutique(\''+boutique.id+'\')">📦 Ouvrir mes commandes</button><div id="commandesBoutique_'+boutique.id+'"></div>';
    }else{
-    contenu+='<div class="notice"><strong>Abonnement expiré</strong><p>Votre boutique n’est plus visible par les utilisateurs. Pour la rendre à nouveau visible, renouvelez votre abonnement.</p><button type="button" class="primary" onclick="afficherFormulaireRenouvellementBoutique(\''+boutique.id+'\')">Renouveler mon abonnement</button><div id="formRenouvellementBoutique_'+boutique.id+'"></div></div>';
+    contenu+='<div class="notice"><strong>'+(paiementInitial?"Paiement Jèko requis":"Abonnement expiré")+'</strong><p>'+(paiementInitial?"Votre dossier est approuvé. Réglez votre formule pour activer la visibilité.":"Votre boutique n’est plus visible. Réglez une formule pour rétablir sa visibilité.")+'</p><button type="button" class="primary" onclick="afficherFormulaireRenouvellementBoutique(\''+boutique.id+'\')">'+(paiementInitial?"Payer mon abonnement":"Renouveler mon abonnement")+'</button><div id="formRenouvellementBoutique_'+boutique.id+'"></div></div>';
    }
    zone.innerHTML=contenu;
   }
