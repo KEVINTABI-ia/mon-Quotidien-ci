@@ -47,6 +47,9 @@ Les périodes d'essai gratuites restent inchangées. Les paiements hors abonneme
 - [x] Première verticale webhook — petites annonces, écriture atomique et idempotence.
 - [x] Première verticale interface — renouvellement petites annonces via catalogue et checkout Jèko ; suppression du formulaire Wave/Orange et de la référence manuelle.
 - [x] Première verticale sécurité — règles Firestore empêchant l'activation ou la modification des dates/paiements par le client ou l'administrateur via le SDK navigateur. L'essai gratuit initial reste autorisé.
+- [x] Deuxième verticale backend — renouvellement boutique partenaire, avec contrôle de propriété/dossier approuvé, formule configurée, verrou anti-doublon, webhook Jèko et activation atomique.
+- [x] Deuxième verticale interface — choix de formule et paiement Jèko depuis l'espace partenaire ; validation manuelle admin désactivée.
+- [x] Deuxième verticale sécurité — blocage des demandes de renouvellement manuelles et des écritures navigateur des dates/champs d'abonnement boutique.
 - [ ] Étendre les étapes précédentes aux autres rubriques.
 - [ ] Étape 6 — Tests de non-régression, tests webhook simulés, puis un seul paiement réel contrôlé par rubrique avant activation générale.
 
@@ -82,3 +85,11 @@ Les règles Firestore conservent la création de l'essai gratuit initial, mais i
 ## Portée actuelle de la migration exécutable
 
 Seule la verticale **renouvellement d'un abonnement petites annonces déjà existant et expiré** est entièrement câblée en source (catalogue, checkout, webhook, interface et règles). Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les autres catégories restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
+
+## Deuxième verticale : boutiques partenaires
+
+Le Worker accepte désormais `serviceId: "boutique_renewal"` avec `boutiqueId` et `planId` parmi `boutiques_1mois`, `boutiques_2mois`, `boutiques_3mois`. Il exige un utilisateur Firebase authentifié qui possède le dossier boutique, lequel doit être de type commerce, en mode partenaire et approuvé. Prix et durée sont lus côté serveur dans `configuration_abonnements/globale`. Un verrou écrit dans le document boutique empêche les demandes concurrentes ; un paiement déjà en cours, ambigu ou à examiner bloque une nouvelle tentative.
+
+Le webhook signé valide les données du prestataire, prolonge l'échéance avec un calcul de mois calendaires, met à jour le paiement et écrit le reçu dans un commit Firestore atomique. L'espace partenaire propose les formules Jèko et redirige vers le checkout ; les anciennes demandes de renouvellement manuelles ne peuvent plus être créées ni validées depuis le navigateur. Les anciennes demandes restent lisibles pour historique.
+
+Limite : cette verticale couvre les **renouvellements des boutiques en mode partenaire déjà approuvées**. Elle ne migre pas encore les créations/abonnements initiaux des boutiques classiques ni l'activation initiale des partenaires, qui doivent être traités séparément. Aucun paiement réel n'a été réalisé et la branche n'est pas déployée.
