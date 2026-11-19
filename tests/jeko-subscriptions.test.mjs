@@ -49,3 +49,32 @@ test("le catalogue Automobiliste reprend le forfait annuel par défaut du checko
   assert.equal(plan.duration, 12);
   assert.equal(plan.unit, "mois");
 });
+
+test("le catalogue Petites annonces reflète la configuration tarifaire du checkout", () => {
+  const [plan] = buildSubscriptionPlans("petites_annonces", {
+    petites_annonces: { prix: 700, duree: 45, unite: "jours", actif: true }
+  });
+  assert.equal(plan.priceXof, 700);
+  assert.equal(plan.duration, 45);
+  assert.equal(plan.unit, "jours");
+});
+
+test("le catalogue Automobiliste reflète le prix configuré tout en conservant 12 mois", () => {
+  const [plan] = buildSubscriptionPlans("automobiliste", {
+    automobiliste: { prix: 2500, duree: 12, unite: "mois", actif: true }
+  });
+  assert.equal(plan.priceXof, 2500);
+  assert.equal(plan.duration, 12);
+  assert.equal(plan.unit, "mois");
+});
+
+test("les forfaits fixes Logement et Ramassage ne peuvent pas être modifiés par la configuration", () => {
+  const logement = buildSubscriptionPlans("logement", {
+    mensuel: { prix: 9900, duree: 12, unite: "mois" }
+  })[0];
+  const ramassage = buildSubscriptionPlans("ramassage", {
+    ramassage: { prix: 9900, duree: 12, unite: "mois" }
+  })[0];
+  assert.deepEqual([logement.priceXof, logement.duration, logement.unit], [3000, 1, "mois"]);
+  assert.deepEqual([ramassage.priceXof, ramassage.duration, ramassage.unit], [2000, 30, "jours"]);
+});

@@ -711,12 +711,17 @@ export function buildSubscriptionPlans(requested,services={},now=new Date()) {
   const plans=definitions[requested].map(key=>{
     const fixedPlan=fixedDefaults[requested]?.[key]||null;
     const sourceCfg=services[key]||{};
-    const cfg=fixedPlan?{
+    const cfg=(requested==="logement"||requested==="ramassage")?{
       ...sourceCfg,
       duree:fixedPlan.duration,
       unite:fixedPlan.unit,
       prix:fixedPlan.price
-    }:sourceCfg;
+    }:(fixedPlan?{
+      ...sourceCfg,
+      duree:sourceCfg.duree??fixedPlan.duration,
+      unite:sourceCfg.unite??fixedPlan.unit,
+      prix:sourceCfg.prix??fixedPlan.price
+    }:sourceCfg);
     const duration=Number(cfg.duree??0);
     const unit=cfg.unite==="mois"?"mois":"jours";
     const base=requested==="ramassage"?2000:Number(cfg.prix??0);
