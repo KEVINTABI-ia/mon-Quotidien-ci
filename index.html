@@ -4533,7 +4533,7 @@ async function enregistrerCommandeBoutique(boutiqueId,index){
   statut.textContent="Commande enregistrée. Vous pourrez suivre la livraison dans votre historique client.";
   // WhatsApp prérempli : le client garde la main et doit appuyer sur Envoyer.
   const zoneWhatsApp=document.getElementById("commandeBoutiqueZone_"+boutiqueId)||document.getElementById("commandeBoutiqueZoneCatalogue");
-  const numeroBoutique=String(b.telephone||"").replace(/\\D/g,"");
+  const numeroBoutique=String(b.telephone||"").replace(/\D/g,"");
   let numeroWhatsApp=numeroBoutique;
   if(numeroWhatsApp.startsWith("00225"))numeroWhatsApp=numeroWhatsApp.slice(2);
   if(numeroWhatsApp.startsWith("0")&&numeroWhatsApp.length===10)numeroWhatsApp="225"+numeroWhatsApp.slice(1);
@@ -4541,8 +4541,8 @@ async function enregistrerCommandeBoutique(boutiqueId,index){
   if(zoneWhatsApp){
    let action=zoneWhatsApp.querySelector("[data-mqci-whatsapp-commande]");
    if(!action){action=document.createElement("a");action.dataset.mqciWhatsappCommande="true";action.style.cssText="display:block;margin:14px 0;padding:14px 16px;border-radius:12px;background:#16834A;color:#fff;text-align:center;text-decoration:none;font-weight:800;";zoneWhatsApp.querySelector(".card")?.appendChild(action);}
-   if(/^225(?:01|05|07)\\d{8}$/.test(numeroWhatsApp)){
-    const message=["Bonjour "+(b.titre||"la boutique")+", je viens de passer une commande sur Mon Quotidien CI.","Référence : "+numero,"Produit : "+p.nom,"Quantité : "+qte,"Montant des articles : "+prixArticles.toLocaleString("fr-FR")+" FCFA","Client : "+(profilSnap.data().nom||"Client"),"Téléphone client : "+tel,"Adresse de livraison : "+adresse,"Commentaire : "+(commentaire||"Aucun"),"Merci de confirmer la disponibilité et les frais de livraison."].join("\\n");
+   if(/^225(?:01|05|07)\d{8}$/.test(numeroWhatsApp)){
+    const message=["Bonjour "+(b.titre||"la boutique")+", je viens de passer une commande sur Mon Quotidien CI.","Référence : "+numero,"Produit : "+p.nom,"Quantité : "+qte,"Montant des articles : "+prixArticles.toLocaleString("fr-FR")+" FCFA","Client : "+(profilSnap.data().nom||"Client"),"Téléphone client : "+tel,"Adresse de livraison : "+adresse,"Commentaire : "+(commentaire||"Aucun"),"Merci de confirmer la disponibilité et les frais de livraison."].join("\n");
     action.href="https://wa.me/"+numeroWhatsApp+"?text="+encodeURIComponent(message);
     action.target="_blank";action.rel="noopener noreferrer";action.textContent="Envoyer la commande à la boutique sur WhatsApp";
    }else{
