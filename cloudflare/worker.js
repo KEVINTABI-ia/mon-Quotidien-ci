@@ -121,7 +121,7 @@ async function firebaseUser(token) {
   return {sub:user.localId,email:user.email||null};
 }
 async function requireUser(request) {
-  const token=(request.headers.get("authorization")||"").match(/^Bearer\\s+(.+)$/i)?.[1];
+  const token=(request.headers.get("authorization")||"").match(/^Bearer\s+(.+)$/i)?.[1];
   if(!token) return {user:null,diagnostic:"MISSING_BEARER_TOKEN"};
   try { return {user:await firebaseUser(token),diagnostic:null}; }
   catch(e) { return {user:null,diagnostic:e.authCode||"FIREBASE_AUTH_ERROR"}; }
