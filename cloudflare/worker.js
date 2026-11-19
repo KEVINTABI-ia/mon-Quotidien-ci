@@ -240,7 +240,13 @@ async function createCheckout(request,env) {
     if(typeof boutiqueId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(boutiqueId)||!["boutiques_1mois","boutiques_2mois","boutiques_3mois"].includes(planId))return json({error:"invalid_boutique_plan"},400);
     const boutiquePath="demandes_nouveaux_services/"+boutiqueId;
     const boutiqueDoc=await getDoc(env,boutiquePath),boutique=docData(boutiqueDoc);
-    if(!boutiqueDoc||boutique?.type!=="commerce"||boutique?.modePartenaire!==true||boutique?.statut!=="approuve"||boutique?.uid!==user.sub)return json({error:"boutique_not_found_or_not_authorized"},403);
+    if(!boutiqueDoc||boutique?.type!=="commerce"||boutique?.statut!=="approuve"||boutique?.uid!==user.sub)return json({error:"boutique_not_found_or_not_authorized"},403);
+    if(boutique.paiementStatut==="a_verifier")return json({error:"legacy_payment_requires_review"},409);
+    const initialSubscription=boutique.abonnementStatut==="a_payer"||boutique.paiementStatut==="a_payer";
+    if(!initialSubscription){
+      const expiry=boutique.abonnementFin instanceof Date?boutique.abonnementFin:(boutique.abonnementFin?new Date(boutique.abonnementFin):null);
+      if(!expiry||!Number.isFinite(expiry.getTime())||expiry.getTime()>now.getTime())return json({error:"subscription_still_active_or_not_payable"},409);
+    }
     if(boutique.renouvellementJekoPaymentId){
       const previous=await getDoc(env,"payments/"+boutique.renouvellementJekoPaymentId);
       const previousStatus=docData(previous)?.status;
@@ -445,7 +451,7 @@ async function webhook(request,env) {
   if(payment.serviceId==="boutique_renewal") {
     const boutiquePath=payment.targetPath;
     const boutiqueDoc=await getDoc(env,boutiquePath),boutique=docData(boutiqueDoc);
-    if(!boutiqueDoc||!boutique||boutique.uid!==payment.uid||boutique.type!=="commerce"||boutique.modePartenaire!==true||!Number.isSafeInteger(payment.durationMonths)||payment.durationMonths<1||payment.durationMonths>12){
+    if(!boutiqueDoc||!boutique||boutique.uid!==payment.uid||boutique.type!=="commerce"||boutique.statut!=="approuve"||boutique.renouvellementJekoPaymentId!==paymentId||!Number.isSafeInteger(payment.durationMonths)||payment.durationMonths<1||payment.durationMonths>12){
       await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"boutique_target_or_duration_invalid",updatedAt:now.toISOString()}))});
       return new Response("OK",{status:200});
     }
