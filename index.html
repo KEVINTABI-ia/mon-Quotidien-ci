@@ -3860,7 +3860,14 @@ auth.onAuthStateChanged(function(user){
   if(!gate)return;
   if(user&&window.__mqciAuthFlowInProgress)return;
   gate.hidden=!!user;
-  if(user)verifierRetourPaiementJeko(user);
+  const paymentService=new URLSearchParams(window.location.search).get("serviceId");
+  if(user&&paymentService!=="ramassage")verifierRetourPaiementJeko(user);
+});
+// Les compagnies utilisent une instance Firebase Auth séparée pour préserver
+// la session du client principal : le retour Jèko doit reprendre le jeton compagnie.
+partnerAuth.onAuthStateChanged(function(user){
+  const paymentService=new URLSearchParams(window.location.search).get("serviceId");
+  if(user&&paymentService==="ramassage")verifierRetourPaiementJeko(user);
 });
 
 
