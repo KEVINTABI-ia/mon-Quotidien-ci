@@ -165,7 +165,7 @@ async function createCheckout(request,env) {
   const methods=["orange","wave","mtn","moov","djamo"];
   if(!methods.includes(body.paymentMethod)) return json({error:"invalid_payment_method"},400);
   const serviceId=body.serviceId||"automobiliste";
-  if(!["automobiliste","objet_retrouve","petites_annonces","boutique_renewal","partenaire_colis","compagnie_voyage","annuaire_renewal"].includes(serviceId)) return json({error:"unsupported_service"},400);
+  if(!["automobiliste","objet_retrouve","petites_annonces","boutique_renewal","partenaire_colis","compagnie_voyage","annuaire_renewal","logement_renewal"].includes(serviceId)) return json({error:"unsupported_service"},400);
   const now=new Date();
   let amountXof, initial;
   if(serviceId==="objet_retrouve"){
@@ -177,6 +177,20 @@ async function createCheckout(request,env) {
     if(!objectDoc||docData(objectDoc)?.statut!=="publie") return json({error:"object_unavailable"},409);
     amountXof=1000;
     initial={uid:user.sub,serviceId,objectId,nomComplet:nomComplet.trim(),telephone:telephone.trim(),residence:residence.trim(),provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
+  } else if(serviceId==="logement_renewal") {
+    const plans={mensuel:{amount:3000,days:30},trimestriel:{amount:8000,days:90},semestriel:{amount:15000,days:180}},plan=plans[body.planId];
+    if(!plan)return json({error:"invalid_logement_plan"},400);
+    const profilePath="partenaires_logement/"+user.sub,profileDoc=await getDoc(env,profilePath),profile=docData(profileDoc);
+    if(!profileDoc||profile?.uid!==user.sub||profile?.statutCompte!=="actif")return json({error:"logement_profile_not_found_or_inactive"},403);
+    const trialEnd=profile.finEssai instanceof Date?profile.finEssai:(profile.finEssai?new Date(profile.finEssai):null),paidEnd=profile.finAbonnement instanceof Date?profile.finAbonnement:(profile.finAbonnement?new Date(profile.finAbonnement):null);
+    if((profile.statutAbonnement==="essai"&&trialEnd&&trialEnd.getTime()>now.getTime())||(profile.statutAbonnement==="actif"&&paidEnd&&paidEnd.getTime()>now.getTime()))return json({error:"logement_subscription_still_active"},409);
+    if(profile.renouvellementJekoPaymentId){
+      const previous=await getDoc(env,"payments/"+profile.renouvellementJekoPaymentId);
+      const previousStatus=docData(previous)?.status;
+      if(previousStatus==="pending"||previousStatus==="initialization_unknown"||previousStatus==="review_required")return json({error:"existing_payment_requires_review"},409);
+    }
+    amountXof=plan.amount;
+    initial={uid:user.sub,serviceId,planId:body.planId,targetPath:profilePath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays:plan.days,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),logementLockUpdateTime:profileDoc.updateTime};
   } else if(serviceId==="annuaire_renewal") {
     const annuaireId=body.annuaireId;
     if(typeof annuaireId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(annuaireId))return json({error:"invalid_annuaire_id"},400);
@@ -289,13 +303,14 @@ async function createCheckout(request,env) {
   const reference="MQCI-"+id;
   initial.clientReference=reference;
   const path="payments/"+id;
-  const boutiqueLockUpdateTime=initial.boutiqueLockUpdateTime,partnerLockUpdateTime=initial.partnerLockUpdateTime,companyLockUpdateTime=initial.companyLockUpdateTime,annuaireLockUpdateTime=initial.annuaireLockUpdateTime;
-  delete initial.boutiqueLockUpdateTime;delete initial.partnerLockUpdateTime;delete initial.companyLockUpdateTime;delete initial.annuaireLockUpdateTime;
+  const boutiqueLockUpdateTime=initial.boutiqueLockUpdateTime,partnerLockUpdateTime=initial.partnerLockUpdateTime,companyLockUpdateTime=initial.companyLockUpdateTime,annuaireLockUpdateTime=initial.annuaireLockUpdateTime,logementLockUpdateTime=initial.logementLockUpdateTime;
+  delete initial.boutiqueLockUpdateTime;delete initial.partnerLockUpdateTime;delete initial.companyLockUpdateTime;delete initial.annuaireLockUpdateTime;delete initial.logementLockUpdateTime;
   const initialWrites=[createWrite(path,initial)];
   if(serviceId==="boutique_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},boutiqueLockUpdateTime));
   if(serviceId==="partenaire_colis")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},partnerLockUpdateTime));
   if(serviceId==="compagnie_voyage")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},companyLockUpdateTime));
   if(serviceId==="annuaire_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},annuaireLockUpdateTime));
+  if(serviceId==="logement_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},logementLockUpdateTime));
   await commitWrites(env,initialWrites);
   try {
     const providerResult=await jeko(env,"/partner_api/payment_requests",{method:"POST",body:JSON.stringify({
@@ -386,6 +401,25 @@ async function webhook(request,env) {
       await commitWrites(env,[
         updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
         createWrite(demandPath,demandData),
+        createWrite(receiptPath,receiptData)
+      ]);
+    }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
+    return new Response("OK",{status:200});
+  }
+  if(payment.serviceId==="logement_renewal") {
+    const profilePath=payment.targetPath,profileDoc=await getDoc(env,profilePath),profile=docData(profileDoc);
+    const plans={mensuel:{amount:3000,days:30},trimestriel:{amount:8000,days:90},semestriel:{amount:15000,days:180}},plan=plans[payment.planId];
+    if(!profileDoc||!profile||profile.uid!==payment.uid||profile.statutCompte!=="actif"||profile.renouvellementJekoPaymentId!==paymentId||!plan||payment.amountXof!==plan.amount||payment.durationDays!==plan.days){
+      await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"logement_target_or_plan_invalid",updatedAt:now.toISOString()}))});
+      return new Response("OK",{status:200});
+    }
+    const oldEnd=profile.finAbonnement instanceof Date?profile.finAbonnement:(profile.finAbonnement?new Date(profile.finAbonnement):null);
+    const start=oldEnd&&Number.isFinite(oldEnd.getTime())&&oldEnd>now?oldEnd:now;
+    const end=new Date(start.getTime()+plan.days*24*60*60*1000);
+    try{
+      await commitWrites(env,[
+        updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
+        updateWrite(profilePath,{statutAbonnement:"actif",debutAbonnement:start,finAbonnement:end,renouvellementJekoStatut:"confirme",renouvellementJekoPaymentId:null,dernierPaiementJekoMontant:plan.amount,dernierPaiementJekoLe:now},profileDoc.updateTime),
         createWrite(receiptPath,receiptData)
       ]);
     }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
