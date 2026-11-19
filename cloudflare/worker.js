@@ -303,6 +303,31 @@ async function webhook(request,env) {
   }
   return new Response("OK",{status:200});
 }
+async function jekoDiagnostic(request,env) {
+  const authResult=await requireUser(request,env);
+  if(!authResult.user) return json({ok:false,error:"unauthorized",diagnostic:authResult.diagnostic},401);
+  if(!env.JEKO_API_KEY||!env.JEKO_API_KEY_ID) return json({ok:false,error:"jeko_credentials_not_configured"},503);
+  try {
+    const result=await jeko(env,"/partner_api/stores",{method:"GET"});
+    const data=result.data;
+    return json({
+      ok:true,service:"jeko",check:"authenticated_read_only_stores",
+      providerHttpStatus:result.meta.status,
+      contentType:result.meta.contentType,
+      responseShape:Array.isArray(data)?"array":(data&&typeof data==="object"?"object":typeof data),
+      responseKeys:data&&typeof data==="object"&&!Array.isArray(data)?Object.keys(data).slice(0,20):[],
+      checkedAt:new Date().toISOString()
+    });
+  } catch(e) {
+    return json({
+      ok:false,service:"jeko",check:"authenticated_read_only_stores",
+      error:e?.message==="jeko_network_timeout"?"jeko_network_timeout":e?.message==="jeko_network_error"?"jeko_network_error":String(e?.message||"jeko_diagnostic_failed").slice(0,120),
+      networkCause:e?.networkCause||null,
+      providerHttpStatus:Number.isInteger(e?.providerStatus)?e.providerStatus:null,
+      checkedAt:new Date().toISOString()
+    },502);
+  }
+}
 async function paymentStatus(request,env) {
   const authResult=await requireUser(request, env);const user=authResult.user;if(!user)return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
   const url=new URL(request.url),id=url.searchParams.get("paymentId");
@@ -336,6 +361,7 @@ export default {
     else if(url.pathname==="/webhook") response=await webhook(request,env);
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/jeko/status"&&request.method==="GET") response=await paymentStatus(request,env);
+    else if(url.pathname==="/api/jeko/diagnostic"&&request.method==="GET") response=await jekoDiagnostic(request,env);
     else response=json({error:"not_found"},404);
     if(origin==="https://kevintabi-ia.github.io") {
       const headers=new Headers(response.headers);
