@@ -4952,7 +4952,13 @@ async function obtenirConfigurationAbonnement(id,forcerLectureServeur=false){
   configurationAbonnementsPromise=lecture.then(s=>s.exists?(s.data().services||{}):{}).catch(e=>{console.warn("Configuration abonnements indisponible.",e);throw e;});
  }
  const services=await configurationAbonnementsPromise;
- return {...CONFIG_ABONNEMENTS_DEFAUT[id],...(services[id]||{})};
+ const config={...CONFIG_ABONNEMENTS_DEFAUT[id],...(services[id]||{})};
+ if(id==="ramassage"){
+  // Tarif métier fixé : les anciennes configurations à 0 FCFA ne doivent pas
+  // réintroduire un forfait gratuit ni modifier le prix envoyé à Jèko.
+  config.prix=2000;config.duree=1;config.unite="mois";config.essai=0;config.promotionActive=false;
+ }
+ return config;
 }
 function tarifAbonnementEffectif(c){
  const maintenant=new Date(),debut=c.promotionDebut?new Date(c.promotionDebut+"T00:00:00"):null,fin=c.promotionFin?new Date(c.promotionFin+"T23:59:59"):null;
