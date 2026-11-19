@@ -400,6 +400,43 @@ async function paymentStatus(request,env) {
   }
   return json({paymentId:id,status:payment.status,amountXof:payment.amountXof,currency:payment.currency,serviceId:payment.serviceId||"automobiliste"});
 }
+async function subscriptionPlans(request,env) {
+  const authResult=await requireUser(request,env);
+  if(!authResult.user) return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
+  const cfgDoc=await getDoc(env,"configuration_abonnements/globale");
+  const services=docData(cfgDoc)?.services||{};
+  const url=new URL(request.url);
+  const requested=url.searchParams.get("serviceId")||"";
+  const definitions={
+    automobiliste:["automobiliste"],
+    petites_annonces:["petites_annonces"],
+    boutiques:["boutiques_15j","boutiques_30j","boutiques_1mois","boutiques_2mois","boutiques_3mois"],
+    partenaires_colis:["partenaires_colis_1mois","partenaires_colis_3mois","partenaires_colis_6mois"],
+    compagnie_voyage:["compagnie_essentielle_mensuel","compagnie_essentielle_annuel","compagnie_professionnelle_mensuel","compagnie_professionnelle_annuel"],
+    ramassage:["ramassage"]
+  };
+  if(!Object.prototype.hasOwnProperty.call(definitions,requested)) return json({error:"unsupported_subscription_service"},400);
+  const now=new Date();
+  const plans=definitions[requested].map(key=>{
+    const cfg=services[key]||{};
+    const duration=Number(cfg.duree??0),unit=cfg.unite==="mois"?"mois":"jours";
+    const base=Number(cfg.prix??0),promo=Number(cfg.promotionPrix??0);
+    const start=cfg.promotionDebut?new Date(cfg.promotionDebut+"T00:00:00Z"):null;
+    const end=cfg.promotionFin?new Date(cfg.promotionFin+"T23:59:59Z"):null;
+    const promotionActive=cfg.promotionActive===true&&promo>0&&promo<=base&&start&&end&&now>=start&&now<=end;
+    const price=promotionActive?promo:base;
+    const valid=cfg.actif!==false&&Number.isSafeInteger(duration)&&duration>0&&Number.isSafeInteger(price)&&price>0&&price<=10000000;
+    return {
+      planId:key,label:typeof cfg.libelle==="string"?cfg.libelle:key,
+      active:cfg.actif!==false,available:valid,priceXof:valid?price:null,
+      regularPriceXof:Number.isSafeInteger(base)&&base>0?base:null,
+      duration:valid?duration:null,unit,
+      trialDays:Number.isSafeInteger(Number(cfg.essai))&&Number(cfg.essai)>0?Number(cfg.essai):0,
+      promotional:promotionActive
+    };
+  });
+  return json({serviceId:requested,currency:"XOF",provider:"jeko",plans,checkedAt:now.toISOString()});
+}
 export default {
   async fetch(request,env) {
     const url=new URL(request.url), origin=request.headers.get("origin")||"";
@@ -414,6 +451,7 @@ export default {
     else if(url.pathname==="/webhook") response=await webhook(request,env);
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/jeko/status"&&request.method==="GET") response=await paymentStatus(request,env);
+    else if(url.pathname==="/api/jeko/subscription-plans"&&request.method==="GET") response=await subscriptionPlans(request,env);
     else if(url.pathname==="/api/jeko/diagnostic"&&request.method==="GET") response=await jekoDiagnostic(request,env);
     else if(url.pathname==="/api/jeko/network-diagnostic"&&request.method==="GET") response=await jekoNetworkDiagnostic(request,env);
     else response=json({error:"not_found"},404);
