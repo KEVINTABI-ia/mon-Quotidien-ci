@@ -301,11 +301,35 @@ exports.createJekoCheckout = onRequest(
         return json(res, 400, { error: "invalid_request" });
       }
 
-      // Price and duration are read only from the server-managed catalogue.
-      const planSnap = await db.doc("payment_catalog/" + serviceId + "/plans/" + planId).get();
-      if (!planSnap.exists || planSnap.data().active !== true) return json(res, 404, { error: "plan_unavailable" });
-      const plan = planSnap.data();
-      if (!Number.isSafeInteger(plan.amountXof) || plan.amountXof < 1 || plan.amountXof > 10000000 ||
+      // Reuse the trusted admin-managed automotive annual plan; other services use the server catalogue.
+      let plan;
+      if (serviceId === "automobiliste" && planId === "annuel") {
+        const configSnap = await db.doc("configuration_abonnements/globale").get();
+        const config = configSnap.exists ? (configSnap.data().services || {}).automobiliste || {} : {};
+        const active = config.actif !== false;
+        const durationMonths = Number(config.duree ?? 12);
+        const unit = config.unite || "mois";
+        const basePrice = Number(config.prix ?? 1000);
+        if (!active) return json(res, 409, { error: "plan_unavailable" });
+        if (durationMonths !== 12 || unit !== "mois" ||
+            !Number.isSafeInteger(basePrice) || basePrice < 1 || basePrice > 10000000) {
+          logger.error("Invalid automotive annual subscription configuration", { durationMonths, unit });
+          return json(res, 503, { error: "plan_configuration_invalid" });
+        }
+        const now = new Date();
+        const promoStart = config.promotionDebut ? new Date(config.promotionDebut + "T00:00:00") : null;
+        const promoEnd = config.promotionFin ? new Date(config.promotionFin + "T23:59:59") : null;
+        const promoPrice = Number(config.promotionPrix || 0);
+        const promoActive = config.promotionActive === true && promoPrice > 0 && promoPrice <= basePrice &&
+          promoStart && promoEnd && now >= promoStart && now <= promoEnd;
+        plan = { active, amountXof: promoActive ? promoPrice : basePrice, currency: "XOF",
+          label: "Abonnement automobiliste annuel", durationDays: 365, durationMonths: 12 };
+      } else {
+        const planSnap = await db.doc("payment_catalog/" + serviceId + "/plans/" + planId).get();
+        if (!planSnap.exists || planSnap.data().active !== true) return json(res, 404, { error: "plan_unavailable" });
+        plan = planSnap.data();
+      }
+      if (plan.active !== true || !Number.isSafeInteger(plan.amountXof) || plan.amountXof < 1 || plan.amountXof > 10000000 ||
           plan.currency !== "XOF" || typeof plan.label !== "string" ||
           !Number.isSafeInteger(plan.durationDays) || plan.durationDays < 1 || plan.durationDays > 3660) {
         logger.error("Invalid Jèko payment catalogue entry", { serviceId, planId });
