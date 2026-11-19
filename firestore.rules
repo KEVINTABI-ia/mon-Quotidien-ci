@@ -907,22 +907,16 @@ service cloud.firestore {
         && abonnementChamp("petites_annonces", "essai", 30) > 0
         && request.resource.data.dateExpiration >= request.time + duration.value(abonnementChamp("petites_annonces", "essai", 30) - 1, "d")
         && request.resource.data.dateExpiration <= request.time + duration.value(abonnementChamp("petites_annonces", "essai", 30) + 1, "d");
+      // Seul le Worker Jèko (Admin SDK, qui contourne les règles) peut modifier
+      // l'état, la date d'expiration ou les champs de paiement d'un abonnement.
+      // L'admin depuis le navigateur peut encore modifier des champs non financiers.
       allow update: if estAdmin()
-        || (demandePaiementManuelEnAttente(request.resource.data.paiementStatut) && estConnecte() && request.auth.uid == uid
-          && resource.data.dateExpiration is timestamp
-          && resource.data.dateExpiration <= request.time
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["paiementMoyen","paiementReference","montantRenouvellement","dureeRenouvellementJours","paiementStatut","demandeRenouvellementLe"])
-          && request.resource.data.paiementMoyen in ["Wave","Orange Money"]
-          && request.resource.data.paiementReference is string
-          && request.resource.data.paiementReference.size() >= 4
-          && request.resource.data.paiementReference.size() <= 80
-          && abonnementAutorise("petites_annonces")
-          && request.resource.data.montantRenouvellement is int
-          && request.resource.data.montantRenouvellement > 0
-          && abonnementMontantAutorise("petites_annonces", request.resource.data.montantRenouvellement, 500)
-          && request.resource.data.dureeRenouvellementJours == dureeEnJours("petites_annonces", 30)
-          && request.resource.data.paiementStatut == "a_verifier"
-          && request.resource.data.demandeRenouvellementLe == request.time);
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          "statut","dateExpiration","dateDebut","paiementStatut","paiementMoyen",
+          "paiementReference","montantRenouvellement","dureeRenouvellementJours",
+          "demandeRenouvellementLe","dateConfirmationPaiement","confirmePar",
+          "dernierPaiementFCFA","dernierPaiementLe","paymentId"
+        ]);
       allow delete: if estAdmin();
     }
 
