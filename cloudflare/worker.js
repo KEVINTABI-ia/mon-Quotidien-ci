@@ -134,8 +134,16 @@ async function jeko(env,path,init={}) {
       "X-API-KEY":env.JEKO_API_KEY,"X-API-KEY-ID":env.JEKO_API_KEY_ID,"content-type":"application/json",...(init.headers||{})
     },signal:AbortSignal.timeout(15000)});
   } catch(e) {
+    const cause=e?.cause||null;
+    const safeMessage=String(cause?.message||e?.message||"").replace(/https?:\\/\\/[^\\s)]+/g,"[url]").replace(/(authorization|x-api-key)\\s*[:=]\\s*\\S+/gi,"$1=[redacted]").slice(0,160);
     const err=new Error(e?.name==="TimeoutError"?"jeko_network_timeout":"jeko_network_error");
     err.networkFailure=true;
+    err.networkCause={
+      name:typeof e?.name==="string"?e.name.slice(0,40):null,
+      code:typeof (cause?.code||e?.code)==="string"?(cause?.code||e?.code).slice(0,60):null,
+      causeName:typeof cause?.name==="string"?cause.name.slice(0,40):null,
+      message:safeMessage||null
+    };
     throw err;
   }
   const raw=await response.text();
@@ -208,7 +216,7 @@ async function createCheckout(request,env) {
   } catch(e) {
     const diagnostic=typeof e?.message==="string"&&/^(jeko_provider_[0-9]{3}(_[A-Za-z0-9_.-]{1,80})?|jeko_network_(timeout|error)|jeko_response_missing_checkout_fields)$/.test(e.message)?e.message:"jeko_unclassified_error";
     const ambiguous=e?.ambiguous===true||e?.networkFailure===true;
-    console.error("Jeko checkout initialization failed",{serviceId,diagnostic,providerStatus:e?.providerStatus||null,providerContentType:e?.providerContentType||null,providerResponseKeys:e?.providerResponseKeys||null,ambiguous});
+    console.error("Jeko checkout initialization failed",{serviceId,diagnostic,providerStatus:e?.providerStatus||null,providerContentType:e?.providerContentType||null,providerResponseKeys:e?.providerResponseKeys||null,networkCause:e?.networkCause||null,ambiguous});
     const status=ambiguous?"initialization_unknown":"failed";
     await firestore(env,path,{method:"PATCH",body:JSON.stringify(fields({status,initializationError:diagnostic,updatedAt:new Date().toISOString()}))}).catch(()=>{});
     return json({error:"payment_initialization_failed",diagnostic,checkRequired:ambiguous},502);
