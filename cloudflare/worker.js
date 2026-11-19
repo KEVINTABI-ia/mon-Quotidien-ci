@@ -107,16 +107,24 @@ async function firebaseUser(token) {
   const response=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key="+FIREBASE_API_KEY,{
     method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({idToken:token})
   });
-  if(!response.ok) return null;
-  const data=await response.json();
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok) {
+    const rawCode=data.error?.message||"FIREBASE_LOOKUP_HTTP_"+response.status;
+    const code=String(rawCode).split(/[ :]/)[0].replace(/[^A-Za-z0-9_.-]/g,"").slice(0,60)||"FIREBASE_LOOKUP_FAILED";
+    const err=new Error("firebase_auth_"+code);
+    err.authCode=code;
+    throw err;
+  }
   const user=data.users?.[0];
-  if(!user?.localId||user.disabled===true) return null;
+  if(!user?.localId) { const err=new Error("firebase_auth_USER_NOT_FOUND");err.authCode="USER_NOT_FOUND";throw err; }
+  if(user.disabled===true) { const err=new Error("firebase_auth_USER_DISABLED");err.authCode="USER_DISABLED";throw err; }
   return {sub:user.localId,email:user.email||null};
 }
 async function requireUser(request) {
-  const token=(request.headers.get("authorization")||"").match(/^Bearer\s+(.+)$/i)?.[1];
-  if(!token) return null;
-  try { return await firebaseUser(token); } catch { return null; }
+  const token=(request.headers.get("authorization")||"").match(/^Bearer\\s+(.+)$/i)?.[1];
+  if(!token) return {user:null,diagnostic:"MISSING_BEARER_TOKEN"};
+  try { return {user:await firebaseUser(token),diagnostic:null}; }
+  catch(e) { return {user:null,diagnostic:e.authCode||"FIREBASE_AUTH_ERROR"}; }
 }
 async function jeko(env,path,init={}) {
   const response=await fetch(JEKO_API_BASE+path,{...init,headers:{
@@ -133,8 +141,9 @@ async function jeko(env,path,init={}) {
   return data;
 }
 async function createCheckout(request,env) {
-  const user=await requireUser(request);
-  if(!user) return json({error:"unauthorized"},401);
+  const authResult=await requireUser(request);
+  const user=authResult.user;
+  if(!user) return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
   let body={}; try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
   const methods=["orange","wave","mtn","moov","djamo"];
   if(!methods.includes(body.paymentMethod)) return json({error:"invalid_payment_method"},400);
@@ -268,7 +277,7 @@ async function webhook(request,env) {
   return new Response("OK",{status:200});
 }
 async function paymentStatus(request,env) {
-  const user=await requireUser(request);if(!user)return json({error:"unauthorized"},401);
+  const authResult=await requireUser(request);const user=authResult.user;if(!user)return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
   const url=new URL(request.url),id=url.searchParams.get("paymentId");
   if(!id||!/^[a-f0-9]{32}$/i.test(id)) return json({error:"invalid_payment_id"},400);
   const doc=await getDoc(env,"payments/"+id),payment=docData(doc);
