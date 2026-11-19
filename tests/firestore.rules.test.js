@@ -1000,7 +1000,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       await assertSucceeds(setDoc(doc(db,"demandes_abonnement_logement","logement-orange-accepte"),{...base,operateur:"Orange Money"}));
     });
 
-    it("accepte un renouvellement boutique en attente de vérification", async () => {
+    it("refuse la création d’une demande de renouvellement boutique manuelle", async () => {
       const SHOP_ID="shop-renewal-paiement-bloque";
       await testEnv.withSecurityRulesDisabled(async context=>{
         await context.firestore().doc("demandes_nouveaux_services/"+SHOP_ID).set({
@@ -1009,7 +1009,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       });
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
       const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
-      await assertSucceeds(setDoc(doc(db,"demandes_renouvellement_boutiques","renewal-paiement-manuel"),{
+      await assertFails(setDoc(doc(db,"demandes_renouvellement_boutiques","renewal-paiement-manuel"),{
         boutiqueId:SHOP_ID,uid:CLIENT_UID,email:"client@example.test",
         operateur:"Wave",referencePaiement:"REF-TEST-1234",nomPayeur:"Client test",
         montantFCFA:7000,dureeJours:30,statut:"en_attente",createdAt:serverTimestamp()
@@ -1038,7 +1038,7 @@ describe("Mon Transport CI — règles Firestore", function () {
 
 
   describe("Contrôles complémentaires — paiements et parcours gratuits", () => {
-    it("accepte une inscription de compagnie en attente de validation administrative", async () => {
+    it("accepte le dépôt d’un dossier compagnie sans paiement manuel et réserve l’activation à Jèko", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
       const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
       const compagnieRef=doc(db,"compagnies","compagnie-paiement-manuel");
@@ -1049,12 +1049,15 @@ describe("Mon Transport CI — règles Firestore", function () {
         photoGarePrincipale:"data:image/jpeg;base64,abcdefghijklmnopqrstuvwxyz0123456789",
         telephoneGarePrincipale:"0700000001",telephoneServiceCourrier:"0700000002",
         formule:"Essentielle",periodicite:"Mensuel",montant:5000,dureeMois:1,
-        moyenPaiement:"Wave",referencePaiement:"REF-TEST-1234",
-        statutAbonnement:"En attente",dateCreation:serverTimestamp(),
+        statutAbonnement:"Dossier à vérifier",dateCreation:serverTimestamp(),
         dateDebut:null,dateExpiration:null
       }));
       await assertFails(updateDoc(compagnieRef,{
         statutAbonnement:"Actif",dateDebut:serverTimestamp(),dateExpiration:serverTimestamp()
+      }));
+      const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      await assertSucceeds(updateDoc(doc(adminDb,"compagnies","compagnie-paiement-manuel"),{
+        statutAbonnement:"À payer",dossierApprouveLe:serverTimestamp(),dossierApprouvePar:ADMIN_UID
       }));
     });
 
@@ -1072,7 +1075,7 @@ describe("Mon Transport CI — règles Firestore", function () {
   });
 
 
-  it("accepte le dépôt manuel d’une demande de renouvellement partenaire expiré, sans autoriser l’activation par le partenaire", async () => {
+  it("refuse les renouvellements manuels du partenaire expiré et interdit son auto-activation", async () => {
     const expired = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
     await testEnv.withSecurityRulesDisabled(async context => {
       const db=context.firestore();
@@ -1089,7 +1092,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
     const db=testEnv.authenticatedContext(PARTNER_UID,{email:"partner@example.test"}).firestore();
     const {doc,updateDoc,serverTimestamp}=require("firebase/firestore");
-    await assertSucceeds(updateDoc(doc(db,"partenaires",PARTNER_UID),{
+    await assertFails(updateDoc(doc(db,"partenaires",PARTNER_UID),{
       renouvellementStatut:"a_verifier",
       renouvellementFormule:"partenaires_colis_1mois",
       renouvellementMois:1,
