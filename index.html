@@ -4816,7 +4816,7 @@ async function envoyerReclamationObjet(){
     const token=await user.getIdToken();
     const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{
       method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
-      body:JSON.stringify({serviceId:"objet_retrouve",objectId,nomComplet:nom,telephone:tel,residence,paymentMethod})
+      body:JSON.stringify({serviceId:"objet_retrouve",objectId:objetId,nomComplet:nom,telephone:tel,residence,paymentMethod})
     });
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data.checkoutUrl)throw new Error(data.error==="object_unavailable"?"Cet objet n’est plus disponible.":data.error==="invalid_claim_details"?"Vérifiez les coordonnées saisies.":"Jèko ne peut pas initialiser le paiement. Réessayez plus tard.");
