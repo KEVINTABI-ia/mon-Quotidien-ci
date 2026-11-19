@@ -2163,7 +2163,7 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
       <button type="button" onclick="deconnecterRamassage()">Déconnexion</button>
     </div>
   </div>
-  <p class="notice">Les comptes des compagnies sont soumis à validation administrative. Après approbation du dossier, la compagnie règle son forfait mensuel de 2 000 FCFA par Jèko. Seul le webhook de paiement vérifié active l’abonnement.</p>
+  <p class="notice">Après approbation administrative, chaque compagnie bénéficie de 30 jours d’essai gratuit. À l’expiration de l’essai, le forfait de 2 000 FCFA pour 30 jours peut être réglé par Jèko. Seul le webhook de paiement vérifié active l’abonnement payant.</p>
 </section>
 
 
@@ -8456,11 +8456,29 @@ async function afficherEspaceRamassage(user,profil=null){
   if(company){
     const expirationAbonnement = p.dateExpirationAbonnement && typeof p.dateExpirationAbonnement.toDate === "function"
       ? p.dateExpirationAbonnement.toDate().getTime()
-      : 0;
-    const active=p.statut==="approuve"&&p.abonnement==="actif"&&expirationAbonnement>Date.now();
+      : (p.dateExpirationAbonnement ? new Date(p.dateExpirationAbonnement).getTime() : 0);
+    const finEssai = p.dateFinEssai && typeof p.dateFinEssai.toDate === "function"
+      ? p.dateFinEssai.toDate().getTime()
+      : (p.dateFinEssai ? new Date(p.dateFinEssai).getTime() : 0);
+    const now=Date.now();
+    const paidActive=p.statut==="approuve"&&p.abonnement==="actif"&&expirationAbonnement>now;
+    const trialActive=p.statut==="approuve"&&p.abonnement==="essai"&&finEssai>now;
+    const active=paidActive||trialActive;
+    const trialExpired=p.statut==="approuve"&&p.abonnement==="essai"&&finEssai>0&&finEssai<=now;
+    const trialMissing=p.statut==="approuve"&&p.abonnement!=="actif"&&p.abonnement!=="essai";
     const paymentBox=document.getElementById("ramassageCompanyPayment");
-    if(paymentBox)paymentBox.style.display=p.statut==="approuve"&&!active?"block":"none";
-    document.getElementById("ramassageCompanyStatus").textContent=active?"Compagnie approuvée — abonnement actif jusqu’au "+new Date(expirationAbonnement).toLocaleDateString("fr-FR")+". Vous pouvez publier vos trajets et consulter les demandes.":p.statut!=="approuve"?"Votre dossier est en attente de validation par l'administration.":"Votre dossier est approuvé. Réglez le forfait de 2 000 FCFA avec Jèko pour activer votre espace.";
+    if(paymentBox)paymentBox.style.display=trialExpired?"block":"none";
+    document.getElementById("ramassageCompanyStatus").textContent=paidActive
+      ?"Compagnie approuvée — abonnement actif jusqu’au "+new Date(expirationAbonnement).toLocaleDateString("fr-FR")+". Vous pouvez publier vos trajets et consulter les demandes."
+      :trialActive
+        ?"Compagnie approuvée — essai gratuit jusqu’au "+new Date(finEssai).toLocaleDateString("fr-FR")+". Aucun paiement n’est demandé pendant cette période."
+        :p.statut!=="approuve"
+          ?"Votre dossier est en attente de validation par l'administration."
+          :trialExpired
+            ?"Votre essai gratuit est terminé. Vous pouvez maintenant régler le forfait de 2 000 FCFA pour 30 jours avec Jèko."
+            :trialMissing
+              ?"Votre dossier est approuvé, mais la période d’essai doit être initialisée par l’administration. Aucun paiement ne peut être demandé pour le moment."
+              :"Vérifiez les dates de votre essai ou de votre abonnement auprès de l’administration.";
     document.getElementById("ramassageCompanyActions").style.display=active?"block":"none";
     if(active)await chargerDemandesRamassage();
   }else{
@@ -8564,10 +8582,13 @@ async function chargerCompagniesRamassageAdmin(){
       const title=document.createElement("strong");title.textContent=d.nom||"Compagnie sans nom";
       const detail=document.createElement("p");detail.textContent=(d.email||"")+" · "+(d.telephone||"")+" · Dossier : "+(d.statut||"inconnu")+" · Abonnement : "+(d.abonnement||"inactif");
       if(d.statut!=="approuve"){
-        const approve=document.createElement("button");approve.type="button";approve.textContent="Approuver le dossier";approve.onclick=()=>modifierStatutCompagnieRamassage(doc.id,"approuve");
+        const approve=document.createElement("button");approve.type="button";approve.textContent="Approuver + démarrer l’essai de 30 jours";approve.onclick=()=>modifierStatutCompagnieRamassage(doc.id,"approuve");
         card.append(title,detail,approve);
+      }else if(!d.dateFinEssai&&d.abonnement!=="actif"){
+        const startTrial=document.createElement("button");startTrial.type="button";startTrial.textContent="Initialiser l’essai gratuit de 30 jours";startTrial.onclick=()=>modifierStatutCompagnieRamassage(doc.id,"approuve");
+        const status=document.createElement("p");status.textContent="Ancien dossier approuvé sans période d’essai enregistrée.";card.append(title,detail,status,startTrial);
       }else{
-        const status=document.createElement("p");status.textContent="Dossier approuvé. Activation du forfait exclusivement après confirmation Jèko.";card.append(title,detail,status);
+        const status=document.createElement("p");status.textContent=d.abonnement==="essai"?"Essai gratuit jusqu’au "+(d.dateFinEssai?.toDate?d.dateFinEssai.toDate().toLocaleDateString("fr-FR"):"date à vérifier")+".": "Dossier approuvé. Forfait activé uniquement après confirmation Jèko.";card.append(title,detail,status);
       }
       zone.appendChild(card);
     });
@@ -8575,9 +8596,21 @@ async function chargerCompagniesRamassageAdmin(){
 }
 async function modifierStatutCompagnieRamassage(uid,statut){
   if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
-  if(statut!=="approuve")return alert("Seule l’approbation du dossier est autorisée ici. Le forfait est activé automatiquement après confirmation Jèko.");
-  try{await db.collection("comptes_ramassage").doc(uid).update({statut:"approuve"});alert("Dossier de la compagnie approuvé. Elle peut maintenant régler son forfait Jèko de 2 000 FCFA.");await chargerCompagniesRamassageAdmin();}
-  catch(e){alert("Modification impossible : "+e.message);}
+  if(statut!=="approuve")return alert("Seule l’approbation du dossier est autorisée ici.");
+  try{
+    const ref=db.collection("comptes_ramassage").doc(uid),snap=await ref.get();
+    if(!snap.exists)throw new Error("Profil compagnie introuvable.");
+    const profile=snap.data();
+    if(profile.statut==="approuve"&&profile.dateFinEssai)throw new Error("La période d’essai a déjà été initialisée. Elle ne peut pas être redémarrée.");
+    const finEssai=new Date(Date.now()+30*24*60*60*1000);
+    await ref.update({
+      statut:"approuve",abonnement:"essai",
+      dateDebutEssai:firebase.firestore.FieldValue.serverTimestamp(),
+      dateFinEssai:firebase.firestore.Timestamp.fromDate(finEssai)
+    });
+    alert("Dossier approuvé. L’essai gratuit de 30 jours commence maintenant. Aucun paiement ne sera demandé avant son expiration.");
+    await chargerCompagniesRamassageAdmin();
+  }catch(e){alert("Modification impossible : "+e.message);}
 }
 
 async function deconnecterRamassage(){
