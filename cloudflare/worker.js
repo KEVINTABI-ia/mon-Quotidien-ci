@@ -177,6 +177,25 @@ async function createCheckout(request,env) {
     if(!objectDoc||docData(objectDoc)?.statut!=="publie") return json({error:"object_unavailable"},409);
     amountXof=1000;
     initial={uid:user.sub,serviceId,objectId,nomComplet:nomComplet.trim(),telephone:telephone.trim(),residence:residence.trim(),provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
+  } else if(serviceId==="boutique_renewal") {
+    const boutiqueId=body.boutiqueId,planId=body.planId;
+    if(typeof boutiqueId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(boutiqueId)||!["boutiques_1mois","boutiques_2mois","boutiques_3mois"].includes(planId))return json({error:"invalid_boutique_plan"},400);
+    const boutiquePath="demandes_nouveaux_services/"+boutiqueId;
+    const boutiqueDoc=await getDoc(env,boutiquePath),boutique=docData(boutiqueDoc);
+    if(!boutiqueDoc||boutique?.type!=="commerce"||boutique?.modePartenaire!==true||boutique?.statut!=="approuve"||boutique?.uid!==user.sub)return json({error:"boutique_not_found_or_not_authorized"},403);
+    if(boutique.renouvellementJekoPaymentId){
+      const previous=await getDoc(env,"payments/"+boutique.renouvellementJekoPaymentId);
+      const previousStatus=docData(previous)?.status;
+      if(previousStatus==="pending"||previousStatus==="initialization_unknown"||previousStatus==="review_required")return json({error:"existing_payment_requires_review"},409);
+    }
+    const cfgDoc=await getDoc(env,"configuration_abonnements/globale");
+    const cfg=docData(cfgDoc)?.services?.[planId]||{};
+    const duration=Number(cfg.duree??0),unit=cfg.unite||"mois",base=Number(cfg.prix??0);
+    if(cfg.actif===false||unit!=="mois"||!Number.isSafeInteger(duration)||duration<1||duration>12||!Number.isSafeInteger(base)||base<1||base>10000000)return json({error:"plan_configuration_invalid"},503);
+    const start=cfg.promotionDebut?new Date(cfg.promotionDebut+"T00:00:00Z"):null,end=cfg.promotionFin?new Date(cfg.promotionFin+"T23:59:59Z"):null,promo=Number(cfg.promotionPrix||0);
+    amountXof=cfg.promotionActive===true&&promo>0&&promo<=base&&start&&end&&now>=start&&now<=end?promo:base;
+    initial={uid:user.sub,serviceId,planId,boutiqueId,targetPath:boutiquePath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationMonths:duration,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
+    initial.boutiqueLockUpdateTime=boutiqueDoc.updateTime;
   } else if(serviceId==="petites_annonces") {
     const subDoc=await getDoc(env,"abonnements_petites_annonces/"+user.sub);
     const sub=docData(subDoc);
@@ -206,7 +225,11 @@ async function createCheckout(request,env) {
   const reference="MQCI-"+id;
   initial.clientReference=reference;
   const path="payments/"+id;
-  await commitWrites(env,[createWrite(path,initial)]);
+  const createPaymentWrite=createWrite(path,initial);
+  const initialWrites=[createPaymentWrite];
+  if(serviceId==="boutique_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},initial.boutiqueLockUpdateTime));
+  delete initial.boutiqueLockUpdateTime;
+  await commitWrites(env,initialWrites);
   try {
     const providerResult=await jeko(env,"/partner_api/payment_requests",{method:"POST",body:JSON.stringify({
       storeId:env.JEKO_STORE_ID,amountCents:amountXof*100,currency:"XOF",reference,
@@ -296,6 +319,26 @@ async function webhook(request,env) {
       await commitWrites(env,[
         updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
         createWrite(demandPath,demandData),
+        createWrite(receiptPath,receiptData)
+      ]);
+    }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
+    return new Response("OK",{status:200});
+  }
+  if(payment.serviceId==="boutique_renewal") {
+    const boutiquePath=payment.targetPath;
+    const boutiqueDoc=await getDoc(env,boutiquePath),boutique=docData(boutiqueDoc);
+    if(!boutiqueDoc||!boutique||boutique.uid!==payment.uid||boutique.type!=="commerce"||boutique.modePartenaire!==true||!Number.isSafeInteger(payment.durationMonths)||payment.durationMonths<1||payment.durationMonths>12){
+      await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"boutique_target_or_duration_invalid",updatedAt:now.toISOString()}))});
+      return new Response("OK",{status:200});
+    }
+    const oldEnd=boutique.abonnementFin instanceof Date?boutique.abonnementFin:(boutique.abonnementFin?new Date(boutique.abonnementFin):null);
+    const start=oldEnd&&Number.isFinite(oldEnd.getTime())&&oldEnd>now?oldEnd:now;
+    const end=addMonthsClamped(start,payment.durationMonths);
+    const nextBoutique={abonnementDebut:start,abonnementFin:end,abonnementStatut:"actif",paiementStatut:"confirme",montantAbonnement:payment.amountXof,dureeAbonnementJours:payment.durationMonths*30,dernierPaiementFCFA:payment.amountXof,dernierPaiementConfirmeLe:now,renouvellementJekoStatut:"confirme",renouvellementJekoPaymentId:null};
+    try{
+      await commitWrites(env,[
+        updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
+        updateWrite(boutiquePath,nextBoutique,boutiqueDoc.updateTime),
         createWrite(receiptPath,receiptData)
       ]);
     }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
