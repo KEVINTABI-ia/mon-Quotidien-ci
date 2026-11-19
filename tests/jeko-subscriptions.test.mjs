@@ -119,3 +119,14 @@ test("webhook accepte un abonnement automobiliste avec snapshot complet", () => 
     planAmountXof:1000,planDurationMonths:12
   }),false);
 });
+
+test("webhook garde la compatibilité des paiements en attente créés avant le snapshot", () => {
+  assert.equal(validateJekoPaymentPlan({
+    provider:"jeko",currency:"XOF",serviceId:"partenaire_colis",planId:"partenaires_colis_3mois",
+    amountXof:6000,amountCents:600000,durationMonths:3
+  }),true);
+  assert.equal(validateJekoPaymentPlan({
+    provider:"jeko",currency:"XOF",serviceId:"compagnie_voyage",planId:"compagnie_professionnelle_annuel",
+    amountXof:25000,amountCents:2500000,durationMonths:12
+  }),true);
+});
