@@ -1,0 +1,11 @@
+{
+  "name": "mon-quotidien-ci-jeko-payments",
+  "private": true,
+  "main": "src/index.js",
+  "engines": { "node": "20" },
+  "scripts": { "test": "node --test", "deploy": "firebase deploy --only functions" },
+  "dependencies": {
+    "firebase-admin": "^13.0.2",
+    "firebase-functions": "^6.3.2"
+  }
+}
