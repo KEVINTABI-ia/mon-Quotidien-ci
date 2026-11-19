@@ -182,6 +182,7 @@ async function createCheckout(request,env) {
     if(!plan)return json({error:"invalid_logement_plan"},400);
     const profilePath="partenaires_logement/"+user.sub,profileDoc=await getDoc(env,profilePath),profile=docData(profileDoc);
     if(!profileDoc||profile?.uid!==user.sub||profile?.statutCompte!=="actif")return json({error:"logement_profile_not_found_or_inactive"},403);
+    if(!["essai","actif"].includes(profile.statutAbonnement))return json({error:"logement_subscription_not_payable"},409);
     const trialEnd=profile.finEssai instanceof Date?profile.finEssai:(profile.finEssai?new Date(profile.finEssai):null),paidEnd=profile.finAbonnement instanceof Date?profile.finAbonnement:(profile.finAbonnement?new Date(profile.finAbonnement):null);
     if((profile.statutAbonnement==="essai"&&trialEnd&&trialEnd.getTime()>now.getTime())||(profile.statutAbonnement==="actif"&&paidEnd&&paidEnd.getTime()>now.getTime()))return json({error:"logement_subscription_still_active"},409);
     if(profile.renouvellementJekoPaymentId){
@@ -409,7 +410,7 @@ async function webhook(request,env) {
   if(payment.serviceId==="logement_renewal") {
     const profilePath=payment.targetPath,profileDoc=await getDoc(env,profilePath),profile=docData(profileDoc);
     const plans={mensuel:{amount:3000,days:30},trimestriel:{amount:8000,days:90},semestriel:{amount:15000,days:180}},plan=plans[payment.planId];
-    if(!profileDoc||!profile||profile.uid!==payment.uid||profile.statutCompte!=="actif"||profile.renouvellementJekoPaymentId!==paymentId||!plan||payment.amountXof!==plan.amount||payment.durationDays!==plan.days){
+    if(!profileDoc||!profile||profile.uid!==payment.uid||profile.statutCompte!=="actif"||!["essai","actif"].includes(profile.statutAbonnement)||profile.renouvellementJekoPaymentId!==paymentId||!plan||payment.amountXof!==plan.amount||payment.durationDays!==plan.days){
       await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"logement_target_or_plan_invalid",updatedAt:now.toISOString()}))});
       return new Response("OK",{status:200});
     }
