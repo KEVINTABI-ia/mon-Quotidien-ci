@@ -306,7 +306,8 @@ async function paymentStatus(request,env) {
   if(payment.status==="pending"&&payment.providerPaymentRequestId) {
     const last=payment.lastProviderCheckAt?new Date(payment.lastProviderCheckAt).getTime():0;
     if(Date.now()-last>10000) {
-      try { const provider=await jeko(env,"/partner_api/payment_requests/"+encodeURIComponent(payment.providerPaymentRequestId));
+      try { const providerResult=await jeko(env,"/partner_api/payment_requests/"+encodeURIComponent(payment.providerPaymentRequestId));
+        const provider=providerResult.data;
         const checkedAt=new Date().toISOString();
         if(provider.status==="error") {payment.status="failed";await firestore(env,"payments/"+id,{method:"PATCH",body:JSON.stringify(fields({status:"failed",lastProviderCheckAt:checkedAt,updatedAt:checkedAt}))});}
         else await firestore(env,"payments/"+id,{method:"PATCH",body:JSON.stringify(fields({lastProviderCheckAt:checkedAt}))});
