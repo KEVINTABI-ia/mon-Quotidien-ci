@@ -328,6 +328,36 @@ async function jekoDiagnostic(request,env) {
     },502);
   }
 }
+async function jekoNetworkDiagnostic(request,env) {
+  const authResult=await requireUser(request,env);
+  if(!authResult.user) return json({ok:false,error:"unauthorized",diagnostic:authResult.diagnostic},401);
+  const probe=async(url)=>{
+    try {
+      const response=await fetch(url,{method:"GET",redirect:"follow",signal:AbortSignal.timeout(10000)});
+      return {reachable:true,httpStatus:response.status,contentType:response.headers.get("content-type")||"unknown"};
+    } catch(e) {
+      const cause=e?.cause||null;
+      return {reachable:false,error:e?.name==="TimeoutError"?"timeout":"network_error",
+        networkCause:{name:typeof e?.name==="string"?e.name.slice(0,40):null,
+          code:typeof (cause?.code||e?.code)==="string"?(cause?.code||e?.code).slice(0,60):null,
+          causeName:typeof cause?.name==="string"?cause.name.slice(0,40):null}};
+    }
+  };
+  const [baseline,jekoRoot]=await Promise.all([
+    probe("https://www.google.com/generate_204"),
+    probe(JEKO_API_BASE+"/")
+  ]);
+  let authenticatedApi;
+  try {
+    const result=await jeko(env,"/partner_api/stores",{method:"GET"});
+    authenticatedApi={reachable:true,httpStatus:result.meta.status,contentType:result.meta.contentType};
+  } catch(e) {
+    authenticatedApi={reachable:!e?.networkFailure,httpStatus:Number.isInteger(e?.providerStatus)?e.providerStatus:null,
+      error:String(e?.message||"diagnostic_failed").slice(0,100),networkCause:e?.networkCause||null};
+  }
+  return json({ok:baseline.reachable&&jekoRoot.reachable&&authenticatedApi.reachable,
+    service:"jeko",check:"outbound_network_read_only",baseline,jekoRoot,authenticatedApi,checkedAt:new Date().toISOString()});
+}
 async function paymentStatus(request,env) {
   const authResult=await requireUser(request, env);const user=authResult.user;if(!user)return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
   const url=new URL(request.url),id=url.searchParams.get("paymentId");
@@ -362,6 +392,7 @@ export default {
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/jeko/status"&&request.method==="GET") response=await paymentStatus(request,env);
     else if(url.pathname==="/api/jeko/diagnostic"&&request.method==="GET") response=await jekoDiagnostic(request,env);
+    else if(url.pathname==="/api/jeko/network-diagnostic"&&request.method==="GET") response=await jekoNetworkDiagnostic(request,env);
     else response=json({error:"not_found"},404);
     if(origin==="https://kevintabi-ia.github.io") {
       const headers=new Headers(response.headers);
