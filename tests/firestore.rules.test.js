@@ -996,8 +996,29 @@ describe("Mon Transport CI — règles Firestore", function () {
       };
       await assertFails(setDoc(doc(db,"demandes_abonnement_logement","logement-mtn-refuse"),{...base,operateur:"MTN MoMo"}));
       await assertFails(setDoc(doc(db,"demandes_abonnement_logement","logement-moov-refuse"),{...base,operateur:"Moov Money"}));
-      await assertSucceeds(setDoc(doc(db,"demandes_abonnement_logement","logement-wave-accepte"),{...base,operateur:"Wave"}));
-      await assertSucceeds(setDoc(doc(db,"demandes_abonnement_logement","logement-orange-accepte"),{...base,operateur:"Orange Money"}));
+      await assertFails(setDoc(doc(db,"demandes_abonnement_logement","logement-wave-refuse"),{...base,operateur:"Wave"}));
+      await assertFails(setDoc(doc(db,"demandes_abonnement_logement","logement-orange-refuse"),{...base,operateur:"Orange Money"}));
+      const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        await context.firestore().doc("partenaires_logement/"+CLIENT_UID).set({
+          uid:CLIENT_UID,statutCompte:"actif",statutAbonnement:"actif",
+          debutAbonnement:Timestamp.fromMillis(Date.now()-40*86400000),
+          finAbonnement:Timestamp.fromMillis(Date.now()-10*86400000)
+        });
+        await context.firestore().doc("demandes_abonnement_logement/ancienne-demande").set({
+          uid:CLIENT_UID,statut:"a_verifier",formule:"mensuel",montant:3000
+        });
+      });
+      await assertFails(updateDoc(doc(adminDb,"partenaires_logement",CLIENT_UID),{
+        statutAbonnement:"actif",debutAbonnement:serverTimestamp(),
+        finAbonnement:Timestamp.fromMillis(Date.now()+30*86400000)
+      }));
+      await assertFails(updateDoc(doc(adminDb,"demandes_abonnement_logement","ancienne-demande"),{
+        statut:"confirme",confirmedAt:serverTimestamp(),confirmedBy:ADMIN_UID
+      }));
+      await assertSucceeds(updateDoc(doc(adminDb,"demandes_abonnement_logement","ancienne-demande"),{
+        statut:"refuse",reviewedAt:serverTimestamp(),reviewedBy:ADMIN_UID
+      }));
     });
 
     it("refuse la création d’une demande de renouvellement boutique manuelle", async () => {
