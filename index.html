@@ -6666,9 +6666,7 @@ function afficherFormulaireInscriptionCompagnie(zone){
       <label>Formule d’abonnement</label><select id="partCompagnieFormule" onchange="actualiserPrixInscriptionCompagnie()"><option value="Essentielle">Essentielle</option><option value="Professionnelle">Professionnelle</option></select>
       <label>Périodicité</label><select id="partCompagniePeriodicite" onchange="actualiserPrixInscriptionCompagnie()"><option value="Mensuel">Mensuel</option><option value="Annuel">Annuel</option></select>
       <p id="partCompagniePrix" class="notice">Tarif : 5 000 FCFA / mois</p>
-      <label>Moyen de paiement</label><select id="partCompagniePaiement"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select>
-      <label>Référence de paiement</label><input id="partCompagnieReference" maxlength="80" placeholder="Référence de la transaction" required>
-      <p class="notice" id="partCompagnieCoordonneesPaiement">Chargement des coordonnées de paiement...</p><p class="notice">Le tarif et la durée sont déterminés par la formule choisie et les paramètres en vigueur. L’activation intervient après vérification par l’administration.</p>
+      <p class="notice">Le dépôt du dossier est gratuit. Après vérification et approbation, le titulaire réglera son abonnement exclusivement avec Jèko depuis son espace compagnie.</p>
       <button type="button" class="primary" onclick="envoyerInscriptionCompagnie()">Envoyer mon dossier</button>
       <p id="partCompagnieStatut" class="notice" aria-live="polite"></p>
     </div>`;
@@ -10376,12 +10374,8 @@ async function chargerCompagniesAdmin() {
 
       let bouton = "";
 
-if (compagnie.statutAbonnement === "En attente") {
-  bouton = `<button type="button" class="primary"
-    onclick="validerPaiementCompagnie('${doc.id}')">
-    Valider le paiement
-  </button>`;
-}
+if (compagnie.statutAbonnement === "Dossier à vérifier") bouton = `<button type="button" class="primary" onclick="validerPaiementCompagnie('${doc.id}')">Approuver le dossier</button>`;
+if (compagnie.statutAbonnement === "À payer") bouton = '<p class="notice">Dossier approuvé — paiement Jèko attendu du titulaire.</p>';
 
 if (
   compagnie.statutAbonnement === "Actif" ||
@@ -10588,96 +10582,18 @@ destinations,
   }
 }
 async function validerPaiementCompagnie(id) {
-  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
-    alert("Accès administrateur requis.");
-    return;
-  }
-
-  const confirmation = confirm(
-    "Confirme-tu avoir vérifié le paiement de cette compagnie ?"
-  );
-
-  if (!confirmation) return;
-
-  try {
-    const reference = db.collection("compagnies").doc(id);
-    const document = await reference.get();
-
-    if (!document.exists) {
-      alert("Compagnie introuvable.");
-      return;
-    }
-
-    const compagnie = document.data();
-    const maintenant = new Date();
-
-const ancienneExpiration = compagnie.dateExpiration
-  ? compagnie.dateExpiration.toDate()
-  : null;
-
-const dateDebut =
-  ancienneExpiration && ancienneExpiration > maintenant
-    ? ancienneExpiration
-    : maintenant;
-
-const dateExpiration = new Date(dateDebut);
-
-    dateExpiration.setMonth(dateExpiration.getMonth()+Number(compagnie.dureeMois||(compagnie.periodicite==="Annuel"?12:1)));
-
-    await reference.update({
-      statutAbonnement: "Actif",
-      dateDebut: firebase.firestore.Timestamp.fromDate(dateDebut),
-      dateExpiration: firebase.firestore.Timestamp.fromDate(dateExpiration)
-    });
-
-    alert("Paiement validé. Abonnement activé.");
-    chargerCompagniesAdmin();
-
-  } catch (erreur) {
-    alert("Erreur lors de la validation : " + erreur.message);
-  }
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ try{
+  const ref=db.collection("compagnies").doc(id),snap=await ref.get();
+  if(!snap.exists||snap.data().statutAbonnement!=="Dossier à vérifier")return alert("Ce dossier n'est plus en attente d'approbation.");
+  if(!(await demanderConfirmation("Approuver le dossier compagnie ?","Le titulaire devra ensuite payer son abonnement via Jèko. Aucun abonnement ne sera activé à cette étape.","Approuver le dossier")))return;
+  await ref.update({statutAbonnement:"À payer",dossierApprouveLe:firebase.firestore.FieldValue.serverTimestamp(),dossierApprouvePar:auth.currentUser.uid});
+  await chargerCompagniesAdmin();alert("Dossier approuvé. Le titulaire peut maintenant payer avec Jèko.");
+ }catch(e){alert("Approbation impossible : "+e.message);}
 }
 async function demanderRenouvellementCompagnie(id) {
-  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
-    alert("Accès administrateur requis.");
-    return;
-  }
-
-  const confirmation = confirm(
-    "Confirmer la demande de renouvellement de cet abonnement ?"
-  );
-
-  if (!confirmation) return;
-
-  try {
-    const reference = db.collection("compagnies").doc(id);
-    const document = await reference.get();
-
-    if (!document.exists) {
-      alert("Compagnie introuvable.");
-      return;
-    }
-
-    const compagnie = document.data();
-
-    if (!["Actif", "Expiré"].includes(compagnie.statutAbonnement)) {
-  alert("Cette compagnie ne peut pas être renouvelée dans son état actuel.");
-  return;
-}
-
-    const cfg=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(compagnie.formule||"Essentielle",compagnie.periodicite||"Mensuel"));
-    if(!cfg.actif)return alert("Les nouvelles souscriptions et renouvellements de cette formule sont suspendus.");
-    if(cfg.unite!=="mois")return alert("La durée de cette formule doit être configurée en mois.");
-    const montant=tarifAbonnementEffectif(cfg),dureeMois=Number(cfg.duree);
-    if(montant<=0||dureeMois<=0)return alert("Tarif ou durée non configuré.");
-    await reference.update({statutAbonnement:"En attente",montant,dureeMois,dateDemandeRenouvellement:firebase.firestore.FieldValue.serverTimestamp()});
-
-    alert("Demande enregistrée. Vérifie le paiement avant validation.");
-    chargerCompagniesAdmin();
-
-  } catch (erreur) {
-    alert("Erreur : " + erreur.message);
-  }
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ alert("Le renouvellement se fait par le titulaire depuis son espace compagnie, exclusivement avec Jèko.");
 }
 async function preparerRappelWhatsApp(id) {
   if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
@@ -12573,33 +12489,30 @@ function afficherFormulaireInscriptionCompagnie(zone){
  '<label>Destinations, prix et heures</label><textarea id="partCompagnieDestinations" rows="4" placeholder="Bouaké | 5000 | 06:00, 08:00"></textarea><small>Une destination par ligne : Destination | Prix | heures de départ.</small>'+
  '<label>Formule</label><select id="partCompagnieFormule" onchange="actualiserPrixInscriptionCompagnie()"><option>Essentielle</option><option>Professionnelle</option></select>'+
  '<label>Périodicité</label><select id="partCompagniePeriodicite" onchange="actualiserPrixInscriptionCompagnie()"><option>Mensuel</option><option>Annuel</option></select><p id="partCompagniePrix" class="notice"></p>'+
- '<label>Moyen de paiement</label><select id="partCompagniePaiement"><option value="">Choisir</option><option>Wave</option><option>Orange Money</option></select>'+
- '<label>Référence de paiement</label><input id="partCompagnieReference">'+
- '<p id="partCompagnieCoordonneesPaiement" class="notice">Coordonnées de paiement en chargement...</p>'+
+ '<p class="notice">Le dépôt du dossier est gratuit. Après vérification et approbation, le titulaire réglera son abonnement exclusivement avec Jèko depuis son espace compagnie.</p>'+
  '<button type="button" class="primary" onclick="envoyerInscriptionCompagnie()">Envoyer mon dossier</button><p id="partCompagnieStatut" class="notice"></p></div>';
  document.getElementById("partCompagnieEmail").value=auth.currentUser?.email||"";
- window.chargerCoordonneesPaiementMQCI().then(p=>{document.getElementById("partCompagnieCoordonneesPaiement").textContent="Wave / Orange Money : "+p.numero+" — "+p.beneficiaire;});
  actualiserPrixInscriptionCompagnie();
 }
 async function envoyerInscriptionCompagnie(){
- const user=auth.currentUser, val=id=>document.getElementById(id)?.value.trim()||"", status=document.getElementById("partCompagnieStatut");
- if(!(await window.paiementsMQCIDisponibles(true))){if(status)status.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
+ const user=auth.currentUser,val=id=>document.getElementById(id)?.value.trim()||"",status=document.getElementById("partCompagnieStatut");
  if(!user){status.textContent="Connectez-vous à votre compte utilisateur.";return;}
- const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),telephoneGare=val("partCompagnieTelephoneGare"),telephoneResponsable=val("partCompagnieTelephoneResponsable"),courrier=val("partCompagnieTelephoneCourrier"),texte=val("partCompagnieDestinations"),paiement=val("partCompagniePaiement"),reference=val("partCompagnieReference"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite");
+ const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),telephoneGare=val("partCompagnieTelephoneGare"),telephoneResponsable=val("partCompagnieTelephoneResponsable"),courrier=val("partCompagnieTelephoneCourrier"),texte=val("partCompagnieDestinations"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite");
  let destinations;try{destinations=analyserDestinationsCompagnie(texte);}catch(e){status.textContent=e.message;return;}
- const photoFile=document.getElementById("partCompagniePhotoGare").files[0];
- if(!nom||!agence||!localisation||!telephone||!telephoneGare||!telephoneResponsable||!courrier||!photoFile||!paiement||reference.length<4){status.textContent="Tous les champs obligatoires sont requis, y compris la photo de la gare principale.";return;}
+ const photoFile=document.getElementById("partCompagniePhotoGare")?.files?.[0];
+ if(!nom||!agence||!localisation||!telephone||!telephoneGare||!telephoneResponsable||!courrier||!photoFile){status.textContent="Tous les champs obligatoires sont requis, y compris la photo de la gare principale.";return;}
  try{
   const old=await db.collection("compagnies").where("uid","==",user.uid).limit(1).get();if(!old.empty)throw new Error("Un dossier compagnie existe déjà pour ce compte.");
   const cfg=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));if(!cfg.actif||cfg.unite!=="mois")throw new Error("Formule indisponible.");
   const montant=tarifAbonnementEffectif(cfg),dureeMois=Number(cfg.duree);
+  if(!Number.isSafeInteger(montant)||montant<=0||!Number.isSafeInteger(dureeMois)||dureeMois<=0)throw new Error("Tarif ou durée non configuré.");
   const photoGarePrincipale=await compresserImage(photoFile);if(photoGarePrincipale.length>700000)throw new Error("Photo trop volumineuse.");
-  let logo="";const logoFile=document.getElementById("partCompagnieLogo").files[0];if(logoFile){logo=await compresserImage(logoFile);if(logo.length>300000)throw new Error("Le logo est trop volumineux après compression.");}
+  let logo="";const logoFile=document.getElementById("partCompagnieLogo")?.files?.[0];if(logoFile){logo=await compresserImage(logoFile);if(logo.length>300000)throw new Error("Logo trop volumineux.");}
   const compagnieRef=db.collection("compagnies").doc(),batch=db.batch(),now=firebase.firestore.FieldValue.serverTimestamp();
-  batch.set(compagnieRef,{uid:user.uid,nom,agence,localisation,telephone,telephoneGarePrincipale:telephoneGare,telephoneServiceCourrier:courrier,email:user.email||"",logo,photoGarePrincipale,destinations,formule,periodicite,montant,dureeMois,moyenPaiement:paiement,referencePaiement:reference,statutAbonnement:"En attente",dateCreation:now,dateDebut:null,dateExpiration:null});
+  batch.set(compagnieRef,{uid:user.uid,nom,agence,localisation,telephone,telephoneGarePrincipale:telephoneGare,telephoneServiceCourrier:courrier,email:user.email||"",logo,photoGarePrincipale,destinations,formule,periodicite,montant,dureeMois,statutAbonnement:"Dossier à vérifier",dateCreation:now,dateDebut:null,dateExpiration:null});
   batch.set(compagnieRef.collection("informations_privees").doc("gare_principale"),{uid:user.uid,telephoneResponsable,createdAt:now});
   await batch.commit();
-  status.textContent="Dossier transmis. La validation du paiement reste nécessaire avant activation.";
+  status.textContent="Dossier transmis. Après approbation, vous pourrez régler votre abonnement exclusivement avec Jèko depuis votre espace compagnie.";
  }catch(e){status.textContent="Erreur : "+e.message;}
 }
 async function afficherEspaceCompagnie(id,c){
@@ -12622,6 +12535,10 @@ async function afficherEspaceCompagnie(id,c){
  '<label>Destinations, prix et heures de départ</label><textarea id="annexeDestinations" rows="3" placeholder="Bouaké | 5000 | 06:00, 08:00"></textarea>'+
  '<button class="primary" onclick="ajouterGareAnnexeCompagnie(\''+id+'\')">Soumettre la gare annexe</button><p id="statutEspaceCompagnie" class="notice"></p>'+
  '<h4>Mes gares annexes</h4><div id="listeGaresAnnexesCompagnie">Chargement...</div><h4>Avis des voyageurs</h4><div id="listeAvisCompagnie">Chargement...</div>';
+ if(["À payer","Expiré"].includes(c.statutAbonnement)){
+  window.compagnieRenouvellementCourante={formule:c.formule,periodicite:c.periodicite};
+  el.insertAdjacentHTML("afterbegin",'<div class="card" style="padding:12px;margin:10px 0;"><h4>'+(c.statutAbonnement==="À payer"?"Régler l’abonnement":"Renouveler l’abonnement")+'</h4><p>Le règlement s’effectue exclusivement via Jèko.</p><button type="button" class="primary" onclick="ouvrirPaiementRenouvellementCompagnie(\''+id+'\')">Payer avec Jèko</button><div id="zonePaiementRenouvellementCompagnie"></div></div>');
+ }
  await chargerGaresAnnexesCompagnie(id);await chargerAvisCompagnie(id,true);
 }
 async function enregistrerGarePrincipaleCompagnie(id){
