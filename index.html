@@ -8204,9 +8204,10 @@ async function verifierRetourPaiementJeko(user){
  if(paymentState!=="return"&&paymentState!=="error")return;
  const companyZone=serviceId==="compagnie_voyage"?(document.getElementById("zonePaiementRenouvellementCompagnie")||document.getElementById("connexionPartenaire")):null;
  const annuaireZone=serviceId==="annuaire_renewal"?(document.getElementById("espaceAnnuaireCompte")||document.getElementById("zoneInscriptionAnnuairePartenaire")):null;
- const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="annuaire_renewal"?annuaireZone:document.getElementById("etatAbonnementAuto")));
+ const boutiqueZone=serviceId==="boutique_renewal"?(document.getElementById("boutiqueCompteConnecte")||document.getElementById("connexionBoutiqueStatut")):null;
+ const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="annuaire_renewal"?annuaireZone:(serviceId==="boutique_renewal"?boutiqueZone:document.getElementById("etatAbonnementAuto"))));
  if(paymentState==="error"){
-  if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été finalisé. Aucune demande de récupération n’a été transmise.":serviceId==="compagnie_voyage"?"Le paiement n’a pas été finalisé. Aucun abonnement de compagnie n’a été activé.":serviceId==="annuaire_renewal"?"Le paiement n’a pas été finalisé. Votre fiche reste masquée si son abonnement est expiré.":"Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
+  if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été finalisé. Aucune demande de récupération n’a été transmise.":serviceId==="compagnie_voyage"?"Le paiement n’a pas été finalisé. Aucun abonnement de compagnie n’a été activé.":serviceId==="annuaire_renewal"?"Le paiement n’a pas été finalisé. Votre fiche reste masquée si son abonnement est expiré.":serviceId==="boutique_renewal"?"Le paiement n’a pas été finalisé. Votre boutique reste masquée tant que le paiement n’est pas confirmé.":"Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
   params.delete("payment");params.delete("paymentId");params.delete("serviceId");history.replaceState({},document.title,location.pathname+(params.toString()?"?"+params.toString():""));return;
  }
  if(!paymentId)return;
@@ -8228,6 +8229,8 @@ async function verifierRetourPaiementJeko(user){
     }else if(serviceId==="annuaire_renewal"){
      if(zone)zone.textContent="Paiement confirmé par Jèko. Votre fiche annuaire est de nouveau visible.";
      await chargerEspaceAnnuaire();
+    }else if(serviceId==="boutique_renewal"){
+     if(zone)zone.textContent="Paiement confirmé par Jèko. Actualisez votre espace boutique pour retrouver la visibilité et gérer vos articles.";
     }else{
      if(zone)zone.textContent="Paiement confirmé par Jèko. Activation de votre abonnement…";
      await actualiserEtatAbonnementAutomobiliste();
