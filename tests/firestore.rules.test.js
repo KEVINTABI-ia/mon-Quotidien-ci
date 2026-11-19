@@ -1018,7 +1018,7 @@ describe("Mon Transport CI — règles Firestore", function () {
 
     it("accepte une demande boutique payante en attente et conserve les inscriptions gratuites d’annuaire", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
+      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
       await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","boutique-paiement-manuel"),{
         uid:CLIENT_UID,type:"commerce",titre:"Boutique test",categorie:"Boutique",
         commune:"Yopougon",telephone:"0700000000",description:"Boutique de test",
