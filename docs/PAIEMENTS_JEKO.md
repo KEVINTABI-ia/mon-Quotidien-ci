@@ -1,88 +1,56 @@
-# Intégration Jèko Checkout — Mon Quotidien CI
+# Paiements Jèko — Mon Quotidien CI
 
-## Périmètre de cette première livraison
+## Architecture
 
-- Souscription annuelle automobiliste uniquement.
-- Le tarif est lu côté serveur dans `configuration_abonnements/globale.services.automobiliste`.
-- Le navigateur transmet uniquement le moyen de paiement choisi.
-- Le paiement manuel Wave / Orange Money reste disponible.
-- L'abonnement historique `abonnements_automobiliste/{uid}` n'est activé qu'après webhook authentifié.
+Le checkout Jèko est servi par le Cloudflare Worker `mon-quotidien-jeko`, afin de conserver le projet Firebase sur le forfait Spark.
 
-Les autres abonnements ne sont pas encore migrés vers Jèko. Ils nécessitent un catalogue de plans validé côté serveur et une migration des droits correspondants.
+- Frontend : Firebase Authentication pour la session, puis appel HTTPS au Worker.
+- Backend : Cloudflare Workers.
+- Données : Cloud Firestore REST API, authentifiée avec le compte de service Google.
+- Confirmation : webhook Jèko signé HMAC-SHA256; aucune activation sur la seule redirection navigateur.
+- Périmètre initial : abonnement annuel automobiliste.
 
-## Architecture et sécurité
+## Routes du Worker
 
-1. Firebase Authentication valide le jeton utilisateur.
-2. Cloud Functions lit le prix, la durée et une éventuelle promotion depuis Firestore.
-3. Le backend convertit les FCFA en centimes Jèko : **1 FCFA = 100 centimes**. Exemple : 3 000 FCFA = 300 000 centimes.
-4. Le backend crée une demande `POST /partner_api/payment_requests` avec le magasin, une référence unique et le moyen de paiement.
-5. Le navigateur est redirigé vers `redirectUrl`.
-6. Le webhook vérifie `Jeko-Signature` par HMAC-SHA256 sur le corps brut, puis contrôle `Jeko-Event`, le magasin, le type de transaction, le statut, le montant, la devise, la référence et l'identifiant de demande.
-7. Une transaction Firestore idempotente enregistre le paiement et active l'abonnement.
+- `POST /api/jeko/checkout` — exige un Firebase ID token Bearer; reçoit uniquement `paymentMethod`.
+- `GET /api/jeko/status?paymentId=...` — exige le même jeton et vérifie la propriété du paiement.
+- `POST /webhook` — public pour Jèko; vérifie la signature sur le corps HTTP brut avant de lire le JSON.
+- `GET /health` — contrôle technique sans données sensibles.
 
-La redirection de succès n'active jamais un abonnement. Le webhook signé est la source de confirmation.
+URL Worker : `https://mon-quotidien-jeko.tabikevin57.workers.dev`
 
-## Secrets Firebase à configurer
+URL webhook à déclarer dans le tableau de bord Jèko :
+`https://mon-quotidien-jeko.tabikevin57.workers.dev/webhook`
 
-Ne jamais commiter ni placer ces valeurs dans le navigateur :
+## Secrets Cloudflare requis
 
+Dans Workers & Pages → `mon-quotidien-jeko` → Settings → Variables and Secrets → Production, enregistrer comme **Secrets** :
+
+- `GOOGLE_SERVICE_ACCOUNT_JSON` — JSON du compte de service Google Cloud.
 - `JEKO_API_KEY`
 - `JEKO_API_KEY_ID`
 - `JEKO_STORE_ID`
 - `JEKO_WEBHOOK_SECRET`
 
-Depuis un terminal authentifié au projet Firebase de production, exécuter :
+Ne jamais placer ces valeurs dans le dépôt, le frontend ou les journaux. Le compte de service doit avoir uniquement le rôle IAM nécessaire à Firestore (`Cloud Datastore User`) sur le projet `mon-transport-ci`.
 
-```bash
-firebase functions:secrets:set JEKO_API_KEY
-firebase functions:secrets:set JEKO_API_KEY_ID
-firebase functions:secrets:set JEKO_STORE_ID
-firebase functions:secrets:set JEKO_WEBHOOK_SECRET
-```
+## Flux de paiement
 
-Le `storeId` fourni pour Mon Quotidien CI doit être vérifié avec les identifiants API utilisés avant déploiement.
+1. Le Worker valide le Firebase ID token auprès de Firebase Identity Toolkit.
+2. Il lit le tarif annuel automobiliste dans `configuration_abonnements/globale.services.automobiliste`.
+3. Il crée un document de paiement avec une référence aléatoire et appelle Jèko.
+4. Le navigateur est redirigé vers l’URL HTTPS retournée par Jèko.
+5. Le webhook vérifie la signature, l’événement, la référence, l’identifiant de demande, le magasin (lorsqu’il est inclus), le type, le statut, la devise et le montant.
+6. Le Worker confirme le paiement, enregistre le reçu idempotent et active l’abonnement dans un commit Firestore atomique.
 
-## Webhook Jèko
+La redirection de succès ne déclenche jamais l’activation. Les notifications répétées ne doivent pas prolonger deux fois l’abonnement.
 
-Après déploiement, enregistrer l'URL HTTPS de la fonction `jekoWebhook` dans le Dashboard Business Jèko, pour le magasin concerné, avec l'événement `TRANSACTION_COMPLETED`.
+## Vérifications avant ouverture aux clients
 
-Le secret de signature n'est affiché qu'une seule fois à la création. Le sauvegarder immédiatement dans Firebase Secret Manager.
+- Vérifier la réponse réelle de `POST /partner_api/payment_requests` et le format de `TRANSACTION_COMPLETED`.
+- Vérifier que l’événement du webhook Jèko correspond à la version de payload attendue.
+- Tester un paiement réel de faible montant, puis son échec, un doublon webhook et un montant incorrect.
+- Vérifier le statut Firestore et la date d’expiration après confirmation.
+- Surveiller les erreurs Worker et les livraisons webhook.
 
-## Déploiement
-
-Vérifier d'abord le projet ciblé :
-
-```bash
-firebase use
-```
-
-Le projet historique indiqué par le code de l'application est `mon-transport-ci`. Confirmer qu'il s'agit bien du projet de production avant tout déploiement.
-
-Après configuration des secrets et validation des tests :
-
-```bash
-cd functions
-npm install
-npm test
-cd ..
-firebase deploy --only functions:createJekoCheckout,functions:jekoWebhook,functions:getJekoPaymentStatus
-```
-
-Déployer ensuite les règles Firestore si elles ne sont pas déjà publiées :
-
-```bash
-firebase deploy --only firestore:rules
-```
-
-## Limites avant activation publique
-
-- Jèko ne propose pas de sandbox séparée : utiliser un magasin dédié aux essais, avec des paiements réels de faible montant et des remboursements gérés selon les conditions Jèko.
-- Aucun secret n'est fourni dans le dépôt.
-- Aucun webhook n'est enregistré dans le Dashboard par cette livraison.
-- Aucun paiement réel ni déploiement n'a été effectué par les tests GitHub Actions.
-- Tester les paiements réussis, les erreurs, les webhooks rejoués, les montants incohérents, le mauvais magasin et les utilisateurs non authentifiés.
-- Confirmer que les notifications webhook sont bien actives et surveiller leurs livraisons.
-
-## Tests
-
-`npm test` vérifie la signature HMAC sur le corps brut, le rejet d'un corps modifié, la conversion FCFA/centimes et le renouvellement calendaire.
+Jèko ne proposant pas de sandbox selon la documentation d’intégration consultée, ne lancer aucun essai avec le magasin de production sans procédure de test et de remboursement confirmée auprès de Jèko.
