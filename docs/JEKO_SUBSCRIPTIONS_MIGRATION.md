@@ -87,7 +87,7 @@ Les règles Firestore conservent la création de l'essai gratuit initial, mais i
 
 ## Portée actuelle de la migration exécutable
 
-Trois verticales sont câblées en source (catalogue, checkout, webhook, interface et règles) : **renouvellement petites annonces**, **renouvellement des boutiques en mode partenaire déjà approuvées** et **renouvellement des partenaires colis**. Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les créations/abonnements initiaux des boutiques classiques et partenaires, ainsi que les autres catégories, restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
+Quatre verticales sont câblées en source (catalogue, checkout, webhook, interface et règles) : **renouvellement petites annonces**, **renouvellement des boutiques en mode partenaire déjà approuvées**, **renouvellement des partenaires colis** et **inscription/renouvellement des compagnies de voyage**. Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les abonnements initiaux des boutiques classiques et partenaires, ainsi que l'annuaire, restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
 
 ## Deuxième verticale : boutiques partenaires
 
@@ -104,3 +104,11 @@ Le Worker accepte `serviceId: "partenaire_colis"` et une formule parmi `partenai
 Le webhook Jèko signé active la formule, calcule l'échéance, conserve l'historique des abonnements et écrit le reçu dans un commit atomique. L'espace partenaire propose désormais le checkout Jèko ; les anciennes demandes Wave/Orange et la confirmation manuelle sont désactivées. L'administration conserve l'action de démarrage de l'essai gratuit de 21 jours, mais ne peut plus activer manuellement une période payante depuis le navigateur.
 
 Cette verticale couvre le renouvellement payant des partenaires colis approuvés (y compris la première formule après l'essai, si le dossier est déjà approuvé). Elle ne remplace pas le processus d'approbation initial du dossier.
+
+## Quatrième verticale : compagnies de voyage
+
+L'inscription d'une compagnie ne demande plus de transfert Wave/Orange ni de référence manuelle. Le dossier est créé avec le statut `Dossier à vérifier`, puis l'administrateur peut seulement l'approuver en le passant à `À payer` ; cette approbation ne crée aucun abonnement actif. Le titulaire règle ensuite depuis son espace compagnie avec le checkout Jèko, selon la formule et la périodicité enregistrées. Le renouvellement après expiration utilise le même parcours.
+
+Le Worker vérifie le propriétaire du dossier, son statut (paiement initial autorisé uniquement après approbation ; renouvellement uniquement après expiration), le plan configuré dans Firestore, le montant et la durée côté serveur. Il pose un verrou anti-doublon, puis le webhook Jèko signé vérifie le paiement et active l'abonnement avec les dates et le montant confirmés dans un commit atomique. Le verrou du dossier doit correspondre au paiement traité. Les règles Firestore n'autorisent plus la création d'un dossier avec moyen/référence de paiement manuels ; l'administrateur ne peut plus activer un abonnement payé en modifiant directement les dates ou le statut actif depuis le navigateur.
+
+Les demandes historiques en statut `En attente` ne sont pas automatiquement converties ni validées. Aucun paiement réel n'a été effectué. Le Worker, l'interface et les règles ne sont pas encore déployés.
