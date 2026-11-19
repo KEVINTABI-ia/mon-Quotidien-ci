@@ -4093,7 +4093,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
  ${type==="annonce"?'<div id="zoneAbonnementPetitesAnnonces" style="margin:12px 0;"><button type="button" onclick="ouvrirGestionAbonnementPetitesAnnonces()">Consulter mon abonnement / renouveler</button></div>':""}
- ${type==="commerce"&&!modePartenaire?genererFormulairePaiementCommun("ns",{duree:true,coordId:"coordonneesPaiementBoutique",titre:"Choisissez votre abonnement boutique"}):''}
+ ${type==="commerce"&&!modePartenaire?genererFormulairePlanBoutiqueJeko():''}
  ${type==="commerce"&&modePartenaire?'<p class="notice">Inscription partenaire gratuite. Après approbation par l’administration, votre boutique bénéficiera de 30 jours de visibilité gratuite. Un abonnement sera nécessaire pour continuer après cette période.</p>':''}
  <button id="nsEnvoyerValidation" class="primary" type="button">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
@@ -4118,10 +4118,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
    }
   });
  }
- if(type==="commerce"&&!modePartenaire){
-  initialiserFormulaireAbonnementBoutique();
-  window.chargerCoordonneesPaiementMQCI().then(p=>{const el=document.getElementById("coordonneesPaiementBoutique");if(el)el.textContent="Wave : "+p.numero+" · Orange Money : "+p.numero+" · Bénéficiaire : "+p.beneficiaire;});
- }
+ if(type==="commerce"&&!modePartenaire)initialiserFormulaireAbonnementBoutique();
  chargerNouveauxServicesPublics(type);
 }
 function previsualiserPhotoNouveauService(event){
@@ -4162,16 +4159,15 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
  if(modePartenaire&&comptePartenaire.email&&email&&comptePartenaire.email.toLowerCase()!==email.toLowerCase()){statut.textContent="L’adresse e-mail doit correspondre au compte utilisateur connecté.";return;}
  const estBoutique=nouveauServiceActif==="commerce";
  const boutiquePartenaire=estBoutique&&modePartenaire;
- if(estBoutique&&!boutiquePartenaire&&!(await window.paiementsMQCIDisponibles(true))){if(statut)statut.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
- const paiementMoyen=estBoutique&&!boutiquePartenaire?(document.getElementById("nsPaiementMoyen")?.value||""):"";
- const paiementReference=estBoutique&&!boutiquePartenaire?(document.getElementById("nsPaiementReference")?.value.trim()||""):"";
+ 
+
  const dureeSelect=estBoutique&&!boutiquePartenaire?document.getElementById("nsDureeAbonnement"):null;
  const dureeOption=dureeSelect?.selectedOptions?.[0]||null;
  const montantAbonnement=estBoutique&&!boutiquePartenaire?Number(dureeOption?.dataset?.montant||0):0;
  const dureeAbonnementJours=estBoutique&&!boutiquePartenaire?Number(dureeSelect?.value||0):0;
  const adresseBoutique=estBoutique?(document.getElementById("nsAdresseBoutique")?.value.trim()||""):"";
  if(estBoutique&&!adresseBoutique){statut.textContent="Renseignez l’adresse précise de récupération de votre établissement.";return;}
- if(estBoutique&&!boutiquePartenaire&&(!paiementMoyen||!paiementReference)){statut.textContent="Effectuez le paiement, choisissez Wave ou Orange Money et saisissez la référence de la transaction.";return;}
+
  if(estBoutique&&!boutiquePartenaire&&(!dureeSelect||!dureeOption||!Number.isInteger(montantAbonnement)||montantAbonnement<=0||!Number.isInteger(dureeAbonnementJours)||dureeAbonnementJours<=0)){statut.textContent="Choisissez une formule d’abonnement disponible avant de continuer.";return;}
  if(!titre||!commune||!telephone||!description||!(modePartenaire?(comptePartenaire?.email||email):email)||(!modePartenaire&&password.length<6)){statut.textContent="Remplissez tous les champs obligatoires."+(modePartenaire?"":" Le mot de passe doit contenir au moins 6 caractères.");return;}
  statut.textContent="Envoi du dossier...";
@@ -4194,7 +4190,7 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
    ...(modePartenaire?{modePartenaire:true}:{}),
    ...(photoUrl?{photoUrl}:{}),
    ...(estBoutique?{adresseBoutique}:{}),
-   ...(estBoutique&&!boutiquePartenaire?{paiementMoyen,paiementReference,montantAbonnement,dureeAbonnementJours,paiementStatut:"a_verifier"}:{}),
+   ...(estBoutique&&!boutiquePartenaire?{planAbonnementId:dureeOption.dataset.config,montantAbonnement,dureeAbonnementJours,abonnementStatut:"a_payer",paiementStatut:"a_payer"}:{}),
    statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()
   };
   if(nouveauServiceActif==="annonce"){
@@ -4986,8 +4982,16 @@ async function initialiserFormulairePaiementCommun(prefix,ids,coordId){
   select.innerHTML=options.length?'<option value="">Choisir une formule</option>'+options.join(""):'<option value="">Formules indisponibles</option>';select.disabled=!options.length;
  }catch(e){console.error("Formulaire de paiement commun",e);const select=document.getElementById(prefix+"DureeAbonnement");if(select)select.disabled=true;const zone=document.getElementById(coordId||("coordonneesPaiement_"+prefix));if(zone)zone.textContent="Coordonnées ou formules de paiement indisponibles.";}
 }
+function genererFormulairePlanBoutiqueJeko(){
+ return '<div style="padding:12px;background:#F0F7F1;border:1px solid #DCEBDD;border-radius:10px;margin:12px 0;"><strong>Formule d’abonnement</strong><label for="nsDureeAbonnement">Choisissez une formule</label><select id="nsDureeAbonnement" required><option value="">Chargement des formules...</option></select><p class="notice">Le dossier sera d’abord vérifié. Après approbation, vous réglerez cette formule exclusivement avec Jèko depuis votre espace boutique.</p></div>';
+}
 async function initialiserFormulaireAbonnementBoutique(){
- await initialiserFormulairePaiementCommun("ns",["boutiques_1mois","boutiques_2mois","boutiques_3mois"],"coordonneesPaiementBoutique");
+ const select=document.getElementById("nsDureeAbonnement");if(!select)return;
+ try{
+  const ids=["boutiques_1mois","boutiques_2mois","boutiques_3mois"],plans=await Promise.all(ids.map(async id=>({id,c:await obtenirConfigurationAbonnement(id)})));
+  const options=plans.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&dureeAbonnementEnJours(x.c)>0).map(x=>{const days=dureeAbonnementEnJours(x.c),price=tarifAbonnementEffectif(x.c);return '<option value="'+days+'" data-montant="'+price+'" data-config="'+x.id+'">'+Number(x.c.duree)+' '+(x.c.unite==="mois"?"mois":"jours")+' — '+price.toLocaleString("fr-FR")+' FCFA</option>';});
+  select.innerHTML=options.length?'<option value="">Choisir une formule</option>'+options.join(""):'<option value="">Formules indisponibles</option>';select.disabled=!options.length;
+ }catch(e){console.error("Catalogue boutique Jèko",e);select.innerHTML='<option value="">Catalogue indisponible</option>';select.disabled=true;}
 }
 
 function valeurConfigAbonnement(id,champ){
