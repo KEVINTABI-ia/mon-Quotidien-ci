@@ -135,14 +135,12 @@ async function jeko(env,path,init={}) {
     },signal:AbortSignal.timeout(15000)});
   } catch(e) {
     const cause=e?.cause||null;
-    const safeMessage=String(cause?.message||e?.message||"").replace(/https?:\\/\\/[^\\s)]+/g,"[url]").replace(/(authorization|x-api-key)\\s*[:=]\\s*\\S+/gi,"$1=[redacted]").slice(0,160);
     const err=new Error(e?.name==="TimeoutError"?"jeko_network_timeout":"jeko_network_error");
     err.networkFailure=true;
     err.networkCause={
       name:typeof e?.name==="string"?e.name.slice(0,40):null,
       code:typeof (cause?.code||e?.code)==="string"?(cause?.code||e?.code).slice(0,60):null,
       causeName:typeof cause?.name==="string"?cause.name.slice(0,40):null,
-      message:safeMessage||null
     };
     throw err;
   }
