@@ -189,9 +189,10 @@ async function createCheckout(request,env) {
       if(previousStatus==="pending"||previousStatus==="initialization_unknown"||previousStatus==="review_required")return json({error:"existing_payment_requires_review"},409);
     }
     const cfgDoc=await getDoc(env,"configuration_abonnements/globale"),cfg=docData(cfgDoc)?.services?.ramassage||{};
-    const duration=Number(cfg.duree??1),unit=cfg.unite==="mois"?"mois":"jours";
-    const durationDays=unit==="mois"?Math.round(duration*30):duration;
-    if(cfg.actif===false||!Number.isSafeInteger(durationDays)||durationDays<1||durationDays>365)return json({error:"plan_configuration_invalid"},503);
+    // Règle tarifaire validée : 2 000 FCFA pour un mois civil conventionnel de 30 jours.
+    // Ne pas reprendre une ancienne durée/prix administrable qui pourrait contredire ce forfait.
+    const durationDays=30;
+    if(cfg.actif===false)return json({error:"plan_configuration_invalid"},503);
     amountXof=2000;
     initial={uid:user.sub,serviceId,planId:"ramassage",targetPath:profilePath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),ramassageLockUpdateTime:profileDoc.updateTime};
   } else if(serviceId==="logement_renewal") {
