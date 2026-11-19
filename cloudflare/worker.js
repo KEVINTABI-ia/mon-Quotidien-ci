@@ -165,7 +165,7 @@ async function createCheckout(request,env) {
   const methods=["orange","wave","mtn","moov","djamo"];
   if(!methods.includes(body.paymentMethod)) return json({error:"invalid_payment_method"},400);
   const serviceId=body.serviceId||"automobiliste";
-  if(!["automobiliste","objet_retrouve","petites_annonces","boutique_renewal","partenaire_colis","compagnie_voyage","annuaire_renewal","logement_renewal"].includes(serviceId)) return json({error:"unsupported_service"},400);
+  if(!["automobiliste","objet_retrouve","petites_annonces","boutique_renewal","partenaire_colis","compagnie_voyage","annuaire_renewal","logement_renewal","ramassage"].includes(serviceId)) return json({error:"unsupported_service"},400);
   const now=new Date();
   let amountXof, initial;
   if(serviceId==="objet_retrouve"){
@@ -177,6 +177,23 @@ async function createCheckout(request,env) {
     if(!objectDoc||docData(objectDoc)?.statut!=="publie") return json({error:"object_unavailable"},409);
     amountXof=1000;
     initial={uid:user.sub,serviceId,objectId,nomComplet:nomComplet.trim(),telephone:telephone.trim(),residence:residence.trim(),provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
+  } else if(serviceId==="ramassage") {
+    const profilePath="comptes_ramassage/"+user.sub,profileDoc=await getDoc(env,profilePath),profile=docData(profileDoc);
+    if(!profileDoc||profile?.uid!==user.sub||profile?.role!=="compagnie"||profile?.statut!=="approuve")return json({error:"ramassage_profile_not_approved"},403);
+    const expiry=profile.dateExpirationAbonnement instanceof Date?profile.dateExpirationAbonnement:(profile.dateExpirationAbonnement?new Date(profile.dateExpirationAbonnement):null);
+    if(profile.abonnement==="actif"&&(!expiry||!Number.isFinite(expiry.getTime())))return json({error:"ramassage_subscription_state_invalid"},409);
+    if(profile.abonnement==="actif"&&expiry.getTime()>now.getTime())return json({error:"ramassage_subscription_still_active"},409);
+    if(profile.renouvellementJekoPaymentId){
+      const previous=await getDoc(env,"payments/"+profile.renouvellementJekoPaymentId);
+      const previousStatus=docData(previous)?.status;
+      if(previousStatus==="pending"||previousStatus==="initialization_unknown"||previousStatus==="review_required")return json({error:"existing_payment_requires_review"},409);
+    }
+    const cfgDoc=await getDoc(env,"configuration_abonnements/globale"),cfg=docData(cfgDoc)?.services?.ramassage||{};
+    const duration=Number(cfg.duree??1),unit=cfg.unite==="mois"?"mois":"jours";
+    const durationDays=unit==="mois"?Math.round(duration*30):duration;
+    if(cfg.actif===false||!Number.isSafeInteger(durationDays)||durationDays<1||durationDays>365)return json({error:"plan_configuration_invalid"},503);
+    amountXof=2000;
+    initial={uid:user.sub,serviceId,planId:"ramassage",targetPath:profilePath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),ramassageLockUpdateTime:profileDoc.updateTime};
   } else if(serviceId==="logement_renewal") {
     const plans={mensuel:{amount:3000,days:30},trimestriel:{amount:8000,days:90},semestriel:{amount:15000,days:180}},plan=plans[body.planId];
     if(!plan)return json({error:"invalid_logement_plan"},400);
@@ -304,14 +321,15 @@ async function createCheckout(request,env) {
   const reference="MQCI-"+id;
   initial.clientReference=reference;
   const path="payments/"+id;
-  const boutiqueLockUpdateTime=initial.boutiqueLockUpdateTime,partnerLockUpdateTime=initial.partnerLockUpdateTime,companyLockUpdateTime=initial.companyLockUpdateTime,annuaireLockUpdateTime=initial.annuaireLockUpdateTime,logementLockUpdateTime=initial.logementLockUpdateTime;
-  delete initial.boutiqueLockUpdateTime;delete initial.partnerLockUpdateTime;delete initial.companyLockUpdateTime;delete initial.annuaireLockUpdateTime;delete initial.logementLockUpdateTime;
+  const boutiqueLockUpdateTime=initial.boutiqueLockUpdateTime,partnerLockUpdateTime=initial.partnerLockUpdateTime,companyLockUpdateTime=initial.companyLockUpdateTime,annuaireLockUpdateTime=initial.annuaireLockUpdateTime,logementLockUpdateTime=initial.logementLockUpdateTime,ramassageLockUpdateTime=initial.ramassageLockUpdateTime;
+  delete initial.boutiqueLockUpdateTime;delete initial.partnerLockUpdateTime;delete initial.companyLockUpdateTime;delete initial.annuaireLockUpdateTime;delete initial.logementLockUpdateTime;delete initial.ramassageLockUpdateTime;
   const initialWrites=[createWrite(path,initial)];
   if(serviceId==="boutique_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},boutiqueLockUpdateTime));
   if(serviceId==="partenaire_colis")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},partnerLockUpdateTime));
   if(serviceId==="compagnie_voyage")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},companyLockUpdateTime));
   if(serviceId==="annuaire_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},annuaireLockUpdateTime));
   if(serviceId==="logement_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},logementLockUpdateTime));
+  if(serviceId==="ramassage")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},ramassageLockUpdateTime));
   await commitWrites(env,initialWrites);
   try {
     const providerResult=await jeko(env,"/partner_api/payment_requests",{method:"POST",body:JSON.stringify({
@@ -421,6 +439,24 @@ async function webhook(request,env) {
       await commitWrites(env,[
         updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
         updateWrite(profilePath,{statutAbonnement:"actif",debutAbonnement:start,finAbonnement:end,renouvellementJekoStatut:"confirme",renouvellementJekoPaymentId:null,dernierPaiementJekoMontant:plan.amount,dernierPaiementJekoLe:now},profileDoc.updateTime),
+        createWrite(receiptPath,receiptData)
+      ]);
+    }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
+    return new Response("OK",{status:200});
+  }
+  if(payment.serviceId==="ramassage") {
+    const profilePath=payment.targetPath,profileDoc=await getDoc(env,profilePath),profile=docData(profileDoc);
+    if(!profileDoc||!profile||profile.uid!==payment.uid||profile.role!=="compagnie"||profile.statut!=="approuve"||profile.renouvellementJekoPaymentId!==paymentId||payment.planId!=="ramassage"||payment.amountXof!==2000||!Number.isSafeInteger(payment.durationDays)||payment.durationDays<1||payment.durationDays>365){
+      await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"ramassage_target_or_plan_invalid",updatedAt:now.toISOString()}))});
+      return new Response("OK",{status:200});
+    }
+    const oldEnd=profile.dateExpirationAbonnement instanceof Date?profile.dateExpirationAbonnement:(profile.dateExpirationAbonnement?new Date(profile.dateExpirationAbonnement):null);
+    const start=oldEnd&&Number.isFinite(oldEnd.getTime())&&oldEnd>now?oldEnd:now;
+    const end=new Date(start.getTime()+payment.durationDays*86400000);
+    try{
+      await commitWrites(env,[
+        updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
+        updateWrite(profilePath,{abonnement:"actif",montantAbonnement:2000,dureeAbonnementJours:payment.durationDays,dateExpirationAbonnement:end,renouvellementJekoStatut:"confirme",renouvellementJekoPaymentId:null},profileDoc.updateTime),
         createWrite(receiptPath,receiptData)
       ]);
     }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
@@ -660,7 +696,7 @@ async function subscriptionPlans(request,env) {
   const plans=definitions[requested].map(key=>{
     const cfg=services[key]||{};
     const duration=Number(cfg.duree??0),unit=cfg.unite==="mois"?"mois":"jours";
-    const base=Number(cfg.prix??0),promo=Number(cfg.promotionPrix??0);
+    const base=requested==="ramassage"&&key==="ramassage"?2000:Number(cfg.prix??0),promo=Number(cfg.promotionPrix??0);
     const start=cfg.promotionDebut?new Date(cfg.promotionDebut+"T00:00:00Z"):null;
     const end=cfg.promotionFin?new Date(cfg.promotionFin+"T23:59:59Z"):null;
     const promotionActive=cfg.promotionActive===true&&promo>0&&promo<=base&&start&&end&&now>=start&&now<=end;
