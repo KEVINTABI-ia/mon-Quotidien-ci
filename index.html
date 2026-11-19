@@ -10588,96 +10588,12 @@ destinations,
   }
 }
 async function validerPaiementCompagnie(id) {
-  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
-    alert("Accès administrateur requis.");
-    return;
-  }
-
-  const confirmation = confirm(
-    "Confirme-tu avoir vérifié le paiement de cette compagnie ?"
-  );
-
-  if (!confirmation) return;
-
-  try {
-    const reference = db.collection("compagnies").doc(id);
-    const document = await reference.get();
-
-    if (!document.exists) {
-      alert("Compagnie introuvable.");
-      return;
-    }
-
-    const compagnie = document.data();
-    const maintenant = new Date();
-
-const ancienneExpiration = compagnie.dateExpiration
-  ? compagnie.dateExpiration.toDate()
-  : null;
-
-const dateDebut =
-  ancienneExpiration && ancienneExpiration > maintenant
-    ? ancienneExpiration
-    : maintenant;
-
-const dateExpiration = new Date(dateDebut);
-
-    dateExpiration.setMonth(dateExpiration.getMonth()+Number(compagnie.dureeMois||(compagnie.periodicite==="Annuel"?12:1)));
-
-    await reference.update({
-      statutAbonnement: "Actif",
-      dateDebut: firebase.firestore.Timestamp.fromDate(dateDebut),
-      dateExpiration: firebase.firestore.Timestamp.fromDate(dateExpiration)
-    });
-
-    alert("Paiement validé. Abonnement activé.");
-    chargerCompagniesAdmin();
-
-  } catch (erreur) {
-    alert("Erreur lors de la validation : " + erreur.message);
-  }
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ alert("L'activation manuelle est désactivée. Le titulaire de la compagnie doit régler via Jèko ; seul le webhook confirmé active l'abonnement.");
 }
 async function demanderRenouvellementCompagnie(id) {
-  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
-    alert("Accès administrateur requis.");
-    return;
-  }
-
-  const confirmation = confirm(
-    "Confirmer la demande de renouvellement de cet abonnement ?"
-  );
-
-  if (!confirmation) return;
-
-  try {
-    const reference = db.collection("compagnies").doc(id);
-    const document = await reference.get();
-
-    if (!document.exists) {
-      alert("Compagnie introuvable.");
-      return;
-    }
-
-    const compagnie = document.data();
-
-    if (!["Actif", "Expiré"].includes(compagnie.statutAbonnement)) {
-  alert("Cette compagnie ne peut pas être renouvelée dans son état actuel.");
-  return;
-}
-
-    const cfg=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(compagnie.formule||"Essentielle",compagnie.periodicite||"Mensuel"));
-    if(!cfg.actif)return alert("Les nouvelles souscriptions et renouvellements de cette formule sont suspendus.");
-    if(cfg.unite!=="mois")return alert("La durée de cette formule doit être configurée en mois.");
-    const montant=tarifAbonnementEffectif(cfg),dureeMois=Number(cfg.duree);
-    if(montant<=0||dureeMois<=0)return alert("Tarif ou durée non configuré.");
-    await reference.update({statutAbonnement:"En attente",montant,dureeMois,dateDemandeRenouvellement:firebase.firestore.FieldValue.serverTimestamp()});
-
-    alert("Demande enregistrée. Vérifie le paiement avant validation.");
-    chargerCompagniesAdmin();
-
-  } catch (erreur) {
-    alert("Erreur : " + erreur.message);
-  }
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ alert("Le renouvellement se fait par le titulaire depuis son espace compagnie, exclusivement avec Jèko.");
 }
 async function preparerRappelWhatsApp(id) {
   if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
@@ -12602,10 +12518,38 @@ async function envoyerInscriptionCompagnie(){
   status.textContent="Dossier transmis. La validation du paiement reste nécessaire avant activation.";
  }catch(e){status.textContent="Erreur : "+e.message;}
 }
+async function ouvrirPaiementRenouvellementCompagnie(id){
+ const zone=document.getElementById("zonePaiementRenouvellementCompagnie"),user=partnerAuth.currentUser;
+ if(!zone)return;if(!user){zone.textContent="Connectez-vous à l'espace de votre compagnie.";return;}
+ zone.textContent="Chargement de la formule et du tarif...";
+ try{
+  const token=await user.getIdToken(),plansResponse=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/subscription-plans?serviceId=compagnie_voyage",{headers:{Authorization:"Bearer "+token}});
+  const data=await plansResponse.json().catch(()=>({}));if(!plansResponse.ok)throw new Error("Catalogue Jèko indisponible.");
+  const planIdMap={"Essentielle|Mensuel":"compagnie_essentielle_mensuel","Essentielle|Annuel":"compagnie_essentielle_annuel","Professionnelle|Mensuel":"compagnie_professionnelle_mensuel","Professionnelle|Annuel":"compagnie_professionnelle_annuel"};
+  const planId=planIdMap[window.compagnieRenouvellementCourante?.formule+"|"+window.compagnieRenouvellementCourante?.periodicite];
+  const plan=(data.plans||[]).find(p=>p.planId===planId&&p.available);
+  if(!plan)throw new Error("La formule actuelle est désactivée ou son tarif n'est pas configuré.");
+  zone.innerHTML='<p>Formule : '+echapperTexteCompagnie(plan.label)+' — '+Number(plan.priceXof).toLocaleString("fr-FR")+' FCFA</p><label>Moyen de paiement</label><select id="methodeJekoCompagnie"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select><button type="button" class="primary" onclick="demarrerPaiementRenouvellementCompagnie(\''+id+'\',\''+planId+'\')">Payer avec Jèko</button><p id="statutJekoCompagnie" class="notice" aria-live="polite"></p>';
+ }catch(e){zone.textContent=e.message||"Impossible de charger la formule.";}
+}
+async function demarrerPaiementRenouvellementCompagnie(id,planId){
+ const user=partnerAuth.currentUser,method=document.getElementById("methodeJekoCompagnie")?.value,zone=document.getElementById("statutJekoCompagnie");
+ if(!user||!["wave","orange","mtn","moov","djamo"].includes(method)){if(zone)zone.textContent="Connexion ou moyen de paiement invalide.";return;}
+ if(zone)zone.textContent="Préparation du paiement Jèko...";
+ try{
+  const token=await user.getIdToken(),r=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceId:"compagnie_voyage",compagnieId:id,paymentMethod:method})});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok||!data.checkoutUrl){const messages={company_not_found_or_not_authorized:"Compagnie introuvable ou compte non autorisé.",company_not_renewable:"Cette compagnie ne peut pas être renouvelée dans son état actuel.",company_subscription_not_expired:"L'abonnement est encore actif.",existing_payment_requires_review:"Un paiement précédent doit être vérifié. Ne recommencez pas.",plan_configuration_invalid:"La formule est momentanément indisponible."};throw new Error(messages[data.error]||data.diagnostic||"Initialisation Jèko impossible.");}
+  if(zone)zone.textContent="Redirection vers Jèko...";
+  window.location.assign(data.checkoutUrl);
+ }catch(e){if(zone)zone.textContent=e.message||"Erreur de paiement.";}
+}
 async function afficherEspaceCompagnie(id,c){
  const zone=document.getElementById("connexionPartenaire")||document.getElementById("zoneMenuColisPartenaire");
  let el=document.getElementById("zoneEspaceCompagnie");if(!el){el=document.createElement("div");el.id="zoneEspaceCompagnie";zone.appendChild(el);}
+ window.compagnieRenouvellementCourante={formule:c.formule,periodicite:c.periodicite};
  el.innerHTML='<hr><h3>🏢 Espace compagnie – '+echapperTexteCompagnie(c.nom)+'</h3><p>Abonnement : '+echapperTexteCompagnie(c.statutAbonnement)+'</p>'+
+ (c.statutAbonnement==="Expiré"?'<div class="card" style="padding:12px;margin:10px 0;"><h4>Renouveler l’abonnement</h4><p>Le règlement s’effectue exclusivement via Jèko.</p><button type="button" class="primary" onclick="ouvrirPaiementRenouvellementCompagnie(\''+id+'\')">Renouveler avec Jèko</button><div id="zonePaiementRenouvellementCompagnie"></div></div>':'')+
  '<button type="button" onclick="deconnecterPartenaire()">Se déconnecter de mon espace compagnie</button><h4>Gare principale</h4><img src="'+echapperTexteCompagnie(c.photoGarePrincipale||"")+'" style="width:100%;max-height:170px;object-fit:cover;border-radius:12px">'+
  '<label>Localisation précise</label><input id="espaceCompagnieLocalisation" value="'+echapperTexteCompagnie(c.localisation||"")+'">'+
  '<label>Contact public gare</label><input id="espaceCompagnieTelGare" value="'+echapperTexteCompagnie(c.telephoneGarePrincipale||"")+'">'+
