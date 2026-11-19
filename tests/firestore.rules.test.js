@@ -193,6 +193,36 @@ describe("Mon Transport CI — règles Firestore", function () {
     }));
   });
 
+  it("autorise une compagnie de ramassage approuvée à publier pendant ses 30 jours d’essai", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`comptes_ramassage/${PARTNER_UID}`).set(ramassageCompanyFixture({
+        abonnement:"essai",dateExpirationAbonnement:null,dateFinEssai:futureDate(24)
+      }));
+    });
+    const db=testEnv.authenticatedContext(PARTNER_UID,{email:"partner@example.test"}).firestore();
+    const {collection,addDoc,serverTimestamp}=require("firebase/firestore");
+    await assertSucceeds(addDoc(collection(db,"offres_ramassage"),{
+      compagnieId:PARTNER_UID,compagnieNom:"Compagnie test",telephone:"0100000000",communeDepart:"Yopougon",
+      points:"Bagnon",destination:"Plateau",jours:"Lundi-vendredi",heure:"06:00",
+      placesDisponibles:12,tarif:25000,statut:"publiee",createdAt:serverTimestamp()
+    }));
+  });
+
+  it("refuse à une compagnie de ramassage dont l’essai gratuit est expiré de publier une offre", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`comptes_ramassage/${PARTNER_UID}`).set(ramassageCompanyFixture({
+        abonnement:"essai",dateExpirationAbonnement:null,dateFinEssai:futureDate(-24)
+      }));
+    });
+    const db=testEnv.authenticatedContext(PARTNER_UID,{email:"partner@example.test"}).firestore();
+    const {collection,addDoc,serverTimestamp}=require("firebase/firestore");
+    await assertFails(addDoc(collection(db,"offres_ramassage"),{
+      compagnieId:PARTNER_UID,compagnieNom:"Compagnie test",communeDepart:"Yopougon",
+      points:"Bagnon",destination:"Plateau",jours:"Lundi-vendredi",heure:"06:00",
+      placesDisponibles:12,tarif:25000,statut:"publiee",createdAt:serverTimestamp()
+    }));
+  });
+
   it("refuse à une compagnie de ramassage dont l'abonnement est expiré de publier une offre", async () => {
     await testEnv.withSecurityRulesDisabled(async context => {
       await context.firestore().doc(`comptes_ramassage/${PARTNER_UID}`).set(ramassageCompanyFixture({
