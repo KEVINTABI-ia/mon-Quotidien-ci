@@ -374,7 +374,7 @@ function safeHexEqual(a,b) {
   const x=Uint8Array.from(a.match(/../g),v=>parseInt(v,16)),y=Uint8Array.from(b.match(/../g),v=>parseInt(v,16));
   let diff=0;for(let i=0;i<x.length;i++)diff|=x[i]^y[i];return diff===0;
 }
-async function verifyHmac(raw,signature,secret) {
+export async function verifyHmac(raw,signature,secret) {
   const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
   return safeHexEqual(signature,Array.from(new Uint8Array(await crypto.subtle.sign("HMAC",key,raw))).map(v=>v.toString(16).padStart(2,"0")).join(""));
 }
@@ -395,7 +395,7 @@ export function validateJekoPaymentPlan(payment) {
   if(payment.serviceId==="objet_retrouve") return payment.amountXof===1000;
   if(payment.serviceId==="logement_renewal"||payment.serviceId==="ramassage"||payment.serviceId==="annuaire_renewal"){
     const plan=fixed[payment.serviceId]?.[payment.planId];
-    return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1];
+    return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1]&&(payment.serviceId!=="annuaire_renewal"||payment.planId==null||payment.planId==="annuaire");
   }
   if(payment.serviceId==="automobiliste"){
     return payment.planId==="annuel"&&payment.durationMonths===12&&(
