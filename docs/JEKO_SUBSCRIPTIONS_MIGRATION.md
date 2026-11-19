@@ -42,7 +42,8 @@ Les périodes d'essai gratuites restent inchangées. Les paiements hors abonneme
 ## Ordre d'implémentation
 
 - [x] Étape 1 — Contrat de données et première brique catalogue : endpoint authentifié `GET /api/jeko/subscription-plans?serviceId=...`. Il lit `configuration_abonnements/globale`, expose uniquement les formules actives, calcule la promotion côté serveur et masque les tarifs invalides ou nuls. Il n'initie aucun paiement.
-- [ ] Étape 2 — Checkout Worker générique et vérification serveur des formules.
+- [x] Première verticale backend — checkout Jèko et activation webhook pour le renouvellement des petites annonces. Le Worker vérifie le propriétaire, l'expiration, l'absence de demande en attente, puis lit prix/durée dans Firestore. Le webhook vérifie les données Jèko et met à jour le document d'abonnement avec une écriture atomique idempotente.
+- [ ] Étape 2 — Étendre le checkout générique aux autres formules et rubriques.
 - [ ] Étape 3 — Activation webhook pour chaque cible, transactions atomiques et idempotence.
 - [ ] Étape 4 — Migration des interfaces : suppression des coordonnées Wave/Orange et références manuelles ; bouton « Payer avec Jèko ».
 - [ ] Étape 5 — Règles Firestore : bloquer les anciens chemins d'activation, conserver les créations de dossiers et essais gratuits.
@@ -62,3 +63,11 @@ Les périodes d'essai gratuites restent inchangées. Les paiements hors abonneme
 `GET /api/jeko/subscription-plans?serviceId=...` accepte les identifiants `automobiliste`, `petites_annonces`, `boutiques`, `partenaires_colis`, `compagnie_voyage` et `ramassage`. Il exige un jeton Firebase valide. Les montants et durées viennent exclusivement de `configuration_abonnements/globale`; le navigateur ne peut pas les imposer. Les plans désactivés ou dont le tarif/durée ne sont pas valides ne sont pas proposés à l'achat. Un prix nul, notamment la configuration actuelle de ramassage, n'est pas transformé en paiement.
 
 Limite actuelle : cet endpoint ne crée pas encore de paiement. Les rubriques listées ne doivent pas encore être considérées comme migrées vers Jèko tant que le checkout, les cibles métier du webhook, les interfaces et les règles Firestore ne sont pas terminés.
+
+## Première verticale backend : renouvellement petites annonces
+
+Le Worker accepte désormais `serviceId: "petites_annonces"` sur `POST /api/jeko/checkout`. Le client ne fournit ni prix ni durée. Le Worker exige un compte Firebase authentifié, un abonnement existant dont l'échéance est passée, l'absence d'un ancien paiement en attente/à vérifier, puis récupère le prix et la durée depuis `configuration_abonnements/globale.services.petites_annonces`. Le plan doit être actif, en jours, avec une durée de 1 à 365 jours et un montant positif.
+
+Après confirmation du webhook signé et validation de la référence, de la demande, du magasin, de la devise et du montant, le Worker prolonge l'abonnement et marque le paiement confirmé dans une seule écriture Firestore atomique, protégée contre les webhooks répétés.
+
+**Important :** cette étape backend n'a pas encore remplacé les formulaires Wave/Orange dans `index.html` ni les règles Firestore. Ne pas proposer le renouvellement petites annonces en production via ce nouveau flux tant que ces deux éléments ne sont pas migrés et testés. Les autres rubriques ne sont pas encore migrées.
