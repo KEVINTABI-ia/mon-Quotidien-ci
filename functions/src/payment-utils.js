@@ -35,4 +35,12 @@ function addMonthsClamped(date, months) {
   return result;
 }
 
-module.exports = { safeEqualHex, verifyWaveSignature, addMonthsClamped };
+function verifyJekoSignature(header, rawBody, secret) {
+  if (typeof header !== "string" || !Buffer.isBuffer(rawBody) ||
+      typeof secret !== "string" || !secret ||
+      !/^[a-f0-9]{64}$/i.test(header)) return false;
+  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  return safeEqualHex(header, expected);
+}
+
+module.exports = { safeEqualHex, verifyWaveSignature, verifyJekoSignature, addMonthsClamped };
