@@ -4399,26 +4399,31 @@ async function deconnecterCompteBoutique(){
 }
 function afficherFormulaireRenouvellementBoutique(id){
  const zone=document.getElementById("formRenouvellementBoutique_"+id);if(!zone)return;
- const prefix="renouvBoutique_"+id;
- zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><h4>Renouveler mon abonnement</h4><p>Choisissez une formule et effectuez le paiement avec les coordonnées habituelles.</p>'+genererFormulairePaiementCommun(prefix,{duree:true,coordId:"coordonneesRenouvellementBoutique_"+id})+'<button type="button" class="primary" data-boutique-id="'+echapperTextePublicite(id)+'" onclick="envoyerDemandeRenouvellementBoutique(this.dataset.boutiqueId)">Envoyer à l’administrateur</button><p id="statutRenouvBoutique_'+id+'" class="notice"></p></div>';
- initialiserFormulairePaiementCommun(prefix,["boutiques_1mois","boutiques_2mois","boutiques_3mois"],"coordonneesRenouvellementBoutique_"+id);
+ zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><h4>Renouveler mon abonnement</h4><p>Choisissez une formule et réglez directement avec Jèko.</p><div id="catalogueJekoBoutique_'+echapperTextePublicite(id)+'" class="notice">Chargement des formules...</div><p id="statutRenouvBoutique_'+echapperTextePublicite(id)+'" class="notice" aria-live="polite"></p></div>';
+ chargerFormulesRenouvellementBoutiqueJeko(id);
 }
-async function envoyerDemandeRenouvellementBoutique(id){
- const user=partnerAuth.currentUser;if(!user)return alert("Connectez-vous au compte de votre boutique.");
- if(!(await window.paiementsMQCIDisponibles(true))){const zoneBloquee=document.getElementById("statutRenouvBoutique_"+id);if(zoneBloquee)zoneBloquee.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
- const prefix="renouvBoutique_"+id,op=document.getElementById(prefix+"PaiementMoyen")?.value||"",ref=document.getElementById(prefix+"PaiementReference")?.value.trim()||"",select=document.getElementById(prefix+"DureeAbonnement"),option=select?.selectedOptions?.[0],montant=Number(option?.dataset?.montant||0),jours=Number(select?.value||0),zone=document.getElementById("statutRenouvBoutique_"+id);
- if(!zone)return;
- if(!["Wave","Orange Money"].includes(op)||ref.length<4||ref.length>80||!Number.isInteger(montant)||montant<1||!Number.isInteger(jours)||jours<1||jours>365){zone.textContent="Choisissez une formule disponible, un moyen de paiement et saisissez une référence valide.";return;}
- zone.textContent="Envoi de la demande...";
+async function chargerFormulesRenouvellementBoutiqueJeko(id){
+ const zone=document.getElementById("catalogueJekoBoutique_"+id),user=partnerAuth.currentUser;if(!zone)return;
+ if(!user){zone.textContent="Connectez-vous au compte de votre boutique.";return;}
  try{
-  const formule=option?.dataset?.config;if(!["boutiques_1mois","boutiques_2mois","boutiques_3mois"].includes(formule))throw new Error("Formule de renouvellement invalide.");
-  const cfg=await obtenirConfigurationAbonnement(formule,true);
-  if(!cfg.actif||tarifAbonnementEffectif(cfg)!==montant||dureeAbonnementEnJours(cfg)!==jours)throw new Error("La formule a changé. Rechargez le formulaire pour vérifier le tarif.");
-  const b=await partnerDb.collection("demandes_nouveaux_services").doc(id).get();if(!b.exists||b.data().uid!==user.uid||b.data().modePartenaire!==true)throw new Error("Dossier partenaire introuvable.");
-  const enAttente=await partnerDb.collection("demandes_renouvellement_boutiques").where("boutiqueId","==",id).where("statut","==","en_attente").limit(1).get();if(!enAttente.empty)throw new Error("Une demande est déjà en attente de vérification.");
-  await partnerDb.collection("demandes_renouvellement_boutiques").add({boutiqueId:id,uid:user.uid,email:user.email||"",operateur:op,referencePaiement:ref,nomPayeur:"",montantFCFA:montant,dureeJours:jours,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-  zone.textContent="Demande envoyée. Votre boutique restera invisible jusqu’à la vérification et la validation de l’administrateur.";
- }catch(e){console.error(e);zone.textContent="Envoi impossible : "+(e.message||"vérifiez les règles Firestore.");}
+  const token=await user.getIdToken(),r=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/subscription-plans?serviceId=boutiques",{headers:{Authorization:"Bearer "+token}});
+  const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error("Catalogue Jèko indisponible.");
+  const plans=(data.plans||[]).filter(p=>["boutiques_1mois","boutiques_2mois","boutiques_3mois"].includes(p.planId)&&p.available);
+  if(!plans.length){zone.textContent="Aucune formule boutique payante n'est actuellement disponible.";return;}
+  zone.innerHTML='<label for="planJekoBoutique_'+id+'">Formule</label><select id="planJekoBoutique_'+id+'" style="width:100%;padding:12px;">'+plans.map(p=>'<option value="'+p.planId+'">'+echapperTextePublicite(p.label)+' — '+Number(p.priceXof).toLocaleString("fr-FR")+' FCFA / '+Number(p.duration)+' '+(p.unit==="mois"?"mois":"jours")+'</option>').join("")+'</select><label for="methodeJekoBoutique_'+id+'">Moyen de paiement</label><select id="methodeJekoBoutique_'+id+'" style="width:100%;padding:12px;"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select><button type="button" class="primary" onclick="demarrerRenouvellementBoutiqueJeko(\''+id+'\')">Payer avec Jèko</button>';
+ }catch(e){zone.textContent=e.message||"Impossible de charger les formules.";}
+}
+async function demarrerRenouvellementBoutiqueJeko(id){
+ const user=partnerAuth.currentUser,planId=document.getElementById("planJekoBoutique_"+id)?.value,paymentMethod=document.getElementById("methodeJekoBoutique_"+id)?.value,zone=document.getElementById("statutRenouvBoutique_"+id);
+ if(!user||!planId||!["wave","orange","mtn","moov","djamo"].includes(paymentMethod)){if(zone)zone.textContent="Connexion ou sélection de formule manquante.";return;}
+ if(zone)zone.textContent="Préparation du paiement Jèko. Ne fermez pas cette page.";
+ try{
+  const token=await user.getIdToken(),r=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceId:"boutique_renewal",boutiqueId:id,planId,paymentMethod})});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok||!data.checkoutUrl){const messages={existing_payment_requires_review:"Un paiement précédent doit être vérifié. Ne recommencez pas.",boutique_not_found_or_not_authorized:"Boutique introuvable, non approuvée ou compte non autorisé.",plan_configuration_invalid:"Cette formule n'est pas disponible."};throw new Error(messages[data.error]||data.diagnostic||"Initialisation Jèko impossible.");}
+  if(zone)zone.textContent="Redirection vers Jèko...";
+  window.location.assign(data.checkoutUrl);
+ }catch(e){if(zone)zone.textContent=e.message||"Erreur de paiement.";}
 }
 async function chargerDemandesRenouvellementBoutiquesAdmin(){
  const zone=document.getElementById("listeRenouvellementsBoutiquesAdmin");if(!zone)return;
@@ -4432,18 +4437,7 @@ async function chargerDemandesRenouvellementBoutiquesAdmin(){
 }
 async function traiterRenouvellementBoutiqueAdmin(id,approuver){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
- try{
-  const req=db.collection("demandes_renouvellement_boutiques").doc(id),snap=await req.get();if(!snap.exists||snap.data().statut!=="en_attente")return alert("Demande déjà traitée.");
-  const d=snap.data(),bref=db.collection("demandes_nouveaux_services").doc(d.boutiqueId),bs=await bref.get();if(!bs.exists||bs.data().uid!==d.uid||bs.data().statut!=="approuve")throw new Error("Boutique introuvable.");
-  const batch=db.batch();
-  if(approuver){
-   const montant=Number(d.montantFCFA),jours=Number(d.dureeJours);if(!Number.isInteger(montant)||montant<1||!Number.isInteger(jours)||jours<1||jours>365)throw new Error("Montant ou durée invalide.");
-   const ancienne=bs.data().abonnementFin?.toDate?bs.data().abonnementFin.toDate():new Date(),debut=ancienne.getTime()>Date.now()?ancienne:new Date(),fin=new Date(debut.getTime()+jours*86400000);
-   batch.update(bref,{abonnementDebut:firebase.firestore.Timestamp.fromDate(debut),abonnementFin:firebase.firestore.Timestamp.fromDate(fin),abonnementStatut:"actif",paiementStatut:"confirme",montantAbonnement:montant,dureeAbonnementJours:jours,dernierPaiementFCFA:montant,dernierPaiementConfirmeLe:firebase.firestore.FieldValue.serverTimestamp()});
-  }
-  batch.update(req,{statut:approuver?"approuve":"refuse",traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});
-  await batch.commit();await chargerDemandesRenouvellementBoutiquesAdmin();alert(approuver?"Paiement validé. La boutique peut redevenir visible.":"Demande refusée.");
- }catch(e){console.error(e);alert("Traitement impossible : "+e.message);}
+ alert("La validation manuelle des renouvellements est désactivée. Seul un paiement Jèko confirmé par webhook peut prolonger l'abonnement. Les anciennes demandes doivent être vérifiées séparément.");
 }
 async function chargerCommandesBoutique(boutiqueId){
  const zone=document.getElementById("commandesBoutique_"+boutiqueId);if(!zone)return;
