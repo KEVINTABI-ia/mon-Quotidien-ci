@@ -1,5 +1,5 @@
 const FIREBASE_PROJECT_ID = "mon-transport-ci";
-const FIREBASE_API_KEY = "AIzaSyBJFCyGS-cEaEm0_c_-p0CzunNcME9-u7Q";
+// Firebase Web API key is supplied securely by the Worker secret FIREBASE_API_KEY.
 const JEKO_API_BASE = "https://api.jeko.africa";
 const FIREBASE_CERTS = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -103,8 +103,9 @@ function createWrite(path,data) {
   return {update:{name:resourceName(path),...fields(data)},currentDocument:{exists:false}};
 }
 
-async function firebaseUser(token) {
-  const response=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key="+FIREBASE_API_KEY,{
+async function firebaseUser(token, apiKey) {
+  if (!apiKey) { const err=new Error("firebase_auth_API_KEY_NOT_CONFIGURED");err.authCode="API_KEY_NOT_CONFIGURED";throw err; }
+  const response=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key="+apiKey,{
     method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({idToken:token})
   });
   const data=await response.json().catch(()=>({}));
@@ -120,10 +121,10 @@ async function firebaseUser(token) {
   if(user.disabled===true) { const err=new Error("firebase_auth_USER_DISABLED");err.authCode="USER_DISABLED";throw err; }
   return {sub:user.localId,email:user.email||null};
 }
-async function requireUser(request) {
+async function requireUser(request, env) {
   const token=(request.headers.get("authorization")||"").match(/^Bearer\s+(.+)$/i)?.[1];
   if(!token) return {user:null,diagnostic:"MISSING_BEARER_TOKEN"};
-  try { return {user:await firebaseUser(token),diagnostic:null}; }
+  try { return {user:await firebaseUser(token, env.FIREBASE_API_KEY),diagnostic:null}; }
   catch(e) { return {user:null,diagnostic:e.authCode||"FIREBASE_AUTH_ERROR"}; }
 }
 async function jeko(env,path,init={}) {
@@ -141,7 +142,7 @@ async function jeko(env,path,init={}) {
   return data;
 }
 async function createCheckout(request,env) {
-  const authResult=await requireUser(request);
+  const authResult=await requireUser(request, env);
   const user=authResult.user;
   if(!user) return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
   let body={}; try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
@@ -277,7 +278,7 @@ async function webhook(request,env) {
   return new Response("OK",{status:200});
 }
 async function paymentStatus(request,env) {
-  const authResult=await requireUser(request);const user=authResult.user;if(!user)return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
+  const authResult=await requireUser(request, env);const user=authResult.user;if(!user)return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
   const url=new URL(request.url),id=url.searchParams.get("paymentId");
   if(!id||!/^[a-f0-9]{32}$/i.test(id)) return json({error:"invalid_payment_id"},400);
   const doc=await getDoc(env,"payments/"+id),payment=docData(doc);
