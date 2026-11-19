@@ -8193,38 +8193,28 @@ async function verifierRetourPaiementJeko(user){
 }
 
 async function chargerDemandesAbonnementAutomobilisteAdmin(){
-  const zone=document.getElementById("listeAbonnementsAutomobilisteAdmin");
-  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){if(zone)zone.textContent="Accès administrateur requis.";return;}
-  zone.innerHTML="<p class='notice'>Chargement des demandes...</p>";
-  try{
-    const snap=await db.collection("demandes_abonnement_automobiliste").orderBy("createdAt","desc").limit(200).get();
-    if(snap.empty){zone.innerHTML="<p class='notice'>Aucune demande reçue.</p>";return;}
-    zone.innerHTML=snap.docs.map(doc=>{
-      const d=doc.data(),date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date non disponible";
-      const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterDemandeAbonnementAutomobiliste(\''+doc.id+'\',true)">Valider 1 an</button><button type="button" onclick="traiterDemandeAbonnementAutomobiliste(\''+doc.id+'\',false)">Refuser</button>':'<p class="notice">Demande '+echapperTextePublicite(d.statut)+'</p>';
-      return '<article class="card" style="padding:12px;margin:10px 0;"><strong>'+echapperTextePublicite(d.email)+'</strong><p>'+echapperTextePublicite(d.operateur)+' · 1 000 FCFA</p><p>Référence : <strong>'+echapperTextePublicite(d.referencePaiement)+'</strong></p><p>Payeur : '+echapperTextePublicite(d.nomPayeur||"Non indiqué")+'</p><p>'+date+'</p>'+actions+'</article>';
-    }).join("");
-  }catch(e){console.error(e);zone.innerHTML="<p class='notice'>Erreur de chargement. Vérifiez les règles Firestore.</p>";}
+ const zone=document.getElementById("listeAbonnementsAutomobilisteAdmin");
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){if(zone)zone.textContent="Accès administrateur requis.";return;}
+ zone.innerHTML="<p class='notice'>Chargement des anciennes demandes manuelles...</p>";
+ try{
+  const snap=await db.collection("demandes_abonnement_automobiliste").orderBy("createdAt","desc").limit(200).get();
+  if(snap.empty){zone.innerHTML="<p class='notice'>Aucune ancienne demande manuelle.</p>";return;}
+  zone.innerHTML=snap.docs.map(doc=>{
+   const d=doc.data(),date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date non disponible";
+   const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterDemandeAbonnementAutomobiliste(\''+doc.id+'\',false)">Refuser l’ancienne demande</button>':'<p class="notice">Demande '+echapperTextePublicite(d.statut)+'</p>';
+   return '<article class="card" style="padding:12px;margin:10px 0;"><strong>'+echapperTextePublicite(d.email)+'</strong><p>'+echapperTextePublicite(d.operateur||"Paiement manuel historique")+' · '+Number(d.montantFCFA||0).toLocaleString("fr-FR")+' FCFA</p><p>Référence historique : '+echapperTextePublicite(d.referencePaiement||"Non disponible")+'</p><p>'+date+'</p><p class="notice">Cette demande historique ne peut plus activer un abonnement. Les nouveaux paiements passent par Jèko.</p>'+actions+'</article>';
+  }).join("");
+ }catch(e){console.error(e);zone.innerHTML="<p class='notice'>Erreur de chargement. Vérifiez les règles Firestore.</p>";}
 }
 async function traiterDemandeAbonnementAutomobiliste(id,approuver){
-  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
-  try{
-    const ref=db.collection("demandes_abonnement_automobiliste").doc(id),snap=await ref.get();
-    if(!snap.exists||snap.data().statut!=="en_attente")return alert("Cette demande n'est plus en attente.");
-    const d=snap.data(),batch=db.batch();
-    if(approuver){
-      const debut=new Date(),fin=new Date(debut.getTime()+Number(d.dureeMois||12)*30.4375*24*60*60*1000);
-      batch.set(db.collection("abonnements_automobiliste").doc(d.uid),{
-        uid:d.uid,statut:"actif",montantFCFA:Number(d.montantFCFA||1000),dureeMois:Number(d.dureeMois||12),
-        dateActivation:firebase.firestore.Timestamp.fromDate(debut),
-        dateExpiration:firebase.firestore.Timestamp.fromDate(fin),
-        demandeId:id,activePar:auth.currentUser.uid
-      });
-      batch.update(ref,{statut:"approuve",traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});
-    }else batch.update(ref,{statut:"refuse",traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});
-    await batch.commit();await chargerDemandesAbonnementAutomobilisteAdmin();
-    alert(approuver?"Abonnement activé pour "+Number(d.dureeMois||12)+" mois.":"Demande refusée.");
-  }catch(e){console.error(e);alert("Traitement impossible : "+e.message);}
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ if(approuver)return alert("La validation manuelle est désactivée. Seul un webhook Jèko confirmé peut activer l'abonnement automobiliste.");
+ try{
+  const ref=db.collection("demandes_abonnement_automobiliste").doc(id),snap=await ref.get();
+  if(!snap.exists||snap.data().statut!=="en_attente")return alert("Cette demande n'est plus en attente.");
+  await ref.update({statut:"refuse",traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});
+  await chargerDemandesAbonnementAutomobilisteAdmin();
+ }catch(e){console.error(e);alert("Traitement impossible : "+e.message);}
 }
 
 async function abrirVerificarAccesoAutomovilista(id){
