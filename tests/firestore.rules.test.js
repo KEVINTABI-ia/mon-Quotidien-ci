@@ -148,6 +148,27 @@ describe("Mon Transport CI — règles Firestore", function () {
     }));
   });
 
+  it("réserve l'activation et le renouvellement du forfait ramassage au webhook Jèko", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`comptes_ramassage/${PARTNER_UID}`).set(ramassageCompanyFixture({
+        abonnement:"inactif",statut:"en_attente",montantAbonnement:null,dateExpirationAbonnement:null
+      }));
+    });
+    const {doc,updateDoc,serverTimestamp,Timestamp}=require("firebase/firestore");
+    const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+    const companyRef=doc(adminDb,"comptes_ramassage",PARTNER_UID);
+    await assertSucceeds(updateDoc(companyRef,{statut:"approuve"}));
+    await assertFails(updateDoc(companyRef,{
+      abonnement:"actif",montantAbonnement:2000,dureeAbonnementJours:30,
+      dateExpirationAbonnement:Timestamp.fromMillis(Date.now()+30*86400000)
+    }));
+    const companyDb=testEnv.authenticatedContext(PARTNER_UID,{email:"partner@example.test"}).firestore();
+    await assertFails(updateDoc(doc(companyDb,"comptes_ramassage",PARTNER_UID),{
+      abonnement:"actif",montantAbonnement:2000,dureeAbonnementJours:30,
+      dateExpirationAbonnement:serverTimestamp()
+    }));
+  });
+
   it("autorise une compagnie de ramassage dont l'abonnement est valide à publier une offre", async () => {
     await testEnv.withSecurityRulesDisabled(async context => {
       await context.firestore().doc(`comptes_ramassage/${PARTNER_UID}`).set(ramassageCompanyFixture());
@@ -963,17 +984,19 @@ describe("Mon Transport CI — règles Firestore", function () {
       }));
     });
 
-    it("accepte une demande manuelle d'abonnement automobiliste en attente", async () => {
-      const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
-      await assertSucceeds(setDoc(doc(db,"demandes_abonnement_automobiliste","auto-paiement-manuel"),{
-        uid:CLIENT_UID,email:"client@example.test",operateur:"Wave",
-        referencePaiement:"REF-TEST-1234",nomPayeur:"Client test",
-        montantFCFA:1000,dureeMois:12,statut:"en_attente",createdAt:serverTimestamp()
-      }));
-      await assertFails(updateDoc(doc(db,"demandes_abonnement_automobiliste","auto-paiement-manuel"),{statut:"actif"}));
+    it("conserve les anciennes demandes manuelles automobiliste en lecture seule et interdit leur approbation", async () => {
       const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
-      await assertSucceeds(updateDoc(doc(adminDb,"demandes_abonnement_automobiliste","auto-paiement-manuel"),{statut:"approuve"}));
+      const {doc,updateDoc}=require("firebase/firestore");
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        await context.firestore().doc("demandes_abonnement_automobiliste/auto-paiement-manuel").set({
+          uid:CLIENT_UID,email:"client@example.test",operateur:"Wave",
+          referencePaiement:"REF-TEST-1234",nomPayeur:"Client test",
+          montantFCFA:1000,dureeMois:12,statut:"en_attente",createdAt:Timestamp.now()
+        });
+      });
+      const legacyRef=doc(adminDb,"demandes_abonnement_automobiliste","auto-paiement-manuel");
+      await assertFails(updateDoc(legacyRef,{statut:"approuve"}));
+      await assertSucceeds(updateDoc(legacyRef,{statut:"refuse"}));
     });
 
     it("accepte une recharge Gbairai en attente de vérification", async () => {
@@ -986,9 +1009,9 @@ describe("Mon Transport CI — règles Firestore", function () {
       }));
     });
 
-    it("accepte Wave et Orange Money pour le logement et refuse MTN MoMo et Moov Money", async () => {
+    it("refuse les anciennes demandes manuelles de renouvellement Logement", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
+      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
       const base={
         uid:CLIENT_UID,nom:"Client test",email:"client@example.test",telephone:"0700000000",
         formule:"mensuel",montant:3000,reference:"REF-TEST-1234",
@@ -996,11 +1019,32 @@ describe("Mon Transport CI — règles Firestore", function () {
       };
       await assertFails(setDoc(doc(db,"demandes_abonnement_logement","logement-mtn-refuse"),{...base,operateur:"MTN MoMo"}));
       await assertFails(setDoc(doc(db,"demandes_abonnement_logement","logement-moov-refuse"),{...base,operateur:"Moov Money"}));
-      await assertSucceeds(setDoc(doc(db,"demandes_abonnement_logement","logement-wave-accepte"),{...base,operateur:"Wave"}));
-      await assertSucceeds(setDoc(doc(db,"demandes_abonnement_logement","logement-orange-accepte"),{...base,operateur:"Orange Money"}));
+      await assertFails(setDoc(doc(db,"demandes_abonnement_logement","logement-wave-refuse"),{...base,operateur:"Wave"}));
+      await assertFails(setDoc(doc(db,"demandes_abonnement_logement","logement-orange-refuse"),{...base,operateur:"Orange Money"}));
+      const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        await context.firestore().doc("partenaires_logement/"+CLIENT_UID).set({
+          uid:CLIENT_UID,statutCompte:"actif",statutAbonnement:"actif",
+          debutAbonnement:Timestamp.fromMillis(Date.now()-40*86400000),
+          finAbonnement:Timestamp.fromMillis(Date.now()-10*86400000)
+        });
+        await context.firestore().doc("demandes_abonnement_logement/ancienne-demande").set({
+          uid:CLIENT_UID,statut:"a_verifier",formule:"mensuel",montant:3000
+        });
+      });
+      await assertFails(updateDoc(doc(adminDb,"partenaires_logement",CLIENT_UID),{
+        statutAbonnement:"actif",debutAbonnement:serverTimestamp(),
+        finAbonnement:Timestamp.fromMillis(Date.now()+30*86400000)
+      }));
+      await assertFails(updateDoc(doc(adminDb,"demandes_abonnement_logement","ancienne-demande"),{
+        statut:"confirme",confirmedAt:serverTimestamp(),confirmedBy:ADMIN_UID
+      }));
+      await assertSucceeds(updateDoc(doc(adminDb,"demandes_abonnement_logement","ancienne-demande"),{
+        statut:"refuse",reviewedAt:serverTimestamp(),reviewedBy:ADMIN_UID
+      }));
     });
 
-    it("accepte un renouvellement boutique en attente de vérification", async () => {
+    it("refuse la création d’une demande de renouvellement boutique manuelle", async () => {
       const SHOP_ID="shop-renewal-paiement-bloque";
       await testEnv.withSecurityRulesDisabled(async context=>{
         await context.firestore().doc("demandes_nouveaux_services/"+SHOP_ID).set({
@@ -1009,23 +1053,33 @@ describe("Mon Transport CI — règles Firestore", function () {
       });
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
       const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
-      await assertSucceeds(setDoc(doc(db,"demandes_renouvellement_boutiques","renewal-paiement-manuel"),{
+      await assertFails(setDoc(doc(db,"demandes_renouvellement_boutiques","renewal-paiement-manuel"),{
         boutiqueId:SHOP_ID,uid:CLIENT_UID,email:"client@example.test",
         operateur:"Wave",referencePaiement:"REF-TEST-1234",nomPayeur:"Client test",
         montantFCFA:7000,dureeJours:30,statut:"en_attente",createdAt:serverTimestamp()
       }));
     });
 
-    it("accepte une demande boutique payante en attente et conserve les inscriptions gratuites d’annuaire", async () => {
+    it("accepte une demande boutique Jèko en attente et conserve les inscriptions gratuites d’annuaire", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
+      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
       await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","boutique-paiement-manuel"),{
         uid:CLIENT_UID,type:"commerce",titre:"Boutique test",categorie:"Boutique",
         commune:"Yopougon",telephone:"0700000000",description:"Boutique de test",
         email:"client@example.test",adresseBoutique:"Yopougon, Abidjan",
-        paiementMoyen:"Wave",paiementReference:"REF-TEST-1234",
-        montantAbonnement:7000,dureeAbonnementJours:30,paiementStatut:"a_verifier",
+        planAbonnementId:"boutiques_3mois",abonnementStatut:"a_payer",
+        montantAbonnement:7000,dureeAbonnementJours:90,paiementStatut:"a_payer",
         statut:"en_attente",createdAt:serverTimestamp()
+      }));
+      const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      await assertSucceeds(updateDoc(doc(adminDb,"demandes_nouveaux_services","boutique-paiement-manuel"),{
+        statut:"approuve",traiteLe:serverTimestamp()
+      }));
+      await assertFails(updateDoc(doc(adminDb,"demandes_nouveaux_services","boutique-paiement-manuel"),{
+        abonnementStatut:"actif",paiementStatut:"confirme",
+        abonnementDebut:serverTimestamp(),
+        abonnementFin:Timestamp.fromMillis(Date.now()+90*24*60*60*1000),
+        dernierPaiementFCFA:7000,dernierPaiementConfirmeLe:serverTimestamp()
       }));
       await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","annuaire-gratuit-apres-verrou"),{
         uid:CLIENT_UID,type:"annuaire",titre:"Plomberie test",categorie:"Plomberie",
@@ -1033,12 +1087,27 @@ describe("Mon Transport CI — règles Firestore", function () {
         telephone:"0700000000",description:"Prestation de plomberie de test",
         email:"client@example.test",statut:"en_attente",createdAt:serverTimestamp()
       }));
+      const annuaireRef=doc(db,"demandes_nouveaux_services","annuaire-gratuit-apres-verrou");
+      const {getDoc}=require("firebase/firestore");
+      await assertSucceeds(getDoc(annuaireRef));
+      const annuaireAdminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      await assertSucceeds(updateDoc(doc(annuaireAdminDb,"demandes_nouveaux_services","annuaire-gratuit-apres-verrou"),{
+        statut:"approuve",abonnementDebut:serverTimestamp(),
+        abonnementFin:Timestamp.fromMillis(Date.now()+30*24*60*60*1000),
+        abonnementStatut:"essai_gratuit",traiteLe:serverTimestamp()
+      }));
+      await assertFails(updateDoc(doc(annuaireAdminDb,"demandes_nouveaux_services","annuaire-gratuit-apres-verrou"),{
+        abonnementDebut:serverTimestamp(),
+        abonnementFin:Timestamp.fromMillis(Date.now()+60*24*60*60*1000),
+        abonnementStatut:"actif",dernierPaiementFCFA:1000,
+        dernierPaiementConfirmeLe:serverTimestamp()
+      }));
     });
   });
 
 
   describe("Contrôles complémentaires — paiements et parcours gratuits", () => {
-    it("accepte une inscription de compagnie en attente de validation administrative", async () => {
+    it("accepte le dépôt d’un dossier compagnie sans paiement manuel et réserve l’activation à Jèko", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
       const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
       const compagnieRef=doc(db,"compagnies","compagnie-paiement-manuel");
@@ -1049,12 +1118,15 @@ describe("Mon Transport CI — règles Firestore", function () {
         photoGarePrincipale:"data:image/jpeg;base64,abcdefghijklmnopqrstuvwxyz0123456789",
         telephoneGarePrincipale:"0700000001",telephoneServiceCourrier:"0700000002",
         formule:"Essentielle",periodicite:"Mensuel",montant:5000,dureeMois:1,
-        moyenPaiement:"Wave",referencePaiement:"REF-TEST-1234",
-        statutAbonnement:"En attente",dateCreation:serverTimestamp(),
+        statutAbonnement:"Dossier à vérifier",dateCreation:serverTimestamp(),
         dateDebut:null,dateExpiration:null
       }));
       await assertFails(updateDoc(compagnieRef,{
         statutAbonnement:"Actif",dateDebut:serverTimestamp(),dateExpiration:serverTimestamp()
+      }));
+      const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      await assertSucceeds(updateDoc(doc(adminDb,"compagnies","compagnie-paiement-manuel"),{
+        statutAbonnement:"À payer",dossierApprouveLe:serverTimestamp(),dossierApprouvePar:ADMIN_UID
       }));
     });
 
@@ -1072,7 +1144,7 @@ describe("Mon Transport CI — règles Firestore", function () {
   });
 
 
-  it("accepte le dépôt manuel d’une demande de renouvellement partenaire expiré, sans autoriser l’activation par le partenaire", async () => {
+  it("refuse les renouvellements manuels du partenaire expiré et interdit son auto-activation", async () => {
     const expired = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
     await testEnv.withSecurityRulesDisabled(async context => {
       const db=context.firestore();
@@ -1089,7 +1161,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
     const db=testEnv.authenticatedContext(PARTNER_UID,{email:"partner@example.test"}).firestore();
     const {doc,updateDoc,serverTimestamp}=require("firebase/firestore");
-    await assertSucceeds(updateDoc(doc(db,"partenaires",PARTNER_UID),{
+    await assertFails(updateDoc(doc(db,"partenaires",PARTNER_UID),{
       renouvellementStatut:"a_verifier",
       renouvellementFormule:"partenaires_colis_1mois",
       renouvellementMois:1,

@@ -143,19 +143,19 @@ service cloud.firestore {
     match /compagnies/{compagnieId} {
       allow read: if true;
       allow create: if estAdmin()
-        || (demandePaiementManuelEnAttente(request.resource.data.statutAbonnement) && estConnecte()
+        || (request.resource.data.statutAbonnement == "Dossier à vérifier" && estConnecte()
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.email == request.auth.token.get("email", "")
           && request.resource.data.keys().hasAll([
             "uid","nom","agence","localisation","telephone","email","destinations",
             "photoGarePrincipale","telephoneGarePrincipale","telephoneServiceCourrier",
-            "formule","periodicite","montant","dureeMois","moyenPaiement","referencePaiement",
+            "formule","periodicite","montant","dureeMois",
             "statutAbonnement","dateCreation","dateDebut","dateExpiration"
           ])
           && request.resource.data.keys().hasOnly([
             "uid","nom","agence","localisation","telephone","email","logo","destinations",
             "photoGarePrincipale","telephoneGarePrincipale","telephoneServiceCourrier",
-            "formule","periodicite","montant","dureeMois","moyenPaiement","referencePaiement",
+            "formule","periodicite","montant","dureeMois",
             "statutAbonnement","dateCreation","dateDebut","dateExpiration"
           ])
           && request.resource.data.uid == request.auth.uid
@@ -169,29 +169,9 @@ service cloud.firestore {
           && request.resource.data.periodicite in ["Mensuel","Annuel"]
           && request.resource.data.montant is int && request.resource.data.montant > 0
           && request.resource.data.dureeMois is int && request.resource.data.dureeMois > 0
-          && (
-            (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Mensuel"
-              && abonnementAutorise("compagnie_essentielle_mensuel")
-              && abonnementMontantAutorise("compagnie_essentielle_mensuel", request.resource.data.montant, 5000)
-              && request.resource.data.dureeMois == abonnementChamp("compagnie_essentielle_mensuel", "duree", 1))
-            || (request.resource.data.formule == "Essentielle" && request.resource.data.periodicite == "Annuel"
-              && abonnementAutorise("compagnie_essentielle_annuel")
-              && abonnementMontantAutorise("compagnie_essentielle_annuel", request.resource.data.montant, 50000)
-              && request.resource.data.dureeMois == abonnementChamp("compagnie_essentielle_annuel", "duree", 12))
-            || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Mensuel"
-              && abonnementAutorise("compagnie_professionnelle_mensuel")
-              && abonnementMontantAutorise("compagnie_professionnelle_mensuel", request.resource.data.montant, 10000)
-              && request.resource.data.dureeMois == abonnementChamp("compagnie_professionnelle_mensuel", "duree", 1))
-            || (request.resource.data.formule == "Professionnelle" && request.resource.data.periodicite == "Annuel"
-              && abonnementAutorise("compagnie_professionnelle_annuel")
-              && abonnementMontantAutorise("compagnie_professionnelle_annuel", request.resource.data.montant, 100000)
-              && request.resource.data.dureeMois == abonnementChamp("compagnie_professionnelle_annuel", "duree", 12))
-          )
-          && request.resource.data.moyenPaiement in ["Wave","Orange Money"]
-          && request.resource.data.referencePaiement is string
-          && request.resource.data.referencePaiement.size() >= 4
-          && request.resource.data.referencePaiement.size() <= 80
-          && request.resource.data.statutAbonnement == "En attente"
+          && request.resource.data.montant <= 10000000
+          && request.resource.data.dureeMois <= 12
+          && request.resource.data.statutAbonnement == "Dossier à vérifier"
           && request.resource.data.dateCreation == request.time
           && request.resource.data.dateDebut == null
           && request.resource.data.dateExpiration == null
@@ -208,7 +188,13 @@ service cloud.firestore {
           && request.resource.data.telephoneServiceCourrier.size() >= 6
           && request.resource.data.telephoneServiceCourrier.size() <= 25
         );
-      allow update: if estAdmin()
+      allow update: if (estAdmin()
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            "dateDebut","dateExpiration","montant","dureeMois","dernierPaiementJekoLe",
+            "dernierPaiementJekoMontant","renouvellementJekoPaymentId","renouvellementJekoStatut"
+          ])
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["statutAbonnement"])
+            || request.resource.data.statutAbonnement in ["À payer","Dossier refusé","Expiré","Dossier à vérifier"]))
         || (estConnecte() && resource.data.uid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["photoGarePrincipale","telephoneGarePrincipale","telephoneServiceCourrier","localisation"])
           && request.resource.data.photoGarePrincipale is string && request.resource.data.photoGarePrincipale.size() > 30 && request.resource.data.photoGarePrincipale.size() <= 700000 && request.resource.data.photoGarePrincipale.matches("^data:image/jpeg;base64,.*$")
@@ -363,7 +349,17 @@ service cloud.firestore {
             && request.resource.data.photoProfil.matches('^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$'))
         );
 
-      allow update: if estAdmin()
+      allow update: if (estAdmin()
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            "montantAbonnementPartenaire","formuleAbonnementPartenaire",
+            "dateDebutAbonnement","dateExpirationAbonnement","historiqueAbonnements",
+            "renouvellementMontant","renouvellementFormule","renouvellementMois",
+            "renouvellementOperateur","renouvellementReference","renouvellementDemandeLe",
+            "renouvellementConfirmeLe","renouvellementConfirmePar",
+            "renouvellementJekoPaymentId","renouvellementJekoStatut"
+          ])
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["statutAbonnementPartenaire"])
+            || request.resource.data.statutAbonnementPartenaire == "Essai"))
         || (estConnecte()
           && request.auth.uid == partenaireId
           && request.resource.data.diff(resource.data).affectedKeys()
@@ -371,40 +367,7 @@ service cloud.firestore {
           && request.resource.data.enLigne is bool
           && request.resource.data.derniereActivite == request.time
           && (request.resource.data.enLigne == false
-            || abonnementValide(request.resource.data)))
-        || (demandePaiementManuelEnAttente(request.resource.data.renouvellementStatut) && estConnecte()
-          && request.auth.uid == partenaireId
-          && resource.data.statut == "approuve"
-          && (!("etatCompte" in resource.data) || resource.data.etatCompte == "actif")
-          && !abonnementValide(resource.data)
-          && (!("renouvellementStatut" in resource.data) || resource.data.renouvellementStatut != "a_verifier")
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "renouvellementStatut","renouvellementFormule","renouvellementMois",
-            "renouvellementMontant","renouvellementOperateur","renouvellementReference",
-            "renouvellementDemandeLe"
-          ])
-          && request.resource.data.renouvellementStatut == "a_verifier"
-          && request.resource.data.renouvellementFormule in [
-            "partenaires_colis_1mois","partenaires_colis_3mois","partenaires_colis_6mois"
-          ]
-          && abonnementAutorise(request.resource.data.renouvellementFormule)
-          && abonnementMontantAutorise(
-            request.resource.data.renouvellementFormule,
-            request.resource.data.renouvellementMontant,
-            0
-          )
-          && request.resource.data.renouvellementMois
-            == abonnementChamp(request.resource.data.renouvellementFormule,"duree",0)
-          && abonnementChamp(request.resource.data.renouvellementFormule,"unite","mois") == "mois"
-          && request.resource.data.renouvellementMontant is int
-          && request.resource.data.renouvellementMontant > 0
-          && request.resource.data.renouvellementMois in [1,3,6]
-          && request.resource.data.renouvellementOperateur in ["Wave","Orange Money"]
-          && request.resource.data.renouvellementReference is string
-          && request.resource.data.renouvellementReference.size() >= 4
-          && request.resource.data.renouvellementReference.size() <= 80
-          && request.resource.data.renouvellementDemandeLe == request.time);
-
+            || abonnementValide(request.resource.data)));
       allow delete: if estAdmin();
 
       match /verrous/{verrouId} {
@@ -805,7 +768,12 @@ service cloud.firestore {
             && request.resource.data.abonnement == "inactif")
         && request.resource.data.createdAt == request.time;
       allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
-      allow update, delete: if estAdmin();
+      // L'administration peut approuver le dossier, mais aucun client ni administrateur
+      // via le SDK navigateur ne peut activer ou prolonger l'abonnement payant.
+      allow update: if estAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut"])
+        && request.resource.data.statut == "approuve";
+      allow delete: if estAdmin();
     }
 
     match /offres_ramassage/{offreId} {
@@ -907,22 +875,16 @@ service cloud.firestore {
         && abonnementChamp("petites_annonces", "essai", 30) > 0
         && request.resource.data.dateExpiration >= request.time + duration.value(abonnementChamp("petites_annonces", "essai", 30) - 1, "d")
         && request.resource.data.dateExpiration <= request.time + duration.value(abonnementChamp("petites_annonces", "essai", 30) + 1, "d");
+      // Seul le Worker Jèko (Admin SDK, qui contourne les règles) peut modifier
+      // l'état, la date d'expiration ou les champs de paiement d'un abonnement.
+      // L'admin depuis le navigateur peut encore modifier des champs non financiers.
       allow update: if estAdmin()
-        || (demandePaiementManuelEnAttente(request.resource.data.paiementStatut) && estConnecte() && request.auth.uid == uid
-          && resource.data.dateExpiration is timestamp
-          && resource.data.dateExpiration <= request.time
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["paiementMoyen","paiementReference","montantRenouvellement","dureeRenouvellementJours","paiementStatut","demandeRenouvellementLe"])
-          && request.resource.data.paiementMoyen in ["Wave","Orange Money"]
-          && request.resource.data.paiementReference is string
-          && request.resource.data.paiementReference.size() >= 4
-          && request.resource.data.paiementReference.size() <= 80
-          && abonnementAutorise("petites_annonces")
-          && request.resource.data.montantRenouvellement is int
-          && request.resource.data.montantRenouvellement > 0
-          && abonnementMontantAutorise("petites_annonces", request.resource.data.montantRenouvellement, 500)
-          && request.resource.data.dureeRenouvellementJours == dureeEnJours("petites_annonces", 30)
-          && request.resource.data.paiementStatut == "a_verifier"
-          && request.resource.data.demandeRenouvellementLe == request.time);
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          "statut","dateExpiration","dateDebut","paiementStatut","paiementMoyen",
+          "paiementReference","montantRenouvellement","dureeRenouvellementJours",
+          "demandeRenouvellementLe","dateConfirmationPaiement","confirmePar",
+          "dernierPaiementFCFA","dernierPaiementLe","paymentId"
+        ]);
       allow delete: if estAdmin();
     }
 
@@ -930,7 +892,7 @@ service cloud.firestore {
       allow create: if estConnecte()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","telephone","description","email","statut","createdAt"])
-        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","telephone","description","email","photoUrl","adresseBoutique","paiementMoyen","paiementReference","montantAbonnement","dureeAbonnementJours","paiementStatut","modePartenaire","rubrique","quartier","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","telephone","description","email","photoUrl","adresseBoutique","montantAbonnement","dureeAbonnementJours","paiementStatut","modePartenaire","planAbonnementId","abonnementStatut","rubrique","quartier","statut","createdAt"])
         && request.resource.data.type in ["depannage","commerce","annonce","annuaire"]
         && (request.resource.data.type != "annuaire"
           || (request.resource.data.rubrique in ["educationFormation","logementImmobilier","depannageDomicile","agricultureElevage","evenementsPrestations","artisansProfessionnels"]
@@ -939,27 +901,19 @@ service cloud.firestore {
             && request.resource.data.categorie in ["École","Université","Centre de formation","Cours particuliers","Agence immobilière","Location de logement","Promoteur immobilier","Gestion locative","Plomberie","Électricité","Climatisation","Réparation électroménager","Nettoyage","Producteur agricole","Fournisseur agricole","Élevage","Matériel agricole","Traiteur","Salle de réception","Photographe","Décoration","Location de matériel","Couturier","Menuisier","Soudeur","Mécanicien","Coiffeur","Autre artisan"]))
         && (!request.resource.data.keys().hasAny(["modePartenaire"]) || request.resource.data.get("modePartenaire", false) == true)
         && (request.resource.data.type != "commerce"
-          || request.resource.data.modePartenaire == true
-          || (demandePaiementManuelEnAttente(request.resource.data.paiementStatut)
-            && request.resource.data.adresseBoutique is string
+          || request.resource.data.get("modePartenaire", false) == true
+          || (request.resource.data.adresseBoutique is string
             && request.resource.data.adresseBoutique.size() > 4
             && request.resource.data.adresseBoutique.size() <= 220
-            && request.resource.data.paiementMoyen in ["Wave","Orange Money"]
-            && request.resource.data.paiementReference is string
-            && request.resource.data.paiementReference.size() >= 4
-            && request.resource.data.paiementReference.size() <= 80
+            && request.resource.data.planAbonnementId in ["boutiques_1mois","boutiques_2mois","boutiques_3mois"]
+            && request.resource.data.abonnementStatut == "a_payer"
+            && request.resource.data.paiementStatut == "a_payer"
             && request.resource.data.montantAbonnement is int
-              && request.resource.data.montantAbonnement > 0
-              && (
-                (abonnementAutorise("boutiques_15j")
-                  && abonnementMontantAutorise("boutiques_15j", request.resource.data.montantAbonnement, 4000)
-                  && request.resource.data.dureeAbonnementJours == dureeEnJours("boutiques_15j", 15))
-                ||
-                (abonnementAutorise("boutiques_30j")
-                  && abonnementMontantAutorise("boutiques_30j", request.resource.data.montantAbonnement, 7000)
-                  && request.resource.data.dureeAbonnementJours == dureeEnJours("boutiques_30j", 30))
-              )
-            && request.resource.data.paiementStatut == "a_verifier"))
+            && request.resource.data.montantAbonnement > 0
+            && request.resource.data.montantAbonnement <= 10000000
+            && request.resource.data.dureeAbonnementJours is int
+            && request.resource.data.dureeAbonnementJours > 0
+            && request.resource.data.dureeAbonnementJours <= 90))
         && request.resource.data.titre is string && request.resource.data.titre.size() > 0 && request.resource.data.titre.size() <= 100
         && request.resource.data.categorie is string && request.resource.data.categorie.size() <= 80
         && request.resource.data.commune is string && request.resource.data.commune.size() > 0 && request.resource.data.commune.size() <= 60
@@ -973,34 +927,56 @@ service cloud.firestore {
             && getAfter(/databases/$(database)/documents/abonnements_petites_annonces/$(request.auth.uid)).data.dateExpiration > request.time))
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time;
-      allow read: if estAdmin() || (resource.data.statut == "approuve" && (resource.data.type != "depannage" || estAbonneAutomobiliste()) && (resource.data.type != "annuaire" || (resource.data.abonnementFin is timestamp && resource.data.abonnementFin > request.time)));
-      allow update, delete: if estAdmin();
+      allow read: if estAdmin()
+        || (resource.data.type == "annuaire" && estConnecte() && resource.data.uid == request.auth.uid)
+        || (resource.data.statut == "approuve" && (resource.data.type != "depannage" || estAbonneAutomobiliste()) && (resource.data.type != "annuaire" || (resource.data.abonnementFin is timestamp && resource.data.abonnementFin > request.time)));
+      allow update: if estAdmin()
+        && (resource.data.type != "commerce"
+          || !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            "abonnementDebut","abonnementFin","abonnementStatut","paiementStatut",
+            "montantAbonnement","dureeAbonnementJours","dernierPaiementFCFA",
+            "dernierPaiementConfirmeLe","renouvellementJekoPaymentId","renouvellementJekoStatut"
+          ])
+          || (resource.data.statut == "en_attente"
+            && request.resource.data.statut == "approuve"
+            && ((resource.data.get("modePartenaire", false) == true
+              && request.resource.data.abonnementStatut == "essai_gratuit"
+              && request.resource.data.paiementStatut == "gratuit"
+              && request.resource.data.abonnementDebut == request.time
+              && request.resource.data.abonnementFin is timestamp
+              && request.resource.data.abonnementFin >= request.time + duration.value(29, "d")
+              && request.resource.data.abonnementFin <= request.time + duration.value(31, "d"))
+              || (resource.data.get("modePartenaire", false) != true
+                && request.resource.data.abonnementStatut == "a_payer"
+                && request.resource.data.paiementStatut == "a_payer"
+                && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                  "abonnementDebut","abonnementFin","dernierPaiementFCFA","dernierPaiementConfirmeLe"
+                ])))))
+        && (resource.data.type != "annuaire"
+          || !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            "abonnementDebut","abonnementFin","abonnementStatut","dernierPaiementFCFA",
+            "dernierPaiementConfirmeLe","renouvellementJekoPaymentId","renouvellementJekoStatut"
+          ])
+          || (resource.data.statut == "en_attente"
+            && request.resource.data.statut == "approuve"
+            && request.resource.data.abonnementStatut == "essai_gratuit"
+            && request.resource.data.abonnementDebut == request.time
+            && request.resource.data.abonnementFin is timestamp
+            && request.resource.data.abonnementFin >= request.time + duration.value(29, "d")
+            && request.resource.data.abonnementFin <= request.time + duration.value(31, "d")
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+              "dernierPaiementFCFA","dernierPaiementConfirmeLe",
+              "renouvellementJekoPaymentId","renouvellementJekoStatut"
+            ])));
+      allow delete: if estAdmin();
     }
 
     match /demandes_renouvellement_boutiques/{demandeId} {
-      allow create: if demandePaiementManuelEnAttente(request.resource.data.statut) && estConnecte()
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.keys().hasAll(["boutiqueId","uid","email","operateur","referencePaiement","nomPayeur","montantFCFA","dureeJours","statut","createdAt"])
-        && request.resource.data.keys().hasOnly(["boutiqueId","uid","email","operateur","referencePaiement","nomPayeur","montantFCFA","dureeJours","statut","createdAt"])
-        && exists(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId))
-        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.uid == request.auth.uid
-        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.type == "commerce"
-        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.modePartenaire == true
-        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.statut == "approuve"
-        && request.resource.data.operateur in ["Wave","Orange Money"]
-        && request.resource.data.referencePaiement is string
-        && request.resource.data.referencePaiement.size() >= 4
-        && request.resource.data.referencePaiement.size() <= 80
-        && request.resource.data.montantFCFA is int
-        && request.resource.data.montantFCFA > 0
-        && request.resource.data.dureeJours is int
-        && request.resource.data.dureeJours >= 1
-        && request.resource.data.dureeJours <= 365
-        && request.resource.data.statut == "en_attente"
-        && request.resource.data.createdAt == request.time;
+      // Legacy manual payment requests are retained for history only.
+      // New renewals use the authenticated Jeko Worker; no browser can create
+      // or approve a manual payment request.
+      allow create, update, delete: if false;
       allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
-      allow update, delete: if estAdmin();
-
     }
 
     match /avis_boutiques/{avisId} {
@@ -1042,32 +1018,19 @@ service cloud.firestore {
     }
 
     match /demandes_abonnement_automobiliste/{demandeId} {
-      allow create: if demandePaiementManuelEnAttente(request.resource.data.statut) && estConnecte()
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.keys().hasAll(["uid","email","operateur","referencePaiement","nomPayeur","montantFCFA","dureeMois","statut","createdAt"])
-        && request.resource.data.keys().hasOnly(["uid","email","operateur","referencePaiement","nomPayeur","montantFCFA","dureeMois","statut","createdAt"])
-        && request.resource.data.email == request.auth.token.email
-        && request.resource.data.operateur in ["Wave","Orange Money"]
-        && request.resource.data.referencePaiement is string
-        && request.resource.data.referencePaiement.size() >= 4
-        && request.resource.data.referencePaiement.size() <= 80
-        && request.resource.data.nomPayeur is string
-        && request.resource.data.nomPayeur.size() <= 80
-        && abonnementAutorise("automobiliste")
-        && request.resource.data.montantFCFA is int
-        && request.resource.data.montantFCFA > 0
-        && abonnementMontantAutorise("automobiliste", request.resource.data.montantFCFA, 1000)
-        && request.resource.data.dureeMois == abonnementChamp("automobiliste", "duree", 12)
-        && request.resource.data.statut == "en_attente"
-        && request.resource.data.createdAt == request.time;
+      // Historical manual payment requests are retained for review only.
+      allow create: if false;
       allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
-      allow update, delete: if estAdmin();
-
+      allow update: if estAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","traiteLe","traitePar"])
+        && request.resource.data.statut == "refuse";
+      allow delete: if estAdmin();
     }
 
     match /abonnements_automobiliste/{uid} {
       allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
-      allow create, update, delete: if estAdmin();
+      // Only the Jèko Worker Admin SDK can create or change paid subscriptions.
+      allow create, update, delete: if false;
     }
 
     match /configuration_application/{configId} {
@@ -1424,7 +1387,12 @@ service cloud.firestore {
         && request.resource.data.finEssai <= request.time + duration.value(30, "d")
         && request.resource.data.createdAt == request.time;
       allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
-      allow update: if estAdmin();
+      allow update: if estAdmin()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          "statutAbonnement","debutAbonnement","finAbonnement",
+          "renouvellementJekoPaymentId","renouvellementJekoStatut",
+          "dernierPaiementJekoMontant","dernierPaiementJekoLe"
+        ]);
       allow delete: if estAdmin();
     }
     match /annonces_logement/{annonceId} {
@@ -1471,20 +1439,13 @@ service cloud.firestore {
       allow update, delete: if estAdmin();
     }
     match /demandes_abonnement_logement/{demandeId} {
-      allow create: if demandePaiementManuelEnAttente(request.resource.data.statut) && estConnecte()
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.keys().hasAll(["uid","nom","email","telephone","formule","montant","operateur","reference","statut","createdAt"])
-        && request.resource.data.keys().hasOnly(["uid","nom","email","telephone","formule","montant","operateur","reference","statut","createdAt"])
-        && request.resource.data.formule in ["mensuel","trimestriel","semestriel"]
-        && ((request.resource.data.formule == "mensuel" && request.resource.data.montant == 3000)
-          || (request.resource.data.formule == "trimestriel" && request.resource.data.montant == 8000)
-          || (request.resource.data.formule == "semestriel" && request.resource.data.montant == 15000))
-        && request.resource.data.operateur in ["Orange Money","Wave"]
-        && request.resource.data.reference is string && request.resource.data.reference.size() >= 4 && request.resource.data.reference.size() <= 100
-        && request.resource.data.statut == "a_verifier"
-        && request.resource.data.createdAt == request.time;
+      // Historical manual payment requests remain readable; no new manual requests or confirmations.
+      allow create: if false;
       allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
-      allow update, delete: if estAdmin();
+      allow update: if estAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","reviewedAt","reviewedBy"])
+        && request.resource.data.statut == "refuse";
+      allow delete: if estAdmin();
     }
 
 

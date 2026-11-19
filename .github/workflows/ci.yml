@@ -1,0 +1,37 @@
+name: CI — Mon Quotidien CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, feat/jeko-unified-subscriptions]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Installer Java pour Firebase Emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Installer les dépendances
+        run: npm install --no-audit --no-fund
+      - name: Vérifier la syntaxe JavaScript
+        run: npm run test:syntax
+      - name: Tester les Workers enfants
+        run: npm run test:worker
+      - name: Tester les règles Firestore
+        run: npm run test:rules
+      - name: Tester les règles Storage
+        run: npm run test:storage
