@@ -232,11 +232,25 @@ async function paymentStatus(request,env) {
 }
 export default {
   async fetch(request,env) {
-    const url=new URL(request.url);
-    if(url.pathname==="/health"&&request.method==="GET") return json({ok:true,service:"mon-quotidien-jeko",mode:"production-locked"});
-    if(url.pathname==="/webhook") return webhook(request,env);
-    if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") return createCheckout(request,env);
-    if(url.pathname==="/api/jeko/status"&&request.method==="GET") return paymentStatus(request,env);
-    return json({error:"not_found"},404);
+    const url=new URL(request.url), origin=request.headers.get("origin")||"";
+    if(origin==="https://kevintabi-ia.github.io"&&request.method==="OPTIONS") {
+      return new Response(null,{status:204,headers:{
+        "Access-Control-Allow-Origin":origin,"Access-Control-Allow-Methods":"GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers":"Authorization, Content-Type","Access-Control-Max-Age":"86400","Vary":"Origin"
+      }});
+    }
+    let response;
+    if(url.pathname==="/health"&&request.method==="GET") response=json({ok:true,service:"mon-quotidien-jeko",mode:"production-locked"});
+    else if(url.pathname==="/webhook") response=await webhook(request,env);
+    else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
+    else if(url.pathname==="/api/jeko/status"&&request.method==="GET") response=await paymentStatus(request,env);
+    else response=json({error:"not_found"},404);
+    if(origin==="https://kevintabi-ia.github.io") {
+      const headers=new Headers(response.headers);
+      headers.set("Access-Control-Allow-Origin",origin);
+      headers.set("Vary","Origin");
+      response=new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+    }
+    return response;
   }
 };
