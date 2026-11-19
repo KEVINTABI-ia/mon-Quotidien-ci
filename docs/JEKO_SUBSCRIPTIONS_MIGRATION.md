@@ -77,7 +77,7 @@ Le Worker accepte désormais `serviceId: "petites_annonces"` sur `POST /api/jeko
 
 Après confirmation du webhook signé et validation de la référence, de la demande, du magasin, de la devise et du montant, le Worker prolonge l'abonnement et marque le paiement confirmé dans une seule écriture Firestore atomique, protégée contre les webhooks répétés.
 
-**Important :** cette étape backend n'a pas encore remplacé les formulaires Wave/Orange dans `index.html` ni les règles Firestore. Ne pas proposer le renouvellement petites annonces en production via ce nouveau flux tant que ces deux éléments ne sont pas migrés et testés. Les autres rubriques ne sont pas encore migrées.
+**État actualisé :** l'interface de renouvellement et les règles Firestore ont depuis été migrées pour cette rubrique, comme détaillé dans la section suivante. Le parcours reste toutefois non déployé et ne doit pas être considéré comme opérationnel en production avant fusion, déploiement séparé et tests fonctionnels.
 
 ## Interfaces et règles de sécurité — petites annonces
 
