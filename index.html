@@ -8067,13 +8067,9 @@ async function actualiserTarifPublicAutomobiliste(){
   try{
     const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
     if(!cfg.actif){zone.innerHTML="<strong>Les nouvelles souscriptions sont temporairement suspendues.</strong>";return;}
-    const paiement=await window.chargerCoordonneesPaiementMQCI();
     const montant=tarifAbonnementEffectif(cfg),duree=Number(cfg.duree),unite=cfg.unite==="mois"?(duree===12?"an":"mois"):"jours";
     zone.innerHTML="<strong>Tarif actuel : "+montant.toLocaleString("fr-FR")+" FCFA / "+duree+" "+unite+"</strong>"+
-      '<p style="margin:8px 0 4px;">Wave : <strong>'+echapperTextePublicite(paiement.numero)+'</strong></p>'+
-      '<p style="margin:4px 0;">Orange Money : <strong>'+echapperTextePublicite(paiement.numero)+'</strong></p>'+
-      '<p style="margin:4px 0;">Titulaire : <strong>'+echapperTextePublicite(paiement.beneficiaire)+'</strong></p>'+
-      '<p style="font-size:13px;margin-bottom:0;">Effectuez le transfert du montant indiqué, puis saisissez la référence de la transaction. L’accès sera activé après vérification manuelle.</p>';
+      '<p style="font-size:13px;margin:8px 0 0;">Le règlement de l’abonnement se fait exclusivement via Jèko. Choisissez votre moyen de paiement dans le formulaire ci-dessous. L’accès est activé uniquement après confirmation du webhook Jèko.</p>';
   }catch(e){
     console.error("Lecture du tarif automobiliste impossible :",e);
     zone.textContent="Impossible de charger le tarif actuel. Vérifiez votre connexion puis rouvrez cette rubrique.";
