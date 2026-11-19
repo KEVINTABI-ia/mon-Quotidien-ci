@@ -80,6 +80,19 @@ async function firestore(env, path, init={}) {
   return data;
 }
 async function getDoc(env,path) { return firestore(env,path); }
+function resourceName(path) { return "projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents/"+path; }
+async function commitWrites(env,writes) {
+  return firestore(env,":commit",{method:"POST",body:JSON.stringify({writes})});
+}
+function updateWrite(path,data,updateTime,exists) {
+  const write={update:{name:resourceName(path),...fields(data)},updateMask:{fieldPaths:Object.keys(data)}};
+  write.currentDocument=updateTime?{updateTime}:exists===false?{exists:false}:{exists:true};
+  return write;
+}
+function createWrite(path,data) {
+  return {update:{name:resourceName(path),...fields(data)},currentDocument:{exists:false}};
+}
+
 async function firebaseUser(token) {
   const response=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key="+FIREBASE_API_KEY,{
     method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({idToken:token})
@@ -171,12 +184,16 @@ async function webhook(request,env) {
     return new Response("OK",{status:200});
   }
   const receiptId="jeko_"+Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(transactionId)))).map(v=>v.toString(16).padStart(2,"0")).join("");
-  const receipt=await getDoc(env,"payment_webhooks/"+receiptId);
+  const receiptPath="payment_webhooks/"+receiptId;
+  const receipt=await getDoc(env,receiptPath);
   if(receipt) return new Response("OK",{status:200});
   const now=new Date();
+  const receiptData={provider:"jeko",transactionId,outcome:tx.status==="error"?"failed":"processed",receivedAt:now.toISOString()};
   if(tx.status==="error") {
-    await firestore(env,"payment_webhooks/"+receiptId,{method:"PATCH",body:JSON.stringify(fields({provider:"jeko",transactionId,outcome:"failed",receivedAt:now.toISOString()}))});
-    await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"failed",updatedAt:now.toISOString()}))});
+    await commitWrites(env,[
+      updateWrite(paymentPath,{status:"failed",updatedAt:now.toISOString()},paymentDoc.updateTime),
+      createWrite(receiptPath,receiptData)
+    ]);
     return new Response("OK",{status:200});
   }
   if(tx.status!=="success") return new Response("OK",{status:200});
@@ -185,9 +202,16 @@ async function webhook(request,env) {
   const oldEnd=sub.dateExpiration?new Date(sub.dateExpiration):null;
   const renewing=oldEnd&&oldEnd>now, end=addMonthsClamped(renewing?oldEnd:now,12);
   const subData={uid:payment.uid,statut:"actif",montantFCFA:payment.amountXof,dureeMois:12,dateActivation:sub.dateActivation||now.toISOString(),dateExpiration:end.toISOString(),paymentId,operateur:"Jèko"};
-  await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()}))});
-  await firestore(env,subPath,{method:"PATCH",body:JSON.stringify(fields(subData))});
-  await firestore(env,"payment_webhooks/"+receiptId,{method:"PATCH",body:JSON.stringify(fields({provider:"jeko",transactionId,outcome:"processed",receivedAt:now.toISOString()}))});
+  const writes=[
+    updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
+    updateWrite(subPath,subData,subDoc?.updateTime,subDoc?undefined:false),
+    createWrite(receiptPath,receiptData)
+  ];
+  try { await commitWrites(env,writes); }
+  catch(e) {
+    // A concurrent webhook may have committed first. Confirm receipt before returning success.
+    if(!(await getDoc(env,receiptPath))) throw e;
+  }
   return new Response("OK",{status:200});
 }
 async function paymentStatus(request,env) {
