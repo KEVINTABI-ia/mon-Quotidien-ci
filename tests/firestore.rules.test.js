@@ -1033,6 +1033,21 @@ describe("Mon Transport CI — règles Firestore", function () {
         telephone:"0700000000",description:"Prestation de plomberie de test",
         email:"client@example.test",statut:"en_attente",createdAt:serverTimestamp()
       }));
+      const annuaireRef=doc(db,"demandes_nouveaux_services","annuaire-gratuit-apres-verrou");
+      const {getDoc}=require("firebase/firestore");
+      await assertSucceeds(getDoc(annuaireRef));
+      const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      await assertSucceeds(updateDoc(doc(adminDb,"demandes_nouveaux_services","annuaire-gratuit-apres-verrou"),{
+        statut:"approuve",abonnementDebut:serverTimestamp(),
+        abonnementFin:Timestamp.fromMillis(Date.now()+30*24*60*60*1000),
+        abonnementStatut:"essai_gratuit",traiteLe:serverTimestamp()
+      }));
+      await assertFails(updateDoc(doc(adminDb,"demandes_nouveaux_services","annuaire-gratuit-apres-verrou"),{
+        abonnementDebut:serverTimestamp(),
+        abonnementFin:Timestamp.fromMillis(Date.now()+60*24*60*60*1000),
+        abonnementStatut:"actif",dernierPaiementFCFA:1000,
+        dernierPaiementConfirmeLe:serverTimestamp()
+      }));
     });
   });
 
