@@ -953,7 +953,23 @@ service cloud.firestore {
             "abonnementDebut","abonnementFin","abonnementStatut","paiementStatut",
             "montantAbonnement","dureeAbonnementJours","dernierPaiementFCFA",
             "dernierPaiementConfirmeLe","renouvellementJekoPaymentId","renouvellementJekoStatut"
-          ]));
+          ]))
+        && (resource.data.type != "annuaire"
+          || !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            "abonnementDebut","abonnementFin","abonnementStatut","dernierPaiementFCFA",
+            "dernierPaiementConfirmeLe","renouvellementJekoPaymentId","renouvellementJekoStatut"
+          ])
+          || (resource.data.statut == "en_attente"
+            && request.resource.data.statut == "approuve"
+            && request.resource.data.abonnementStatut == "essai_gratuit"
+            && request.resource.data.abonnementDebut == request.time
+            && request.resource.data.abonnementFin is timestamp
+            && request.resource.data.abonnementFin >= request.time + duration.value(29, "d")
+            && request.resource.data.abonnementFin <= request.time + duration.value(31, "d")
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+              "dernierPaiementFCFA","dernierPaiementConfirmeLe",
+              "renouvellementJekoPaymentId","renouvellementJekoStatut"
+            ])));
       allow delete: if estAdmin();
     }
 
