@@ -84,7 +84,7 @@ Les règles Firestore conservent la création de l'essai gratuit initial, mais i
 
 ## Portée actuelle de la migration exécutable
 
-Seule la verticale **renouvellement d'un abonnement petites annonces déjà existant et expiré** est entièrement câblée en source (catalogue, checkout, webhook, interface et règles). Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les autres catégories restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
+Deux verticales sont câblées en source (catalogue, checkout, webhook, interface et règles) : **renouvellement petites annonces** et **renouvellement des boutiques en mode partenaire déjà approuvées**. Les nouvelles inscriptions petites annonces continuent de préserver l'essai gratuit initial. Les créations/abonnements initiaux des boutiques classiques et partenaires, ainsi que les autres catégories, restent à migrer. Cette branche n'est pas encore fusionnée ni déployée.
 
 ## Deuxième verticale : boutiques partenaires
 
