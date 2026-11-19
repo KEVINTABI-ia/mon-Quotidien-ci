@@ -4531,25 +4531,22 @@ async function enregistrerCommandeBoutique(boutiqueId,index){
   const prixData={distanceKm:0,distanceMetres:0,tarifKm:100,montantLivraison:0,fraisService:0,montantTotal:0,devise:"FCFA",operation:"livraison_boutique",createdAt};
   await db.runTransaction(async tx=>{tx.set(ref,publicData);tx.set(ref.collection("informations_privees").doc("details"),privateData);tx.set(ref.collection("tarification").doc("prix"),prixData);});
   statut.textContent="Commande enregistrée. Vous pourrez suivre la livraison dans votre historique client.";
-  // WhatsApp prérempli : le client garde la main et doit appuyer sur Envoyer.
-  const zoneWhatsApp=document.getElementById("commandeBoutiqueZone_"+boutiqueId)||document.getElementById("commandeBoutiqueZoneCatalogue");
+  // WhatsApp prérempli : le lien est placé directement sous la confirmation,
+  // sans dépendre du conteneur global qui peut avoir été remplacé ou retiré.
   const numeroBoutique=String(b.telephone||"").replace(/\D/g,"");
   let numeroWhatsApp=numeroBoutique;
   if(numeroWhatsApp.startsWith("00225"))numeroWhatsApp=numeroWhatsApp.slice(2);
   if(numeroWhatsApp.startsWith("0")&&numeroWhatsApp.length===10)numeroWhatsApp="225"+numeroWhatsApp.slice(1);
   if(numeroWhatsApp.length===10)numeroWhatsApp="225"+numeroWhatsApp;
-  if(zoneWhatsApp){
-   let action=zoneWhatsApp.querySelector("[data-mqci-whatsapp-commande]");
-   if(!action){action=document.createElement("a");action.dataset.mqciWhatsappCommande="true";action.style.cssText="display:block;margin:14px 0;padding:14px 16px;border-radius:12px;background:#16834A;color:#fff;text-align:center;text-decoration:none;font-weight:800;";zoneWhatsApp.querySelector(".card")?.appendChild(action);}
-   if(/^225(?:01|05|07)\d{8}$/.test(numeroWhatsApp)){
-    const message=["Bonjour "+(b.titre||"la boutique")+", je viens de passer une commande sur Mon Quotidien CI.","Référence : "+numero,"Produit : "+p.nom,"Quantité : "+qte,"Montant des articles : "+prixArticles.toLocaleString("fr-FR")+" FCFA","Client : "+(profilSnap.data().nom||"Client"),"Téléphone client : "+tel,"Adresse de livraison : "+adresse,"Commentaire : "+(commentaire||"Aucun"),"Merci de confirmer la disponibilité et les frais de livraison."].join("\n");
-    action.href="https://wa.me/"+numeroWhatsApp+"?text="+encodeURIComponent(message);
-    action.target="_blank";action.rel="noopener noreferrer";action.textContent="Envoyer la commande à la boutique sur WhatsApp";
-   }else{
-    action.remove();
-    const avertissement=document.createElement("p");avertissement.className="notice";avertissement.textContent="La commande est enregistrée dans votre compte. Le numéro WhatsApp de cette boutique n’est pas valide ou n’est pas renseigné.";
-    zoneWhatsApp.querySelector(".card")?.appendChild(avertissement);
-   }
+  const zoneResultat=statut?.parentElement||document.getElementById("commandeBoutiqueZone_"+boutiqueId)||document.getElementById("commandeBoutiqueZoneCatalogue");
+  if(/^225(?:01|05|07)\d{8}$/.test(numeroWhatsApp)){
+   const message=["Bonjour "+(b.titre||"la boutique")+", je viens de passer une commande sur Mon Quotidien CI.","Référence : "+numero,"Produit : "+p.nom,"Quantité : "+qte,"Montant des articles : "+prixArticles.toLocaleString("fr-FR")+" FCFA","Client : "+(profilSnap.data().nom||"Client"),"Téléphone client : "+tel,"Adresse de livraison : "+adresse,"Commentaire : "+(commentaire||"Aucun"),"Merci de confirmer la disponibilité et les frais de livraison."].join("\n");
+   let action=zoneResultat?.querySelector("[data-mqci-whatsapp-commande]");
+   if(!action){action=document.createElement("a");action.dataset.mqciWhatsappCommande="true";action.style.cssText="display:block;margin:14px 0;padding:14px 16px;border-radius:12px;background:#16834A;color:#fff;text-align:center;text-decoration:none;font-weight:800;";if(statut?.parentElement)statut.insertAdjacentElement("afterend",action);else zoneResultat?.appendChild(action);}
+   if(action){action.href="https://wa.me/"+numeroWhatsApp+"?text="+encodeURIComponent(message);action.target="_blank";action.rel="noopener noreferrer";action.textContent="🟢 Envoyer la commande à la boutique sur WhatsApp";}
+  }else{
+   const avertissement=document.createElement("p");avertissement.className="notice";avertissement.textContent="La commande est enregistrée dans votre compte, mais le numéro WhatsApp de cette boutique n’est pas valide ou n’est pas renseigné.";
+   if(statut?.parentElement)statut.insertAdjacentElement("afterend",avertissement);else zoneResultat?.appendChild(avertissement);
   }
   const zone=document.getElementById("zoneHistoriqueCommandes");if(zone)chargerHistoriqueCommandes();
  }catch(e){console.error(e);statut.textContent="Commande impossible : "+e.message;}
