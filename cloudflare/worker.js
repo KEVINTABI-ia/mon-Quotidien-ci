@@ -225,10 +225,10 @@ async function createCheckout(request,env) {
   const reference="MQCI-"+id;
   initial.clientReference=reference;
   const path="payments/"+id;
-  const createPaymentWrite=createWrite(path,initial);
-  const initialWrites=[createPaymentWrite];
-  if(serviceId==="boutique_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},initial.boutiqueLockUpdateTime));
+  const boutiqueLockUpdateTime=initial.boutiqueLockUpdateTime;
   delete initial.boutiqueLockUpdateTime;
+  const initialWrites=[createWrite(path,initial)];
+  if(serviceId==="boutique_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},boutiqueLockUpdateTime));
   await commitWrites(env,initialWrites);
   try {
     const providerResult=await jeko(env,"/partner_api/payment_requests",{method:"POST",body:JSON.stringify({
