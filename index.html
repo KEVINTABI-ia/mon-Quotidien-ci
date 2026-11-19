@@ -7057,55 +7057,31 @@ function afficherEspacePartenaire(dossier, uid) {
 }
 
 async function ouvrirFormulaireRenouvellementPartenaire(){
- const zone=document.getElementById("formulaireRenouvellementPartenaire");
- const user=partnerAuth.currentUser;if(!zone||!user)return;
- zone.innerHTML="<p class='notice'>Chargement des formules...</p>";
+ const zone=document.getElementById("formulaireRenouvellementPartenaire"),user=partnerAuth.currentUser;if(!zone||!user)return;
+ zone.innerHTML='<p class="notice">Chargement des formules Jèko...</p>';
  try{
-  const ids=["partenaires_colis_1mois","partenaires_colis_3mois","partenaires_colis_6mois"];
-  const formules=await Promise.all(ids.map(async key=>({key,c:await obtenirConfigurationAbonnement(key)})));
-  const disponibles=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&x.c.unite==="mois"&&Number(x.c.duree)>0);
-  if(!disponibles.length){zone.innerHTML="<p class='notice'>Aucune formule de renouvellement n’est disponible actuellement.</p>";return;}
-  const options=disponibles.map(x=>'<option value="'+x.key+'" data-montant="'+tarifAbonnementEffectif(x.c)+'" data-mois="'+Number(x.c.duree)+'">'+Number(x.c.duree)+' mois — '+tarifAbonnementEffectif(x.c).toLocaleString("fr-FR")+' FCFA</option>').join("");
-  const paiement=await window.chargerCoordonneesPaiementMQCI();
-  zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><label>Formule d’abonnement</label><select id="partenaireRenouvellementFormule" style="width:100%;padding:12px;">'+options+'</select><p class="notice">Wave ou Orange Money au '+echapperTexteCompagnie(paiement.numero)+' — Bénéficiaire : '+echapperTexteCompagnie(paiement.beneficiaire)+'</p><label>Opérateur de paiement</label><select id="partenaireRenouvellementOperateur" style="width:100%;padding:12px;"><option value="">Choisir</option><option value="Wave">Wave</option><option value="Orange Money">Orange Money</option></select><label>Référence de transaction</label><input id="partenaireRenouvellementReference" maxlength="80" placeholder="Référence affichée après le paiement" style="width:100%;padding:12px;"><button type="button" class="primary" onclick="envoyerRenouvellementPartenaire()">Envoyer ma demande de renouvellement</button><p id="statutRenouvellementPartenaire" class="notice" aria-live="polite"></p></div>';
- }catch(e){zone.textContent="Impossible de charger les formules : "+e.message;}
+  const token=await user.getIdToken(),r=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/subscription-plans?serviceId=partenaires_colis",{headers:{Authorization:"Bearer "+token}});
+  const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error("Catalogue Jèko indisponible.");
+  const plans=(data.plans||[]).filter(p=>["partenaires_colis_1mois","partenaires_colis_3mois","partenaires_colis_6mois"].includes(p.planId)&&p.available);
+  if(!plans.length){zone.textContent="Aucune formule partenaire payante n'est actuellement disponible.";return;}
+  zone.innerHTML='<div class="card" style="padding:12px;margin-top:10px;"><label>Formule d’abonnement</label><select id="partenaireRenouvellementFormule" style="width:100%;padding:12px;">'+plans.map(p=>'<option value="'+p.planId+'">'+Number(p.duration)+' mois — '+Number(p.priceXof).toLocaleString("fr-FR")+' FCFA</option>').join("")+'</select><label>Moyen de paiement</label><select id="partenaireJekoPaymentMethod" style="width:100%;padding:12px;"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select><button type="button" class="primary" onclick="envoyerRenouvellementPartenaire()">Payer avec Jèko</button><p id="statutRenouvellementPartenaire" class="notice" aria-live="polite"></p></div>';
+ }catch(e){zone.textContent="Impossible de charger les formules : "+(e.message||"erreur");}
 }
 async function envoyerRenouvellementPartenaire(){
- const user=partnerAuth.currentUser,statut=document.getElementById("statutRenouvellementPartenaire");
- if(!(await window.paiementsMQCIDisponibles(true))){if(statut)statut.textContent="Paiements temporairement indisponibles en attendant les API Wave et Orange Money.";return;}
- const formule=document.getElementById("partenaireRenouvellementFormule")?.value||"";
- const operateur=document.getElementById("partenaireRenouvellementOperateur")?.value||"";
- const reference=document.getElementById("partenaireRenouvellementReference")?.value.trim()||"";
- if(!user||!["Wave","Orange Money"].includes(operateur)||reference.length<4){if(statut)statut.textContent="Choisissez un opérateur et saisissez une référence valide.";return;}
+ const user=partnerAuth.currentUser,statut=document.getElementById("statutRenouvellementPartenaire"),planId=document.getElementById("partenaireRenouvellementFormule")?.value||"",paymentMethod=document.getElementById("partenaireJekoPaymentMethod")?.value||"";
+ if(!user||!["wave","orange","mtn","moov","djamo"].includes(paymentMethod)){if(statut)statut.textContent="Connexion ou moyen de paiement invalide.";return;}
+ if(statut)statut.textContent="Préparation du paiement Jèko...";
  try{
-  const cfg=await obtenirConfigurationAbonnement(formule);
-  if(!["partenaires_colis_1mois","partenaires_colis_3mois","partenaires_colis_6mois"].includes(formule)||!cfg.actif||cfg.unite!=="mois")throw new Error("Cette formule n’est plus disponible. Actualisez la page.");
-  const montant=tarifAbonnementEffectif(cfg),mois=Number(cfg.duree);
-  const ref=partnerDb.collection("partenaires").doc(user.uid),snap=await ref.get();
-  if(!snap.exists)throw new Error("Dossier partenaire introuvable.");
-  const p=snap.data(),now=Date.now(),finEssai=p.dateFinEssai?.toDate?.()?.getTime()||0,finAbonnement=p.dateExpirationAbonnement?.toDate?.()?.getTime()||0;
-  if(p.statut!=="approuve"||(p.etatCompte||"actif")!=="actif")throw new Error("Votre dossier ou votre compte ne permet pas ce renouvellement.");
-  if((p.statutAbonnementPartenaire==="Essai"&&finEssai>now)||(p.statutAbonnementPartenaire==="Actif"&&finAbonnement>now))throw new Error("Votre abonnement est encore actif. Le renouvellement n’est pas encore nécessaire.");
-  if(p.renouvellementStatut==="a_verifier")throw new Error("Une demande de renouvellement est déjà en attente de vérification.");
-  await ref.update({renouvellementStatut:"a_verifier",renouvellementFormule:formule,renouvellementMois:mois,renouvellementMontant:montant,renouvellementOperateur:operateur,renouvellementReference:reference,renouvellementDemandeLe:firebase.firestore.FieldValue.serverTimestamp()});
-  if(statut)statut.textContent="Demande envoyée. Votre abonnement sera réactivé après vérification et confirmation du paiement par l’administration.";
-  const zone=document.getElementById("formulaireRenouvellementPartenaire");if(zone)zone.innerHTML='<p class="notice">Votre demande de renouvellement est en attente de vérification par l’administration.</p>';
- }catch(e){console.error(e);if(statut)statut.textContent="Envoi impossible : "+e.message;}
+  const token=await user.getIdToken(),r=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceId:"partenaire_colis",planId,paymentMethod})});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok||!data.checkoutUrl){const messages={partner_not_eligible:"Votre dossier ou votre compte ne permet pas ce renouvellement.",subscription_still_active:"Votre essai ou abonnement est encore actif.",existing_payment_requires_review:"Un paiement précédent doit être vérifié. Ne recommencez pas le paiement.",plan_configuration_invalid:"Cette formule est momentanément indisponible."};throw new Error(messages[data.error]||data.diagnostic||"Initialisation Jèko impossible.");}
+  if(statut)statut.textContent="Redirection vers Jèko...";
+  window.location.assign(data.checkoutUrl);
+ }catch(e){if(statut)statut.textContent=e.message||"Erreur de paiement.";}
 }
 async function confirmerRenouvellementPartenaire(id){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
- try{
-  const ref=db.collection("partenaires").doc(id),snap=await ref.get();
-  if(!snap.exists)throw new Error("Partenaire introuvable.");
-  const p=snap.data();if(p.renouvellementStatut!=="a_verifier")throw new Error("Aucune demande de renouvellement en attente.");
-  const cfg=await obtenirConfigurationAbonnement(p.renouvellementFormule);
-  if(!cfg.actif||tarifAbonnementEffectif(cfg)!==Number(p.renouvellementMontant)||Number(cfg.duree)!==Number(p.renouvellementMois))throw new Error("La formule ou son tarif a changé. Vérifiez la demande avant toute activation.");
-  if(!confirm("Confirmer la réception de "+Number(p.renouvellementMontant).toLocaleString("fr-FR")+" FCFA via "+p.renouvellementOperateur+" (référence "+p.renouvellementReference+") et activer "+p.renouvellementMois+" mois ?"))return;
-  const maintenant=new Date(),ancienneFin=p.dateExpirationAbonnement?.toDate?.()||null,base=ancienneFin&&ancienneFin>maintenant?ancienneFin:maintenant,expiration=new Date(base);expiration.setMonth(expiration.getMonth()+Number(p.renouvellementMois));
-  const libelle=Number(p.renouvellementMois)+" mois";
-  await ref.update({statutAbonnementPartenaire:"Actif",etatCompte:"actif",formuleAbonnementPartenaire:libelle,montantAbonnementPartenaire:Number(p.renouvellementMontant),dateDebutAbonnement:firebase.firestore.Timestamp.fromDate(maintenant),dateExpirationAbonnement:firebase.firestore.Timestamp.fromDate(expiration),renouvellementStatut:"confirme",renouvellementConfirmeLe:firebase.firestore.FieldValue.serverTimestamp(),renouvellementConfirmePar:auth.currentUser.uid,historiqueAbonnements:firebase.firestore.FieldValue.arrayUnion({formule:libelle,montant:Number(p.renouvellementMontant),operateur:p.renouvellementOperateur,reference:p.renouvellementReference,dateValidation:firebase.firestore.Timestamp.fromDate(maintenant),dateExpiration:firebase.firestore.Timestamp.fromDate(expiration),validePar:auth.currentUser.uid})});
-  alert("Renouvellement confirmé. Abonnement actif jusqu’au "+expiration.toLocaleDateString("fr-FR")+".");chargerPartenairesAdmin();chargerCommandesAdmin();
- }catch(e){console.error(e);alert("Validation impossible : "+e.message);}
+ alert("La validation manuelle est désactivée. Seul un webhook Jèko vérifié peut activer l'abonnement. Les anciennes demandes restent consultables pour historique.");
 }
 
 let ecouteFileCommandesPartenaire = null;
@@ -7643,23 +7619,7 @@ async function demarrerEssaiPartenaire(id) {
 
 async function activerAbonnementPartenaire(id) {
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
- try{
-  const ids=["partenaires_colis_1mois","partenaires_colis_3mois","partenaires_colis_6mois"];
-  const formules=await Promise.all(ids.map(async key=>({key,c:await obtenirConfigurationAbonnement(key)})));
-  const disponibles=formules.filter(x=>x.c.actif&&tarifAbonnementEffectif(x.c)>0&&x.c.unite==="mois");
-  if(!disponibles.length)return alert("Aucune formule partenaire n'est actuellement disponible.");
-  const lignes=disponibles.map((x,i)=>(i+1)+" = "+x.c.duree+" mois : "+tarifAbonnementEffectif(x.c).toLocaleString("fr-FR")+" FCFA").join("\n");
-  const choix=prompt("Choisis la formule après vérification du paiement :\n"+lignes,"1");if(choix===null)return;
-  const formule=disponibles[Number(choix.trim())-1];if(!formule)return alert("Choix invalide.");
-  const montant=tarifAbonnementEffectif(formule.c),mois=Number(formule.c.duree);
-  if(!confirm("Confirmer la réception de "+montant.toLocaleString("fr-FR")+" FCFA pour "+mois+" mois ?"))return;
-  const reference=db.collection("partenaires").doc(id),document=await reference.get();if(!document.exists)return alert("Partenaire introuvable.");
-  const partenaire=document.data(),maintenant=new Date(),ancienneFin=partenaire.dateExpirationAbonnement&&partenaire.dateExpirationAbonnement.toDate?partenaire.dateExpirationAbonnement.toDate():(partenaire.dateExpirationAbonnement?new Date(partenaire.dateExpirationAbonnement):null);
-  const base=ancienneFin&&ancienneFin>maintenant?ancienneFin:maintenant,expiration=new Date(base);expiration.setMonth(expiration.getMonth()+mois);
-  const libelle=mois+" mois";
-  await reference.update({statutAbonnementPartenaire:"Actif",formuleAbonnementPartenaire:libelle,montantAbonnementPartenaire:montant,dateDebutAbonnement:firebase.firestore.Timestamp.fromDate(maintenant),dateExpirationAbonnement:firebase.firestore.Timestamp.fromDate(expiration),historiqueAbonnements:firebase.firestore.FieldValue.arrayUnion({formule:libelle,montant,dateValidation:firebase.firestore.Timestamp.fromDate(maintenant),dateExpiration:firebase.firestore.Timestamp.fromDate(expiration),validePar:auth.currentUser.uid})});
-  alert("Abonnement activé jusqu'au "+expiration.toLocaleDateString("fr-FR")+".");chargerPartenairesAdmin();
- }catch(erreur){alert("Erreur lors de l'activation : "+erreur.message);}
+ alert("L'activation payante manuelle est désactivée. Le partenaire doit régler sa formule via Jèko depuis son espace. L'essai gratuit de 21 jours reste disponible séparément.");
 }
 
 async function refuserPartenaire(id) {
