@@ -8074,48 +8074,27 @@ async function ouvrirEspaceAbonnementAutomobiliste(){
 }
 
 async function actualiserEtatAbonnementAutomobiliste(){
-  const zone=document.getElementById("etatAbonnementAuto");if(!zone)return;
-  if(!auth.currentUser){zone.textContent="Connectez-vous ou créez un compte pour demander l'activation.";return;}
-  zone.textContent="Vérification de votre abonnement...";
+ const zone=document.getElementById("etatAbonnementAuto");if(!zone)return;
+ if(!auth.currentUser){zone.textContent="Connectez-vous ou créez un compte pour consulter votre abonnement.";return;}
+ zone.textContent="Vérification de votre abonnement...";
+ try{
   const actif=await verifierAbonnementAutomobiliste();
   if(actif){
-    const [abonnement,profil]=await Promise.all([
-      db.collection("abonnements_automobiliste").doc(auth.currentUser.uid).get(),
-      db.collection("utilisateurs").doc(auth.currentUser.uid).get()
-    ]);
-    const expiration=abonnement.exists&&abonnement.data().dateExpiration&&abonnement.data().dateExpiration.toDate?abonnement.data().dateExpiration.toDate():null;
-    if(expiration){
-      zone.textContent="Votre abonnement est actif jusqu'au "+expiration.toLocaleDateString("fr-FR")+". Vous pouvez accéder aux services.";
-    }else{
-      const creation=profil.exists&&profil.data().createdAt&&profil.data().createdAt.toDate?profil.data().createdAt.toDate():null;
-      if(!creation){zone.textContent="Votre accès est actif. La date de création du compte est en cours de vérification.";return;}
-      const finEssai=new Date(creation.getTime()+30*24*60*60*1000);
-      zone.textContent="Votre accès gratuit est actif jusqu'au "+finEssai.toLocaleDateString("fr-FR")+". Vous pouvez utiliser les services de l'espace automobiliste.";
-    }
-    document.getElementById("operateurAbonnementAuto").disabled=true;
-    document.getElementById("referenceAbonnementAuto").disabled=true;
-    document.getElementById("nomPayeurAbonnementAuto").disabled=true;
-    return;
+   const abonnement=await db.collection("abonnements_automobiliste").doc(auth.currentUser.uid).get();
+   const expiration=abonnement.exists&&abonnement.data().dateExpiration?.toDate?abonnement.data().dateExpiration.toDate():null;
+   zone.textContent=expiration?"Votre abonnement est actif jusqu'au "+expiration.toLocaleDateString("fr-FR")+".":"Votre accès automobiliste est actif.";
+   return;
   }
-  const demandes=await db.collection("demandes_abonnement_automobiliste").where("uid","==",auth.currentUser.uid).get();
-  const derniereDemande=demandes.docs.slice().sort((a,b)=>{
-    const dateA=a.data().createdAt?.toMillis?.()||0;
-    const dateB=b.data().createdAt?.toMillis?.()||0;
-    return dateB-dateA;
-  })[0];
-  if(derniereDemande && derniereDemande.data().statut==="en_attente"){
-    zone.textContent="Votre demande est en attente de vérification. Vous serez autorisé après validation par l'administrateur.";
-    document.getElementById("operateurAbonnementAuto").disabled=true;
-    document.getElementById("referenceAbonnementAuto").disabled=true;
-    document.getElementById("nomPayeurAbonnementAuto").disabled=true;
-    return;
+  const anciennes=await db.collection("demandes_abonnement_automobiliste").where("uid","==",auth.currentUser.uid).get();
+  if(anciennes.docs.some(d=>d.data().statut==="en_attente")){
+   zone.textContent="Une ancienne demande de paiement manuel est encore en attente. Elle ne sera pas validée automatiquement. Contactez l’administration avant tout nouveau paiement.";
+   return;
   }
   const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
-  if(!cfg.actif){zone.textContent="Les nouvelles souscriptions automobilistes sont temporairement suspendues.";document.getElementById("operateurAbonnementAuto").disabled=true;document.getElementById("referenceAbonnementAuto").disabled=true;document.getElementById("nomPayeurAbonnementAuto").disabled=true;return;}
-  zone.textContent="Aucun abonnement actif. Après votre transfert de "+tarifAbonnementEffectif(cfg).toLocaleString("fr-FR")+" FCFA pour "+cfg.duree+" mois, renseignez la référence ci-dessous.";
-  document.getElementById("operateurAbonnementAuto").disabled=false;
-  document.getElementById("referenceAbonnementAuto").disabled=false;
-  document.getElementById("nomPayeurAbonnementAuto").disabled=false;
+  if(!cfg.actif){zone.textContent="Les nouvelles souscriptions automobilistes sont temporairement suspendues.";return;}
+  if(cfg.unite!=="mois"||Number(cfg.duree)!==12){zone.textContent="La formule annuelle est momentanément mal configurée. Contactez l’administration.";return;}
+  zone.textContent="Aucun abonnement actif. Souscription annuelle : "+tarifAbonnementEffectif(cfg).toLocaleString("fr-FR")+" FCFA. Le paiement se fait exclusivement avec Jèko.";
+ }catch(e){zone.textContent="Vérification impossible : "+(e.message||"réessayez.");}
 }
 
 async function connecterCompteAbonnementAuto(){
@@ -8139,64 +8118,34 @@ async function creerCompteAbonnementAuto(){
 async function deconnecterCompteAbonnementAuto(){await auth.signOut();abonnementAutomobilisteValide=false;document.getElementById("formulaireDemandeAbonnementAuto").style.display="none";document.getElementById("connexionAbonnementAuto").style.display="block";}
 
 function actualiserModePaiementAbonnementAuto(){
-  const choix=document.getElementById("operateurAbonnementAuto")?.value||"Wave";
-  const viaJeko=choix.startsWith("jeko:");
-  const manuel=document.getElementById("paiementManuelAbonnementAuto");
-  const aide=document.getElementById("aidePaiementAbonnementAuto");
-  const bouton=document.getElementById("boutonPaiementAbonnementAuto");
-  if(manuel)manuel.style.display=viaJeko?"none":"block";
-  if(aide)aide.textContent=viaJeko
-    ?"Vous serez redirigé vers Jèko Checkout. Le paiement sera confirmé automatiquement avant toute activation."
-    :"Le paiement manuel reste disponible avec vérification par l’administration.";
-  if(bouton)bouton.textContent=viaJeko?"Payer avec Jèko Checkout":"Envoyer ma demande de validation";
+ const aide=document.getElementById("aidePaiementAbonnementAuto"),bouton=document.getElementById("boutonPaiementAbonnementAuto");
+ if(aide)aide.textContent="Tous les paiements d'abonnement sont traités par Jèko. L'activation intervient après confirmation du webhook.";
+ if(bouton)bouton.textContent="Payer avec Jèko";
 }
-
 async function envoyerDemandeAbonnementAuto(){
-  const user=auth.currentUser;if(!user)return alert("Connectez-vous d'abord.");
-  if(!(await window.paiementsMQCIDisponibles(true)))return alert("Paiements temporairement indisponibles.");
-  const operateur=document.getElementById("operateurAbonnementAuto").value;
-  if(operateur.startsWith("jeko:")){
-    const zone=document.getElementById("etatAbonnementAuto");
-    const bouton=document.getElementById("boutonPaiementAbonnementAuto");
-    const paymentMethod=operateur.slice(5);
-    if(bouton){bouton.disabled=true;bouton.textContent="Préparation du paiement…";}
-    if(zone)zone.textContent="Vérification du tarif et création de la session Jèko…";
-    try{
-      const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
-      if(!cfg.actif)throw new Error("Les nouvelles souscriptions automobilistes sont temporairement suspendues.");
-      if(cfg.unite!=="mois"||Number(cfg.duree)!==12)throw new Error("L’abonnement automobiliste doit être annuel.");
-      const token=await user.getIdToken();
-      const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{
-        method:"POST",
-        headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
-        body:JSON.stringify({paymentMethod})
-      });
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok||!data.checkoutUrl)throw new Error("Jèko ne peut pas créer le paiement pour le moment. Le paiement manuel reste disponible.");
-      if(zone)zone.textContent="Session Jèko créée. Redirection sécurisée…";
-      window.location.assign(data.checkoutUrl);
-      return;
-    }catch(e){
-      console.error("Création checkout Jèko:",e);
-      if(zone)zone.textContent=e.message||"Paiement Jèko indisponible.";
-      if(bouton){bouton.disabled=false;bouton.textContent="Payer avec Jèko Checkout";}
-      return;
-    }
-  }
-  const reference=document.getElementById("referenceAbonnementAuto").value.trim();
-  if(reference.length<4)return alert("Saisissez la référence de votre transaction.");
-  const nomPayeur=document.getElementById("nomPayeurAbonnementAuto").value.trim();
-  try{
-    const cfg=await obtenirConfigurationAbonnement("automobiliste",true);if(!cfg.actif)return alert("Les nouvelles souscriptions automobilistes sont temporairement suspendues.");if(cfg.unite!=="mois"||Number(cfg.duree)!==12)return alert("L’abonnement automobiliste doit être annuel.");const montant=tarifAbonnementEffectif(cfg);
-    await db.collection("demandes_abonnement_automobiliste").add({
-      uid:user.uid,email:user.email||"",operateur,referencePaiement:reference,nomPayeur,
-      montantFCFA:montant,dureeMois:Number(cfg.duree),statut:"en_attente",
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
-    document.getElementById("referenceAbonnementAuto").value="";
-    alert("Demande envoyée. L'accès sera activé après vérification du paiement.");
-    await actualiserEtatAbonnementAutomobiliste();
-  }catch(e){console.error(e);alert("Envoi impossible. Vérifiez votre connexion et réessayez.");}
+ const user=auth.currentUser;if(!user)return alert("Connectez-vous d'abord.");
+ const paymentMethod=document.getElementById("operateurAbonnementAuto")?.value||"";
+ if(!["wave","orange","mtn","moov","djamo"].includes(paymentMethod))return alert("Choisissez un moyen de paiement Jèko.");
+ const zone=document.getElementById("etatAbonnementAuto"),bouton=document.getElementById("boutonPaiementAbonnementAuto");
+ if(bouton){bouton.disabled=true;bouton.textContent="Préparation du paiement…";}
+ if(zone)zone.textContent="Vérification du tarif et création de la session Jèko…";
+ try{
+  const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
+  if(!cfg.actif)throw new Error("Les nouvelles souscriptions automobilistes sont temporairement suspendues.");
+  if(cfg.unite!=="mois"||Number(cfg.duree)!==12)throw new Error("L’abonnement automobiliste doit être annuel.");
+  const token=await user.getIdToken(),response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{
+   method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+   body:JSON.stringify({serviceId:"automobiliste",paymentMethod})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.checkoutUrl)throw new Error(data.diagnostic||"Jèko ne peut pas créer le paiement pour le moment.");
+  if(zone)zone.textContent="Session Jèko créée. Redirection sécurisée…";
+  window.location.assign(data.checkoutUrl);
+ }catch(e){
+  console.error("Création checkout Jèko:",e);
+  if(zone)zone.textContent=e.message||"Paiement Jèko indisponible.";
+  if(bouton){bouton.disabled=false;bouton.textContent="Payer avec Jèko";}
+ }
 }
 
 async function verifierRetourPaiementJeko(user){
