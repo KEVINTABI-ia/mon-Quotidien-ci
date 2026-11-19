@@ -3375,7 +3375,7 @@ function chargerPublicitesAccueil() {
 <button type="button" class="primary" onclick="envoyerDeclarationObjet()">Envoyer la déclaration</button><p id="orStatutDeclaration" class="notice"></p></div>
 <div id="listeBiensRetrouves" style="display:none;margin:12px 0;"><h3>Biens retrouvés publiés</h3><div id="orResultatsPublics"></div></div>
 <div id="formulaireReclamationObjet" style="display:none;border:1px solid #D8E5DD;border-radius:12px;padding:13px;margin:12px 0;">
-<h3>🔐 Réclamer ce bien</h3><p class="notice">Vos coordonnées et informations de paiement seront transmises uniquement à l’administrateur.</p>
+<h3>🔐 Réclamer ce bien</h3><p class="notice">Vos coordonnées seront transmises uniquement à l’administrateur.</p>
 <input id="orObjetReclameId" type="hidden">
 <label>Votre nom et prénoms</label><input id="orReclamantNom" maxlength="100">
 <label>Votre numéro de téléphone</label><input id="orReclamantTel" type="tel" maxlength="25">
@@ -8268,7 +8268,7 @@ async function verifierRetourPaiementJeko(user){
         return;
       }
       if(response.ok&&["review_required","failed","expired"].includes(data.status)){
-        if(zone)zone.textContent="Le paiement nécessite une vérification. Votre abonnement n'a pas été activé.";
+        if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été confirmé. Aucune demande de récupération n’a été transmise.":"Le paiement nécessite une vérification. Votre abonnement n'a pas été activé.";
         return;
       }
       await new Promise(resolve=>setTimeout(resolve,1500));
