@@ -157,15 +157,26 @@ describe("Mon Transport CI — règles Firestore", function () {
     const {doc,updateDoc,serverTimestamp,Timestamp}=require("firebase/firestore");
     const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
     const companyRef=doc(adminDb,"comptes_ramassage",PARTNER_UID);
-    await assertSucceeds(updateDoc(companyRef,{statut:"approuve"}));
+    await assertSucceeds(updateDoc(companyRef,{
+      statut:"approuve",abonnement:"essai",
+      dateDebutEssai:serverTimestamp(),
+      dateFinEssai:Timestamp.fromMillis(Date.now()+30*86400000)
+    }));
     await assertFails(updateDoc(companyRef,{
       abonnement:"actif",montantAbonnement:2000,dureeAbonnementJours:30,
       dateExpirationAbonnement:Timestamp.fromMillis(Date.now()+30*86400000)
+    }));
+    await assertFails(updateDoc(companyRef,{
+      abonnement:"essai",dateDebutEssai:serverTimestamp(),
+      dateFinEssai:Timestamp.fromMillis(Date.now()+30*86400000)
     }));
     const companyDb=testEnv.authenticatedContext(PARTNER_UID,{email:"partner@example.test"}).firestore();
     await assertFails(updateDoc(doc(companyDb,"comptes_ramassage",PARTNER_UID),{
       abonnement:"actif",montantAbonnement:2000,dureeAbonnementJours:30,
       dateExpirationAbonnement:serverTimestamp()
+    }));
+    await assertFails(updateDoc(doc(companyDb,"comptes_ramassage",PARTNER_UID),{
+      dateFinEssai:Timestamp.fromMillis(Date.now()+30*86400000)
     }));
   });
 
