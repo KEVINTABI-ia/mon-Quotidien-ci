@@ -148,6 +148,27 @@ describe("Mon Transport CI — règles Firestore", function () {
     }));
   });
 
+  it("réserve l'activation et le renouvellement du forfait ramassage au webhook Jèko", async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await context.firestore().doc(`comptes_ramassage/${PARTNER_UID}`).set(ramassageCompanyFixture({
+        abonnement:"inactif",statut:"en_attente",montantAbonnement:null,dateExpirationAbonnement:null
+      }));
+    });
+    const {doc,updateDoc,serverTimestamp,Timestamp}=require("firebase/firestore");
+    const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+    const companyRef=doc(adminDb,"comptes_ramassage",PARTNER_UID);
+    await assertSucceeds(updateDoc(companyRef,{statut:"approuve"}));
+    await assertFails(updateDoc(companyRef,{
+      abonnement:"actif",montantAbonnement:2000,dureeAbonnementJours:30,
+      dateExpirationAbonnement:Timestamp.fromMillis(Date.now()+30*86400000)
+    }));
+    const companyDb=testEnv.authenticatedContext(PARTNER_UID,{email:"partner@example.test"}).firestore();
+    await assertFails(updateDoc(doc(companyDb,"comptes_ramassage",PARTNER_UID),{
+      abonnement:"actif",montantAbonnement:2000,dureeAbonnementJours:30,
+      dateExpirationAbonnement:serverTimestamp()
+    }));
+  });
+
   it("autorise une compagnie de ramassage dont l'abonnement est valide à publier une offre", async () => {
     await testEnv.withSecurityRulesDisabled(async context => {
       await context.firestore().doc(`comptes_ramassage/${PARTNER_UID}`).set(ramassageCompanyFixture());
