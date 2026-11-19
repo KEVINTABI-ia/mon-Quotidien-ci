@@ -1016,16 +1016,26 @@ describe("Mon Transport CI — règles Firestore", function () {
       }));
     });
 
-    it("accepte une demande boutique payante en attente et conserve les inscriptions gratuites d’annuaire", async () => {
+    it("accepte une demande boutique Jèko en attente et conserve les inscriptions gratuites d’annuaire", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
       const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
       await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","boutique-paiement-manuel"),{
         uid:CLIENT_UID,type:"commerce",titre:"Boutique test",categorie:"Boutique",
         commune:"Yopougon",telephone:"0700000000",description:"Boutique de test",
         email:"client@example.test",adresseBoutique:"Yopougon, Abidjan",
-        paiementMoyen:"Wave",paiementReference:"REF-TEST-1234",
-        montantAbonnement:7000,dureeAbonnementJours:30,paiementStatut:"a_verifier",
+        planAbonnementId:"boutiques_3mois",abonnementStatut:"a_payer",
+        montantAbonnement:7000,dureeAbonnementJours:90,paiementStatut:"a_payer",
         statut:"en_attente",createdAt:serverTimestamp()
+      }));
+      const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      await assertSucceeds(updateDoc(doc(adminDb,"demandes_nouveaux_services","boutique-paiement-manuel"),{
+        statut:"approuve",traiteLe:serverTimestamp()
+      }));
+      await assertFails(updateDoc(doc(adminDb,"demandes_nouveaux_services","boutique-paiement-manuel"),{
+        abonnementStatut:"actif",paiementStatut:"confirme",
+        abonnementDebut:serverTimestamp(),
+        abonnementFin:Timestamp.fromMillis(Date.now()+90*24*60*60*1000),
+        dernierPaiementFCFA:7000,dernierPaiementConfirmeLe:serverTimestamp()
       }));
       await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","annuaire-gratuit-apres-verrou"),{
         uid:CLIENT_UID,type:"annuaire",titre:"Plomberie test",categorie:"Plomberie",
