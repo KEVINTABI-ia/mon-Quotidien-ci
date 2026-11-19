@@ -4819,7 +4819,7 @@ async function envoyerReclamationObjet(){
       body:JSON.stringify({serviceId:"objet_retrouve",objectId:objetId,nomComplet:nom,telephone:tel,residence,paymentMethod})
     });
     const data=await response.json().catch(()=>({}));
-    if(!response.ok||!data.checkoutUrl)throw new Error(data.error==="object_unavailable"?"Cet objet n’est plus disponible.":data.error==="invalid_claim_details"?"Vérifiez les coordonnées saisies.":"Jèko ne peut pas initialiser le paiement. Réessayez plus tard.");
+    if(!response.ok||!data.checkoutUrl)throw new Error(data.error==="object_unavailable"?"Cet objet n’est plus disponible.":data.error==="invalid_claim_details"?"Vérifiez les coordonnées saisies.":data.diagnostic?"Échec de l’initialisation Jèko ("+data.diagnostic+").":"Jèko ne peut pas initialiser le paiement. Réessayez plus tard.");
     statut.textContent="Paiement sécurisé prêt. Redirection vers Jèko…";
     window.location.assign(data.checkoutUrl);
   }catch(e){
