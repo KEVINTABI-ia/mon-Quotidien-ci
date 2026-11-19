@@ -130,7 +130,7 @@ async function createCheckout(request,env) {
   const user=await requireUser(request);
   if(!user) return json({error:"unauthorized"},401);
   let body={}; try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
-  const methods=["orange","wave","mtn","moov","djamo","jeko"];
+  const methods=["orange","wave","mtn","moov","djamo"];
   if(!methods.includes(body.paymentMethod)) return json({error:"invalid_payment_method"},400);
   const cfgDoc=await getDoc(env,"configuration_abonnements/globale");
   const services=docData(cfgDoc)?.services||{};
