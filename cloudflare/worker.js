@@ -123,7 +123,13 @@ async function jeko(env,path,init={}) {
     "X-API-KEY":env.JEKO_API_KEY,"X-API-KEY-ID":env.JEKO_API_KEY_ID,"content-type":"application/json",...(init.headers||{})
   },signal:AbortSignal.timeout(15000)});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok) throw new Error("jeko_provider_"+response.status);
+  if(!response.ok) {
+    const providerCode=[data.code,data.errorCode,data.errorReason,data.error].find(v=>typeof v==="string"&&/^[A-Za-z0-9_.-]{1,80}$/.test(v))||"";
+    const err=new Error("jeko_provider_"+response.status+(providerCode?"_"+providerCode:""));
+    err.providerStatus=response.status;
+    err.providerCode=providerCode||null;
+    throw err;
+  }
   return data;
 }
 async function createCheckout(request,env) {
@@ -172,8 +178,10 @@ async function createCheckout(request,env) {
     await firestore(env,path,{method:"PATCH",body:JSON.stringify(fields({providerPaymentRequestId:checkoutId,checkoutUrl:redirect,updatedAt:new Date().toISOString()}))});
     return json({paymentId:id,checkoutUrl:redirect},201);
   } catch(e) {
-    await firestore(env,path,{method:"PATCH",body:JSON.stringify(fields({status:"failed",initializationError:"provider_unavailable",updatedAt:new Date().toISOString()}))}).catch(()=>{});
-    return json({error:"payment_initialization_failed"},502);
+    const diagnostic=typeof e?.message==="string"&&/^jeko_provider_[0-9]{3}(_[A-Za-z0-9_.-]{1,80})?$/.test(e.message)?e.message:"provider_network_or_response_error";
+    console.error("Jeko checkout initialization failed",{serviceId,diagnostic});
+    await firestore(env,path,{method:"PATCH",body:JSON.stringify(fields({status:"failed",initializationError:diagnostic,updatedAt:new Date().toISOString()}))}).catch(()=>{});
+    return json({error:"payment_initialization_failed",diagnostic},502);
   }
 }
 function safeHexEqual(a,b) {
