@@ -343,33 +343,41 @@ async function jekoNetworkDiagnostic(request,env) {
           causeName:typeof cause?.name==="string"?cause.name.slice(0,40):null}};
     }
   };
+  const inspect=(value)=>{
+    if(typeof value!=="string") return {configured:false,type:typeof value};
+    return {configured:value.length>0,length:value.length,trimmedLength:value.trim().length,
+      hasOuterWhitespace:value!==value.trim(),hasCRorLF:/[\r\n]/.test(value),
+      hasOtherControlChars:/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value),
+      hasNonAscii:/[^\x20-\x7E]/.test(value)};
+  };
   const base=JEKO_API_BASE+"/partner_api/stores";
+  const keyInfo=inspect(env.JEKO_API_KEY),idInfo=inspect(env.JEKO_API_KEY_ID);
   const [baseline,jekoRoot,unauthenticatedApi]=await Promise.all([
     probe("https://www.google.com/generate_204"),
     probe(JEKO_API_BASE+"/"),
     probe(base)
   ]);
-  let headerValidation={ok:false};
-  let authenticatedNoContentType={reachable:false,error:"credentials_not_configured"};
-  let authenticatedWithContentType={reachable:false,error:"credentials_not_configured"};
+  let rawHeaderValidation={ok:false,error:"credentials_not_configured"};
+  let trimmedHeaderValidation={ok:false,error:"credentials_not_configured"};
+  let authenticatedTrimmed={reachable:false,error:"credentials_not_configured"};
   if(env.JEKO_API_KEY&&env.JEKO_API_KEY_ID) {
-    const authHeaders={"X-API-KEY":env.JEKO_API_KEY,"X-API-KEY-ID":env.JEKO_API_KEY_ID};
+    const rawHeaders={"X-API-KEY":env.JEKO_API_KEY,"X-API-KEY-ID":env.JEKO_API_KEY_ID};
+    const trimmedHeaders={"X-API-KEY":String(env.JEKO_API_KEY).trim(),"X-API-KEY-ID":String(env.JEKO_API_KEY_ID).trim()};
+    try { new Headers(rawHeaders); rawHeaderValidation={ok:true}; }
+    catch(e) { rawHeaderValidation={ok:false,error:e?.name==="TypeError"?"invalid_header_value":"header_construction_error"}; }
     try {
-      new Headers(authHeaders);
-      headerValidation={ok:true};
-      [authenticatedNoContentType,authenticatedWithContentType]=await Promise.all([
-        probe(base,authHeaders),
-        probe(base,{...authHeaders,"content-type":"application/json"})
-      ]);
+      new Headers(trimmedHeaders); trimmedHeaderValidation={ok:true};
+      authenticatedTrimmed=await probe(base,trimmedHeaders);
     } catch(e) {
-      headerValidation={ok:false,error:e?.name==="TypeError"?"invalid_header_value":"header_construction_error"};
+      trimmedHeaderValidation={ok:false,error:e?.name==="TypeError"?"invalid_header_value":"header_construction_error"};
     }
   }
   return json({
-    ok:baseline.reachable&&jekoRoot.reachable&&authenticatedNoContentType.reachable,
-    service:"jeko",check:"outbound_network_header_isolation",
-    baseline,jekoRoot,unauthenticatedApi,headerValidation,
-    authenticatedNoContentType,authenticatedWithContentType,
+    ok:baseline.reachable&&jekoRoot.reachable&&authenticatedTrimmed.reachable,
+    service:"jeko",check:"outbound_network_header_trim_check",
+    baseline,jekoRoot,unauthenticatedApi,
+    credentialMetadata:{apiKey:keyInfo,apiKeyId:idInfo},
+    rawHeaderValidation,trimmedHeaderValidation,authenticatedTrimmed,
     checkedAt:new Date().toISOString()
   });
 }
