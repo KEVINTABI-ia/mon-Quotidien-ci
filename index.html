@@ -7930,7 +7930,7 @@ async function verifierRetourPaiementJeko(user){
  const boutiqueZone=serviceId==="boutique_renewal"?(document.getElementById("boutiqueCompteConnecte")||document.getElementById("connexionBoutiqueStatut")):null;
  const logementZone=serviceId==="logement_renewal"?(document.getElementById("logementSubscriptionStatus")||document.getElementById("logementRenewal")):null;
  const ramassageZone=serviceId==="ramassage"?(document.getElementById("ramassageJekoPaymentStatus")||document.getElementById("ramassageCompanyStatus")):null;
- const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone : ((serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:(serviceId==="ramassage"?ramassageZone:document.getElementById("etatAbonnementAuto"))))));
+ const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:(serviceId==="ramassage"?ramassageZone:document.getElementById("etatAbonnementAuto")))));
  if(paymentState==="error"){
   if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été finalisé. Aucune demande de récupération n’a été transmise.":serviceId==="compagnie_voyage"?"Le paiement n’a pas été finalisé. Aucun abonnement de compagnie n’a été activé.":serviceId==="boutique_renewal"?"Le paiement n’a pas été finalisé. Votre boutique reste masquée tant que le paiement n’est pas confirmé.":serviceId==="logement_renewal"?"Le paiement n’a pas été finalisé. La publication de vos annonces reste suspendue si l’abonnement est expiré.":"Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
   params.delete("payment");params.delete("paymentId");params.delete("serviceId");history.replaceState({},document.title,location.pathname+(params.toString()?"?"+params.toString():""));return;
@@ -7951,7 +7951,7 @@ async function verifierRetourPaiementJeko(user){
      const companyUser=partnerAuth.currentUser||user;
      const companySnap=await partnerDb.collection("compagnies").where("uid","==",companyUser.uid).limit(1).get();
      if(!companySnap.empty)await afficherEspaceCompagnie(companySnap.docs[0].id,companySnap.docs[0].data());
-else if(serviceId==="boutique_renewal"){
+    }else if(serviceId==="boutique_renewal"){
      if(zone)zone.textContent="Paiement confirmé par Jèko. Actualisez votre espace boutique pour retrouver la visibilité et gérer vos articles.";
     }else if(serviceId==="logement_renewal"){
      if(zone)zone.textContent="Paiement confirmé par Jèko. Actualisation de votre espace Logement…";
