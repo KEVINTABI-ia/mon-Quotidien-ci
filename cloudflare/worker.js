@@ -780,7 +780,7 @@ export function buildSubscriptionPlans(requested,services={},now=new Date()) {
     const price=promotionActive?promo:base;
     const valid=cfg.actif!==false&&Number.isSafeInteger(duration)&&duration>0&&Number.isSafeInteger(price)&&price>0&&price<=10000000;
     return {
-      planId:requested==="automobiliste"?"annuel":key,label:typeof cfg.libelle==="string"?cfg.libelle:(fixedPlan?.label||key),
+      planId:requested==="automobiliste"?"trimestriel":key,label:typeof cfg.libelle==="string"?cfg.libelle:(fixedPlan?.label||key),
       active:cfg.actif!==false,available:valid,priceXof:valid?price:null,
       regularPriceXof:Number.isSafeInteger(base)&&base>0?base:null,
       duration:valid?duration:null,unit,
