@@ -2045,6 +2045,8 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
       <option value="commercant">🏪 Commerçant / boutique</option>
       <option value="compagnie">🚌 Compagnie de voyage</option>
       <option value="compagnie_ramassage">🚐 Compagnie de cars de ramassage</option>
+      <option value="hebergement">🏨 Hôtel / résidence</option>
+      <option value="depannage_domicile">🧰 Professionnel du dépannage à domicile</option>
       
     </select>
     <div id="partenaireFormulaireChoisi" aria-live="polite"></div>
@@ -2173,6 +2175,8 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
 <div id="gestionAbonnementsRamassage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🚌 Validation des compagnies de ramassage</h3><p class="notice">Vérifie les dossiers et approuve les compagnies éligibles. L’abonnement mensuel de 2 000 FCFA est activé automatiquement par le webhook Jèko après confirmation du paiement.</p><div id="listeCompagniesRamassageAdmin">Chargement...</div></div>
 <div id="gestionAbonnementsAutomobiliste" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>🚘 Validation des abonnements automobiles</h3><p class="notice">Vérifie le moyen de paiement et la référence avant d'activer 12 mois d'accès. Ne valide qu'après réception effective des 1 000 FCFA.</p><div id="listeAbonnementsAutomobilisteAdmin">Chargement...</div></div>
 <div id="gestionValidationDepannage" style="display:none;margin-top:20px;border-top:2px solid #F28C28;padding-top:18px;"><h3>🔧 Validation des dépannages</h3><p class="notice">Examine séparément les demandes des professionnels du dépannage automobile.</p><div id="listeValidationDepannageAdmin">Chargement...</div></div>
+<div id="gestionValidationHebergement" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🏨 Validation des hôtels et résidences</h3><p class="notice">Vérifie les établissements d’hébergement avant leur publication.</p><div id="listeValidationHebergementAdmin">Chargement...</div></div>
+<div id="gestionValidationDomicile" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🧰 Validation des professionnels à domicile</h3><p class="notice">Vérifie les électriciens, nettoyeurs, agences de placement de servantes, plombiers, spécialistes de climatisation et professionnels du gaz.</p><div id="listeValidationDomicileAdmin">Chargement...</div></div>
 <div id="gestionValidationCommerce" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🏪 Validation des commerces</h3><p class="notice">Vérifie les établissements commerciaux hors boutiques.</p><div id="listeValidationCommerceAdmin">Chargement...</div></div>
 <div id="gestionValidationBoutiques" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🛍️ Validation des boutiques</h3><p class="notice">Vérifie les boutiques, les paiements d’abonnement et leur visibilité.</p><div id="listeValidationBoutiquesAdmin">Chargement...</div><h4>🔄 Demandes de renouvellement des partenaires commerçants</h4><div id="listeRenouvellementsBoutiquesAdmin">Chargement...</div><h4>📦 Articles soumis par les vendeurs</h4><p class="notice">Les articles restent invisibles au public jusqu’à leur approbation.</p><div id="listeValidationArticlesBoutiquesAdmin">Chargement...</div></div>
 <div id="gestionDonsSolidarite" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🤝 Dons et demandes d’aide</h3><p class="notice">Les coordonnées des personnes sont privées et visibles uniquement ici.</p><div id="listeDonsSolidariteAdmin">Chargement...</div></div>
@@ -3867,6 +3871,8 @@ chargerPublicitesAccueil();
 
 const NOUVEAUX_SERVICES = {
  depannage:{titre:"Dépannage automobile",icone:"🚗",categories:["Mécanicien","Dépannage général","Remorquage","Panne de batterie","Crevaison","Dépannage carburant"]},
+ hebergement:{titre:"Hôtels et résidences",icone:"🏨",categories:["Hôtel","Résidence hôtelière","Résidence meublée"]},
+ depannage_domicile:{titre:"Dépannage à domicile",icone:"🧰",categories:["Électricien","Service de nettoyage","Agence de placement de servante","Plombier","Climatisation","Gaz"]},
  commerce:{titre:"Commerces et boutiques",icone:"🏪",categories:["Alimentation","Restaurant","Boutique","Pièces détachées","Électronique","Autre commerce"]},
  annonce:{titre:"Petites annonces et emplois",icone:"📢",categories:["Offre d'emploi","Demande d'emploi","Véhicule à vendre","Véhicule à louer","Autre annonce"]}
 };
@@ -3874,6 +3880,13 @@ let nouveauServiceActif="depannage";
 let filtrePublicCommerce="tout";
 function ouvrirAnnuaireCommerce(type){if(!["commerce","boutique"].includes(type))return;filtrePublicCommerce=type;ouvrirSectionPleinEcran("nouveauxServices",type==="boutique"?"Boutiques":"Commerces");choisirNouveauService("commerce");const c=document.getElementById("nsCategorie");if(c){if(type==="boutique")c.value="Boutique";c.disabled=false;}chargerNouveauxServicesPublics("commerce");}
 
+function ouvrirNouveauCatalogueAccueil(type,titre){
+ if(!["hebergement","depannage_domicile"].includes(type))return;
+ ouvrirSectionPleinEcran("nouveauxServices",titre);
+ choisirNouveauService(type);
+ const formulaire=document.getElementById("nouveauServiceFormZone");
+ if(formulaire)formulaire.style.display="none";
+}
 function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId){
  if(!NOUVEAUX_SERVICES[type])return;
  nouveauServiceActif=type;
@@ -4002,7 +4015,7 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
   }
   let photoUrl=null;
   const photo=document.getElementById("nsPhoto")?.files?.[0];
-  if(photo&&(nouveauServiceActif==="depannage"||nouveauServiceActif==="commerce"||nouveauServiceActif==="annonce")){
+  if(photo&&(nouveauServiceActif==="depannage"||nouveauServiceActif==="hebergement"||nouveauServiceActif==="depannage_domicile"||nouveauServiceActif==="commerce"||nouveauServiceActif==="annonce")){
    if(!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>3*1024*1024)throw new Error("Photo JPG, PNG ou WEBP de 3 Mo maximum.");
    statut.textContent="Préparation de la photo...";
    photoUrl=await compresserPhotoNouveauService(photo);
@@ -4430,7 +4443,7 @@ async function chargerAvisBoutique(boutiqueId){
  }catch(e){console.error(e);zone.textContent="Impossible de charger les avis. Vérifiez les règles Firestore de la collection avis_boutiques.";}
 }
 async function chargerNouveauxServicesAdmin(typeFiltre){
- const zones={depannage:"listeValidationDepannageAdmin",commerce:"listeValidationCommerceAdmin",boutique:"listeValidationBoutiquesAdmin",annonce:"listeValidationAnnoncesAdmin"};
+ const zones={depannage:"listeValidationDepannageAdmin",hebergement:"listeValidationHebergementAdmin",depannage_domicile:"listeValidationDomicileAdmin",commerce:"listeValidationCommerceAdmin",boutique:"listeValidationBoutiquesAdmin",annonce:"listeValidationAnnoncesAdmin"};
  const zone=document.getElementById(zones[typeFiltre]||"listeNouveauxServicesAdmin");
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){if(zone)zone.textContent="Accès administrateur requis.";return;}
  zone.innerHTML='<p class="notice">Chargement des dossiers...</p>';
@@ -4841,6 +4854,8 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionValidationAnnonces",groupe:"Publications et communication",icone:"📢",image:"annonces",titre:"Annonces",description:"Examiner les annonces avant publication.",notification:"annonce"},
   {id:"gestionAbonnementsAutomobiliste",groupe:"Services et abonnements",icone:"🚘",titre:"Abonnements automobilistes",description:"Contrôler les demandes et activations."},
   {id:"gestionValidationDepannage",groupe:"Services et abonnements",icone:"🔧",image:"automobile",titre:"Dépannage automobile",description:"Valider les professionnels du dépannage.",notification:"depannage"},
+  {id:"gestionValidationHebergement",groupe:"Services et abonnements",icone:"🏨",titre:"Hôtels et résidences",description:"Valider les établissements d’hébergement.",notification:"hebergement"},
+  {id:"gestionValidationDomicile",groupe:"Services et abonnements",icone:"🧰",titre:"Dépannage à domicile",description:"Valider les professionnels des services à domicile.",notification:"depannage_domicile"},
   {id:"gestionValidationCommerce",groupe:"Services et abonnements",icone:"🏪",image:"commerce",titre:"Commerces",description:"Valider les commerces hors boutiques.",notification:"commerce"},
   {id:"gestionValidationBoutiques",groupe:"Services et abonnements",icone:"🛍️",image:"boutique",titre:"Boutiques",description:"Valider les boutiques et leurs abonnements.",notification:"boutique"},
   {id:"gestionDonsSolidarite",groupe:"Vie communautaire",icone:"🤝",image:"solidarite",titre:"Dons et solidarité",description:"Valider les dons et demandes d’aide.",notification:"solidarite"},
@@ -4854,7 +4869,7 @@ function surveillerNotificationsAdmin(){
  if(arretNotificationsAdmin){arretNotificationsAdmin();arretNotificationsAdmin=null;}
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;
  arretNotificationsAdmin=db.collection("demandes_nouveaux_services").onSnapshot(snap=>{
-  const comptes={depannage:0,commerce:0,boutique:0,annonce:0};
+  const comptes={depannage:0,hebergement:0,depannage_domicile:0,commerce:0,boutique:0,annonce:0};
   snap.forEach(doc=>{const d=doc.data()||{};if((d.statut||"en_attente")!=="en_attente")return;if(d.type==="commerce"){if(String(d.categorie||"").toLowerCase()==="boutique")comptes.boutique++;else comptes.commerce++;}else if(Object.prototype.hasOwnProperty.call(comptes,d.type))comptes[d.type]++;});
   document.querySelectorAll("[data-notification-type]").forEach(el=>{
    const n=comptes[el.dataset.notificationType]||0;el.textContent=String(n);el.hidden=n===0;
@@ -4882,6 +4897,8 @@ function ouvrirRubriqueAdmin(id){
   if(!cible)return;
   if(id==="gestionPharmaciesAdmin") mqciChargerGestionPharmaciesAdmin();
   if(id==="gestionValidationDepannage") chargerNouveauxServicesAdmin("depannage");
+  if(id==="gestionValidationHebergement") chargerNouveauxServicesAdmin("hebergement");
+  if(id==="gestionValidationDomicile") chargerNouveauxServicesAdmin("depannage_domicile");
   if(id==="gestionValidationCommerce") chargerNouveauxServicesAdmin("commerce");
   if(id==="gestionValidationBoutiques"){chargerNouveauxServicesAdmin("boutique");chargerArticlesBoutiquesAdmin();chargerDemandesRenouvellementBoutiquesAdmin();}
   if(id==="gestionDonsSolidarite") chargerDonsSolidariteAdmin();
@@ -6423,7 +6440,18 @@ function afficherFormulairePartenaire(type){
     return;
   }
   if(type==="mecanicien"||type==="depannage"||type==="vendeur_pieces"||type==="commercant"){
-    const depannage=type==="mecanicien"||type==="depannage";
+    if(type==="hebergement"||type==="depannage_domicile"){
+    const categorie=type==="hebergement"?"Hôtel":"Électricien";
+    choisirNouveauService(type,categorie,true,"partenaireFormulaireChoisi");
+    const titreForm=document.querySelector("#partenaireFormulaireChoisi h3");
+    if(titreForm)titreForm.textContent=type==="hebergement"?"🏨 Inscription – Hôtel ou résidence":"🧰 Inscription – Dépannage à domicile";
+    const description=document.getElementById("nsDescription");
+    if(description)description.placeholder=type==="hebergement"?"Présentez votre hôtel ou résidence, les types de chambres, les équipements et les conditions d’accueil.":"Décrivez vos prestations, votre expérience et les communes/quartiers desservis.";
+    const titre=document.getElementById("nsTitre");
+    if(titre)titre.placeholder=type==="hebergement"?"Nom de l’hôtel ou de la résidence":"Nom du professionnel ou de l’entreprise";
+    return;
+  }
+  const depannage=type==="mecanicien"||type==="depannage";
     const service=depannage?"depannage":"commerce";
     const categorie=type==="mecanicien"?"Mécanicien":type==="depannage"?"Dépannage général":type==="vendeur_pieces"?"Pièces détachées":"Autre commerce";
     choisirNouveauService(service,categorie,true,"partenaireFormulaireChoisi");
@@ -11654,10 +11682,12 @@ window.mtcAfficherActeJudiciaire = function(type){
       <section class="home-panel" id="homePopular">
         <div class="home-section-heading"><div><h2>Services populaires</h2><p>Des professionnels et services recherchés près de vous.</p></div></div>
         <div class="family-shortcuts">
-          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier');chargerAnnoncesLogementPubliques()"><span>🏠</span>Trouver un logement</button>
+          
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacies et santé')"><span>💊</span>Pharmacies et santé</button>
-          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('transportColis','Livraison et expédition')"><span>📦</span>Livraison et colis</button>
+          
           <button class="family-shortcut" type="button" onclick="ouvrirDeclarationsEnfants()"><span>🧒</span>Enfants perdus ou retrouvés</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirNouveauCatalogueAccueil('hebergement','Hôtels et résidences')"><span>🏨</span>Hôtels et résidences</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirNouveauCatalogueAccueil('depannage_domicile','Dépannage à domicile')"><span>🧰</span>Dépannage à domicile</button>
         </div>
       </section>
       <section class="home-panel" id="homeMobilite">
