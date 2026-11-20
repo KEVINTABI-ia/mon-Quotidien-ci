@@ -804,6 +804,27 @@ describe("Mon Transport CI — règles Firestore", function () {
   });
 
 
+  describe("annuaire professionnel retiré", () => {
+    it("refuse les nouvelles inscriptions et réserve les anciennes fiches à l’administration pour suppression", async () => {
+      const clientDb=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      const {doc,setDoc,getDoc,deleteDoc,serverTimestamp}=require("firebase/firestore");
+      const ancienneFiche={
+        uid:CLIENT_UID,type:"annuaire",titre:"Ancienne fiche",categorie:"Plomberie",
+        commune:"Yopougon",telephone:"0700000000",description:"Fiche historique",
+        email:"client@example.test",statut:"approuve",createdAt:serverTimestamp()
+      };
+      await assertFails(setDoc(doc(clientDb,"demandes_nouveaux_services","annuaire-nouveau-refuse"),ancienneFiche));
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        await context.firestore().doc("demandes_nouveaux_services/annuaire-historique-a-purger").set(ancienneFiche);
+      });
+      const publicDb=testEnv.unauthenticatedContext().firestore();
+      await assertFails(getDoc(doc(publicDb,"demandes_nouveaux_services","annuaire-historique-a-purger")));
+      const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      await assertSucceeds(getDoc(doc(adminDb,"demandes_nouveaux_services","annuaire-historique-a-purger")));
+      await assertSucceeds(deleteDoc(doc(adminDb,"demandes_nouveaux_services","annuaire-historique-a-purger")));
+    });
+  });
+
   describe("compagnies de voyage — gares annexes et avis", () => {
     const COMPANY_ID = "company-test-001";
     const STATION_ID = "station-test-001";
