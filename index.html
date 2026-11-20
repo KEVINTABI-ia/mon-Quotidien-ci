@@ -11951,6 +11951,99 @@ window.mtcAfficherActeJudiciaire = function(type){
     `;
     document.head.appendChild(style);
 
+
+    const familyTilesStyle=document.createElement('style');
+    familyTilesStyle.id='mqci-family-tiles-reference-style';
+    familyTilesStyle.textContent=`
+      /* Présentation en tuiles inspirée de la référence fournie */
+      #homeMobilite .family-shortcuts,
+      #homeAutomobile .family-shortcuts,
+      #homeDemarches .family-shortcuts,
+      #homeLogement .family-shortcuts,
+      #homeSante .family-shortcuts,
+      #homeVieCitoyenne .family-shortcuts{
+        display:grid!important;
+        grid-template-columns:repeat(4,minmax(0,1fr))!important;
+        gap:14px!important;
+        align-items:stretch!important;
+      }
+      #homeMobilite .family-shortcuts .family-shortcut,
+      #homeAutomobile .family-shortcuts .family-shortcut,
+      #homeDemarches .family-shortcuts .family-shortcut,
+      #homeLogement .family-shortcuts .family-shortcut,
+      #homeSante .family-shortcuts .family-shortcut,
+      #homeVieCitoyenne .family-shortcuts .family-shortcut{
+        box-sizing:border-box!important;
+        min-width:0!important;
+        min-height:168px!important;
+        aspect-ratio: .78!important;
+        padding:20px 9px 16px!important;
+        border:2px solid #505050!important;
+        border-radius:27px!important;
+        background:#252525!important;
+        color:#fff!important;
+        box-shadow:none!important;
+        display:flex!important;
+        flex-direction:column!important;
+        align-items:center!important;
+        justify-content:space-between!important;
+        gap:12px!important;
+        text-align:center!important;
+        font-size:clamp(12px,1.35vw,16px)!important;
+        font-weight:800!important;
+        line-height:1.2!important;
+        white-space:normal!important;
+        overflow-wrap:anywhere!important;
+      }
+      #homeMobilite .family-shortcuts .family-shortcut>span:first-child,
+      #homeAutomobile .family-shortcuts .family-shortcut>span:first-child,
+      #homeDemarches .family-shortcuts .family-shortcut>span:first-child,
+      #homeLogement .family-shortcuts .family-shortcut>span:first-child,
+      #homeSante .family-shortcuts .family-shortcut>span:first-child,
+      #homeVieCitoyenne .family-shortcuts .family-shortcut>span:first-child{
+        display:flex!important;
+        align-items:center!important;
+        justify-content:center!important;
+        flex:1 1 auto!important;
+        min-height:0!important;
+        font-size:clamp(34px,5vw,58px)!important;
+        line-height:1!important;
+      }
+      #homeSante .sante-shortcut-copy{
+        display:flex!important;flex-direction:column!important;
+        align-items:center!important;justify-content:center!important;
+        width:100%!important;min-width:0!important;gap:4px!important;
+      }
+      #homeSante .sante-shortcut-copy strong{
+        color:#fff!important;font-size:clamp(11px,1.25vw,15px)!important;
+        line-height:1.2!important;text-align:center!important;
+      }
+      #homeSante .sante-shortcut-copy small,
+      #homeSante .sante-shortcut-arrow{display:none!important}
+      #homeSante .sante-shortcut .sante-shortcut-icon{font-size:clamp(34px,5vw,58px)!important}
+      @media(max-width:680px){
+        #homeMobilite .family-shortcuts,
+        #homeAutomobile .family-shortcuts,
+        #homeDemarches .family-shortcuts,
+        #homeLogement .family-shortcuts,
+        #homeSante .family-shortcuts,
+        #homeVieCitoyenne .family-shortcuts{
+          grid-template-columns:repeat(2,minmax(0,1fr))!important;
+          gap:12px!important;
+        }
+        #homeMobilite .family-shortcuts .family-shortcut,
+        #homeAutomobile .family-shortcuts .family-shortcut,
+        #homeDemarches .family-shortcuts .family-shortcut,
+        #homeLogement .family-shortcuts .family-shortcut,
+        #homeSante .family-shortcuts .family-shortcut,
+        #homeVieCitoyenne .family-shortcuts .family-shortcut{
+          min-height:150px!important;border-radius:23px!important;
+          padding:17px 8px 14px!important;
+        }
+      }
+    `;
+    document.head.appendChild(familyTilesStyle);
+
     const shell=document.createElement('div');
     shell.id='accueilHomeShell';
     shell.innerHTML=`
