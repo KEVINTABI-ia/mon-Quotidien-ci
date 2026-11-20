@@ -268,7 +268,8 @@ async function createCheckout(request,env) {
     if(!doc||!partner||partner.uid!==user.sub||partner.modePartenaire!==true||partner.statut!=="approuve"||!["depannage_domicile","auto_ecole","vulcanisateur"].includes(partner.type))return json({error:"partner_service_not_eligible"},403);
     const trialEnd=partner.abonnementFinEssai instanceof Date?partner.abonnementFinEssai:(partner.abonnementFinEssai?new Date(partner.abonnementFinEssai):null);
     const paidEnd=partner.abonnementFin instanceof Date?partner.abonnementFin:(partner.abonnementFin?new Date(partner.abonnementFin):null);
-    if(partner.abonnementStatut==="essai_gratuit"&&trialEnd&&trialEnd.getTime()>now.getTime())return json({error:"subscription_still_active"},409);
+    if(!trialEnd||!Number.isFinite(trialEnd.getTime()))return json({error:"partner_service_trial_missing"},409);
+    if(trialEnd.getTime()>now.getTime())return json({error:"subscription_still_active"},409);
     if(partner.abonnementStatut==="actif"&&paidEnd&&paidEnd.getTime()>now.getTime())return json({error:"subscription_still_active"},409);
     if(partner.renouvellementJekoPaymentId){
       const previous=await getDoc(env,"payments/"+partner.renouvellementJekoPaymentId);
