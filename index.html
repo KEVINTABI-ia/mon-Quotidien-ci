@@ -3915,9 +3915,17 @@ function afficherChoixCatalogueDomicile(){
  if(titre)titre.textContent="Choisissez un service de dépannage à domicile";
  const categories=NOUVEAUX_SERVICES.depannage_domicile.categories;
  const icones={"Électricien":"⚡","Service de nettoyage":"🧹","Agence de placement de servante":"🧑‍🔧","Plombier":"🚰","Climatisation":"❄️","Dépôts de gaz":"🔥"};
- zone.innerHTML='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">'
- +categories.map(c=>'<button type="button" class="family-shortcut" onclick="chargerCatalogueDomicile('+JSON.stringify(c)+')">'+(icones[c]||"🧰")+' '+echapperTextePublicite(c)+'</button>').join("")
- +'</div>';
+ const grille=document.createElement("div");
+ grille.style.cssText="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;";
+ categories.forEach(c=>{
+  const bouton=document.createElement("button");
+  bouton.type="button";
+  bouton.className="family-shortcut";
+  bouton.textContent=(icones[c]||"🧰")+" "+c;
+  bouton.addEventListener("click",()=>chargerCatalogueDomicile(c));
+  grille.appendChild(bouton);
+ });
+ zone.replaceChildren(grille);
 }
 async function chargerCatalogueDomicile(categorie){
  const zone=document.getElementById("nouveauxServicesPublics");if(!zone)return;
