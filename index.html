@@ -6656,10 +6656,22 @@ function afficherFormulairePartenaire(type){
   if(type==="hebergement"||type==="depannage_domicile"){
     const categorie=categorieActivite||(type==="hebergement"?"Hôtel":"Électricien");
     choisirNouveauService(type,categorie,true,"partenaireFormulaireChoisi");
+    const selectCategorie=document.getElementById("nsCategorie");
+    if(selectCategorie){selectCategorie.value=categorie;selectCategorie.disabled=true;}
     const titreForm=document.querySelector("#partenaireFormulaireChoisi h3");
     if(titreForm)titreForm.textContent=type==="hebergement"?"🏨 Inscription – "+categorie:"🧰 Inscription – "+categorie;
     const description=document.getElementById("nsDescription");
     if(description)description.placeholder=type==="hebergement"?"Présentez votre établissement, les types de chambres, les équipements et les conditions d’accueil.":"Décrivez vos prestations, votre expérience et les communes/quartiers desservis.";
+    const infos=document.getElementById("nsInfosProfessionnelles");
+    const aides={
+      "Électricien":"Précisez vos qualifications, installations électriques, dépannages, mises aux normes et quartiers desservis.",
+      "Plombier":"Précisez vos prestations : recherche et réparation de fuites, débouchage, installation sanitaire, entretien et zones desservies.",
+      "Climatisation":"Précisez l’installation, l’entretien, le nettoyage, le dépannage et les marques ou équipements maîtrisés.",
+      "Service de nettoyage":"Précisez les types de nettoyage, les équipements utilisés, les prestations à domicile ou en entreprise et les zones desservies.",
+      "Agence de placement de servante":"Présentez votre agence, votre méthode de sélection, les vérifications effectuées et les modalités de mise en relation.",
+      "Dépôts de gaz":"Précisez les marques et formats de bouteilles, les services de vente ou recharge et les horaires du point de vente."
+    };
+    if(infos&&type==="depannage_domicile")infos.placeholder=aides[categorie]||"Décrivez vos prestations, votre expérience et les communes/quartiers desservis.";
     const titre=document.getElementById("nsTitre");
     if(titre)titre.placeholder=type==="hebergement"?"Nom de l’établissement":"Nom du professionnel ou de l’entreprise";
     return;
@@ -6685,7 +6697,7 @@ function afficherFormulairePartenaire(type){
     const categorie=categorieActivite||(type==="mecanicien"?"Mécanicien":type==="depannage"?"Dépannage général":type==="vendeur_pieces"?"Pièces détachées":"Autre commerce");
     choisirNouveauService(service,categorie,true,"partenaireFormulaireChoisi");
     const select=document.getElementById("nsCategorie");
-    if(select){select.value=categorie;select.disabled=false;}
+    if(select){select.value=categorie;select.disabled=true;}
     const titre=document.getElementById("nsTitre");
     if(titre) titre.placeholder=type==="vendeur_pieces"?"Nom du magasin ou vendeur de pièces détachées":"Nom de votre activité ou établissement";
     const description=document.getElementById("nsDescription");
