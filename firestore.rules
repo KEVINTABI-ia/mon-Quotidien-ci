@@ -929,7 +929,7 @@ service cloud.firestore {
         && request.resource.data.description is string && request.resource.data.description.size() > 0 && request.resource.data.description.size() <= 1200
         && request.resource.data.email is string
         && request.resource.data.email.matches("^[^@ ]+@[^@ ]+\\.[^@ ]+$")
-        && request.resource.data.email == request.auth.token.email
+        && (request.auth.token.get("email", "") == "" || request.resource.data.email == request.auth.token.email)
         && request.resource.data.email.size() <= 120
         && (request.resource.data.type != "depannage_domicile"
           || (request.resource.data.infosProfessionnelles is string
