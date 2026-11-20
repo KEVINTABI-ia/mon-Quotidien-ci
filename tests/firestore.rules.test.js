@@ -807,7 +807,7 @@ describe("Mon Transport CI — règles Firestore", function () {
   describe("annuaire professionnel retiré", () => {
     it("refuse les nouvelles inscriptions et réserve les anciennes fiches à l’administration pour suppression", async () => {
       const clientDb=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      const {doc,setDoc,getDoc,deleteDoc,serverTimestamp}=require("firebase/firestore");
+      const {doc,setDoc,getDoc,deleteDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
       const ancienneFiche={
         uid:CLIENT_UID,type:"annuaire",titre:"Ancienne fiche",categorie:"Plomberie",
         commune:"Yopougon",telephone:"0700000000",description:"Fiche historique",
@@ -821,6 +821,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       await assertFails(getDoc(doc(publicDb,"demandes_nouveaux_services","annuaire-historique-a-purger")));
       const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
       await assertSucceeds(getDoc(doc(adminDb,"demandes_nouveaux_services","annuaire-historique-a-purger")));
+      await assertFails(updateDoc(doc(adminDb,"demandes_nouveaux_services","annuaire-historique-a-purger"),{statut:"refuse"}));
       await assertSucceeds(deleteDoc(doc(adminDb,"demandes_nouveaux_services","annuaire-historique-a-purger")));
     });
   });
