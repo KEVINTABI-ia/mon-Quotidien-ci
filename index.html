@@ -3984,6 +3984,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  </div>
  <label>Catégorie</label><select id="nsCategorie">${cfg.categories.map(c=>'<option'+(c===categorieInitiale?" selected":"")+' >'+c+'</option>').join("")}</select>
  <label>Commune</label><input id="nsCommune" maxlength="60" placeholder="Ex. Yopougon" required>
+ ${type==="hebergement"?'<label>Quartier</label><input id="nsQuartier" maxlength="80" placeholder="Ex. Niangon, Angré, Riviera" required>':''}
  ${type==="commerce"?'<label>Adresse précise de récupération de la boutique</label><input id="nsAdresseBoutique" maxlength="220" placeholder="Quartier, rue, repère, commune" required>':''}
  <label>Téléphone</label><input id="nsTelephone" type="tel" maxlength="20" placeholder="Ex. 07 00 00 00 00" required>
  <label>Description et détails</label><textarea id="nsDescription" rows="4" maxlength="1200" placeholder="Décrivez le service, le commerce ou l'annonce" required></textarea>
@@ -4051,7 +4052,7 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
  const statut=document.getElementById("nsStatut");
  const valeur=id=>document.getElementById(id)?.value.trim()||"";
  const modePartenaire=!!document.querySelector("#devenirPartenaire [data-mode-partenaire=\"1\"]");
- const titre=valeur("nsTitre"),commune=valeur("nsCommune"),telephone=valeur("nsTelephone"),description=valeur("nsDescription"),email=valeur("nsEmail"),password=document.getElementById("nsPassword")?.value||"";
+ const titre=valeur("nsTitre"),commune=valeur("nsCommune"),quartier=valeur("nsQuartier"),telephone=valeur("nsTelephone"),description=valeur("nsDescription"),email=valeur("nsEmail"),password=document.getElementById("nsPassword")?.value||"";
  const comptePartenaire=modePartenaire?auth.currentUser:null;
  if(modePartenaire&&!comptePartenaire){statut.textContent="Connectez-vous à votre compte utilisateur avant de déposer une demande partenaire.";return;}
  if(modePartenaire&&comptePartenaire.email&&email&&comptePartenaire.email.toLowerCase()!==email.toLowerCase()){statut.textContent="L’adresse e-mail doit correspondre au compte utilisateur connecté.";return;}
@@ -4067,7 +4068,7 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
  if(estBoutique&&!adresseBoutique){statut.textContent="Renseignez l’adresse précise de récupération de votre établissement.";return;}
 
  if(estBoutique&&!boutiquePartenaire&&(!dureeSelect||!dureeOption||!Number.isInteger(montantAbonnement)||montantAbonnement<=0||!Number.isInteger(dureeAbonnementJours)||dureeAbonnementJours<=0)){statut.textContent="Choisissez une formule d’abonnement disponible avant de continuer.";return;}
- if(!titre||!commune||!telephone||!description||!(modePartenaire?(comptePartenaire?.email||email):email)||(!modePartenaire&&password.length<6)){statut.textContent="Remplissez tous les champs obligatoires."+(modePartenaire?"":" Le mot de passe doit contenir au moins 6 caractères.");return;}
+ if(!titre||!commune||(nouveauServiceActif==="hebergement"&&!quartier)||!telephone||!description||!(modePartenaire?(comptePartenaire?.email||email):email)||(!modePartenaire&&password.length<6)){statut.textContent="Remplissez tous les champs obligatoires."+(modePartenaire?"":" Le mot de passe doit contenir au moins 6 caractères.");return;}
  statut.textContent="Envoi du dossier...";
  try{
   let user=auth.currentUser;
@@ -4085,6 +4086,7 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
   }
   const donneesDossier={
    uid:user.uid,type:nouveauServiceActif,titre,categorie:valeur("nsCategorie"),commune,telephone,description,email,
+   ...(nouveauServiceActif==="hebergement"?{quartier}:{}),
    ...(modePartenaire?{modePartenaire:true}:{}),
    ...(photoUrl?{photoUrl}:{}),
    ...(estBoutique?{adresseBoutique}:{}),
