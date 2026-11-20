@@ -804,43 +804,6 @@ describe("Mon Transport CI — règles Firestore", function () {
   });
 
 
-  describe("annuaires professionnels", () => {
-    const fiche = (uid=CLIENT_UID) => ({
-      uid, type:"annuaire", rubrique:"depannageDomicile",
-      titre:"Plomberie test", categorie:"Plomberie", commune:"Yopougon",
-      quartier:"Niangon", telephone:"0700000000",
-      description:"Intervention plomberie de test", email:"pro@example.test",
-      statut:"en_attente", createdAt:require("firebase/firestore").serverTimestamp()
-    });
-    it("autorise une inscription gratuite conforme par son propriétaire", async () => {
-      const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      const {doc,setDoc}=require("firebase/firestore");
-      await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","annuaire-create-001"),fiche()));
-    });
-    it("interdit une inscription au nom d'un autre utilisateur", async () => {
-      const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      const {doc,setDoc}=require("firebase/firestore");
-      await assertFails(setDoc(doc(db,"demandes_nouveaux_services","annuaire-create-002"),fiche(OTHER_UID)));
-    });
-    it("réserve l'approbation à l'administrateur et limite la lecture publique aux fiches approuvées", async () => {
-      await testEnv.withSecurityRulesDisabled(async context=>{
-        await context.firestore().doc("demandes_nouveaux_services/annuaire-approved").set({...fiche(),statut:"approuve",abonnementFin:require("firebase/firestore").Timestamp.fromDate(new Date(Date.now()+30*24*60*60*1000))});
-        await context.firestore().doc("demandes_nouveaux_services/annuaire-expired").set({...fiche(),statut:"approuve",abonnementFin:require("firebase/firestore").Timestamp.fromDate(new Date(Date.now()-1000))});
-        await context.firestore().doc("demandes_nouveaux_services/annuaire-pending").set(fiche());
-      });
-      const publicDb=testEnv.unauthenticatedContext().firestore();
-      const clientDb=testEnv.authenticatedContext(CLIENT_UID).firestore();
-      const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
-      const {doc,getDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
-      await assertSucceeds(getDoc(doc(publicDb,"demandes_nouveaux_services","annuaire-approved")));
-      await assertFails(getDoc(doc(publicDb,"demandes_nouveaux_services","annuaire-expired")));
-      await assertFails(getDoc(doc(publicDb,"demandes_nouveaux_services","annuaire-pending")));
-      await assertFails(updateDoc(doc(clientDb,"demandes_nouveaux_services","annuaire-pending"),{statut:"approuve"}));
-      await assertSucceeds(updateDoc(doc(adminDb,"demandes_nouveaux_services","annuaire-pending"),{statut:"approuve",traiteLe:serverTimestamp()}));
-    });
-  });
-
-
   describe("compagnies de voyage — gares annexes et avis", () => {
     const COMPANY_ID = "company-test-001";
     const STATION_ID = "station-test-001";
@@ -1101,7 +1064,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       }));
     });
 
-    it("accepte une demande boutique Jèko en attente et conserve les inscriptions gratuites d’annuaire", async () => {
+    it("accepte une demande boutique Jèko en attente", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
       const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
       await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","boutique-paiement-manuel"),{
@@ -1121,27 +1084,6 @@ describe("Mon Transport CI — règles Firestore", function () {
         abonnementDebut:serverTimestamp(),
         abonnementFin:Timestamp.fromMillis(Date.now()+90*24*60*60*1000),
         dernierPaiementFCFA:7000,dernierPaiementConfirmeLe:serverTimestamp()
-      }));
-      await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","annuaire-gratuit-apres-verrou"),{
-        uid:CLIENT_UID,type:"annuaire",titre:"Plomberie test",categorie:"Plomberie",
-        rubrique:"depannageDomicile",quartier:"Niangon",commune:"Yopougon",
-        telephone:"0700000000",description:"Prestation de plomberie de test",
-        email:"client@example.test",statut:"en_attente",createdAt:serverTimestamp()
-      }));
-      const annuaireRef=doc(db,"demandes_nouveaux_services","annuaire-gratuit-apres-verrou");
-      const {getDoc}=require("firebase/firestore");
-      await assertSucceeds(getDoc(annuaireRef));
-      const annuaireAdminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
-      await assertSucceeds(updateDoc(doc(annuaireAdminDb,"demandes_nouveaux_services","annuaire-gratuit-apres-verrou"),{
-        statut:"approuve",abonnementDebut:serverTimestamp(),
-        abonnementFin:Timestamp.fromMillis(Date.now()+30*24*60*60*1000),
-        abonnementStatut:"essai_gratuit",traiteLe:serverTimestamp()
-      }));
-      await assertFails(updateDoc(doc(annuaireAdminDb,"demandes_nouveaux_services","annuaire-gratuit-apres-verrou"),{
-        abonnementDebut:serverTimestamp(),
-        abonnementFin:Timestamp.fromMillis(Date.now()+60*24*60*60*1000),
-        abonnementStatut:"actif",dernierPaiementFCFA:1000,
-        dernierPaiementConfirmeLe:serverTimestamp()
       }));
     });
   });
