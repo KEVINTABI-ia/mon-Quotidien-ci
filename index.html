@@ -11961,16 +11961,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       <section class="home-welcome" id="homeWelcome">
         <h1 id="mqciBonjourAccueil">Bonjour !</h1>
         <p class="home-welcome-question">Que recherchez-vous aujourd’hui ?</p>
-        <label class="home-location-label" for="mqciCommuneChoisie">📍 Ma commune ou mon quartier</label>
-        <input id="mqciCommuneChoisie" class="home-location-input" type="text" list="mqciCommunesSuggestions" placeholder="Choisir ou saisir ma commune" autocomplete="address-level2">
-        <datalist id="mqciCommunesSuggestions">
-          <option value="Abobo"><option value="Adjamé"><option value="Anyama"><option value="Attécoubé"><option value="Bingerville"><option value="Cocody"><option value="Koumassi"><option value="Marcory"><option value="Plateau"><option value="Port-Bouët"><option value="Treichville"><option value="Songon"><option value="Yopougon"><option value="Bouaké"><option value="Daloa"><option value="Korhogo"><option value="San-Pédro"><option value="Yamoussoukro">
-        </datalist>
-        <div class="home-search" role="search">
-          <input id="mqciRechercheUniverselle" type="search" placeholder="Un service, un lieu, un professionnel…" aria-label="Rechercher un service, un métier ou un lieu" autocomplete="off">
-          <span class="home-search-icon" aria-hidden="true">⌕</span>
-        </div>
-        <div id="mqciResultatsRecherche" class="mqci-search-results" aria-live="polite"></div>
+
       </section>
 
       <section class="home-panel" id="homeFamilyLauncher" aria-label="Choisir une famille de services">
@@ -11991,6 +11982,7 @@ window.mtcAfficherActeJudiciaire = function(type){
           <button class="family-shortcut" type="button" onclick="ouvrirDeclarationsEnfants()"><span>🧒</span>Enfants perdus ou retrouvés</button>
           <button class="family-shortcut" type="button" onclick="ouvrirNouveauCatalogueAccueil('hebergement','Hôtels et résidences')"><span>🏨</span>Hôtels et résidences</button>
           <button class="family-shortcut" type="button" onclick="ouvrirNouveauCatalogueAccueil('depannage_domicile','Dépannage à domicile')"><span>🧰</span>Dépannage à domicile</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Objets et documents perdus')"><span>🔎</span>Objets et documents perdus</button>
         </div>
       </section>
       <section class="home-panel" id="homeMobilite">
@@ -12036,10 +12028,8 @@ window.mtcAfficherActeJudiciaire = function(type){
       <section class="home-panel" id="homeActualites">
         <div class="home-section-heading"><div><h2>Actualités de ma commune</h2><p>Les informations et initiatives près de chez vous.</p></div></div>
         <div class="home-discovery-grid">
-          <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('maCommuneDirect','Ma commune en direct');chargerMaCommuneDirect()"><span>📍</span><strong>Ma commune en direct</strong><small>Travaux, eau, électricité et informations locales</small></button>
-          <button class="home-discovery-card" type="button" onclick="ouvrirEspaceCommunautaire()"><span>📰</span><strong>M’informer / Gbairai</strong><small>Actualités et échanges de la communauté</small></button>
-          <button class="home-discovery-card" type="button" onclick="ouvrirEspaceSolidarite()"><span>🤝</span><strong>Dons et solidarité</strong><small>Entraide et initiatives solidaires</small></button>
-          <button class="home-discovery-card" type="button" onclick="ouvrirSectionPleinEcran('objetsPerdusRetrouves','Objets et documents perdus')"><span>🔎</span><strong>Objets et documents perdus</strong><small>Signaler un objet retrouvé ou réclamer un bien</small></button>
+          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('maCommuneDirect','Ma commune en direct');chargerMaCommuneDirect()"><span>📍</span>Ma commune en direct</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirEspaceCommunautaire()"><span>📰</span>M’informer / Gbairai</button>
         </div>
       </section>
       <section class="home-panel" id="homeQuotidien">
