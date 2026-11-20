@@ -1092,7 +1092,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","boutique-paiement-manuel"),{
         uid:CLIENT_UID,type:"commerce",titre:"Boutique test",categorie:"Boutique",
         commune:"Yopougon",telephone:"0700000000",description:"Boutique de test",
-        email:"client@example.test",numeroIdentite:"ID-BOUTIQUE-12345",modePartenaire:true,
+        email:"client@example.test",numeroIdentite:"ID-BOUTIQUE-12345",
         adresseBoutique:"Yopougon, Abidjan",
         planAbonnementId:"boutiques_3mois",abonnementStatut:"a_payer",
         montantAbonnement:7000,dureeAbonnementJours:90,paiementStatut:"a_payer",
