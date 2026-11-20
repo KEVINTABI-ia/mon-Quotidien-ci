@@ -44,7 +44,7 @@ test("le catalogue Petites annonces reprend les mêmes valeurs par défaut que l
 
 test("le catalogue Espace du chauffeur expose 500 FCFA pour trois mois après 30 jours d’essai", () => {
   const [plan] = buildSubscriptionPlans("automobiliste", {});
-  assert.equal(plan.planId, "automobiliste");
+  assert.equal(plan.planId, "trimestriel");
   assert.equal(plan.priceXof, 500);
   assert.equal(plan.duration, 3);
   assert.equal(plan.unit, "mois");
@@ -111,14 +111,14 @@ test("webhook refuse une devise ou des centimes incohérents", () => {
 
 test("webhook accepte un abonnement automobiliste avec snapshot complet", () => {
   assert.equal(validateJekoPaymentPlan({
-    provider:"jeko",currency:"XOF",serviceId:"automobiliste",planId:"annuel",
-    amountXof:1000,amountCents:100000,durationMonths:12,
-    planAmountXof:1000,planDurationMonths:12,planSnapshotVersion:1
+    provider:"jeko",currency:"XOF",serviceId:"automobiliste",planId:"trimestriel",
+    amountXof:500,amountCents:50000,durationMonths:3,
+    planAmountXof:500,planDurationMonths:3,planSnapshotVersion:1
   }),true);
   assert.equal(validateJekoPaymentPlan({
-    provider:"jeko",currency:"XOF",serviceId:"automobiliste",planId:"annuel",
-    amountXof:1000,amountCents:100000,durationMonths:12,
-    planAmountXof:1000,planDurationMonths:12
+    provider:"jeko",currency:"XOF",serviceId:"automobiliste",planId:"trimestriel",
+    amountXof:500,amountCents:50000,durationMonths:3,
+    planAmountXof:500,planDurationMonths:3
   }),false);
 });
 
