@@ -757,11 +757,12 @@ export function buildSubscriptionPlans(requested,services={},now=new Date()) {
   const plans=definitions[requested].map(key=>{
     const fixedPlan=fixedDefaults[requested]?.[key]||null;
     const sourceCfg=services[key]||{};
-    const cfg=(requested==="logement"||requested==="ramassage")?{
+    const cfg=(requested==="logement"||requested==="ramassage"||requested==="automobiliste")?{
       ...sourceCfg,
       duree:fixedPlan.duration,
       unite:fixedPlan.unit,
-      prix:fixedPlan.price
+      prix:fixedPlan.price,
+      ...(requested==="automobiliste"?{essai:30,promotionActive:false,promotionPrix:0}:{})
     }:(fixedPlan?{
       ...sourceCfg,
       duree:sourceCfg.duree??fixedPlan.duration,
