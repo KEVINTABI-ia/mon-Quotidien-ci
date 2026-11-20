@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import worker from '../cloudflare-logement/worker.js';
+import worker from '../cloudflare-logement/worker.mjs';
 
 test('health endpoint is available without touching other services', async () => {
   const response = await worker.fetch(new Request('https://logement.example/health'), { LOGEMENT_PHOTOS: {}, FIREBASE_API_KEY: 'test' });
