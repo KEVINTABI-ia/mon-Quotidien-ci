@@ -960,7 +960,7 @@ service cloud.firestore {
                 && request.resource.data.paiementStatut == "a_payer"
                 && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
                   "abonnementDebut","abonnementFin","dernierPaiementFCFA","dernierPaiementConfirmeLe"
-                ])))))
+                ])))));
       allow delete: if estAdmin();
     }
 
