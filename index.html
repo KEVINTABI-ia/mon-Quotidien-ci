@@ -3902,9 +3902,20 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
    :type==="commerce"
      ?"Consultez les boutiques et commerces référencés, ou proposez votre établissement après validation."
      :"Consultez et publiez des petites annonces et offres validées par Mon Quotidien CI.";
+ if(description) description.textContent=type==="depannage"
+   ?"Consultez les professionnels du dépannage automobile et proposez vos services après validation."
+   :type==="hebergement"
+     ?"Consultez les hôtels et résidences partenaires inscrits et validés."
+     :type==="depannage_domicile"
+       ?"Trouvez des professionnels vérifiés pour vos besoins à domicile."
+       :type==="commerce"
+         ?"Consultez les boutiques et commerces référencés, ou proposez votre établissement après validation."
+         :"Consultez et publiez des petites annonces et offres validées par Mon Quotidien CI.";
  if(titreListe) titreListe.textContent=type==="depannage"
    ?"Professionnels du dépannage disponibles"
-   :type==="commerce"?"Commerces et boutiques référencés":"Annonces et offres disponibles";
+   :type==="hebergement"?"Hôtels et résidences partenaires"
+     :type==="depannage_domicile"?"Professionnels du dépannage à domicile"
+       :type==="commerce"?"Commerces et boutiques référencés":"Annonces et offres disponibles";
  const zone=document.getElementById(cibleZoneId||"nouveauServiceFormZone");
  if(!zone)return;
  zone.innerHTML=`
@@ -3913,7 +3924,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <h3>${cfg.icone} ${cfg.titre}</h3>
  <p>Proposez votre service ou votre annonce. La publication sera possible après validation de l'administration.</p>
  <label>Nom / entreprise / titre de l'annonce</label><input id="nsTitre" maxlength="100" placeholder="Nom ou titre" required>
- <div id="nsPhotoZone" style="display:${type==="depannage"||type==="commerce"||type==="annonce"?"block":"none"};margin:12px 0;">
+ <div id="nsPhotoZone" style="display:${type==="depannage"||type==="hebergement"||type==="depannage_domicile"||type==="commerce"||type==="annonce"?"block":"none"};margin:12px 0;">
  <label>${type==="commerce"?"Photo de la boutique":type==="annonce"?"Photo de votre annonce":"Photo de profil du service de dépannage"} (facultatif)</label>
  <input id="nsPhoto" type="file" accept="image/jpeg,image/png,image/webp" onchange="previsualiserPhotoNouveauService(event)">
  <small>Formats JPG, PNG ou WEBP · 3 Mo maximum.</small>
