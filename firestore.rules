@@ -906,7 +906,7 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","telephone","description","email","statut","createdAt"])
         && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","quartier","telephone","description","email","photoUrl","adresseBoutique","montantAbonnement","dureeAbonnementJours","paiementStatut","modePartenaire","planAbonnementId","abonnementStatut","statut","createdAt"])
-        && request.resource.data.type in ["depannage","hebergement","depannage_domicile","commerce","annonce"]
+        && request.resource.data.type in ["auto_ecole","vulcanisateur","depannage","hebergement","depannage_domicile","commerce","annonce"]
         && (!request.resource.data.keys().hasAny(["modePartenaire"]) || request.resource.data.get("modePartenaire", false) == true)
         && (request.resource.data.type != "commerce"
           || request.resource.data.get("modePartenaire", false) == true
@@ -925,7 +925,7 @@ service cloud.firestore {
         && request.resource.data.titre is string && request.resource.data.titre.size() > 0 && request.resource.data.titre.size() <= 100
         && request.resource.data.categorie is string && request.resource.data.categorie.size() <= 80
         && request.resource.data.commune is string && request.resource.data.commune.size() > 0 && request.resource.data.commune.size() <= 60
-        && (!["hebergement","depannage_domicile"].hasAny([request.resource.data.type]) || (request.resource.data.get("quartier", "") is string && request.resource.data.get("quartier", "").size() > 0 && request.resource.data.get("quartier", "").size() <= 80))
+        && (!["hebergement","depannage_domicile","auto_ecole","vulcanisateur"].hasAny([request.resource.data.type]) || (request.resource.data.get("quartier", "") is string && request.resource.data.get("quartier", "").size() > 0 && request.resource.data.get("quartier", "").size() <= 80))
         && (!request.resource.data.keys().hasAny(["quartier"]) || (request.resource.data.quartier is string && request.resource.data.quartier.size() <= 80))
         && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 20
         && request.resource.data.description is string && request.resource.data.description.size() > 0 && request.resource.data.description.size() <= 1200
