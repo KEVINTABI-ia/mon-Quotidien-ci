@@ -7092,7 +7092,12 @@ async function connecterPartenaire(){
     afficherEspacePartenaire(dossier, uid);
 
   } catch(erreur) {
-    statut.textContent = "Connexion impossible : " + erreur.message;
+    const erreursIdentifiants = ["auth/invalid-credential","auth/wrong-password","auth/user-not-found","auth/invalid-email"];
+    if(erreursIdentifiants.includes(erreur.code)){
+      statut.textContent = "Votre adresse e-mail ou votre mot de passe est incorrect.";
+    }else{
+      statut.textContent = "Connexion impossible : " + (erreur.message || "Une erreur est survenue. Réessayez.");
+    }
   }
 }
 function afficherEspacePartenaire(dossier, uid) {
