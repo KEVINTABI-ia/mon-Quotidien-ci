@@ -925,7 +925,7 @@ service cloud.firestore {
         && request.resource.data.titre is string && request.resource.data.titre.size() > 0 && request.resource.data.titre.size() <= 100
         && request.resource.data.categorie is string && request.resource.data.categorie.size() <= 80
         && request.resource.data.commune is string && request.resource.data.commune.size() > 0 && request.resource.data.commune.size() <= 60
-        && (request.resource.data.type != "hebergement" || (request.resource.data.get("quartier", "") is string && request.resource.data.get("quartier", "").size() > 0 && request.resource.data.get("quartier", "").size() <= 80))
+        && (!["hebergement","depannage_domicile"].hasAny([request.resource.data.type]) || (request.resource.data.get("quartier", "") is string && request.resource.data.get("quartier", "").size() > 0 && request.resource.data.get("quartier", "").size() <= 80))
         && (!request.resource.data.keys().hasAny(["quartier"]) || (request.resource.data.quartier is string && request.resource.data.quartier.size() <= 80))
         && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 20
         && request.resource.data.description is string && request.resource.data.description.size() > 0 && request.resource.data.description.size() <= 1200
