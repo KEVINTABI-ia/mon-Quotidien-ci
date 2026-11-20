@@ -3886,6 +3886,58 @@ function ouvrirNouveauCatalogueAccueil(type,titre){
  choisirNouveauService(type);
  const formulaire=document.getElementById("nouveauServiceFormZone");
  if(formulaire)formulaire.style.display="none";
+ if(type==="hebergement")afficherChoixCatalogueHebergement();
+}
+function afficherChoixCatalogueHebergement(){
+ const zone=document.getElementById("nouveauxServicesPublics");if(!zone)return;
+ const titre=document.getElementById("nouveauxServicesListeTitre");
+ if(titre)titre.textContent="Choisissez un type d’hébergement";
+ zone.innerHTML='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">'
+ +'<button type="button" class="family-shortcut" onclick="chargerCatalogueHebergement(\'hotel\')">🏨 Hôtels</button>'
+ +'<button type="button" class="family-shortcut" onclick="chargerCatalogueHebergement(\'residence\')">🏡 Résidences</button></div>';
+}
+async function chargerCatalogueHebergement(categorie){
+ const zone=document.getElementById("nouveauxServicesPublics");if(!zone)return;
+ if(!["hotel","residence"].includes(categorie))return;
+ const libelle=categorie==="hotel"?"Hôtels":"Résidences";
+ const titre=document.getElementById("nouveauxServicesListeTitre");
+ if(titre)titre.textContent=libelle+" par commune et quartier";
+ zone.innerHTML='<p class="notice">Chargement des établissements partenaires...</p>';
+ try{
+  const snap=await db.collection("demandes_nouveaux_services").where("type","==","hebergement").where("statut","==","approuve").limit(300).get();
+  const documents=snap.docs.filter(doc=>{
+   const d=doc.data();if(d.visibleManuellement===false)return false;
+   const cat=String(d.categorie||"").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"");
+   return categorie==="hotel"?cat.includes("hotel"):cat.includes("residence");
+  }).map(doc=>({id:doc.id,...doc.data()}));
+  if(!documents.length){zone.innerHTML='<button type="button" onclick="afficherChoixCatalogueHebergement()">← Retour</button><p class="notice">Aucun établissement partenaire validé dans cette catégorie pour le moment.</p>';return;}
+  const groupes=new Map();
+  documents.forEach(d=>{
+   const commune=String(d.commune||"Commune non renseignée").trim()||"Commune non renseignée";
+   const quartier=String(d.quartier||"Quartier non renseigné").trim()||"Quartier non renseigné";
+   if(!groupes.has(commune))groupes.set(commune,new Map());
+   if(!groupes.get(commune).has(quartier))groupes.get(commune).set(quartier,[]);
+   groupes.get(commune).get(quartier).push(d);
+  });
+  let html='<button type="button" onclick="afficherChoixCatalogueHebergement()">← Retour aux choix</button>';
+  [...groupes.keys()].sort((a,b)=>a.localeCompare(b,"fr")).forEach(commune=>{
+   html+='<section class="card" style="padding:12px;margin:12px 0;"><h3>📍 '+echapperTextePublicite(commune)+'</h3>';
+   [...groupes.get(commune).keys()].sort((a,b)=>a.localeCompare(b,"fr")).forEach(quartier=>{
+    html+='<h4>'+echapperTextePublicite(quartier)+'</h4>';
+    html+=groupes.get(commune).get(quartier).map(d=>{
+     const tel=String(d.telephone||"").replace(/[^+0-9]/g,"");
+     return '<article class="card" style="padding:12px;margin:8px 0;">'
+      +(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo de '+echapperTextePublicite(d.titre)+'" style="width:100%;max-width:220px;height:145px;object-fit:cover;border-radius:10px;margin-bottom:8px;">':'')
+      +'<strong>'+echapperTextePublicite(d.titre||libelle)+'</strong>'
+      +'<p>'+echapperTextePublicite(d.categorie||libelle)+' · '+echapperTextePublicite(commune)+' · '+echapperTextePublicite(quartier)+'</p>'
+      +'<p>'+echapperTextePublicite(d.description||"")+'</p>'
+      +'<a class="primary" style="display:inline-block;text-decoration:none;text-align:center;margin-top:8px;" href="tel:'+tel+'">📞 Contacter</a></article>';
+    }).join("");
+   });
+   html+='</section>';
+  });
+  zone.innerHTML=html;
+ }catch(e){console.error(e);zone.innerHTML='<p class="notice">Impossible de charger les établissements. Vérifiez les règles Firestore.</p>';}
 }
 function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId){
  if(!NOUVEAUX_SERVICES[type])return;
