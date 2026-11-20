@@ -42,12 +42,13 @@ test("le catalogue Petites annonces reprend les mêmes valeurs par défaut que l
   assert.equal(plan.unit, "jours");
 });
 
-test("le catalogue Automobiliste reprend le forfait annuel par défaut du checkout", () => {
+test("le catalogue Espace du chauffeur expose 500 FCFA pour trois mois après 30 jours d’essai", () => {
   const [plan] = buildSubscriptionPlans("automobiliste", {});
-  assert.equal(plan.planId, "annuel");
-  assert.equal(plan.priceXof, 1000);
-  assert.equal(plan.duration, 12);
+  assert.equal(plan.planId, "automobiliste");
+  assert.equal(plan.priceXof, 500);
+  assert.equal(plan.duration, 3);
   assert.equal(plan.unit, "mois");
+  assert.equal(plan.trialDays, 30);
 });
 
 test("le catalogue Petites annonces reflète la configuration tarifaire du checkout", () => {
@@ -59,13 +60,14 @@ test("le catalogue Petites annonces reflète la configuration tarifaire du check
   assert.equal(plan.unit, "jours");
 });
 
-test("le catalogue Automobiliste reflète le prix configuré tout en conservant 12 mois", () => {
+test("le forfait Espace du chauffeur reste fixe malgré une ancienne configuration", () => {
   const [plan] = buildSubscriptionPlans("automobiliste", {
     automobiliste: { prix: 2500, duree: 12, unite: "mois", actif: true }
   });
-  assert.equal(plan.priceXof, 2500);
-  assert.equal(plan.duration, 12);
+  assert.equal(plan.priceXof, 500);
+  assert.equal(plan.duration, 3);
   assert.equal(plan.unit, "mois");
+  assert.equal(plan.trialDays, 30);
 });
 
 test("les forfaits fixes Logement et Ramassage ne peuvent pas être modifiés par la configuration", () => {
