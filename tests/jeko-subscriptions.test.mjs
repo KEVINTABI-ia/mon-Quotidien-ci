@@ -78,3 +78,67 @@ test("les forfaits fixes Logement et Ramassage ne peuvent pas être modifiés pa
   assert.deepEqual([logement.priceXof, logement.duration, logement.unit], [3000, 1, "mois"]);
   assert.deepEqual([ramassage.priceXof, ramassage.duration, ramassage.unit], [2000, 30, "jours"]);
 });
+
+import { validateJekoPaymentPlan } from "../cloudflare/worker.js";
+
+test("webhook valide les forfaits fixes Logement et Ramassage", () => {
+  assert.equal(validateJekoPaymentPlan({provider:"jeko",currency:"XOF",serviceId:"logement_renewal",planId:"trimestriel",amountXof:8000,amountCents:800000,durationDays:90}),true);
+  assert.equal(validateJekoPaymentPlan({provider:"jeko",currency:"XOF",serviceId:"ramassage",planId:"ramassage",amountXof:2000,amountCents:200000,durationDays:30}),true);
+  assert.equal(validateJekoPaymentPlan({provider:"jeko",currency:"XOF",serviceId:"annuaire_renewal",planId:"annuaire",amountXof:1000,amountCents:100000,durationDays:30}),true);
+});
+
+test("webhook refuse un montant ou une durée fixe incohérents", () => {
+  assert.equal(validateJekoPaymentPlan({provider:"jeko",currency:"XOF",serviceId:"logement_renewal",planId:"trimestriel",amountXof:9000,amountCents:900000,durationDays:90}),false);
+  assert.equal(validateJekoPaymentPlan({provider:"jeko",currency:"XOF",serviceId:"ramassage",planId:"ramassage",amountXof:2000,amountCents:200000,durationDays:60}),false);
+});
+
+test("webhook exige un instantané serveur cohérent pour les plans configurables", () => {
+  const base={provider:"jeko",currency:"XOF",serviceId:"partenaire_colis",planId:"partenaires_colis_3mois",amountXof:6000,amountCents:600000,durationMonths:3,planAmountXof:6000,planDurationMonths:3,planSnapshotVersion:1};
+  assert.equal(validateJekoPaymentPlan(base),true);
+  assert.equal(validateJekoPaymentPlan({...base,amountXof:7000,amountCents:700000}),false);
+  assert.equal(validateJekoPaymentPlan({...base,durationMonths:6}),false);
+  assert.equal(validateJekoPaymentPlan({...base,planDurationMonths:6}),false);
+  assert.equal(validateJekoPaymentPlan({...base,planAmountXof:7000}),false);
+});
+
+test("webhook refuse une devise ou des centimes incohérents", () => {
+  const base={provider:"jeko",currency:"XOF",serviceId:"ramassage",planId:"ramassage",amountXof:2000,amountCents:200000,durationDays:30};
+  assert.equal(validateJekoPaymentPlan({...base,currency:"USD"}),false);
+  assert.equal(validateJekoPaymentPlan({...base,amountCents:2000}),false);
+});
+
+test("webhook accepte un abonnement automobiliste avec snapshot complet", () => {
+  assert.equal(validateJekoPaymentPlan({
+    provider:"jeko",currency:"XOF",serviceId:"automobiliste",planId:"annuel",
+    amountXof:1000,amountCents:100000,durationMonths:12,
+    planAmountXof:1000,planDurationMonths:12,planSnapshotVersion:1
+  }),true);
+  assert.equal(validateJekoPaymentPlan({
+    provider:"jeko",currency:"XOF",serviceId:"automobiliste",planId:"annuel",
+    amountXof:1000,amountCents:100000,durationMonths:12,
+    planAmountXof:1000,planDurationMonths:12
+  }),false);
+});
+
+test("webhook garde la compatibilité des paiements en attente créés avant le snapshot", () => {
+  assert.equal(validateJekoPaymentPlan({
+    provider:"jeko",currency:"XOF",serviceId:"partenaire_colis",planId:"partenaires_colis_3mois",
+    amountXof:6000,amountCents:600000,durationMonths:3
+  }),true);
+  assert.equal(validateJekoPaymentPlan({
+    provider:"jeko",currency:"XOF",serviceId:"compagnie_voyage",planId:"compagnie_professionnelle_annuel",
+    amountXof:25000,amountCents:2500000,durationMonths:12
+  }),true);
+});
+
+import { verifyHmac } from "../cloudflare/worker.js";
+
+test("webhook vérifie le HMAC-SHA256 sur le corps brut", async () => {
+  const raw = new TextEncoder().encode('{"id":"tx-test","status":"success"}');
+  const secret = "test-webhook-secret";
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), {name:"HMAC",hash:"SHA-256"}, false, ["sign"]);
+  const signature = Array.from(new Uint8Array(await crypto.subtle.sign("HMAC", key, raw))).map(v=>v.toString(16).padStart(2,"0")).join("");
+  assert.equal(await verifyHmac(raw, signature, secret), true);
+  assert.equal(await verifyHmac(raw, "00".repeat(32), secret), false);
+  assert.equal(await verifyHmac(new TextEncoder().encode('{"id":"changed"}'), signature, secret), false);
+});

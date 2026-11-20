@@ -227,7 +227,7 @@ async function createCheckout(request,env) {
       if(previousStatus==="pending"||previousStatus==="initialization_unknown"||previousStatus==="review_required")return json({error:"existing_payment_requires_review"},409);
     }
     amountXof=1000;
-    initial={uid:user.sub,serviceId,annuaireId,targetPath:annuairePath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays:30,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),annuaireLockUpdateTime:annuaireDoc.updateTime};
+    initial={uid:user.sub,serviceId,planId:"annuaire",annuaireId,targetPath:annuairePath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays:30,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),annuaireLockUpdateTime:annuaireDoc.updateTime};
   } else if(serviceId==="compagnie_voyage") {
     const compagnieId=body.compagnieId;
     if(typeof compagnieId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(compagnieId))return json({error:"invalid_company_id"},400);
@@ -322,6 +322,12 @@ async function createCheckout(request,env) {
     amountXof=cfg.promotionActive===true&&promo>0&&promo<=base&&start&&end&&now>=start&&now<=end?promo:base;
     initial={uid:user.sub,serviceId,planId:"annuel",provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationMonths:12,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
   }
+  if(["automobiliste","petites_annonces","boutique_renewal","partenaire_colis","compagnie_voyage"].includes(serviceId)) {
+    initial.planAmountXof=amountXof;
+    if(Number.isSafeInteger(initial.durationMonths)) initial.planDurationMonths=initial.durationMonths;
+    if(Number.isSafeInteger(initial.durationDays)) initial.planDurationDays=initial.durationDays;
+    initial.planSnapshotVersion=1;
+  }
   const id=crypto.randomUUID().replace(/-/g,"");
   const reference="MQCI-"+id;
   initial.clientReference=reference;
@@ -368,13 +374,60 @@ function safeHexEqual(a,b) {
   const x=Uint8Array.from(a.match(/../g),v=>parseInt(v,16)),y=Uint8Array.from(b.match(/../g),v=>parseInt(v,16));
   let diff=0;for(let i=0;i<x.length;i++)diff|=x[i]^y[i];return diff===0;
 }
-async function verifyHmac(raw,signature,secret) {
+export async function verifyHmac(raw,signature,secret) {
   const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
   return safeHexEqual(signature,Array.from(new Uint8Array(await crypto.subtle.sign("HMAC",key,raw))).map(v=>v.toString(16).padStart(2,"0")).join(""));
 }
 function addMonthsClamped(date,months) {
   const d=new Date(date), day=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+months);
   const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(day,last));return d;
+}
+export function validateJekoPaymentPlan(payment) {
+  if(!payment||payment.provider!=="jeko"||payment.currency!=="XOF"||
+     !Number.isSafeInteger(payment.amountXof)||payment.amountXof<1||
+     !Number.isSafeInteger(payment.amountCents)||payment.amountCents!==payment.amountXof*100) return false;
+  const fixed={
+    logement_renewal:{mensuel:[3000,30],trimestriel:[8000,90],semestriel:[15000,180]},
+    ramassage:{ramassage:[2000,30]},
+    annuaire_renewal:{annuaire:[1000,30]},
+    automobiliste:{annuel:[null, null]}
+  };
+  if(payment.serviceId==="objet_retrouve") return payment.amountXof===1000;
+  if(payment.serviceId==="logement_renewal"||payment.serviceId==="ramassage"||payment.serviceId==="annuaire_renewal"){
+    const plan=fixed[payment.serviceId]?.[payment.planId];
+    return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1]&&(payment.serviceId!=="annuaire_renewal"||payment.planId==null||payment.planId==="annuaire");
+  }
+  if(payment.serviceId==="automobiliste"){
+    return payment.planId==="annuel"&&payment.durationMonths===12&&(
+      payment.planSnapshotVersion===1
+        ? Number.isSafeInteger(payment.planAmountXof)&&payment.planAmountXof===payment.amountXof&&payment.planDurationMonths===12
+        : payment.planSnapshotVersion==null&&payment.planAmountXof==null&&payment.planDurationMonths==null
+    );
+  }
+  const monthPlans={
+    partenaire_colis:{partenaires_colis_1mois:1,partenaires_colis_3mois:3,partenaires_colis_6mois:6},
+    boutique_renewal:{boutiques_1mois:1,boutiques_2mois:2,boutiques_3mois:3},
+    compagnie_voyage:{
+      compagnie_essentielle_mensuel:1,compagnie_essentielle_annuel:12,
+      compagnie_professionnelle_mensuel:1,compagnie_professionnelle_annuel:12
+    }
+  };
+  const expectedMonths=monthPlans[payment.serviceId]?.[payment.planId];
+  if(expectedMonths!==undefined) {
+    return payment.durationMonths===expectedMonths&&(
+      payment.planSnapshotVersion===1
+        ? Number.isSafeInteger(payment.planAmountXof)&&payment.planAmountXof===payment.amountXof&&payment.planDurationMonths===payment.durationMonths
+        : payment.planSnapshotVersion==null&&payment.planAmountXof==null&&payment.planDurationMonths==null
+    );
+  }
+  if(payment.serviceId==="petites_annonces"){
+    return payment.planId==="petites_annonces"&&Number.isSafeInteger(payment.durationDays)&&payment.durationDays>=1&&payment.durationDays<=365&&(
+      payment.planSnapshotVersion===1
+        ? Number.isSafeInteger(payment.planAmountXof)&&payment.planAmountXof===payment.amountXof&&payment.planDurationDays===payment.durationDays
+        : payment.planSnapshotVersion==null&&payment.planAmountXof==null&&payment.planDurationDays==null
+    );
+  }
+  return false;
 }
 async function webhook(request,env) {
   if(request.method!=="POST") return new Response("Method Not Allowed",{status:405});
@@ -410,6 +463,10 @@ async function webhook(request,env) {
     return new Response("OK",{status:200});
   }
   if(tx.status!=="success") return new Response("OK",{status:200});
+  if(!validateJekoPaymentPlan(payment)) {
+    await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"subscription_plan_snapshot_mismatch",updatedAt:new Date().toISOString()}))});
+    return new Response("OK",{status:200});
+  }
   if(payment.status==="succeeded") return new Response("OK",{status:200});
   if(payment.serviceId==="objet_retrouve"){
     const objectDoc=await getDoc(env,"objets_retrouves/"+payment.objectId);
