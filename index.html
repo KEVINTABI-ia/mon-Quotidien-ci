@@ -12047,12 +12047,6 @@ window.mtcAfficherActeJudiciaire = function(type){
     const shell=document.createElement('div');
     shell.id='accueilHomeShell';
     shell.innerHTML=`
-      <section class="home-welcome" id="homeWelcome">
-        <h1 id="mqciBonjourAccueil">Bonjour !</h1>
-        
-
-      </section>
-
       <section class="home-panel" id="homeFamilyLauncher" aria-label="Choisir une famille de services">
         <div class="home-section-heading"><div><h2>Toutes les familles de services</h2><p>Accédez également aux autres rubriques de Mon Quotidien CI.</p></div></div>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeMobilite')"><span class="family-entry-icon">🚌</span><strong>Mobilité et transport</strong><small>Gares, déplacements, colis et compagnies</small></button>
@@ -12134,15 +12128,6 @@ window.mtcAfficherActeJudiciaire = function(type){
     const header=document.querySelector("header");
     const tagline=header?.querySelector(".tagline-anime,.tagline");
     if(welcome&&header){if(tagline&&tagline.parentNode===header)tagline.insertAdjacentElement("afterend",welcome);else header.appendChild(welcome);}
-    // Le mot « Bonjour ! » reste visible pendant 60 secondes à l'arrivée sur l'accueil.
-    const bonjourAccueil=document.getElementById("mqciBonjourAccueil");
-    if(bonjourAccueil){
-      window.setTimeout(()=>{
-        bonjourAccueil.style.setProperty("display","none","important");
-        bonjourAccueil.setAttribute("aria-hidden","true");
-      },60000);
-    }
-
     const mobility=document.getElementById('homeMobilite');
     if(recherche) mobility.appendChild(recherche);
     if(mobilite) mobility.appendChild(mobilite);
@@ -12185,16 +12170,16 @@ window.mtcAfficherActeJudiciaire = function(type){
     actions[1].addEventListener('click',()=>{fermerMenuPro();ouvrirEspacePartenaire('connexion');});
     actions[2].addEventListener('click',()=>{fermerMenuPro();ouvrirSectionPleinEcran('pharmacieProfessionnelle','Espace pharmacie');});
     const headerPro=document.querySelector('header.mqci-header-premium');
-    function alignerBoutonMenuSurBonjour(){
-      const bonjour=document.getElementById('mqciBonjourAccueil');
-      if(!headerPro||!bonjour||bonjour.getAttribute('aria-hidden')==='true')return;
+    function alignerBoutonMenuSurIdentite(){
+      const identite=headerPro?.querySelector('.mqci-brand-lockup');
+      if(!headerPro||!identite)return;
       const h=headerPro.getBoundingClientRect();
-      const b=bonjour.getBoundingClientRect();
+      const b=identite.getBoundingClientRect();
       const milieu=b.top+b.height/2-h.top;
       menuPro.style.top=Math.max(8,milieu-21)+'px';
     }
-    alignerBoutonMenuSurBonjour();
-    window.addEventListener('resize',alignerBoutonMenuSurBonjour);
+    alignerBoutonMenuSurIdentite();
+    window.addEventListener('resize',alignerBoutonMenuSurIdentite);
 
     headerPro?.appendChild(menuPro);
     document.body.appendChild(menuPanel);
