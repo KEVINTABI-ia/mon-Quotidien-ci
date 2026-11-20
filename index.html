@@ -4220,7 +4220,8 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
    photoUrl=await compresserPhotoNouveauService(photo);
   }
   const donneesDossier={
-   uid:user.uid,type:nouveauServiceActif,titre,categorie:valeur("nsCategorie"),commune,telephone,description,email,
+   uid:user.uid,type:nouveauServiceActif,titre,categorie:valeur("nsCategorie"),commune,telephone,
+   description:infosProfessionnelles?description+"\n\nInformations professionnelles : "+infosProfessionnelles:description,email,
    ...(["hebergement","depannage_domicile","auto_ecole","vulcanisateur"].includes(nouveauServiceActif)?{quartier}:{}),
    ...(infosProfessionnelles?{infosProfessionnelles}:{}),
    ...(modePartenaire?{modePartenaire:true}:{}),
