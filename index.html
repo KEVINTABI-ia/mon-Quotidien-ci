@@ -3670,7 +3670,7 @@ document.addEventListener('DOMContentLoaded',function(){try{const t=localStorage
 <script>
 // Déclaré dès le début pour éviter toute erreur d'initialisation lors de l'ouverture des rubriques.
 var vuePleinEcranActive = null;
-const SECTIONS_PROTEGEES_AUTOMOBILISTE = new Set(["fenetreAccident","fenetreInfractions","verificationAssuranceAuto","mesDocumentsAutomobiles","carnetEntretienAuto","rappelsDocumentsAuto","recherchePiecesAuto","estimationTrajetAuto"]);
+const SECTIONS_PROTEGEES_AUTOMOBILISTE = new Set(["espaceAutomobiliste"]);
 // CONFIGURATION FIREBASE
 const firebaseConfig = {
 apiKey:"AIzaSyBJFCyGS-cEaEm0_c_-p0CzunNcME9-u7Q",
@@ -4916,7 +4916,7 @@ async function traiterReclamationObjet(id,statut){
 // MENU ADMINISTRATEUR : tableau de bord par rubriques, une seule page de gestion visible à la fois
 const CONFIG_ABONNEMENTS_DEFAUT={
  petites_annonces:{libelle:"Petites annonces de ma commune",actif:true,prix:500,duree:30,unite:"jours",essai:30,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
- automobiliste:{libelle:"Abonnement automobiliste annuel",actif:true,prix:1000,duree:12,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
+ automobiliste:{libelle:"Espace du chauffeur — abonnement trimestriel",actif:true,prix:500,duree:3,unite:"mois",essai:30,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques_15j:{libelle:"Boutiques — formule 15 jours",actif:true,prix:4000,duree:15,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques_30j:{libelle:"Ancienne formule boutique 30 jours",actif:true,prix:7000,duree:30,unite:"jours",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
  boutiques_1mois:{libelle:"Boutiques et commerces 1 mois",actif:true,prix:2500,duree:1,unite:"mois",essai:0,promotionActive:false,promotionPrix:0,promotionDebut:"",promotionFin:""},
@@ -4944,9 +4944,12 @@ async function obtenirConfigurationAbonnement(id,forcerLectureServeur=false){
  const services=await configurationAbonnementsPromise;
  const config={...CONFIG_ABONNEMENTS_DEFAUT[id],...(services[id]||{})};
  if(id==="ramassage"){
-  // Tarif métier fixé : les anciennes configurations à 0 FCFA ne doivent pas
-  // réintroduire un forfait gratuit ni modifier le prix envoyé à Jèko.
+  // Tarif métier fixé : les anciennes configurations ne peuvent pas modifier ce forfait.
   config.prix=2000;config.duree=1;config.unite="mois";config.essai=0;config.promotionActive=false;
+ }
+ if(id==="automobiliste"){
+  // Règle métier fixe : 30 jours d’essai puis 500 FCFA pour 3 mois, via Jèko.
+  config.libelle="Espace du chauffeur — abonnement trimestriel";config.prix=500;config.duree=3;config.unite="mois";config.essai=30;config.promotionActive=false;config.promotionPrix=0;
  }
  return config;
 }
@@ -5013,7 +5016,7 @@ async function sauvegarderConfigurationAbonnementsAdmin(){
   const unite=lire('unite').value, debut=lire('promoDebut').value,fin=lire('promoFin').value;
   if(!Number.isFinite(prix)||prix<0||!Number.isInteger(prix)||!Number.isFinite(duree)||duree<1||!Number.isInteger(duree)||!Number.isInteger(essai)||essai<0||!Number.isInteger(promotionPrix)||promotionPrix<0)return alert("Vérifie les prix, durées et périodes gratuites : nombres entiers positifs uniquement.");
   if(id==="petites_annonces"&&essai<1)return alert("Le parcours de paiement du premier abonnement des petites annonces n’est pas encore disponible : conserve au moins un jour de période gratuite.");
-  if((id==="automobiliste"&&(unite!=="mois"||duree!==12))||(id.startsWith("compagnie_")&&unite!=="mois"))return alert("L’abonnement automobiliste doit être annuel et les abonnements des compagnies doivent être configurés en mois.");
+  if((id==="automobiliste"&&(unite!=="mois"||duree!==3||prix!==500||essai!==30))||(id.startsWith("compagnie_")&&unite!=="mois"))return alert("L’Espace du chauffeur est fixé à 500 FCFA pour 3 mois après 30 jours d’essai. Les abonnements des compagnies doivent être configurés en mois.");
   if(lire('promo').checked&&(!promotionPrix||promotionPrix>prix||!debut||!fin||fin<debut))return alert("Chaque promotion active doit avoir un prix inférieur ou égal au prix normal, ainsi qu'une date de début et de fin valides.");
   services[id]={libelle:CONFIG_ABONNEMENTS_DEFAUT[id].libelle,actif:lire('actif').checked,prix,duree,unite,essai,promotionActive:lire('promo').checked,promotionPrix,promotionDebut:debut,promotionFin:fin,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
  }
@@ -8032,7 +8035,7 @@ async function actualiserTarifPublicAutomobiliste(){
   try{
     const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
     if(!cfg.actif){zone.innerHTML="<strong>Les nouvelles souscriptions sont temporairement suspendues.</strong>";return;}
-    const montant=tarifAbonnementEffectif(cfg),duree=Number(cfg.duree),unite=cfg.unite==="mois"?(duree===12?"an":"mois"):"jours";
+    const montant=500,duree=3,unite="mois";
     zone.innerHTML="<strong>Tarif actuel : "+montant.toLocaleString("fr-FR")+" FCFA / "+duree+" "+unite+"</strong>"+
       '<p style="font-size:13px;margin:8px 0 0;">Le règlement de l’abonnement se fait exclusivement via Jèko. Choisissez votre moyen de paiement dans le formulaire ci-dessous. L’accès est activé uniquement après confirmation du webhook Jèko.</p>';
   }catch(e){
@@ -8071,8 +8074,8 @@ async function actualiserEtatAbonnementAutomobiliste(){
   }
   const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
   if(!cfg.actif){zone.textContent="Les nouvelles souscriptions automobilistes sont temporairement suspendues.";return;}
-  if(cfg.unite!=="mois"||Number(cfg.duree)!==12){zone.textContent="La formule annuelle est momentanément mal configurée. Contactez l’administration.";return;}
-  zone.textContent="Aucun abonnement actif. Souscription annuelle : "+tarifAbonnementEffectif(cfg).toLocaleString("fr-FR")+" FCFA. Le paiement se fait exclusivement avec Jèko.";
+  if(cfg.unite!=="mois"||Number(cfg.duree)!==3||Number(cfg.prix)!==500){zone.textContent="La formule trimestrielle est momentanément mal configurée. Contactez l’administration.";return;}
+  zone.textContent="Votre période d’essai de 30 jours est terminée. Renouvelez l’Espace du chauffeur pour 500 FCFA / 3 mois avec Jèko.";
  }catch(e){zone.textContent="Vérification impossible : "+(e.message||"réessayez.");}
 }
 
@@ -8111,7 +8114,7 @@ async function envoyerDemandeAbonnementAuto(){
  try{
   const cfg=await obtenirConfigurationAbonnement("automobiliste",true);
   if(!cfg.actif)throw new Error("Les nouvelles souscriptions automobilistes sont temporairement suspendues.");
-  if(cfg.unite!=="mois"||Number(cfg.duree)!==12)throw new Error("L’abonnement automobiliste doit être annuel.");
+  if(cfg.unite!=="mois"||Number(cfg.duree)!==3||Number(cfg.prix)!==500)throw new Error("L’Espace du chauffeur est fixé à 500 FCFA pour 3 mois.");
   const token=await user.getIdToken(),response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{
    method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
    body:JSON.stringify({serviceId:"automobiliste",paymentMethod})
