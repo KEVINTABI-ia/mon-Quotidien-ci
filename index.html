@@ -3288,8 +3288,8 @@ function chargerPublicitesAccueil() {
       <h4>Description et conditions de location</h4>
       <label>Description détaillée *</label><textarea id="logementAdDescription" rows="6" maxlength="3000" placeholder="Décris les pièces, l’état du logement, les équipements, l’accès et le voisinage. Précise les conditions : caution, avance, frais d’agence, pièces à fournir, règles particulières et disponibilité."></textarea>
       <p class="notice">Indique clairement la caution, l’avance, les frais éventuels et les conditions de visite ou d’entrée dans les lieux.</p>
-      <p class="notice">Chaque annonce est examinée par l’administrateur avant sa mise en ligne.</p>
-      <button class="primary" type="button" onclick="logementSubmitAd()">Envoyer l’annonce pour validation</button>
+      <p class="notice" id="logementModerationNotice">La première annonce sera examinée par l’administrateur avant sa mise en ligne.</p>
+      <button class="primary" id="logementPublishButton" type="button" onclick="logementSubmitAd()">Envoyer la première annonce pour validation</button>
     </div>
     <div id="logementRenewal" style="display:none">
       <h3>Renouveler mon abonnement de publication</h3>
