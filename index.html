@@ -4127,6 +4127,11 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <button id="nsEnvoyerValidation" class="primary" type="button">${type==="commerce"&&!modePartenaire?"Envoyer ma demande d’abonnement":"Envoyer pour validation"}</button>
  <p id="nsStatut" class="notice" aria-live="polite"></p>
  </div>`;
+ const champEmailPartenaire=zone.querySelector("#nsEmail");
+ if(modePartenaire&&champEmailPartenaire&&auth.currentUser?.email){
+  champEmailPartenaire.value=auth.currentUser.email;
+  champEmailPartenaire.readOnly=true;
+ }
  const boutonEnvoi=zone.querySelector("#nsEnvoyerValidation");
  if(boutonEnvoi){
   boutonEnvoi.addEventListener("click",()=>{
