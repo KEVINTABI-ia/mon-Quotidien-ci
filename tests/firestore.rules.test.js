@@ -1301,6 +1301,12 @@ describe("Mon Transport CI — règles Firestore", function () {
       await assertFails(setDoc(doc(db,"demandes_nouveaux_services","wrong-email"),application({email:"intrus@example.test"})));
     });
 
+    it("accepte un compte authentifié par téléphone avec une adresse e-mail de contact valide", async () => {
+      const {doc,setDoc}=require("firebase/firestore");
+      const db=testEnv.authenticatedContext(CLIENT_UID,{phone_number:"+2250700000000"}).firestore();
+      await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","phone-auth-application"),application()));
+    });
+
     it("réserve la décision d'approbation à l'administrateur", async () => {
       const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
       const owner=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
