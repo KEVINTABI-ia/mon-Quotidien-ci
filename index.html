@@ -3273,14 +3273,21 @@ function chargerPublicitesAccueil() {
       <input id="logementAdTransaction" type="hidden" value="location"><p class="notice">Cette rubrique est réservée aux logements proposés à la location.</p>
       <label>Prix en FCFA</label><input id="logementAdPrice" type="number" min="1">
       <label>Période du prix</label><select id="logementAdPricePeriod"><option value="par nuit">Par nuit</option><option value="par mois">Par mois</option><option value="par an">Par an</option><option value="prix total">Prix total</option></select>
-      <label>Commune</label><input id="logementAdCommune">
-      <label>Quartier</label><input id="logementAdDistrict">
-      <label>Adresse précise (facultatif)</label><input id="logementAdAddress">
-      <label>Superficie / dimensions (facultatif)</label><input id="logementAdArea">
-      <label>Description</label><textarea id="logementAdDescription" rows="4"></textarea>
-      <label>Téléphone public</label><input id="logementAdPhone" type="tel">
-      <label>WhatsApp (facultatif)</label><input id="logementAdWhatsapp" type="tel">
-      <label>Liens HTTPS des photos (une URL par ligne, 8 maximum)</label><textarea id="logementAdPhotos" rows="3" placeholder="https://..."></textarea>
+      <h4>Localisation du logement</h4>
+      <label>Commune *</label><input id="logementAdCommune" autocomplete="address-level2" placeholder="Ex. Cocody">
+      <label>Quartier *</label><input id="logementAdDistrict" autocomplete="address-level3" placeholder="Ex. Angré, Riviera…">
+      <label>Adresse ou repère pour trouver la maison</label><input id="logementAdAddress" placeholder="Rue, carrefour ou point de repère">
+      <label>Superficie / dimensions (facultatif)</label><input id="logementAdArea" placeholder="Ex. 120 m²">
+      <h4>Contacts pour les visites</h4>
+      <label>Numéro de téléphone *</label><input id="logementAdPhone" type="tel" autocomplete="tel" placeholder="Ex. 07…">
+      <label>Numéro WhatsApp (facultatif)</label><input id="logementAdWhatsapp" type="tel" placeholder="Si différent du téléphone">
+      <h4>Photos du logement</h4>
+      <label>Ajouter des photos (8 maximum) *</label><input id="logementAdPhotoFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+      <p class="notice">Sélectionne directement les photos depuis ton téléphone (JPG, PNG ou WebP, 8 Mo maximum par photo).</p>
+      <label>Ou liens HTTPS des photos (facultatif)</label><textarea id="logementAdPhotos" rows="2" placeholder="Un lien HTTPS par ligne, si tu en as"></textarea>
+      <h4>Description et conditions de location</h4>
+      <label>Description détaillée *</label><textarea id="logementAdDescription" rows="6" maxlength="3000" placeholder="Décris les pièces, l’état du logement, les équipements, l’accès et le voisinage. Précise les conditions : caution, avance, frais d’agence, pièces à fournir, règles particulières et disponibilité."></textarea>
+      <p class="notice">Indique clairement la caution, l’avance, les frais éventuels et les conditions de visite ou d’entrée dans les lieux.</p>
       <p class="notice">Chaque annonce est examinée par l’administrateur avant sa mise en ligne.</p>
       <button class="primary" type="button" onclick="logementSubmitAd()">Envoyer l’annonce pour validation</button>
     </div>
