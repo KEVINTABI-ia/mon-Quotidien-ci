@@ -12092,6 +12092,17 @@ window.mtcAfficherActeJudiciaire = function(type){
     actions[1].addEventListener('click',()=>{fermerMenuPro();ouvrirEspacePartenaire('connexion');});
     actions[2].addEventListener('click',()=>{fermerMenuPro();ouvrirSectionPleinEcran('pharmacieProfessionnelle','Espace pharmacie');});
     const headerPro=document.querySelector('header.mqci-header-premium');
+    function alignerBoutonMenuSurBonjour(){
+      const bonjour=document.getElementById('mqciBonjourAccueil');
+      if(!headerPro||!bonjour||bonjour.getAttribute('aria-hidden')==='true')return;
+      const h=headerPro.getBoundingClientRect();
+      const b=bonjour.getBoundingClientRect();
+      const milieu=b.top+b.height/2-h.top;
+      menuPro.style.top=Math.max(8,milieu-21)+'px';
+    }
+    alignerBoutonMenuSurBonjour();
+    window.addEventListener('resize',alignerBoutonMenuSurBonjour);
+
     headerPro?.appendChild(menuPro);
     document.body.appendChild(menuPanel);
     const menuToggle=menuPro.querySelector('#mqciPartnerDropdownToggle');
