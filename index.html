@@ -2038,15 +2038,25 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
     <select id="typePartenaireSouhaite" onchange="afficherFormulairePartenaire(this.value)" style="width:100%;padding:14px;border:1px solid #D5E2D9;border-radius:12px;margin:8px 0 14px;">
       <option value="">— Sélectionnez votre activité —</option>
       <option value="mecanicien">🔧 Mécanicien</option>
-      <option value="depannage">🚗 Service de dépannage</option>
+      <option value="depannage">🚗 Service de dépannage automobile</option>
       <option value="vendeur_pieces">🧰 Vendeur de pièces détachées</option>
+      <option value="auto_ecole">🚦 Auto-école</option>
+      <option value="vulcanisateur">🛞 Vulcanisateur</option>
+      <option value="electricien">⚡ Électricien</option>
+      <option value="plombier">🚰 Plombier</option>
+      <option value="climatisation">❄️ Spécialiste en climatisation</option>
+      <option value="nettoyage">🧹 Service de nettoyage</option>
+      <option value="placement_servante">🧑‍🔧 Agence de placement de servante</option>
+      <option value="depot_gaz">🔥 Dépôt de gaz</option>
+      <option value="hotel">🏨 Hôtel</option>
+      <option value="residence_hoteliere">🏢 Résidence hôtelière</option>
+      <option value="residence_meublee">🏠 Résidence meublée</option>
+      <option value="commercant">🏪 Commerçant</option>
+      <option value="boutique">🛍️ Boutique</option>
       <option value="livreur">📦 Livreur indépendant</option>
       <option value="representant_gare">🏢 Représentant de gare</option>
-      <option value="commercant">🏪 Commerçant / boutique</option>
       <option value="compagnie">🚌 Compagnie de voyage</option>
       <option value="compagnie_ramassage">🚐 Compagnie de cars de ramassage</option>
-      <option value="hebergement">🏨 Hôtel / résidence</option>
-      <option value="depannage_domicile">🧰 Professionnel du dépannage à domicile</option>
       
     </select>
     <div id="partenaireFormulaireChoisi" aria-live="polite"></div>
@@ -6599,6 +6609,20 @@ function retourChoixPartenaire(){
   document.getElementById("devenirPartenaire")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
 function afficherFormulairePartenaire(type){
+  const correspondancesActivites={
+    electricien:{type:"depannage_domicile",categorie:"Électricien"},
+    plombier:{type:"depannage_domicile",categorie:"Plombier"},
+    climatisation:{type:"depannage_domicile",categorie:"Climatisation"},
+    nettoyage:{type:"depannage_domicile",categorie:"Service de nettoyage"},
+    placement_servante:{type:"depannage_domicile",categorie:"Agence de placement de servante"},
+    depot_gaz:{type:"depannage_domicile",categorie:"Dépôts de gaz"},
+    hotel:{type:"hebergement",categorie:"Hôtel"},
+    residence_hoteliere:{type:"hebergement",categorie:"Résidence hôtelière"},
+    residence_meublee:{type:"hebergement",categorie:"Résidence meublée"},
+    boutique:{type:"commercant",categorie:"Boutique"}
+  };
+  const activite=correspondancesActivites[type];
+  if(activite){type=activite.type;var categorieActivite=activite.categorie;}
   const zone=document.getElementById("partenaireFormulaireChoisi");
   if(!zone)return;
   zone.replaceChildren();
@@ -6614,6 +6638,23 @@ function afficherFormulairePartenaire(type){
       });
     }
     zone.style.display="block";
+    return;
+  }
+  // Les métiers partagent le formulaire technique de leur famille, mais restent
+  // présentés individuellement dans la liste de choix.
+  if(type==="auto_ecole"||type==="vulcanisateur"){
+    choisirNouveauService(type,null,true,"partenaireFormulaireChoisi");
+    return;
+  }
+  if(type==="hebergement"||type==="depannage_domicile"){
+    const categorie=categorieActivite||(type==="hebergement"?"Hôtel":"Électricien");
+    choisirNouveauService(type,categorie,true,"partenaireFormulaireChoisi");
+    const titreForm=document.querySelector("#partenaireFormulaireChoisi h3");
+    if(titreForm)titreForm.textContent=type==="hebergement"?"🏨 Inscription – "+categorie:"🧰 Inscription – "+categorie;
+    const description=document.getElementById("nsDescription");
+    if(description)description.placeholder=type==="hebergement"?"Présentez votre établissement, les types de chambres, les équipements et les conditions d’accueil.":"Décrivez vos prestations, votre expérience et les communes/quartiers desservis.";
+    const titre=document.getElementById("nsTitre");
+    if(titre)titre.placeholder=type==="hebergement"?"Nom de l’établissement":"Nom du professionnel ou de l’entreprise";
     return;
   }
   // Ce conteneur peut avoir été masqué lors de l'ouverture d'une autre rubrique.
@@ -6632,20 +6673,9 @@ function afficherFormulairePartenaire(type){
     return;
   }
   if(type==="mecanicien"||type==="depannage"||type==="vendeur_pieces"||type==="commercant"){
-    if(type==="hebergement"||type==="depannage_domicile"){
-    const categorie=type==="hebergement"?"Hôtel":"Électricien";
-    choisirNouveauService(type,categorie,true,"partenaireFormulaireChoisi");
-    const titreForm=document.querySelector("#partenaireFormulaireChoisi h3");
-    if(titreForm)titreForm.textContent=type==="hebergement"?"🏨 Inscription – Hôtel ou résidence":"🧰 Inscription – Dépannage à domicile";
-    const description=document.getElementById("nsDescription");
-    if(description)description.placeholder=type==="hebergement"?"Présentez votre hôtel ou résidence, les types de chambres, les équipements et les conditions d’accueil.":"Décrivez vos prestations, votre expérience et les communes/quartiers desservis.";
-    const titre=document.getElementById("nsTitre");
-    if(titre)titre.placeholder=type==="hebergement"?"Nom de l’hôtel ou de la résidence":"Nom du professionnel ou de l’entreprise";
-    return;
-  }
-  const depannage=type==="mecanicien"||type==="depannage";
+    const depannage=type==="mecanicien"||type==="depannage";
     const service=depannage?"depannage":"commerce";
-    const categorie=type==="mecanicien"?"Mécanicien":type==="depannage"?"Dépannage général":type==="vendeur_pieces"?"Pièces détachées":"Autre commerce";
+    const categorie=categorieActivite||(type==="mecanicien"?"Mécanicien":type==="depannage"?"Dépannage général":type==="vendeur_pieces"?"Pièces détachées":"Autre commerce");
     choisirNouveauService(service,categorie,true,"partenaireFormulaireChoisi");
     const select=document.getElementById("nsCategorie");
     if(select){select.value=categorie;select.disabled=false;}
