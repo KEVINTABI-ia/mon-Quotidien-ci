@@ -3233,17 +3233,24 @@ function chargerPublicitesAccueil() {
   <p class="notice">Les inscriptions, agréments, frais et conditions doivent être confirmés directement auprès de chaque établissement.</p>
 </section>
 <section class="card" id="logementImmobilier" style="display:none;">
-  <h2>🏠 Logement – annonces immobilières</h2>
-  <p>Consultez les logements à louer ou à vendre, les hôtels et les résidences proposés par des particuliers et des agences.</p>
+  <h2>🏠 Logements à louer</h2>
+  <p>Trouvez une maison, un appartement, un studio ou une chambre à louer, proposés par nos partenaires immobiliers.</p>
   <div class="modes">
     <button type="button" class="mode" onclick="logementOpenAuth('public');chargerAnnoncesLogementPubliques()">🔎 Consulter les annonces</button>
     <button type="button" class="mode" onclick="logementOpenAuth('auth')">🤝 Publier une annonce</button>
   </div>
   <div id="logementPublic" style="display:block;margin-top:14px">
-    <h3>Annonces disponibles</h3>
-    <label>Catégorie</label><select id="logementFilterCategory" onchange="chargerAnnoncesLogementPubliques()"><option value="">Toutes les catégories</option><option>Hôtel</option><option>Résidence meublée</option><option>Chambre à louer</option><option>Studio à louer</option><option>Appartement à louer</option><option>Maison à louer</option><option>Appartement à vendre</option><option>Maison à vendre</option><option>Terrain à vendre</option></select>
-    <label>Commune</label><input id="logementFilterCommune" placeholder="Ex. Cocody, Yopougon">
-    <button type="button" onclick="chargerAnnoncesLogementPubliques()">Rechercher</button>
+    <h3>Rechercher un logement</h3>
+    <div class="card" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:16px">
+      <div><label for="logementFilterCategory">Type de logement</label><select id="logementFilterCategory"><option value="">Tous les types</option><option>Maison à louer</option><option>Appartement à louer</option><option>Studio à louer</option><option>Chambre à louer</option><option>Résidence meublée</option></select></div>
+      <div><label for="logementFilterCommune">Commune</label><input id="logementFilterCommune" placeholder="Ex. Cocody, Yopougon"></div>
+      <div><label for="logementFilterDistrict">Quartier</label><input id="logementFilterDistrict" placeholder="Ex. Angré, Niangon"></div>
+      <div><label for="logementFilterPeriod">Période du loyer</label><select id="logementFilterPeriod"><option value="">Toutes périodes</option><option value="par mois">Par mois</option><option value="par an">Par an</option></select></div>
+      <div><label for="logementFilterMinPrice">Prix minimum (FCFA)</label><input id="logementFilterMinPrice" type="number" min="0" placeholder="Ex. 50000"></div>
+      <div><label for="logementFilterMaxPrice">Prix maximum (FCFA)</label><input id="logementFilterMaxPrice" type="number" min="0" placeholder="Ex. 150000"></div>
+      <div style="display:flex;align-items:end;gap:8px"><button type="button" class="primary" onclick="chargerAnnoncesLogementPubliques()">Rechercher</button><button type="button" onclick="reinitialiserFiltresLogement()">Effacer</button></div>
+    </div>
+    <p id="logementPublicCount" class="notice">Logements disponibles</p>
     <div id="logementPublicResults">Chargement des annonces…</div>
   </div>
   <div id="logementAuth" style="display:none;margin-top:14px">
@@ -3262,8 +3269,8 @@ function chargerPublicitesAccueil() {
     <div id="logementPublishForm" style="display:none">
       <h3>Publier une nouvelle annonce</h3>
       <label>Titre</label><input id="logementAdTitle" maxlength="120">
-      <label>Type de bien</label><select id="logementAdCategory"><option value="">Choisir</option><option>Hôtel</option><option>Résidence meublée</option><option>Chambre à louer</option><option>Studio à louer</option><option>Appartement à louer</option><option>Maison à louer</option><option>Appartement à vendre</option><option>Maison à vendre</option><option>Terrain à vendre</option></select>
-      <label>Opération</label><select id="logementAdTransaction"><option value="location">À louer</option><option value="vente">À vendre</option></select>
+      <label>Type de logement</label><select id="logementAdCategory"><option value="">Choisir</option><option>Maison à louer</option><option>Appartement à louer</option><option>Studio à louer</option><option>Chambre à louer</option><option>Résidence meublée</option></select>
+      <input id="logementAdTransaction" type="hidden" value="location"><p class="notice">Cette rubrique est réservée aux logements proposés à la location.</p>
       <label>Prix en FCFA</label><input id="logementAdPrice" type="number" min="1">
       <label>Période du prix</label><select id="logementAdPricePeriod"><option value="par nuit">Par nuit</option><option value="par mois">Par mois</option><option value="par an">Par an</option><option value="prix total">Prix total</option></select>
       <label>Commune</label><input id="logementAdCommune">
