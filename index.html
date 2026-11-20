@@ -3907,8 +3907,8 @@ async function chargerCatalogueHebergement(categorie){
   const snap=await db.collection("demandes_nouveaux_services").where("type","==","hebergement").where("statut","==","approuve").limit(300).get();
   const documents=snap.docs.filter(doc=>{
    const d=doc.data();if(d.visibleManuellement===false)return false;
-   const cat=String(d.categorie||"").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"");
-   return categorie==="hotel"?cat.includes("hotel"):cat.includes("residence");
+   const cat=String(d.categorie||"").toLowerCase();
+   return categorie==="hotel"?cat.includes("hôtel"):cat.includes("résidence");
   }).map(doc=>({id:doc.id,...doc.data()}));
   if(!documents.length){zone.innerHTML='<button type="button" onclick="afficherChoixCatalogueHebergement()">← Retour</button><p class="notice">Aucun établissement partenaire validé dans cette catégorie pour le moment.</p>';return;}
   const groupes=new Map();
