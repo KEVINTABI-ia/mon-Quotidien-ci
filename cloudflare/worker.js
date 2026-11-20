@@ -307,6 +307,10 @@ async function createCheckout(request,env) {
     initial={uid:user.sub,serviceId,planId:"petites_annonces",targetPath:"abonnements_petites_annonces/"+user.sub,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays:duration,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),petitesAnnoncesLockUpdateTime:subDoc.updateTime};
   } else {
     const autoPath="abonnements_automobiliste/"+user.sub,autoDoc=await getDoc(env,autoPath),autoSub=docData(autoDoc)||{};
+    const userProfileDoc=await getDoc(env,"utilisateurs/"+user.sub),userProfile=docData(userProfileDoc)||{};
+    const accountCreated=userProfile.createdAt instanceof Date?userProfile.createdAt:(userProfile.createdAt?new Date(userProfile.createdAt):null);
+    if(!accountCreated||!Number.isFinite(accountCreated.getTime()))return json({error:"account_trial_start_missing"},409);
+    if(now.getTime()-accountCreated.getTime()<30*86400000)return json({error:"driver_trial_still_active",trialEndsAt:new Date(accountCreated.getTime()+30*86400000).toISOString()},409);
     if(autoSub.renouvellementJekoPaymentId){
       const previous=await getDoc(env,"payments/"+autoSub.renouvellementJekoPaymentId);
       const previousStatus=docData(previous)?.status;
@@ -315,12 +319,11 @@ async function createCheckout(request,env) {
     const cfgDoc=await getDoc(env,"configuration_abonnements/globale");
     const services=docData(cfgDoc)?.services||{};
     const cfg=services.automobiliste||{};
-    const duration=Number(cfg.duree??12), unit=cfg.unite||"mois", base=Number(cfg.prix??1000);
+    const duration=3, unit="mois", base=500;
     if(cfg.actif===false) return json({error:"plan_unavailable"},409);
-    if(duration!==12||unit!=="mois"||!Number.isSafeInteger(base)||base<1||base>10000000) return json({error:"plan_configuration_invalid"},503);
-    const start=cfg.promotionDebut?new Date(cfg.promotionDebut+"T00:00:00Z"):null, end=cfg.promotionFin?new Date(cfg.promotionFin+"T23:59:59Z"):null, promo=Number(cfg.promotionPrix||0);
-    amountXof=cfg.promotionActive===true&&promo>0&&promo<=base&&start&&end&&now>=start&&now<=end?promo:base;
-    initial={uid:user.sub,serviceId,planId:"annuel",targetPath:autoPath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationMonths:12,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),automobilisteLockUpdateTime:autoDoc?.updateTime};
+    if(cfg.actif===false||duration!==3||unit!=="mois"||base!==500) return json({error:"plan_configuration_invalid"},503);
+    amountXof=500;
+    initial={uid:user.sub,serviceId,planId:"trimestriel",targetPath:autoPath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationMonths:3,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),automobilisteLockUpdateTime:autoDoc?.updateTime};
   }
   if(["automobiliste","petites_annonces","boutique_renewal","partenaire_colis","compagnie_voyage"].includes(serviceId)) {
     initial.planAmountXof=amountXof;
@@ -390,7 +393,7 @@ export function validateJekoPaymentPlan(payment) {
   const fixed={
     logement_renewal:{mensuel:[3000,30],trimestriel:[8000,90],semestriel:[15000,180]},
     ramassage:{ramassage:[2000,30]},
-    automobiliste:{annuel:[null, null]}
+    automobiliste:{trimestriel:[500, 3]}
   };
   if(payment.serviceId==="objet_retrouve") return payment.amountXof===1000;
   if(payment.serviceId==="logement_renewal"||payment.serviceId==="ramassage"){
@@ -398,11 +401,7 @@ export function validateJekoPaymentPlan(payment) {
     return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1];
   }
   if(payment.serviceId==="automobiliste"){
-    return payment.planId==="annuel"&&payment.durationMonths===12&&(
-      payment.planSnapshotVersion===1
-        ? Number.isSafeInteger(payment.planAmountXof)&&payment.planAmountXof===payment.amountXof&&payment.planDurationMonths===12
-        : payment.planSnapshotVersion==null&&payment.planAmountXof==null&&payment.planDurationMonths==null
-    );
+    return payment.planId==="trimestriel"&&payment.amountXof===500&&payment.durationMonths===3&&payment.planSnapshotVersion===1&&payment.planAmountXof===500&&payment.planDurationMonths===3;
   }
   const monthPlans={
     partenaire_colis:{partenaires_colis_1mois:1,partenaires_colis_3mois:3,partenaires_colis_6mois:6},
@@ -619,12 +618,12 @@ async function webhook(request,env) {
   }
   const subPath="abonnements_automobiliste/"+payment.uid, subDoc=await getDoc(env,subPath), sub=docData(subDoc)||{};
   const oldEnd=sub.dateExpiration?new Date(sub.dateExpiration):null;
-  const renewing=oldEnd&&oldEnd>now, end=addMonthsClamped(renewing?oldEnd:now,12);
+  const renewing=oldEnd&&oldEnd>now, end=addMonthsClamped(renewing?oldEnd:now,payment.durationMonths);
   if(sub.renouvellementJekoPaymentId&&sub.renouvellementJekoPaymentId!==paymentId){
     await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"automobiliste_payment_lock_mismatch",updatedAt:now.toISOString()}))});
     return new Response("OK",{status:200});
   }
-  const subData={uid:payment.uid,statut:"actif",montantFCFA:payment.amountXof,dureeMois:12,dateActivation:sub.dateActivation||now.toISOString(),dateExpiration:end.toISOString(),paymentId,operateur:"Jèko",renouvellementJekoStatut:"confirme",renouvellementJekoPaymentId:null};
+  const subData={uid:payment.uid,statut:"actif",montantFCFA:payment.amountXof,dureeMois:payment.durationMonths,dateActivation:sub.dateActivation||now.toISOString(),dateExpiration:end.toISOString(),paymentId,operateur:"Jèko",renouvellementJekoStatut:"confirme",renouvellementJekoPaymentId:null};
   const writes=[
     updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
     updateWrite(subPath,subData,subDoc?.updateTime,subDoc?undefined:false),
@@ -745,7 +744,7 @@ export function buildSubscriptionPlans(requested,services={},now=new Date()) {
     ramassage:["ramassage"]
   };
   const fixedDefaults={
-    automobiliste:{automobiliste:{label:"Annuel",price:1000,duration:12,unit:"mois"}},
+    automobiliste:{automobiliste:{label:"Trimestriel",price:500,duration:3,unit:"mois"}},
     petites_annonces:{petites_annonces:{label:"30 jours",price:500,duration:30,unit:"jours"}},
     logement:{
       mensuel:{label:"1 mois",price:3000,duration:1,unit:"mois"},
