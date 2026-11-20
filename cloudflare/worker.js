@@ -217,7 +217,7 @@ async function createCheckout(request,env) {
     }
     amountXof=plan.amount;
     initial={uid:user.sub,serviceId,planId:body.planId,targetPath:profilePath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays:plan.days,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),logementLockUpdateTime:profileDoc.updateTime};
-
+  } else if(serviceId==="compagnie_voyage") {
     const compagnieId=body.compagnieId;
     if(typeof compagnieId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(compagnieId))return json({error:"invalid_company_id"},400);
     const companyPath="compagnies/"+compagnieId,companyDoc=await getDoc(env,companyPath),company=docData(companyDoc);
