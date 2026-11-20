@@ -3937,12 +3937,18 @@ function inscrirePartenaireAutomobile(type){
  ouvrirEspacePartenaire("inscription");
  choisirNouveauService(type,null,true,"partenaireFormulaireChoisi");
 }
+function abonnementServicePartenaireValide(d,maintenant=Date.now()){
+ const date=v=>v&&v.toDate?v.toDate():(v?new Date(v):null);
+ const finEssai=date(d.abonnementFinEssai),finAbonnement=date(d.abonnementFin);
+ return (d.abonnementStatut==="essai_gratuit"&&finEssai&&finEssai.getTime()>maintenant)
+  ||(d.abonnementStatut==="actif"&&finAbonnement&&finAbonnement.getTime()>maintenant);
+}
 async function chargerCatalogueAutomobile(type){
  const zone=document.getElementById("catalogueAutomobilePartenaires");if(!zone||!["auto_ecole","vulcanisateur"].includes(type))return;
  zone.innerHTML='<p class="notice">Chargement des professionnels...</p>';
  try{
   const snap=await db.collection("demandes_nouveaux_services").where("type","==",type).where("statut","==","approuve").limit(300).get();
-  const docs=snap.docs.filter(x=>x.data().visibleManuellement!==false).map(x=>({id:x.id,...x.data()}));
+  const docs=snap.docs.filter(x=>{const d=x.data();return d.visibleManuellement!==false&&(d.modePartenaire!==true||abonnementServicePartenaireValide(d));}).map(x=>({id:x.id,...x.data()}));
   if(!docs.length){zone.innerHTML='<p class="notice">Aucun partenaire validé dans cette rubrique pour le moment.</p>';return;}
   const groupes=new Map();
   docs.forEach(d=>{const c=String(d.commune||"Commune non renseignée").trim()||"Commune non renseignée",q=String(d.quartier||"Quartier non renseigné").trim()||"Quartier non renseigné";if(!groupes.has(c))groupes.set(c,new Map());if(!groupes.get(c).has(q))groupes.get(c).set(q,[]);groupes.get(c).get(q).push(d);});
@@ -3991,7 +3997,7 @@ async function chargerCatalogueDomicile(categorie){
    const d=doc.data();
    const categorieEnregistree=normaliser(d.categorie);
    const correspond=normaliser(categorie)==="depots de gaz"?["gaz","depots de gaz"].includes(categorieEnregistree):categorieEnregistree===normaliser(categorie);
-   return d.visibleManuellement!==false&&correspond;
+   return d.visibleManuellement!==false&&correspond&&(d.modePartenaire!==true||abonnementServicePartenaireValide(d));
   }).map(doc=>({id:doc.id,...doc.data()}));
   if(!documents.length){
    zone.innerHTML='<button type="button" onclick="afficherChoixCatalogueDomicile()">← Retour aux services</button><p class="notice">Aucun professionnel validé dans cette catégorie pour le moment.</p>';
@@ -4655,7 +4661,7 @@ async function chargerNouveauxServicesAdmin(typeFiltre){
   const snap=await db.collection("demandes_nouveaux_services").orderBy("createdAt","desc").limit(150).get();
   const dossiers=snap.docs.filter(doc=>{const d=doc.data();return typeFiltre==="boutique"?(d.type==="commerce"&&String(d.categorie||"").toLowerCase()==="boutique"):typeFiltre==="commerce"?(d.type==="commerce"&&String(d.categorie||"").toLowerCase()!=="boutique"):d.type===typeFiltre;});
   if(dossiers.length===0){zone.innerHTML='<p class="notice">Aucun dossier de cette catégorie pour le moment.</p>';return;}
-  zone.innerHTML=dossiers.map(doc=>{const d=doc.data();const type=NOUVEAUX_SERVICES[d.type]?.titre||d.type;const date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date en cours";const expire=d.abonnementFin?.toDate?d.abonnementFin.toDate().getTime()<=Date.now():false;const paiement=d.type==="commerce"?'<p><strong>Formule demandée :</strong> '+echapperTextePublicite(d.planAbonnementId||"Essai partenaire")+'</p><p><strong>Tarif configuré :</strong> '+Number(d.montantAbonnement||0).toLocaleString("fr-FR")+' FCFA / '+Number(d.dureeAbonnementJours||0)+' jours</p><p><strong>État du paiement :</strong> '+echapperTextePublicite(d.paiementStatut||d.abonnementStatut||"à définir")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée automatiquement — abonnement expiré":d.visibleManuellement===false?"Masquée manuellement":"Visible si abonnement actif")+'</p>':"";const actions=(d.statut==="en_attente"?'<button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'approuve\')">'+(d.type==="commerce"?(d.modePartenaire===true?"Approuver et démarrer l’essai gratuit":"Approuver le dossier — paiement Jèko ensuite"):"Approuver et publier")+'</button><button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'refuse\')">Refuser</button>':'<span class="notice">Dossier '+echapperTextePublicite(d.statut)+(d.abonnementFin&&d.abonnementFin.toDate?" · Fin abonnement : "+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"")+'</span>')+(typeFiltre==="annonce"?'<button type="button" style="display:block;margin-top:8px;background:#b42318;color:#fff;" onclick="supprimerAnnonceAdmin(\''+doc.id+'\')">🗑️ Supprimer l’annonce</button>':'');const controle=d.type==="commerce"&&(String(d.categorie||"").toLowerCase()==="boutique"||d.modePartenaire===true)&&d.statut==="approuve"?'<p><strong>Abonnement :</strong> '+(d.abonnementFin?.toDate&&d.abonnementFin.toDate().getTime()>Date.now()?(d.modePartenaire?"Essai gratuit jusqu’au ":"Actif jusqu’au ")+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"Paiement ou renouvellement Jèko requis par le titulaire")+'</p><p class="notice">Aucune confirmation manuelle : le titulaire règle depuis son espace boutique.</p><button type="button" onclick="basculerVisibiliteBoutiqueAdmin(\''+doc.id+'\','+(d.visibleManuellement===false?'true':'false')+')">'+(d.visibleManuellement===false?"Afficher manuellement la boutique":"Masquer manuellement la boutique")+'</button>'+'<button type="button" style="display:block;margin-top:8px;background:#b42318;color:#fff;" onclick="supprimerBoutiqueCommerceAdmin(\''+doc.id+'\')">🗑️ Supprimer définitivement</button>'+(String(d.categorie||"").toLowerCase()==="boutique"?'<button type="button" onclick="chargerAvisBoutiqueAdmin(\''+doc.id+'\')">⭐ Consulter les avis clients</button><div id="avisAdminBoutique_'+doc.id+'"></div>':""):"";return '<article class="card" style="padding:14px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo proposée" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':"")+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(type)+' · '+echapperTextePublicite(d.categorie)+'</p><p>'+echapperTextePublicite(d.commune)+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+' · '+date+'</p>'+paiement+actions+controle+'</article>';}).join("");
+  zone.innerHTML=dossiers.map(doc=>{const d=doc.data();const type=NOUVEAUX_SERVICES[d.type]?.titre||d.type;const date=d.createdAt?.toDate?d.createdAt.toDate().toLocaleString("fr-FR"):"Date en cours";const expire=d.abonnementFin?.toDate?d.abonnementFin.toDate().getTime()<=Date.now():false;const paiement=d.type==="commerce"?'<p><strong>Formule demandée :</strong> '+echapperTextePublicite(d.planAbonnementId||"Essai partenaire")+'</p><p><strong>Tarif configuré :</strong> '+Number(d.montantAbonnement||0).toLocaleString("fr-FR")+' FCFA / '+Number(d.dureeAbonnementJours||0)+' jours</p><p><strong>État du paiement :</strong> '+echapperTextePublicite(d.paiementStatut||d.abonnementStatut||"à définir")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée automatiquement — abonnement expiré":d.visibleManuellement===false?"Masquée manuellement":"Visible si abonnement actif")+'</p>':"";const actions=(d.statut==="en_attente"?'<button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'approuve\')">'+(d.type==="commerce"?(d.modePartenaire===true?"Approuver et démarrer l’essai gratuit":"Approuver le dossier — paiement Jèko ensuite"):"Approuver et publier")+'</button><button type="button" onclick="traiterNouveauService(\''+doc.id+'\',\'refuse\')">Refuser</button>':'<span class="notice">Dossier '+echapperTextePublicite(d.statut)+(d.abonnementFin&&d.abonnementFin.toDate?" · Fin abonnement : "+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"")+'</span>')+(typeFiltre==="annonce"?'<button type="button" style="display:block;margin-top:8px;background:#b42318;color:#fff;" onclick="supprimerAnnonceAdmin(\''+doc.id+'\')">🗑️ Supprimer l’annonce</button>':'');const controlePartenaire=d.modePartenaire===true&&["depannage_domicile","auto_ecole","vulcanisateur"].includes(d.type)&&d.statut==="approuve"?'<p><strong>Abonnement partenaire :</strong> '+(d.abonnementStatut==="essai_gratuit"&&d.abonnementFinEssai?.toDate?"Essai gratuit jusqu’au "+d.abonnementFinEssai.toDate().toLocaleDateString("fr-FR"):d.abonnementStatut==="actif"&&d.abonnementFin?.toDate?"Actif jusqu’au "+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"À payer / expiré")+"</p><p><strong>Tarif après essai :</strong> 1 000 FCFA / 30 jours</p>":"";const controle=d.type==="commerce"&&(String(d.categorie||"").toLowerCase()==="boutique"||d.modePartenaire===true)&&d.statut==="approuve"?'<p><strong>Abonnement :</strong> '+(d.abonnementFin?.toDate&&d.abonnementFin.toDate().getTime()>Date.now()?(d.modePartenaire?"Essai gratuit jusqu’au ":"Actif jusqu’au ")+d.abonnementFin.toDate().toLocaleDateString("fr-FR"):"Paiement ou renouvellement Jèko requis par le titulaire")+'</p><p class="notice">Aucune confirmation manuelle : le titulaire règle depuis son espace boutique.</p><button type="button" onclick="basculerVisibiliteBoutiqueAdmin(\''+doc.id+'\','+(d.visibleManuellement===false?'true':'false')+')">'+(d.visibleManuellement===false?"Afficher manuellement la boutique":"Masquer manuellement la boutique")+'</button>'+'<button type="button" style="display:block;margin-top:8px;background:#b42318;color:#fff;" onclick="supprimerBoutiqueCommerceAdmin(\''+doc.id+'\')">🗑️ Supprimer définitivement</button>'+(String(d.categorie||"").toLowerCase()==="boutique"?'<button type="button" onclick="chargerAvisBoutiqueAdmin(\''+doc.id+'\')">⭐ Consulter les avis clients</button><div id="avisAdminBoutique_'+doc.id+'"></div>':""):"";return '<article class="card" style="padding:14px;margin:10px 0;">'+(d.photoUrl?'<img src="'+d.photoUrl+'" alt="Photo proposée" style="width:100%;max-width:180px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;">':"")+'<strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(type)+' · '+echapperTextePublicite(d.categorie)+'</p><p>'+echapperTextePublicite(d.commune)+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+' · '+date+'</p>'+paiement+actions+controle+controlePartenaire+'</article>';}).join("");
  }catch(e){console.error(e);zone.innerHTML='<p class="notice">Erreur de chargement. Vérifiez les règles Firestore.</p>';}
 }
 async function renouvelerAbonnementBoutiqueAdmin(id){
@@ -4716,7 +4722,11 @@ async function traiterNouveauService(id,statut){
   const ref=db.collection("demandes_nouveaux_services").doc(id),snap=await ref.get();
   if(!snap.exists)return alert("Dossier introuvable.");
   const data=snap.data(),maj={statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()};
-  if(statut==="approuve"&&data.type==="commerce"){
+  if(statut==="approuve"&&data.modePartenaire===true&&["depannage_domicile","auto_ecole","vulcanisateur"].includes(data.type)){
+   const debut=new Date(),fin=new Date(debut.getTime()+30*24*60*60*1000);
+   maj.abonnementStatut="essai_gratuit";maj.paiementStatut="gratuit";maj.montantAbonnement=1000;maj.dureeAbonnementJours=30;
+   maj.abonnementDebutEssai=firebase.firestore.FieldValue.serverTimestamp();maj.abonnementFinEssai=firebase.firestore.Timestamp.fromDate(fin);
+  }else if(statut==="approuve"&&data.type==="commerce"){
    if(data.modePartenaire===true){
     const debut=new Date(),fin=new Date(debut.getTime()+30*24*60*60*1000);
     maj.abonnementStatut="essai_gratuit";maj.abonnementDebut=firebase.firestore.FieldValue.serverTimestamp();maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);maj.paiementStatut="gratuit";
@@ -4735,6 +4745,41 @@ async function traiterNouveauService(id,statut){
 
 
 
+
+async function chargerEspaceAbonnementServicesPartenaires(user=auth.currentUser){
+ let zone=document.getElementById("espaceAbonnementServicesPartenaires");
+ if(!user){if(zone)zone.remove();return;}
+ if(!zone){zone=document.createElement("section");zone.id="espaceAbonnementServicesPartenaires";zone.className="card";zone.style.cssText="margin:16px;padding:16px;";document.body.appendChild(zone);}
+ zone.innerHTML="<h2>Mon espace partenaire</h2><p class='notice'>Chargement de vos abonnements...</p>";
+ try{
+  const snap=await db.collection("demandes_nouveaux_services").where("uid","==",user.uid).get();
+  const docs=snap.docs.filter(doc=>{const d=doc.data();return d.modePartenaire===true&&["depannage_domicile","auto_ecole","vulcanisateur"].includes(d.type)&&d.statut==="approuve";});
+  if(!docs.length){zone.remove();return;}
+  const date=v=>v&&v.toDate?v.toDate():(v?new Date(v):null);
+  zone.innerHTML="<h2>Mon espace partenaire</h2><p>Abonnement applicable aux dépanneurs à domicile, auto-écoles et vulcanisateurs.</p>"+docs.map(doc=>{
+   const d=doc.data(),trialEnd=date(d.abonnementFinEssai),paidEnd=date(d.abonnementFin);
+   const trial=d.abonnementStatut==="essai_gratuit"&&trialEnd&&trialEnd>Date.now();
+   const paid=d.abonnementStatut==="actif"&&paidEnd&&paidEnd>Date.now();
+   const pending=["pending","initialization_unknown","review_required"].includes(d.renouvellementJekoStatut);
+   const state=trial?"Essai gratuit jusqu’au "+trialEnd.toLocaleDateString("fr-FR"):paid?"Abonnement actif jusqu’au "+paidEnd.toLocaleDateString("fr-FR"):pending?"Paiement en cours de vérification":"Abonnement à renouveler";
+   const action=trial||paid?"":'<label for="methodePartenaireService_'+doc.id+'">Moyen de paiement Jèko</label><select id="methodePartenaireService_'+doc.id+'"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select><button type="button" class="primary" onclick="payerAbonnementPartenaireService(\''+doc.id+'\')">Payer 1 000 FCFA avec Jèko</button>';
+   return '<article class="card" style="padding:12px;margin:12px 0"><strong>'+echapperTextePublicite(d.titre||"Partenaire")+'</strong><p>'+echapperTextePublicite(d.type.replaceAll("_"," "))+'</p><p><strong>Statut :</strong> '+state+'</p><p>Après les 30 jours gratuits : 1 000 FCFA pour 30 jours.</p>'+action+'<p id="statutPaiementPartenaireService_'+doc.id+'" class="notice" aria-live="polite"></p></article>';
+  }).join("");
+ }catch(e){console.error(e);zone.innerHTML="<h2>Mon espace partenaire</h2><p class='notice'>Impossible de charger votre abonnement : "+echapperTextePublicite(e.message||"erreur")+"</p>";}
+}
+async function payerAbonnementPartenaireService(demandeId){
+ const user=auth.currentUser,method=document.getElementById("methodePartenaireService_"+demandeId)?.value,zone=document.getElementById("statutPaiementPartenaireService_"+demandeId);
+ if(!user||!["wave","orange","mtn","moov","djamo"].includes(method)){if(zone)zone.textContent="Connectez-vous et choisissez un moyen de paiement.";return;}
+ if(zone)zone.textContent="Vérification de l’éligibilité et préparation du paiement Jèko...";
+ try{
+  const token=await user.getIdToken(),r=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceId:"partenaire_services",demandeId,paymentMethod:method})});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok||!data.checkoutUrl){const messages={partner_service_not_eligible:"Ce dossier partenaire n’est pas éligible.",subscription_still_active:"Votre essai ou abonnement est encore actif.",existing_payment_requires_review:"Un paiement précédent doit être vérifié. Ne recommencez pas.",invalid_partner_service_id:"Dossier partenaire introuvable."};throw new Error(messages[data.error]||data.diagnostic||"Initialisation Jèko impossible.");}
+  if(zone)zone.textContent="Redirection vers le paiement sécurisé Jèko...";
+  window.location.assign(data.checkoutUrl);
+ }catch(e){if(zone)zone.textContent=e.message||"Erreur de paiement.";}
+}
+auth.onAuthStateChanged(user=>{if(user)chargerEspaceAbonnementServicesPartenaires(user);else chargerEspaceAbonnementServicesPartenaires(null);});
 
 /* DONS ET SOLIDARITE — CONTACTS PRIVES */
 let arretNotificationsSolidariteAdmin=null;
@@ -8191,8 +8236,13 @@ async function verifierRetourPaiementJeko(user){
  const boutiqueZone=serviceId==="boutique_renewal"?(document.getElementById("boutiqueCompteConnecte")||document.getElementById("connexionBoutiqueStatut")):null;
  const logementZone=serviceId==="logement_renewal"?(document.getElementById("logementSubscriptionStatus")||document.getElementById("logementRenewal")):null;
  const ramassageZone=serviceId==="ramassage"?(document.getElementById("ramassageJekoPaymentStatus")||document.getElementById("ramassageCompanyStatus")):null;
- const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:(serviceId==="ramassage"?ramassageZone:document.getElementById("etatAbonnementAuto")))));
+ const partnerServiceZone=null;
+ const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:(serviceId==="ramassage"?ramassageZone:(serviceId==="partenaire_services"?partnerServiceZone:document.getElementById("etatAbonnementAuto"))))));
  if(paymentState==="error"){
+  if(serviceId==="partenaire_services"){
+   try{if(paymentId){const token=await user.getIdToken(true);await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/status?paymentId="+encodeURIComponent(paymentId),{headers:{Authorization:"Bearer "+token}});}}catch(e){}
+   await chargerEspaceAbonnementServicesPartenaires(user);
+  }
   if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été finalisé. Aucune demande de récupération n’a été transmise.":serviceId==="compagnie_voyage"?"Le paiement n’a pas été finalisé. Aucun abonnement de compagnie n’a été activé.":serviceId==="boutique_renewal"?"Le paiement n’a pas été finalisé. Votre boutique reste masquée tant que le paiement n’est pas confirmé.":serviceId==="logement_renewal"?"Le paiement n’a pas été finalisé. La publication de vos annonces reste suspendue si l’abonnement est expiré.":"Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
   params.delete("payment");params.delete("paymentId");params.delete("serviceId");history.replaceState({},document.title,location.pathname+(params.toString()?"?"+params.toString():""));return;
  }
@@ -8220,6 +8270,9 @@ async function verifierRetourPaiementJeko(user){
     }else if(serviceId==="ramassage"){
      if(zone)zone.textContent="Paiement de 2 000 FCFA confirmé par Jèko. Activation de votre abonnement…";
      if(partnerAuth.currentUser)await afficherEspaceRamassage(partnerAuth.currentUser);
+    }else if(serviceId==="partenaire_services"){
+     if(zone)zone.textContent="Paiement de 1 000 FCFA confirmé par Jèko. Votre abonnement partenaire est activé.";
+     await chargerEspaceAbonnementServicesPartenaires(user);
     }else{
      if(zone)zone.textContent="Paiement confirmé par Jèko. Activation de votre abonnement…";
      await actualiserEtatAbonnementAutomobiliste();

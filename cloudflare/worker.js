@@ -168,7 +168,7 @@ async function createCheckout(request,env) {
   const methods=["orange","wave","mtn","moov","djamo"];
   if(!methods.includes(body.paymentMethod)) return json({error:"invalid_payment_method"},400);
   const serviceId=body.serviceId||"automobiliste";
-  if(!["automobiliste","objet_retrouve","petites_annonces","boutique_renewal","partenaire_colis","compagnie_voyage","logement_renewal","ramassage"].includes(serviceId)) return json({error:"unsupported_service"},400);
+  if(!["automobiliste","objet_retrouve","petites_annonces","boutique_renewal","partenaire_colis","partenaire_services","compagnie_voyage","logement_renewal","ramassage"].includes(serviceId)) return json({error:"unsupported_service"},400);
   const now=new Date();
   let amountXof, initial;
   if(serviceId==="objet_retrouve"){
@@ -261,6 +261,24 @@ async function createCheckout(request,env) {
     const start=cfg.promotionDebut?new Date(cfg.promotionDebut+"T00:00:00Z"):null,end=cfg.promotionFin?new Date(cfg.promotionFin+"T23:59:59Z"):null,promo=Number(cfg.promotionPrix||0);
     amountXof=cfg.promotionActive===true&&promo>0&&promo<=base&&start&&end&&now>=start&&now<=end?promo:base;
     initial={uid:user.sub,serviceId,planId,targetPath:partnerPath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationMonths:duration,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),partnerLockUpdateTime:partnerDoc.updateTime};
+  } else if(serviceId==="partenaire_services") {
+    const demandeId=body.demandeId;
+    if(typeof demandeId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(demandeId))return json({error:"invalid_partner_service_id"},400);
+    const targetPath="demandes_nouveaux_services/"+demandeId,doc=await getDoc(env,targetPath),partner=docData(doc);
+    if(!doc||!partner||partner.uid!==user.sub||partner.modePartenaire!==true||partner.statut!=="approuve"||!["depannage_domicile","auto_ecole","vulcanisateur"].includes(partner.type))return json({error:"partner_service_not_eligible"},403);
+    const trialEnd=partner.abonnementFinEssai instanceof Date?partner.abonnementFinEssai:(partner.abonnementFinEssai?new Date(partner.abonnementFinEssai):null);
+    const paidEnd=partner.abonnementFin instanceof Date?partner.abonnementFin:(partner.abonnementFin?new Date(partner.abonnementFin):null);
+    if(!trialEnd||!Number.isFinite(trialEnd.getTime()))return json({error:"partner_service_trial_missing"},409);
+    if(trialEnd.getTime()>now.getTime())return json({error:"subscription_still_active"},409);
+    if(partner.abonnementStatut==="actif"&&paidEnd&&paidEnd.getTime()>now.getTime())return json({error:"subscription_still_active"},409);
+    if(partner.renouvellementJekoPaymentId){
+      const previous=await getDoc(env,"payments/"+partner.renouvellementJekoPaymentId);
+      if(isJekoCheckoutLocked(docData(previous)?.status))return json({error:"existing_payment_requires_review"},409);
+    }
+    const cfgDoc=await getDoc(env,"configuration_abonnements/globale"),cfg=docData(cfgDoc)?.services?.partenaire_services_1mois||{};
+    if(cfg.actif===false)return json({error:"plan_unavailable"},409);
+    amountXof=1000;
+    initial={uid:user.sub,serviceId,planId:"partenaire_services_1mois",demandeId,targetPath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays:30,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),partnerServiceLockUpdateTime:doc.updateTime};
   } else if(serviceId==="boutique_renewal") {
     const boutiqueId=body.boutiqueId,planId=body.planId;
     if(typeof boutiqueId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(boutiqueId)||!["boutiques_1mois","boutiques_2mois","boutiques_3mois"].includes(planId))return json({error:"invalid_boutique_plan"},400);
@@ -326,7 +344,7 @@ async function createCheckout(request,env) {
     amountXof=500;
     initial={uid:user.sub,serviceId,planId:"trimestriel",targetPath:autoPath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationMonths:3,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),automobilisteLockUpdateTime:autoDoc?.updateTime};
   }
-  if(["automobiliste","petites_annonces","boutique_renewal","partenaire_colis","compagnie_voyage"].includes(serviceId)) {
+  if(["automobiliste","petites_annonces","boutique_renewal","partenaire_colis","partenaire_services","compagnie_voyage"].includes(serviceId)) {
     initial.planAmountXof=amountXof;
     if(Number.isSafeInteger(initial.durationMonths)) initial.planDurationMonths=initial.durationMonths;
     if(Number.isSafeInteger(initial.durationDays)) initial.planDurationDays=initial.durationDays;
@@ -336,11 +354,12 @@ async function createCheckout(request,env) {
   const reference="MQCI-"+id;
   initial.clientReference=reference;
   const path="payments/"+id;
-  const boutiqueLockUpdateTime=initial.boutiqueLockUpdateTime,partnerLockUpdateTime=initial.partnerLockUpdateTime,companyLockUpdateTime=initial.companyLockUpdateTime,logementLockUpdateTime=initial.logementLockUpdateTime,ramassageLockUpdateTime=initial.ramassageLockUpdateTime,petitesAnnoncesLockUpdateTime=initial.petitesAnnoncesLockUpdateTime,automobilisteLockUpdateTime=initial.automobilisteLockUpdateTime;
-  delete initial.boutiqueLockUpdateTime;delete initial.partnerLockUpdateTime;delete initial.companyLockUpdateTime;delete initial.logementLockUpdateTime;delete initial.ramassageLockUpdateTime;delete initial.petitesAnnoncesLockUpdateTime;delete initial.automobilisteLockUpdateTime;
+  const boutiqueLockUpdateTime=initial.boutiqueLockUpdateTime,partnerLockUpdateTime=initial.partnerLockUpdateTime,partnerServiceLockUpdateTime=initial.partnerServiceLockUpdateTime,companyLockUpdateTime=initial.companyLockUpdateTime,logementLockUpdateTime=initial.logementLockUpdateTime,ramassageLockUpdateTime=initial.ramassageLockUpdateTime,petitesAnnoncesLockUpdateTime=initial.petitesAnnoncesLockUpdateTime,automobilisteLockUpdateTime=initial.automobilisteLockUpdateTime;
+  delete initial.boutiqueLockUpdateTime;delete initial.partnerLockUpdateTime;delete initial.partnerServiceLockUpdateTime;delete initial.companyLockUpdateTime;delete initial.logementLockUpdateTime;delete initial.ramassageLockUpdateTime;delete initial.petitesAnnoncesLockUpdateTime;delete initial.automobilisteLockUpdateTime;
   const initialWrites=[createWrite(path,initial)];
   if(serviceId==="boutique_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},boutiqueLockUpdateTime));
   if(serviceId==="partenaire_colis")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},partnerLockUpdateTime));
+  if(serviceId==="partenaire_services")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},partnerServiceLockUpdateTime));
   if(serviceId==="compagnie_voyage")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},companyLockUpdateTime));
   if(serviceId==="logement_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},logementLockUpdateTime));
   if(serviceId==="ramassage")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},ramassageLockUpdateTime));
@@ -393,11 +412,12 @@ export function validateJekoPaymentPlan(payment) {
      !Number.isSafeInteger(payment.amountCents)||payment.amountCents!==payment.amountXof*100) return false;
   const fixed={
     logement_renewal:{mensuel:[3000,30],trimestriel:[8000,90],semestriel:[15000,180]},
+    partenaire_services:{partenaire_services_1mois:[1000,30]},
     ramassage:{ramassage:[2000,30]},
     automobiliste:{trimestriel:[500, 3]}
   };
   if(payment.serviceId==="objet_retrouve") return payment.amountXof===1000;
-  if(payment.serviceId==="logement_renewal"||payment.serviceId==="ramassage"){
+  if(payment.serviceId==="logement_renewal"||payment.serviceId==="ramassage"||payment.serviceId==="partenaire_services"){
     const plan=fixed[payment.serviceId]?.[payment.planId];
     return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1];
   }
@@ -543,6 +563,26 @@ async function webhook(request,env) {
       await commitWrites(env,[
         updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
         updateWrite(companyPath,{statutAbonnement:"Actif",montant:payment.amountXof,dureeMois:payment.durationMonths,dateDebut:start,dateExpiration:end,renouvellementJekoStatut:"confirme",renouvellementJekoPaymentId:null,dernierPaiementJekoLe:now,dernierPaiementJekoMontant:payment.amountXof},companyDoc.updateTime),
+        createWrite(receiptPath,receiptData)
+      ]);
+    }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
+    return new Response("OK",{status:200});
+  }
+  if(payment.serviceId==="partenaire_services") {
+    const targetPath=payment.targetPath,partnerDoc=await getDoc(env,targetPath),partner=docData(partnerDoc);
+    if(!partnerDoc||!partner||partner.uid!==payment.uid||partner.modePartenaire!==true||partner.statut!=="approuve"||!["depannage_domicile","auto_ecole","vulcanisateur"].includes(partner.type)||partner.renouvellementJekoPaymentId!==paymentId||payment.planId!=="partenaire_services_1mois"||payment.amountXof!==1000||payment.durationDays!==30){
+      await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"partner_service_target_or_plan_invalid",updatedAt:now.toISOString()}))});
+      return new Response("OK",{status:200});
+    }
+    const oldEnd=partner.abonnementFin instanceof Date?partner.abonnementFin:(partner.abonnementFin?new Date(partner.abonnementFin):null);
+    const start=oldEnd&&Number.isFinite(oldEnd.getTime())&&oldEnd>now?oldEnd:now;
+    const end=new Date(start.getTime()+30*86400000);
+    const history=Array.isArray(partner.historiqueAbonnements)?partner.historiqueAbonnements:[];
+    const nextPartner={abonnementStatut:"actif",paiementStatut:"confirme",abonnementDebut:start,abonnementFin:end,montantAbonnement:1000,dureeAbonnementJours:30,dernierPaiementFCFA:1000,dernierPaiementConfirmeLe:now,renouvellementJekoStatut:"confirme",renouvellementJekoPaymentId:null,historiqueAbonnements:history.concat([{montant:1000,dureeJours:30,dateValidation:now,dateExpiration:end,validePar:"Jèko",paymentId}])};
+    try{
+      await commitWrites(env,[
+        updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
+        updateWrite(targetPath,nextPartner,partnerDoc.updateTime),
         createWrite(receiptPath,receiptData)
       ]);
     }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
@@ -727,7 +767,7 @@ async function paymentStatus(request,env) {
       try { const providerResult=await jeko(env,"/partner_api/payment_requests/"+encodeURIComponent(payment.providerPaymentRequestId));
         const provider=providerResult.data;
         const checkedAt=new Date().toISOString();
-        if(provider.status==="error") {payment.status="failed";await firestore(env,"payments/"+id,{method:"PATCH",body:JSON.stringify(fields({status:"failed",lastProviderCheckAt:checkedAt,updatedAt:checkedAt}))});}
+        if(provider.status==="error") {payment.status="failed";await firestore(env,"payments/"+id,{method:"PATCH",body:JSON.stringify(fields({status:"failed",lastProviderCheckAt:checkedAt,updatedAt:checkedAt}))});if(payment.serviceId==="partenaire_services"&&payment.targetPath){const target=await getDoc(env,payment.targetPath),targetData=docData(target);if(target&&targetData?.renouvellementJekoPaymentId===id)await firestore(env,payment.targetPath,{method:"PATCH",body:JSON.stringify(fields({renouvellementJekoStatut:"failed",renouvellementJekoPaymentId:null}))});}}
         else await firestore(env,"payments/"+id,{method:"PATCH",body:JSON.stringify(fields({lastProviderCheckAt:checkedAt}))});
       } catch {}
     }
@@ -740,6 +780,7 @@ export function buildSubscriptionPlans(requested,services={},now=new Date()) {
     petites_annonces:["petites_annonces"],
     boutiques:["boutiques_15j","boutiques_30j","boutiques_1mois","boutiques_2mois","boutiques_3mois"],
     partenaires_colis:["partenaires_colis_1mois","partenaires_colis_3mois","partenaires_colis_6mois"],
+    partenaire_services:["partenaire_services_1mois"],
     compagnie_voyage:["compagnie_essentielle_mensuel","compagnie_essentielle_annuel","compagnie_professionnelle_mensuel","compagnie_professionnelle_annuel"],
     logement:["mensuel","trimestriel","semestriel"],
     ramassage:["ramassage"]
@@ -752,18 +793,19 @@ export function buildSubscriptionPlans(requested,services={},now=new Date()) {
       trimestriel:{label:"3 mois",price:8000,duration:3,unit:"mois"},
       semestriel:{label:"6 mois",price:15000,duration:6,unit:"mois"}
     },
-    ramassage:{ramassage:{label:"30 jours",price:2000,duration:30,unit:"jours"}}
+    ramassage:{ramassage:{label:"30 jours",price:2000,duration:30,unit:"jours"}},
+    partenaire_services:{partenaire_services_1mois:{label:"1 mois",price:1000,duration:30,unit:"jours"}}
   };
   if(!Object.prototype.hasOwnProperty.call(definitions,requested)) return null;
   const plans=definitions[requested].map(key=>{
     const fixedPlan=fixedDefaults[requested]?.[key]||null;
     const sourceCfg=services[key]||{};
-    const cfg=(requested==="logement"||requested==="ramassage"||requested==="automobiliste")?{
+    const cfg=(requested==="logement"||requested==="ramassage"||requested==="automobiliste"||requested==="partenaire_services")?{
       ...sourceCfg,
       duree:fixedPlan.duration,
       unite:fixedPlan.unit,
       prix:fixedPlan.price,
-      ...(requested==="automobiliste"?{essai:30,promotionActive:false,promotionPrix:0}:{})
+      ...((requested==="automobiliste"||requested==="partenaire_services")?{essai:30,promotionActive:false,promotionPrix:0}:{})
     }:(fixedPlan?{
       ...sourceCfg,
       duree:sourceCfg.duree??fixedPlan.duration,
@@ -784,7 +826,7 @@ export function buildSubscriptionPlans(requested,services={},now=new Date()) {
       active:cfg.actif!==false,available:valid,priceXof:valid?price:null,
       regularPriceXof:Number.isSafeInteger(base)&&base>0?base:null,
       duration:valid?duration:null,unit,
-      trialDays:requested==="ramassage"?30:(Number.isSafeInteger(Number(cfg.essai))&&Number(cfg.essai)>0?Number(cfg.essai):0),
+      trialDays:(requested==="ramassage"||requested==="partenaire_services")?30:(Number.isSafeInteger(Number(cfg.essai))&&Number(cfg.essai)>0?Number(cfg.essai):0),
       promotional:promotionActive
     };
   });
