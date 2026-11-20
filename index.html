@@ -3872,7 +3872,7 @@ chargerPublicitesAccueil();
 const NOUVEAUX_SERVICES = {
  depannage:{titre:"Dépannage automobile",icone:"🚗",categories:["Mécanicien","Dépannage général","Remorquage","Panne de batterie","Crevaison","Dépannage carburant"]},
  hebergement:{titre:"Hôtels et résidences",icone:"🏨",categories:["Hôtel","Résidence hôtelière","Résidence meublée"]},
- depannage_domicile:{titre:"Dépannage à domicile",icone:"🧰",categories:["Électricien","Service de nettoyage","Agence de placement de servante","Plombier","Climatisation","Gaz"]},
+ depannage_domicile:{titre:"Dépannage à domicile",icone:"🧰",categories:["Électricien","Service de nettoyage","Agence de placement de servante","Plombier","Climatisation","Dépôts de gaz"]},
  commerce:{titre:"Commerces et boutiques",icone:"🏪",categories:["Alimentation","Restaurant","Boutique","Pièces détachées","Électronique","Autre commerce"]},
  annonce:{titre:"Petites annonces et emplois",icone:"📢",categories:["Offre d'emploi","Demande d'emploi","Véhicule à vendre","Véhicule à louer","Autre annonce"]}
 };
@@ -3902,7 +3902,7 @@ function afficherChoixCatalogueDomicile(){
  const titre=document.getElementById("nouveauxServicesListeTitre");
  if(titre)titre.textContent="Choisissez un service de dépannage à domicile";
  const categories=NOUVEAUX_SERVICES.depannage_domicile.categories;
- const icones={"Électricien":"⚡","Service de nettoyage":"🧹","Agence de placement de servante":"🧑‍🔧","Plombier":"🚰","Climatisation":"❄️","Gaz":"🔥"};
+ const icones={"Électricien":"⚡","Service de nettoyage":"🧹","Agence de placement de servante":"🧑‍🔧","Plombier":"🚰","Climatisation":"❄️","Dépôts de gaz":"🔥"};
  zone.innerHTML='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">'
  +categories.map(c=>'<button type="button" class="family-shortcut" onclick="chargerCatalogueDomicile('+JSON.stringify(c)+')">'+(icones[c]||"🧰")+' '+echapperTextePublicite(c)+'</button>').join("")
  +'</div>';
@@ -3919,7 +3919,9 @@ async function chargerCatalogueDomicile(categorie){
   const normaliser=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
   const documents=snap.docs.filter(doc=>{
    const d=doc.data();
-   return d.visibleManuellement!==false&&normaliser(d.categorie)===normaliser(categorie);
+   const categorieEnregistree=normaliser(d.categorie);
+   const correspond=normaliser(categorie)==="depots de gaz"?["gaz","depots de gaz"].includes(categorieEnregistree):categorieEnregistree===normaliser(categorie);
+   return d.visibleManuellement!==false&&correspond;
   }).map(doc=>({id:doc.id,...doc.data()}));
   if(!documents.length){
    zone.innerHTML='<button type="button" onclick="afficherChoixCatalogueDomicile()">← Retour aux services</button><p class="notice">Aucun professionnel validé dans cette catégorie pour le moment.</p>';
@@ -4040,6 +4042,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <img id="nsPhotoPreview" alt="Aperçu de la photo sélectionnée" style="display:none;width:120px;height:120px;object-fit:cover;border-radius:12px;margin-top:8px;">
  </div>
  <label>Catégorie</label><select id="nsCategorie">${cfg.categories.map(c=>'<option'+(c===categorieInitiale?" selected":"")+' >'+c+'</option>').join("")}</select>
+ ${type==="depannage_domicile"?'<p class="notice">Pour la catégorie « Dépôts de gaz », inscrivez uniquement les points de vente et de recharge de bouteilles de gaz.</p>':''}
  <label>Commune</label><input id="nsCommune" maxlength="60" placeholder="Ex. Yopougon" required>
  ${type==="hebergement"||type==="depannage_domicile"?'<label>Quartier</label><input id="nsQuartier" maxlength="80" placeholder="Ex. Niangon, Angré, Riviera" required>':''}
  ${type==="commerce"?'<label>Adresse précise de récupération de la boutique</label><input id="nsAdresseBoutique" maxlength="220" placeholder="Quartier, rue, repère, commune" required>':''}
