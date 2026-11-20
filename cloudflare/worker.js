@@ -530,7 +530,7 @@ async function webhook(request,env) {
     }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
     return new Response("OK",{status:200});
   }
-
+  if(payment.serviceId==="compagnie_voyage") {
     const companyPath=payment.targetPath,companyDoc=await getDoc(env,companyPath),company=docData(companyDoc);
     if(!companyDoc||!company||company.uid!==payment.uid||company.formule==null||company.renouvellementJekoPaymentId!==paymentId||!Number.isSafeInteger(payment.durationMonths)||payment.durationMonths<1||payment.durationMonths>12){
       await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"company_target_or_duration_invalid",updatedAt:now.toISOString()}))});
