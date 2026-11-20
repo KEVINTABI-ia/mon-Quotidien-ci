@@ -158,3 +158,24 @@ test("un paiement Jèko échoué ou confirmé ne conserve pas le verrou", () => 
   assert.equal(isJekoCheckoutLocked("succeeded"), false);
   assert.equal(isJekoCheckoutLocked(undefined), false);
 });
+
+test("le catalogue des partenaires services fixe 1 000 FCFA pour 30 jours après 30 jours d’essai", () => {
+  const [plan] = buildSubscriptionPlans("partenaire_services", {
+    partenaire_services_1mois: { prix: 9000, duree: 90, unite: "mois", actif: true, essai: 300 }
+  }, new Date("2026-11-20T12:00:00Z"));
+  assert.equal(plan.planId, "partenaire_services_1mois");
+  assert.equal(plan.priceXof, 1000);
+  assert.equal(plan.regularPriceXof, 1000);
+  assert.equal(plan.duration, 30);
+  assert.equal(plan.unit, "jours");
+  assert.equal(plan.trialDays, 30);
+  assert.equal(plan.available, true);
+});
+
+test("webhook accepte uniquement le forfait fixe des partenaires services", () => {
+  const base={provider:"jeko",currency:"XOF",serviceId:"partenaire_services",planId:"partenaire_services_1mois",amountXof:1000,amountCents:100000,durationDays:30};
+  assert.equal(validateJekoPaymentPlan(base),true);
+  assert.equal(validateJekoPaymentPlan({...base,amountXof:2000,amountCents:200000}),false);
+  assert.equal(validateJekoPaymentPlan({...base,durationDays:90}),false);
+  assert.equal(validateJekoPaymentPlan({...base,currency:"USD"}),false);
+});
