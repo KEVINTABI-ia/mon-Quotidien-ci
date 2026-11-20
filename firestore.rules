@@ -1431,7 +1431,7 @@ service cloud.firestore {
         && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 24
         && request.resource.data.whatsapp is string && request.resource.data.whatsapp.size() <= 24
         && request.resource.data.photos is list && request.resource.data.photos.size() >= 1 && request.resource.data.photos.size() <= 8
-        && ((get(/databases/$(database)/documents/partenaires_logement/$(request.auth.uid)).data.premierePublicationValidee == true && request.resource.data.statut == "publiee") || (get(/databases/$(database)/documents/partenaires_logement/$(request.auth.uid)).data.premierePublicationValidee != true && request.resource.data.statut == "en_attente"))
+        && ((get(/databases/$(database)/documents/partenaires_logement/$(request.auth.uid)).data.get("premierePublicationValidee", false) == true && request.resource.data.statut == "publiee") || (get(/databases/$(database)/documents/partenaires_logement/$(request.auth.uid)).data.get("premierePublicationValidee", false) != true && request.resource.data.statut == "en_attente"))
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
       allow update: if estAdmin();
