@@ -940,6 +940,7 @@ service cloud.firestore {
           && resource.data.statut == "approuve"
           && (resource.data.type != "depannage" || estAbonneAutomobiliste()));
       allow update: if estAdmin()
+        && resource.data.type != "annuaire"
         && (resource.data.type != "commerce"
           || !request.resource.data.diff(resource.data).affectedKeys().hasAny([
             "abonnementDebut","abonnementFin","abonnementStatut","paiementStatut",
