@@ -765,7 +765,7 @@ async function paymentStatus(request,env) {
       try { const providerResult=await jeko(env,"/partner_api/payment_requests/"+encodeURIComponent(payment.providerPaymentRequestId));
         const provider=providerResult.data;
         const checkedAt=new Date().toISOString();
-        if(provider.status==="error") {payment.status="failed";await firestore(env,"payments/"+id,{method:"PATCH",body:JSON.stringify(fields({status:"failed",lastProviderCheckAt:checkedAt,updatedAt:checkedAt}))});}
+        if(provider.status==="error") {payment.status="failed";await firestore(env,"payments/"+id,{method:"PATCH",body:JSON.stringify(fields({status:"failed",lastProviderCheckAt:checkedAt,updatedAt:checkedAt}))});if(payment.serviceId==="partenaire_services"&&payment.targetPath){const target=await getDoc(env,payment.targetPath),targetData=docData(target);if(target&&targetData?.renouvellementJekoPaymentId===id)await firestore(env,payment.targetPath,{method:"PATCH",body:JSON.stringify(fields({renouvellementJekoStatut:"failed",renouvellementJekoPaymentId:null}))});}}
         else await firestore(env,"payments/"+id,{method:"PATCH",body:JSON.stringify(fields({lastProviderCheckAt:checkedAt}))});
       } catch {}
     }
