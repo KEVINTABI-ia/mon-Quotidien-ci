@@ -171,6 +171,11 @@ service cloud.firestore {
           && request.resource.data.dureeMois is int && request.resource.data.dureeMois > 0
           && request.resource.data.montant <= 10000000
           && request.resource.data.dureeMois <= 12
+          && existsAfter(/databases/$(database)/documents/compagnies/$(compagnieId)/informations_privees/gare_principale)
+          && getAfter(/databases/$(database)/documents/compagnies/$(compagnieId)/informations_privees/gare_principale).data.uid == request.auth.uid
+          && getAfter(/databases/$(database)/documents/compagnies/$(compagnieId)/informations_privees/gare_principale).data.numeroIdentite is string
+          && getAfter(/databases/$(database)/documents/compagnies/$(compagnieId)/informations_privees/gare_principale).data.numeroIdentite.size() >= 5
+          && getAfter(/databases/$(database)/documents/compagnies/$(compagnieId)/informations_privees/gare_principale).data.numeroIdentite.size() <= 60
           && request.resource.data.statutAbonnement == "Dossier à vérifier"
           && request.resource.data.dateCreation == request.time
           && request.resource.data.dateDebut == null
@@ -205,22 +210,26 @@ service cloud.firestore {
       match /informations_privees/{privateId} {
         allow read: if estAdmin();
         allow create: if estConnecte() && privateId == "gare_principale"
-          && request.resource.data.keys().hasAll(["uid","telephoneResponsable","createdAt"])
-          && request.resource.data.keys().hasOnly(["uid","telephoneResponsable","createdAt"])
+          && request.resource.data.keys().hasAll(["uid","telephoneResponsable","numeroIdentite","createdAt"])
+          && request.resource.data.keys().hasOnly(["uid","telephoneResponsable","numeroIdentite","createdAt"])
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.telephoneResponsable is string
           && request.resource.data.telephoneResponsable.size() >= 6
           && request.resource.data.telephoneResponsable.size() <= 25
+          && request.resource.data.numeroIdentite is string
+          && request.resource.data.numeroIdentite.size() >= 5
+          && request.resource.data.numeroIdentite.size() <= 60
           && request.resource.data.createdAt == request.time
           && existsAfter(/databases/$(database)/documents/compagnies/$(compagnieId))
           && getAfter(/databases/$(database)/documents/compagnies/$(compagnieId)).data.uid == request.auth.uid;
         allow update: if estConnecte() && privateId == "gare_principale"
           && resource.data.uid == request.auth.uid
           && request.resource.data.uid == request.auth.uid
-          && request.resource.data.keys().hasOnly(["uid","telephoneResponsable","createdAt"])
+          && request.resource.data.keys().hasOnly(["uid","telephoneResponsable","numeroIdentite","createdAt"])
           && request.resource.data.telephoneResponsable is string
           && request.resource.data.telephoneResponsable.size() >= 6
-          && request.resource.data.telephoneResponsable.size() <= 25;
+          && request.resource.data.telephoneResponsable.size() <= 25
+          && request.resource.data.numeroIdentite == resource.data.numeroIdentite;
         allow delete: if estAdmin();
       }
     }
@@ -329,6 +338,9 @@ service cloud.firestore {
           "statut", "createdAt"
         ])
         && request.resource.data.uid == request.auth.uid
+        && request.resource.data.numeroIdentite is string
+        && request.resource.data.numeroIdentite.size() >= 5
+        && request.resource.data.numeroIdentite.size() <= 60
         && (request.resource.data.type == "livreur_independant"
           || request.resource.data.type == "representant_gare")
         && (
@@ -903,9 +915,17 @@ service cloud.firestore {
       allow create: if estConnecte()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","telephone","description","email","statut","createdAt"])
-        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","quartier","telephone","description","infosProfessionnelles","email","photoUrl","adresseBoutique","montantAbonnement","dureeAbonnementJours","paiementStatut","modePartenaire","planAbonnementId","abonnementStatut","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","quartier","telephone","description","infosProfessionnelles","email","numeroIdentite","photoUrl","adresseBoutique","montantAbonnement","dureeAbonnementJours","paiementStatut","modePartenaire","planAbonnementId","abonnementStatut","statut","createdAt"])
         && request.resource.data.type in ["auto_ecole","vulcanisateur","depannage","hebergement","depannage_domicile","commerce","annonce"]
         && (!request.resource.data.keys().hasAny(["modePartenaire"]) || request.resource.data.get("modePartenaire", false) == true)
+        && (request.resource.data.get("modePartenaire", false) != true
+          || (request.resource.data.numeroIdentite is string
+            && request.resource.data.numeroIdentite.size() >= 5
+            && request.resource.data.numeroIdentite.size() <= 60))
+        && (!request.resource.data.keys().hasAny(["numeroIdentite"])
+          || (request.resource.data.numeroIdentite is string
+            && request.resource.data.numeroIdentite.size() >= 5
+            && request.resource.data.numeroIdentite.size() <= 60))
         && (request.resource.data.type != "commerce"
           || request.resource.data.get("modePartenaire", false) == true
           || (request.resource.data.adresseBoutique is string
