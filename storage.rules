@@ -43,6 +43,7 @@ service firebase.storage {
       allow update, delete: if false;
     }
 
+    
     match /logement_photos/{uid}/{annonceId}/{fileName} {
       allow create: if resource == null
         && request.auth != null && request.auth.uid == uid
