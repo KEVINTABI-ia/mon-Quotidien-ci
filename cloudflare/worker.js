@@ -94,6 +94,9 @@ async function commitWrites(env,writes) {
   if(!response.ok) throw new Error("firestore_commit_"+response.status);
   return data;
 }
+export function isJekoCheckoutLocked(status) {
+  return status==="pending"||status==="initialization_unknown"||status==="review_required";
+}
 function updateWrite(path,data,updateTime,exists) {
   const write={update:{name:resourceName(path),...fields(data)},updateMask:{fieldPaths:Object.keys(data)}};
   write.currentDocument=updateTime?{updateTime}:exists===false?{exists:false}:{exists:true};
@@ -307,7 +310,7 @@ async function createCheckout(request,env) {
     if(sub.renouvellementJekoPaymentId){
       const previous=await getDoc(env,"payments/"+sub.renouvellementJekoPaymentId);
       const previousStatus=docData(previous)?.status;
-      if(previousStatus==="pending"||previousStatus==="initialization_unknown"||previousStatus==="review_required") return json({error:"existing_payment_requires_review"},409);
+      if(isJekoCheckoutLocked(previousStatus)) return json({error:"existing_payment_requires_review"},409);
     }
     const cfgDoc=await getDoc(env,"configuration_abonnements/globale");
     const cfg=docData(cfgDoc)?.services?.petites_annonces||{};
