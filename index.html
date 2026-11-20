@@ -11960,7 +11960,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     shell.innerHTML=`
       <section class="home-welcome" id="homeWelcome">
         <h1 id="mqciBonjourAccueil">Bonjour !</h1>
-        <p class="home-welcome-question">Que recherchez-vous aujourd’hui ?</p>
+        
 
       </section>
 
@@ -12076,14 +12076,39 @@ window.mtcAfficherActeJudiciaire = function(type){
      chargerAnnoncesValideesAccueil();
      chargerArticlesBoutiquesAccueil();
 
-    const raccourciPartenaire=document.createElement('section');
-    raccourciPartenaire.id='homePartenaireAcces';
-    raccourciPartenaire.className='home-panel';
-    raccourciPartenaire.innerHTML=`
-      <button type="button" class="family-shortcut" style="width:100%;margin:0;" onclick="ouvrirEspacePartenaire('accueil')">
-        <span>🤝</span><span>Mon espace partenaire et abonnements</span>
-      </button>`;
-    other.insertAdjacentElement('afterend',raccourciPartenaire);
+    /* Menu professionnel placé en haut à droite de l'en-tête. */
+    const menuPro=document.createElement('details');
+    menuPro.id='mqciPartnerDropdown';
+    menuPro.innerHTML=`
+      <summary aria-label="Ouvrir le menu partenaire et abonnements" title="Partenaires et abonnements">
+        <span aria-hidden="true">☰</span>
+      </summary>
+      <div class="mqci-partner-dropdown-panel" role="group" aria-label="Accès professionnels">
+        <button type="button" onclick="this.closest('details').open=false;ouvrirEspacePartenaire('inscription')">➕ Devenir partenaire</button>
+        <button type="button" onclick="this.closest('details').open=false;ouvrirEspacePartenaire('connexion')">🔐 Connexion à mon espace partenaire</button>
+        <button type="button" onclick="this.closest('details').open=false;ouvrirSectionPleinEcran('pharmacieProfessionnelle','Espace pharmacie')">💊 Espace professionnel Pharmacie</button>
+      </div>`;
+    document.querySelector('header.mqci-header-premium')?.appendChild(menuPro);
+    if(!document.getElementById('mqci-partner-dropdown-style')){
+      const menuStyle=document.createElement('style');
+      menuStyle.id='mqci-partner-dropdown-style';
+      menuStyle.textContent=`
+        header.mqci-header-premium{overflow:visible!important}
+        header.mqci-header-premium .mqci-brand-lockup{box-sizing:border-box!important;padding-right:54px!important}
+        #mqciPartnerDropdown{position:absolute!important;z-index:10020!important;top:14px!important;right:14px!important}
+        #mqciPartnerDropdown>summary{list-style:none!important;cursor:pointer!important;width:42px!important;height:42px!important;display:grid!important;place-items:center!important;border:1px solid rgba(255,255,255,.5)!important;border-radius:12px!important;background:#16834a!important;color:#fff!important;box-shadow:0 4px 12px rgba(0,0,0,.2)!important;font-size:21px!important;font-weight:800!important}
+        #mqciPartnerDropdown>summary::-webkit-details-marker{display:none!important}
+        #mqciPartnerDropdown[open]>summary{background:#0e6538!important}
+        #mqciPartnerDropdown .mqci-partner-dropdown-panel{position:absolute!important;top:49px!important;right:0!important;width:min(290px,calc(100vw - 28px))!important;padding:8px!important;border:1px solid #dce8df!important;border-radius:14px!important;background:#fff!important;box-shadow:0 12px 30px rgba(0,0,0,.24)!important;display:grid!important;gap:6px!important}
+        #mqciPartnerDropdown .mqci-partner-dropdown-panel button{width:100%!important;min-width:0!important;padding:12px!important;border:0!important;border-radius:9px!important;background:#f3f8f4!important;color:#174b35!important;text-align:left!important;font-size:13px!important;font-weight:750!important;line-height:1.35!important;white-space:normal!important}
+        #mqciPartnerDropdown .mqci-partner-dropdown-panel button:active{background:#e3f1e7!important}
+        @media(max-width:380px){#mqciPartnerDropdown{top:11px!important;right:11px!important}#mqciPartnerDropdown>summary{width:39px!important;height:39px!important}}
+      `;
+      document.head.appendChild(menuStyle);
+    }
+    document.addEventListener('click',function(event){
+      if(!menuPro.contains(event.target))menuPro.open=false;
+    });
 
     const dailyTitle=quotidien.querySelector('.daily-toggle');
     if(dailyTitle){dailyTitle.innerHTML='Autre service du quotidien <span class="daily-toggle-chevron" aria-hidden="true">⌄</span>';dailyTitle.setAttribute('aria-label','Afficher les autres services du quotidien');}
