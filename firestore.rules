@@ -906,7 +906,7 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","telephone","description","email","statut","createdAt"])
         && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","telephone","description","email","photoUrl","adresseBoutique","montantAbonnement","dureeAbonnementJours","paiementStatut","modePartenaire","planAbonnementId","abonnementStatut","statut","createdAt"])
-        && request.resource.data.type in ["depannage","commerce","annonce"]
+        && request.resource.data.type in ["depannage","hebergement","depannage_domicile","commerce","annonce"]
         && (!request.resource.data.keys().hasAny(["modePartenaire"]) || request.resource.data.get("modePartenaire", false) == true)
         && (request.resource.data.type != "commerce"
           || request.resource.data.get("modePartenaire", false) == true
