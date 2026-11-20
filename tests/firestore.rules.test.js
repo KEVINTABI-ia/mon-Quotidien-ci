@@ -1246,4 +1246,86 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
   });
 
+  describe("Inscriptions partenaires — demandes en attente et identité", () => {
+    const SERVICE_ID = "partner-application-test-001";
+    const application = (overrides = {}) => ({
+      uid: CLIENT_UID,
+      type: "depannage_domicile",
+      titre: "Électricien test",
+      categorie: "Électricien",
+      commune: "Yopougon",
+      quartier: "Niangon",
+      telephone: "0700000000",
+      description: "Interventions électriques à domicile et dépannage.",
+      infosProfessionnelles: "Dépannage électrique, installation et entretien.",
+      email: "client@example.test",
+      photoUrl: "data:image/jpeg;base64,QUJDREVGR0hJSktMTU5PUA==",
+      modePartenaire: true,
+      statut: "en_attente",
+      createdAt: require("firebase/firestore").serverTimestamp(),
+      ...overrides
+    });
+
+    it("autorise le dépôt et la consultation de sa demande en attente, mais pas sa lecture par un tiers", async () => {
+      const {doc,setDoc,getDoc}=require("firebase/firestore");
+      const owner=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      const ref=doc(owner,"demandes_nouveaux_services",SERVICE_ID);
+      await assertSucceeds(setDoc(ref,application()));
+      await assertSucceeds(getDoc(ref));
+      const other=testEnv.authenticatedContext(OTHER_UID).firestore();
+      await assertFails(getDoc(doc(other,"demandes_nouveaux_services",SERVICE_ID)));
+      await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(),"demandes_nouveaux_services",SERVICE_ID)));
+    });
+
+    it("refuse l'auto-approbation, la modification et la suppression par le candidat", async () => {
+      const {doc,setDoc,updateDoc,deleteDoc,serverTimestamp}=require("firebase/firestore");
+      const owner=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      const ref=doc(owner,"demandes_nouveaux_services",SERVICE_ID);
+      await assertFails(setDoc(ref,application({statut:"approuve"})));
+      await assertSucceeds(setDoc(ref,application()));
+      await assertFails(updateDoc(ref,{statut:"approuve",traiteLe:serverTimestamp()}));
+      await assertFails(updateDoc(ref,{telephone:"0100000000"}));
+      await assertFails(deleteDoc(ref));
+    });
+
+    it("exige une photo et les informations professionnelles pour le dépannage à domicile", async () => {
+      const {doc,setDoc}=require("firebase/firestore");
+      const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      await assertFails(setDoc(doc(db,"demandes_nouveaux_services","missing-photo"),application({photoUrl:undefined})));
+      await assertFails(setDoc(doc(db,"demandes_nouveaux_services","missing-details"),application({infosProfessionnelles:""})));
+    });
+
+    it("refuse une adresse e-mail qui ne correspond pas au compte authentifié", async () => {
+      const {doc,setDoc}=require("firebase/firestore");
+      const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      await assertFails(setDoc(doc(db,"demandes_nouveaux_services","wrong-email"),application({email:"intrus@example.test"})));
+    });
+
+    it("réserve la décision d'approbation à l'administrateur", async () => {
+      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
+      const owner=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      await assertSucceeds(setDoc(doc(owner,"demandes_nouveaux_services",SERVICE_ID),application()));
+      const admin=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      await assertSucceeds(updateDoc(doc(admin,"demandes_nouveaux_services",SERVICE_ID),{statut:"approuve",traiteLe:serverTimestamp()}));
+    });
+  });
+
+  describe("Profils livreur et représentant de gare — photo obligatoire", () => {
+    const validProfile = (uid, overrides = {}) => ({
+      uid,type:"livreur_independant",nom:"Livreur test",telephone:"0700000000",commune:"Yopougon",
+      email:"client@example.test",dateNaissance:"1990-01-01",lieuNaissance:"Abidjan",
+      numeroIdentite:"TEST-ID",quartiers:["Yopougon"],numeroPermis:"PERMIS-TEST",
+      photoProfil:"data:image/jpeg;base64,QUJDREVGR0hJSktMTU5PUA==",
+      statut:"en_attente",createdAt:require("firebase/firestore").serverTimestamp(),...overrides
+    });
+    it("refuse un profil sans photo et interdit toute auto-approbation", async () => {
+      const {doc,setDoc,updateDoc}=require("firebase/firestore");
+      const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      await assertFails(setDoc(doc(db,"partenaires",CLIENT_UID),validProfile(CLIENT_UID,{photoProfil:undefined})));
+      const ref=doc(db,"partenaires",CLIENT_UID);
+      await assertSucceeds(setDoc(ref,validProfile(CLIENT_UID)));
+      await assertFails(updateDoc(ref,{statut:"approuve"}));
+    });
+  });
+
 });
