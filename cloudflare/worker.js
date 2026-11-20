@@ -168,7 +168,7 @@ async function createCheckout(request,env) {
   const methods=["orange","wave","mtn","moov","djamo"];
   if(!methods.includes(body.paymentMethod)) return json({error:"invalid_payment_method"},400);
   const serviceId=body.serviceId||"automobiliste";
-  if(!["automobiliste","objet_retrouve","petites_annonces","boutique_renewal","partenaire_colis","compagnie_voyage","annuaire_renewal","logement_renewal","ramassage"].includes(serviceId)) return json({error:"unsupported_service"},400);
+  if(!["automobiliste","objet_retrouve","petites_annonces","boutique_renewal","partenaire_colis","compagnie_voyage","logement_renewal","ramassage"].includes(serviceId)) return json({error:"unsupported_service"},400);
   const now=new Date();
   let amountXof, initial;
   if(serviceId==="objet_retrouve"){
@@ -217,21 +217,7 @@ async function createCheckout(request,env) {
     }
     amountXof=plan.amount;
     initial={uid:user.sub,serviceId,planId:body.planId,targetPath:profilePath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays:plan.days,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),logementLockUpdateTime:profileDoc.updateTime};
-  } else if(serviceId==="annuaire_renewal") {
-    const annuaireId=body.annuaireId;
-    if(typeof annuaireId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(annuaireId))return json({error:"invalid_annuaire_id"},400);
-    const annuairePath="demandes_nouveaux_services/"+annuaireId,annuaireDoc=await getDoc(env,annuairePath),annuaire=docData(annuaireDoc);
-    if(!annuaireDoc||annuaire?.uid!==user.sub||annuaire?.type!=="annuaire"||annuaire?.statut!=="approuve")return json({error:"annuaire_not_found_or_not_authorized"},403);
-    const expiry=annuaire.abonnementFin instanceof Date?annuaire.abonnementFin:(annuaire.abonnementFin?new Date(annuaire.abonnementFin):null);
-    if(!expiry||!Number.isFinite(expiry.getTime())||expiry.getTime()>now.getTime())return json({error:"annuaire_subscription_not_expired"},409);
-    if(annuaire.renouvellementJekoPaymentId){
-      const previous=await getDoc(env,"payments/"+annuaire.renouvellementJekoPaymentId);
-      const previousStatus=docData(previous)?.status;
-      if(previousStatus==="pending"||previousStatus==="initialization_unknown"||previousStatus==="review_required")return json({error:"existing_payment_requires_review"},409);
-    }
-    amountXof=1000;
-    initial={uid:user.sub,serviceId,planId:"annuaire",annuaireId,targetPath:annuairePath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays:30,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),annuaireLockUpdateTime:annuaireDoc.updateTime};
-  } else if(serviceId==="compagnie_voyage") {
+
     const compagnieId=body.compagnieId;
     if(typeof compagnieId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(compagnieId))return json({error:"invalid_company_id"},400);
     const companyPath="compagnies/"+compagnieId,companyDoc=await getDoc(env,companyPath),company=docData(companyDoc);
@@ -346,13 +332,12 @@ async function createCheckout(request,env) {
   const reference="MQCI-"+id;
   initial.clientReference=reference;
   const path="payments/"+id;
-  const boutiqueLockUpdateTime=initial.boutiqueLockUpdateTime,partnerLockUpdateTime=initial.partnerLockUpdateTime,companyLockUpdateTime=initial.companyLockUpdateTime,annuaireLockUpdateTime=initial.annuaireLockUpdateTime,logementLockUpdateTime=initial.logementLockUpdateTime,ramassageLockUpdateTime=initial.ramassageLockUpdateTime,petitesAnnoncesLockUpdateTime=initial.petitesAnnoncesLockUpdateTime,automobilisteLockUpdateTime=initial.automobilisteLockUpdateTime;
-  delete initial.boutiqueLockUpdateTime;delete initial.partnerLockUpdateTime;delete initial.companyLockUpdateTime;delete initial.annuaireLockUpdateTime;delete initial.logementLockUpdateTime;delete initial.ramassageLockUpdateTime;delete initial.petitesAnnoncesLockUpdateTime;delete initial.automobilisteLockUpdateTime;
+  const boutiqueLockUpdateTime=initial.boutiqueLockUpdateTime,partnerLockUpdateTime=initial.partnerLockUpdateTime,companyLockUpdateTime=initial.companyLockUpdateTime,logementLockUpdateTime=initial.logementLockUpdateTime,ramassageLockUpdateTime=initial.ramassageLockUpdateTime,petitesAnnoncesLockUpdateTime=initial.petitesAnnoncesLockUpdateTime,automobilisteLockUpdateTime=initial.automobilisteLockUpdateTime;
+  delete initial.boutiqueLockUpdateTime;delete initial.partnerLockUpdateTime;delete initial.companyLockUpdateTime;delete initial.logementLockUpdateTime;delete initial.ramassageLockUpdateTime;delete initial.petitesAnnoncesLockUpdateTime;delete initial.automobilisteLockUpdateTime;
   const initialWrites=[createWrite(path,initial)];
   if(serviceId==="boutique_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},boutiqueLockUpdateTime));
   if(serviceId==="partenaire_colis")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},partnerLockUpdateTime));
   if(serviceId==="compagnie_voyage")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},companyLockUpdateTime));
-  if(serviceId==="annuaire_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},annuaireLockUpdateTime));
   if(serviceId==="logement_renewal")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},logementLockUpdateTime));
   if(serviceId==="ramassage")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},ramassageLockUpdateTime));
   if(serviceId==="petites_annonces")initialWrites.push(updateWrite(initial.targetPath,{renouvellementJekoPaymentId:id,renouvellementJekoStatut:"pending"},petitesAnnoncesLockUpdateTime));
@@ -405,13 +390,12 @@ export function validateJekoPaymentPlan(payment) {
   const fixed={
     logement_renewal:{mensuel:[3000,30],trimestriel:[8000,90],semestriel:[15000,180]},
     ramassage:{ramassage:[2000,30]},
-    annuaire_renewal:{annuaire:[1000,30]},
     automobiliste:{annuel:[null, null]}
   };
   if(payment.serviceId==="objet_retrouve") return payment.amountXof===1000;
-  if(payment.serviceId==="logement_renewal"||payment.serviceId==="ramassage"||payment.serviceId==="annuaire_renewal"){
+  if(payment.serviceId==="logement_renewal"||payment.serviceId==="ramassage"){
     const plan=fixed[payment.serviceId]?.[payment.planId];
-    return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1]&&(payment.serviceId!=="annuaire_renewal"||payment.planId==null||payment.planId==="annuaire");
+    return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1];
   }
   if(payment.serviceId==="automobiliste"){
     return payment.planId==="annuel"&&payment.durationMonths===12&&(
@@ -546,25 +530,7 @@ async function webhook(request,env) {
     }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
     return new Response("OK",{status:200});
   }
-  if(payment.serviceId==="annuaire_renewal") {
-    const annuairePath=payment.targetPath,annuaireDoc=await getDoc(env,annuairePath),annuaire=docData(annuaireDoc);
-    if(!annuaireDoc||!annuaire||annuaire.uid!==payment.uid||annuaire.type!=="annuaire"||annuaire.statut!=="approuve"||annuaire.renouvellementJekoPaymentId!==paymentId||payment.amountXof!==1000||payment.durationDays!==30){
-      await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"annuaire_target_or_plan_invalid",updatedAt:now.toISOString()}))});
-      return new Response("OK",{status:200});
-    }
-    const oldEnd=annuaire.abonnementFin instanceof Date?annuaire.abonnementFin:(annuaire.abonnementFin?new Date(annuaire.abonnementFin):null);
-    const start=oldEnd&&Number.isFinite(oldEnd.getTime())&&oldEnd>now?oldEnd:now;
-    const end=new Date(start.getTime()+30*24*60*60*1000);
-    try{
-      await commitWrites(env,[
-        updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
-        updateWrite(annuairePath,{abonnementDebut:start,abonnementFin:end,abonnementStatut:"actif",dernierPaiementFCFA:1000,dernierPaiementConfirmeLe:now,renouvellementJekoStatut:"confirme",renouvellementJekoPaymentId:null},annuaireDoc.updateTime),
-        createWrite(receiptPath,receiptData)
-      ]);
-    }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
-    return new Response("OK",{status:200});
-  }
-  if(payment.serviceId==="compagnie_voyage") {
+
     const companyPath=payment.targetPath,companyDoc=await getDoc(env,companyPath),company=docData(companyDoc);
     if(!companyDoc||!company||company.uid!==payment.uid||company.formule==null||company.renouvellementJekoPaymentId!==paymentId||!Number.isSafeInteger(payment.durationMonths)||payment.durationMonths<1||payment.durationMonths>12){
       await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"company_target_or_duration_invalid",updatedAt:now.toISOString()}))});
