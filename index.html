@@ -3194,7 +3194,7 @@ function chargerPublicitesAccueil() {
   <div class="grille-services-quotidiens">
 <button type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacie et santé')" class="tuile-quotidien">💊 Pharmacie et santé<small>Pharmacies de garde, centres de santé, urgences et laboratoires</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('pharmacieDomicile','Pharmacie à domicile')" class="tuile-quotidien">🛵 Pharmacie à domicile<small>Envoyez votre ordonnance ou demandez un médicament avec livraison</small></button>
-<button type="button" onclick="ouvrirSectionPleinEcran('facturesServicesPratiques','Factures et services pratiques')" class="tuile-quotidien">🧾 Factures et services pratiques<small>CIE, SODECI et rappels de paiement</small></button>
+<button type="button" onclick="ouvrirSectionPleinEcran('facturesServicesPratiques','Rappels de paiement')" class="tuile-quotidien">🔔 Rappels de paiement<small>Gérez vos échéances personnelles</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('servicesPublicsDemarches','Services publics et démarches')" class="tuile-quotidien">🏛️ Services publics et démarches<small>Accès aux portails officiels</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('toilettesPubliques','Toilettes publiques')" class="tuile-quotidien">🚻 Toilettes publiques<small>Rechercher les toilettes autour de vous</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('nouveauxServices','Petites annonces de ma commune');choisirNouveauService('annonce');chargerNouveauxServicesPublics('annonce')" class="tuile-quotidien">📢 Petites annonces de ma commune<small>Publier ou consulter les annonces et offres près de chez vous</small></button>
@@ -3274,16 +3274,9 @@ function chargerPublicitesAccueil() {
   </div>
 </section>
 <section class="card" id="facturesServicesPratiques" style="display:none;">
-  <h2>🧾 Factures et services pratiques</h2>
-  <p>Retrouvez les accès aux services de facturation et conservez vos échéances personnelles au même endroit.</p>
-  <div class="modes">
-    <a class="mode" href="https://www.cie.ci/modes-de-paiement/wave" target="_blank" rel="noopener noreferrer">⚡ Paiement des factures CIE</a>
-    <a class="mode" href="https://sodeci.ci/modes-de-paiement/wave" target="_blank" rel="noopener noreferrer">💧 Paiement des factures SODECI</a>
-    <a class="mode" href="https://www.cie.ci/" target="_blank" rel="noopener noreferrer">🌐 Site officiel CIE</a>
-    <a class="mode" href="https://sodeci.ci/" target="_blank" rel="noopener noreferrer">🌐 Site officiel SODECI</a>
-  </div>
-  <p class="notice">Les paiements s’effectuent sur les services officiels ou dans l’application de paiement choisie. Mon Quotidien CI ne collecte pas vos codes secrets ni vos références de paiement.</p>
-  <section class="card" id="rappelsPaiement" style="display:block;"><h3>🔔 Mes rappels de paiement</h3><p class="notice">Ajoutez vos échéances personnelles. Elles sont enregistrées localement sur cet appareil et ne déclenchent pas encore de notification automatique.</p><label>Motif du paiement</label><input id="paiementMotif" maxlength="100" placeholder="Ex. loyer, facture CIE, abonnement"><label>Montant (FCFA, facultatif)</label><input id="paiementMontant" type="number" min="0"><label>Date d’échéance</label><input id="paiementDate" type="date"><button class="primary" type="button" onclick="enregistrerRappelPaiement()">Enregistrer le rappel</button><p id="statutRappelPaiement" class="notice"></p><div id="listeRappelsPaiement"></div></section>
+  <h2>🔔 Rappels de paiement</h2>
+  <p>Ajoutez et consultez vos échéances personnelles au même endroit.</p>
+  <section class="card" id="rappelsPaiement" style="display:block;"><h3>Mes rappels de paiement</h3><p class="notice">Ajoutez vos échéances personnelles. Elles sont enregistrées localement sur cet appareil et ne déclenchent pas encore de notification automatique.</p><label>Motif du paiement</label><input id="paiementMotif" maxlength="100" placeholder="Ex. loyer, abonnement"><label>Montant (FCFA, facultatif)</label><input id="paiementMontant" type="number" min="0"><label>Date d’échéance</label><input id="paiementDate" type="date"><button class="primary" type="button" onclick="enregistrerRappelPaiement()">Enregistrer le rappel</button><p id="statutRappelPaiement" class="notice"></p><div id="listeRappelsPaiement"></div></section>
 </section>
 <section class="card" id="servicesPublicsDemarches" style="display:none;">
   <h2>🏛️ Services publics et démarches</h2>
@@ -11664,6 +11657,7 @@ window.mtcAfficherActeJudiciaire = function(type){
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier');chargerAnnoncesLogementPubliques()"><span>🏠</span>Trouver un logement</button>
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacies et santé')"><span>💊</span>Pharmacies et santé</button>
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('transportColis','Livraison et expédition')"><span>📦</span>Livraison et colis</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirDeclarationsEnfants()"><span>🧒</span>Enfants perdus ou retrouvés</button>
         </div>
       </section>
       <section class="home-panel" id="homeMobilite">
@@ -11703,10 +11697,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       </section>
       <section class="home-panel" id="homeVieCitoyenne">
         <div class="home-section-heading"><div><h2>⚖️ Vie citoyenne</h2><p>Démarches officielles, foncier, justice et solidarité</p></div></div>
-      
-        <div class="home-discovery-grid">
-          <button class="home-discovery-card" type="button" onclick="ouvrirDeclarationsEnfants()"><span>🧒</span><strong>Enfants perdus ou retrouvés</strong><small>Déclarer un enfant perdu ou retrouvé et consulter les déclarations validées</small></button>
-        </div>
+
       </section>
       <section class="home-panel" id="homeActualites">
         <div class="home-section-heading"><div><h2>Actualités de ma commune</h2><p>Les informations et initiatives près de chez vous.</p></div></div>
