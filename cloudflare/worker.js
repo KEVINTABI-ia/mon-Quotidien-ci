@@ -275,6 +275,8 @@ async function createCheckout(request,env) {
       const previous=await getDoc(env,"payments/"+partner.renouvellementJekoPaymentId);
       if(isJekoCheckoutLocked(docData(previous)?.status))return json({error:"existing_payment_requires_review"},409);
     }
+    const cfgDoc=await getDoc(env,"configuration_abonnements/globale"),cfg=docData(cfgDoc)?.services?.partenaire_services_1mois||{};
+    if(cfg.actif===false)return json({error:"plan_unavailable"},409);
     amountXof=1000;
     initial={uid:user.sub,serviceId,planId:"partenaire_services_1mois",demandeId,targetPath,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays:30,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),partnerServiceLockUpdateTime:doc.updateTime};
   } else if(serviceId==="boutique_renewal") {
