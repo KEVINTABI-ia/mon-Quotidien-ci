@@ -3882,12 +3882,24 @@ function ouvrirAnnuaireCommerce(type){if(!["commerce","boutique"].includes(type)
 
 function ouvrirNouveauCatalogueAccueil(type,titre){
  if(!["hebergement","depannage_domicile"].includes(type))return;
+ // Ouvrir la rubrique sans reconstruire le formulaire partenaire.
  ouvrirSectionPleinEcran("nouveauxServices",titre);
- choisirNouveauService(type);
+ nouveauServiceActif=type;
+ const cfg=NOUVEAUX_SERVICES[type];
+ const titreRubrique=document.getElementById("nouveauxServicesTitre");
+ const description=document.getElementById("nouveauxServicesDescription");
+ const connexion=document.getElementById("connexionBoutiqueZone");
  const formulaire=document.getElementById("nouveauServiceFormZone");
- if(formulaire)formulaire.style.display="none";
+ const zone=document.getElementById("nouveauxServicesPublics");
+ if(titreRubrique) titreRubrique.textContent=cfg.icone+" "+cfg.titre;
+ if(description) description.textContent=type==="hebergement"
+   ?"Consultez les hôtels et résidences partenaires inscrits et validés."
+   :"Trouvez des professionnels vérifiés pour vos besoins à domicile.";
+ if(connexion) connexion.style.display="none";
+ if(formulaire){formulaire.replaceChildren();formulaire.style.display="none";}
+ if(zone) zone.style.display="block";
  if(type==="hebergement")afficherChoixCatalogueHebergement();
- if(type==="depannage_domicile")afficherChoixCatalogueDomicile();
+ else afficherChoixCatalogueDomicile();
 }
 function afficherChoixCatalogueHebergement(){
  const zone=document.getElementById("nouveauxServicesPublics");if(!zone)return;
