@@ -319,7 +319,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasAll([
           "uid", "type", "nom", "telephone", "commune",
           "email", "dateNaissance", "lieuNaissance",
-          "numeroIdentite", "statut", "createdAt"
+          "numeroIdentite", "photoProfil", "statut", "createdAt"
         ])
         && request.resource.data.keys().hasOnly([
           "uid", "type", "nom", "telephone", "commune",
@@ -342,12 +342,1343 @@ service cloud.firestore {
         && request.resource.data.statut == "en_attente"
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.createdAt == request.time
-        && (
-          !request.resource.data.keys().hasAny(["photoProfil"])
+        && request.resource.data.photoProfil is string
+        && request.resource.data.photoProfil.size() >= 40
+        && request.resource.data.photoProfil.size() <= 200000
+        && request.resource.data.photoProfil.matches('^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}
+
+      allow update: if (estAdmin()
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            "montantAbonnementPartenaire","formuleAbonnementPartenaire",
+            "dateDebutAbonnement","dateExpirationAbonnement","historiqueAbonnements",
+            "renouvellementMontant","renouvellementFormule","renouvellementMois",
+            "renouvellementOperateur","renouvellementReference","renouvellementDemandeLe",
+            "renouvellementConfirmeLe","renouvellementConfirmePar",
+            "renouvellementJekoPaymentId","renouvellementJekoStatut"
+          ])
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["statutAbonnementPartenaire"])
+            || request.resource.data.statutAbonnementPartenaire == "Essai"))
+        || (estConnecte()
+          && request.auth.uid == partenaireId
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["enLigne", "derniereActivite"])
+          && request.resource.data.enLigne is bool
+          && request.resource.data.derniereActivite == request.time
+          && (request.resource.data.enLigne == false
+            || abonnementValide(request.resource.data)));
+      allow delete: if estAdmin();
+
+      match /verrous/{verrouId} {
+        allow read: if estAdmin()
+          || (estConnecte() && request.auth.uid == partenaireId);
+        allow create: if estConnecte()
+          && (request.auth.uid == partenaireId || estAdmin())
+          && verrouId == "missionActive"
+          && request.resource.data.keys().hasOnly(["commandeId", "statut", "createdAt"])
+          && request.resource.data.commandeId is string
+          && request.resource.data.statut == "active"
+          && request.resource.data.createdAt == request.time
+          && partenaire(partenaireId).enLigne == true
+          && abonnementValide(partenaire(partenaireId))
+          && existsAfter(commandePath(request.resource.data.commandeId))
+          && getAfter(commandePath(request.resource.data.commandeId)).data.partenaireId == partenaireId
+          && getAfter(commandePath(request.resource.data.commandeId)).data.statut == "livreur_affecte";
+        allow delete: if estAdmin()
+          || (estConnecte()
+            && request.auth.uid == partenaireId
+            && verrouId == "missionActive"
+            && resource.data.commandeId is string
+            && (
+              (get(commandePath(resource.data.commandeId)).data.statut == "en_attente"
+                && get(commandePath(resource.data.commandeId)).data.get("partenaireId", null) == null)
+              || ((get(commandePath(resource.data.commandeId)).data.statut == "livre"
+                  || get(commandePath(resource.data.commandeId)).data.statut == "arrive_destination")
+                && get(commandePath(resource.data.commandeId)).data.partenaireId == partenaireId)
+            ));
+        allow update: if false;
+      }
+    }
+
+    // Profil général des utilisateurs : chaque compte ne gère que ses propres informations.
+    match /utilisateurs/{userId} {
+      allow create: if estConnecte()
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && request.resource.data.keys().hasAll(["uid","nom","telephone","email","modeConnexion","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["uid","nom","telephone","email","modeConnexion","createdAt","updatedAt","photoProfil"])
+        && request.resource.data.nom is string
+        && request.resource.data.nom.size() >= 2
+        && request.resource.data.nom.size() <= 100
+        && request.resource.data.telephone is string
+        && request.resource.data.telephone.size() <= 20
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 120
+        && request.resource.data.modeConnexion in ["email","telephone"]
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == userId);
+      allow update: if estConnecte()
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nom","telephone","email","updatedAt","photoProfil"])
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.nom is string
+        && request.resource.data.nom.size() >= 2
+        && request.resource.data.nom.size() <= 100
+        && (!("photoProfil" in request.resource.data)
           || (request.resource.data.photoProfil is string
-            && request.resource.data.photoProfil.size() <= 200000
-            && request.resource.data.photoProfil.matches('^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$'))
+            && request.resource.data.photoProfil.size() <= 190000
+            && request.resource.data.photoProfil.matches("^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$")));
+      allow delete: if estAdmin();
+    }
+
+    match /clients/{clientId} {
+      allow create: if estConnecte()
+        && request.auth.uid == clientId
+        && request.resource.data.uid == clientId
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.keys().hasAll(["uid", "nom", "telephone", "email", "createdAt"])
+        && request.resource.data.keys().hasOnly(["uid", "nom", "telephone", "email", "createdAt"])
+        && request.resource.data.createdAt == request.time;
+
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == clientId);
+
+      allow update: if estConnecte()
+        && request.auth.uid == clientId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nom", "telephone"]);
+
+      allow delete: if estAdmin();
+    }
+
+    match /commandes_colis/{commandeId} {
+      allow create: if (
+        estConnecte()
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.keys().hasAll(["clientId","service","depart","destination","statut","createdAt","publicVersion","typeCommande","boutiqueId","boutiqueUid","boutiqueNom","montantLivraisonBoutique"])
+        && request.resource.data.keys().hasOnly(["clientId","service","depart","destination","statut","createdAt","publicVersion","typeCommande","boutiqueId","boutiqueUid","boutiqueNom","montantLivraisonBoutique"])
+        && request.resource.data['service'] == "livraison"
+        && request.resource.data.statut == "commande_boutique"
+        && request.resource.data.publicVersion == false
+        && request.resource.data.typeCommande == "boutique"
+        && request.resource.data.boutiqueUid is string
+        && exists(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId))
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.uid == request.resource.data.boutiqueUid
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.statut == "approuve"
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin is timestamp
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin > request.time
+        && request.resource.data.montantLivraisonBoutique == 0
+        && existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details)
+        && getAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details).data.clientId == request.auth.uid
+        && existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix)
+        && getAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix).data.montantLivraison == request.resource.data.montantLivraisonBoutique
+      ) || (estConnecte()
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.keys().hasAll([
+          "clientId", "service", "depart", "destination", "statut", "createdAt", "publicVersion"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "clientId", "service", "depart", "destination", "statut", "createdAt",
+          "dateHeureSouhaitee", "publicVersion"
+        ])
+        && (request.resource.data['service'] == "compagnie"
+          || request.resource.data['service'] == "livraison"
+          || request.resource.data['service'] == "livraison_programmee")
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.publicVersion == true
+        && request.resource.data.createdAt == request.time
+        && existsAfter(detailsPrivesPath(commandeId))
+        && getAfter(detailsPrivesPath(commandeId)).data.clientId == request.auth.uid
+        && (
+          request.resource.data['service'] != "livraison_programmee"
+          || (request.resource.data.dateHeureSouhaitee is timestamp
+            && request.resource.data.dateHeureSouhaitee >= request.time + duration.value(1, "h")
+            && request.resource.data.dateHeureSouhaitee <= request.time + duration.value(1, "d"))
+        ));
+
+      allow read: if estAdmin()
+        || (estConnecte() && resource.data.clientId == request.auth.uid)
+        || (estConnecte() && resource.data.partenaireId == request.auth.uid)
+        || (estConnecte() && resource.data.boutiqueUid == request.auth.uid)
+        || (resource.data.publicVersion == true
+          && resource.data.statut == "en_attente"
+          && !contientChampsPrives(resource.data)
+          && partenaireEnLignePour(resource.data['service']));
+
+      // Acceptation ou attribution : l'ordre et le verrou doivent être écrits dans la même transaction.
+      allow update: if (
+          estAdmin()
+          && resource.data.publicVersion == true
+          && resource.data.statut == "en_attente"
+          && request.resource.data.statut == "livreur_affecte"
+          && request.resource.data.partenaireId is string
+          && ((resource.data['service'] == "compagnie" && request.resource.data.partenaireType == "representant_gare" && partenaire(request.resource.data.partenaireId).type == "representant_gare") || (resource.data['service'] != "compagnie" && request.resource.data.partenaireType == "livreur_independant" && partenaire(request.resource.data.partenaireId).type == "livreur_independant"))
+          && request.resource.data.dateAffectation == request.time
+          && request.resource.data.affectePar == request.auth.uid
+          && partenaire(request.resource.data.partenaireId).enLigne == true
+          && abonnementValide(partenaire(request.resource.data.partenaireId))
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation", "affectePar", "statut"])
+          && existsAfter(verrouPath(request.resource.data.partenaireId))
+          && getAfter(verrouPath(request.resource.data.partenaireId)).data.commandeId == commandeId
+        )
+        || (
+          estConnecte()
+          && resource.data.publicVersion == true
+          && resource.data.statut == "en_attente"
+          && !("partenaireId" in resource.data)
+          && request.resource.data.partenaireId == request.auth.uid
+          && request.resource.data.statut == "livreur_affecte"
+          && request.resource.data.dateAffectation == request.time
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["partenaireId", "partenaireNom", "partenaireTelephone", "partenairePhotoProfil", "partenaireType", "dateAffectation", "statut"])
+          && existsAfter(verrouPath(request.auth.uid))
+          && getAfter(verrouPath(request.auth.uid)).data.commandeId == commandeId
+          && partenaireEnLignePour(resource.data['service'])
+        )
+        || (
+          estConnecte()
+          && resource.data.typeCommande == "boutique"
+          && resource.data.boutiqueUid == request.auth.uid
+          && resource.data.statut == "commande_boutique"
+          && request.resource.data.statut == "en_attente"
+          && request.resource.data.publicVersion == true
+          && request.resource.data.dateMiseEnLivraison == request.time
+           && request.resource.data.montantLivraisonBoutique is int
+           && request.resource.data.montantLivraisonBoutique > 0
+           && request.resource.data.montantLivraisonBoutique <= 100000
+           && existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix)
+           && getAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix).data.montantLivraison == request.resource.data.montantLivraisonBoutique
+           && getAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix).data.montantTotal == request.resource.data.montantLivraisonBoutique
+           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","publicVersion","dateMiseEnLivraison","montantLivraisonBoutique"])
+        )
+        || (
+          estConnecte()
+          && resource.data.partenaireId == request.auth.uid
+          && resource.data.statut == "livreur_affecte"
+          && request.resource.data.statut == "en_attente"
+          && !("partenaireId" in request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation", "affectePar", "statut"])
+        )
+        || (
+          estConnecte()
+          && resource.data.partenaireId == request.auth.uid
+          && resource.data.statut == "livreur_affecte"
+          && request.resource.data.statut == "colis_recupere"
+          && request.resource.data.dateRecuperation == request.time
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["statut", "dateRecuperation"])
+          && exists(verrouPath(request.auth.uid))
+          && get(verrouPath(request.auth.uid)).data.commandeId == commandeId
+          && get(verrouPath(request.auth.uid)).data.statut == "active"
+        )
+        || (
+          estConnecte()
+          && resource.data.partenaireId == request.auth.uid
+          && (resource.data.statut == "colis_recupere" || resource.data.statut == "en_transit")
+          && request.resource.data.statut == "arrive_destination"
+          && request.resource.data.dateArriveeDestination == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut", "dateArriveeDestination"])
+          && exists(verrouPath(request.auth.uid))
+          && get(verrouPath(request.auth.uid)).data.commandeId == commandeId
+          && get(verrouPath(request.auth.uid)).data.statut == "active"
+        )
+        || (
+          estConnecte()
+          && resource.data.partenaireId == request.auth.uid
+          && resource.data.statut == "arrive_destination"
+          && request.resource.data.statut == "livre"
+          && request.resource.data.dateLivraison == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut", "dateLivraison"])
+          && exists(verrouPath(request.auth.uid))
+          && get(verrouPath(request.auth.uid)).data.commandeId == commandeId
+          && get(verrouPath(request.auth.uid)).data.statut == "active"
+          && exists(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix)
+          && (
+            resource.data['service'] != "compagnie"
+            || get(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details).data.get("operation", null) != "expedition"
+            || existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/expedition)
+          )
+        )
+        // Migration administrative contrôlée des anciennes commandes vers le document privé.
+        || (
+          estAdmin()
+          && request.resource.data.publicVersion == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "clientNom", "clientTelephone", "telephoneExpediteur", "telephoneDestinataire",
+            "adresseRecuperation", "adresseLivraison", "descriptionColis", "trackingNumber",
+            "provenance", "codeColis", "typeColis", "livreurId", "operation", "compagnie",
+            "gare", "latitudeRecuperation", "longitudeRecuperation",
+            "latitudeLivraison", "longitudeLivraison", "publicVersion"
+          ])
+          && !contientChampsPrives(request.resource.data)
+          && (
+            (existsAfter(detailsPrivesPath(commandeId))
+              && getAfter(detailsPrivesPath(commandeId)).data.clientId == resource.data.clientId
+              && getAfter(detailsPrivesPath(commandeId)).data.trackingNumber is string
+              && (!(resource.data.get("trackingNumber", null) is string)
+                || getAfter(detailsPrivesPath(commandeId)).data.trackingNumber == resource.data.trackingNumber))
+            || (!existsAfter(detailsPrivesPath(commandeId))
+              && !contientChampsPrives(resource.data))
+          )
+        )
+        || (
+          estConnecte()
+          && resource.data.partenaireId == request.auth.uid
+          && resource.data.statut in ["livreur_affecte", "colis_recupere", "en_transit", "arrive_destination"]
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["positionLivreur", "positionLivreurMaj"])
+          && request.resource.data.positionLivreur is map
+          && request.resource.data.positionLivreur.keys().hasAll(["latitude", "longitude"])
+          && request.resource.data.positionLivreur.latitude is number
+          && request.resource.data.positionLivreur.latitude >= -90
+          && request.resource.data.positionLivreur.latitude <= 90
+          && request.resource.data.positionLivreur.longitude is number
+          && request.resource.data.positionLivreur.longitude >= -180
+          && request.resource.data.positionLivreur.longitude <= 180
+          && request.resource.data.positionLivreurMaj == request.time
         );
+
+      allow delete: if estAdmin();
+
+      match /informations_privees/{docId} {
+        allow create: if (docId == "details"
+          && request.resource.data.keys().hasAll([
+            "clientId", "clientNom", "clientTelephone", "telephoneExpediteur",
+            "telephoneDestinataire", "adresseRecuperation", "adresseLivraison",
+            "descriptionColis", "trackingNumber", "createdAt"
+          ])
+          && request.resource.data.keys().hasOnly([
+            "clientId", "clientNom", "clientTelephone", "telephoneExpediteur",
+            "telephoneDestinataire", "adresseRecuperation", "descriptionColis",
+            "adresseLivraison", "trackingNumber", "provenance", "codeColis",
+            "operation", "compagnie", "gare", "expeditionPayee", "latitudeRecuperation",
+            "longitudeRecuperation", "latitudeLivraison", "longitudeLivraison",
+            "typeColis", "livreurId", "createdAt",
+            "produitCommande", "quantiteCommande", "prixProduit", "commentaireCommande",
+            "boutiqueUid", "telephoneBoutique", "telephoneClient"
+          ])
+          && request.resource.data.createdAt == request.time
+          && (
+            (estConnecte()
+              && !exists(commandePath(commandeId))
+              && getAfter(commandePath(commandeId)).data.clientId == request.auth.uid
+              && (getAfter(commandePath(commandeId)).data.statut == "en_attente"
+                || (getAfter(commandePath(commandeId)).data.typeCommande == "boutique"
+                  && getAfter(commandePath(commandeId)).data.statut == "commande_boutique"))
+              && request.resource.data.clientId == request.auth.uid)
+            || (estAdmin()
+              && get(commandePath(commandeId)).data.clientId == request.resource.data.clientId)
+          ))
+          || (docId == "expedition"
+            && estConnecte()
+            && get(commandePath(commandeId)).data.partenaireId == request.auth.uid
+            && get(commandePath(commandeId)).data.statut == "arrive_destination"
+            && request.resource.data.keys().hasAll(["compagnieExpedition","gareDestination","codeColis","partenaireId","createdAt"])
+            && request.resource.data.keys().hasOnly(["compagnieExpedition","gareDestination","codeColis","partenaireId","createdAt"])
+            && request.resource.data.partenaireId == request.auth.uid
+            && request.resource.data.compagnieExpedition is string
+            && request.resource.data.gareDestination is string
+            && request.resource.data.codeColis is string
+            && request.resource.data.createdAt == request.time);
+
+        allow read: if estAdmin()
+          || (estConnecte()
+            && get(commandePath(commandeId)).data.clientId == request.auth.uid)
+          || (estConnecte()
+            && get(commandePath(commandeId)).data.partenaireId == request.auth.uid)
+          || (estConnecte()
+            && get(commandePath(commandeId)).data.boutiqueUid == request.auth.uid);
+
+        allow update, delete: if estAdmin();
+      }
+
+      match /tarification/{docId} {
+        allow create: if docId == "prix"
+          && estConnecte()
+          && !exists(commandePath(commandeId))
+          && getAfter(commandePath(commandeId)).data.clientId == request.auth.uid
+          && (getAfter(commandePath(commandeId)).data.statut == "en_attente"
+            || (getAfter(commandePath(commandeId)).data.typeCommande == "boutique"
+              && getAfter(commandePath(commandeId)).data.statut == "commande_boutique"))
+          && request.resource.data.keys().hasAll(["distanceKm","distanceMetres","tarifKm","montantLivraison","fraisService","montantTotal","devise","operation","createdAt"])
+          && request.resource.data.keys().hasOnly(["distanceKm","distanceMetres","tarifKm","montantLivraison","fraisService","montantTotal","devise","operation","createdAt"])
+          && request.resource.data.distanceKm is number
+          && request.resource.data.distanceMetres is number
+          && request.resource.data.tarifKm in [100,120,150,190]
+          && request.resource.data.montantLivraison is int
+          && request.resource.data.fraisService in [0,300]
+          && request.resource.data.montantTotal == request.resource.data.montantLivraison + request.resource.data.fraisService
+          && (getAfter(commandePath(commandeId)).data.get("typeCommande", null) != "boutique"
+            || (request.resource.data.distanceKm == 0
+              && request.resource.data.distanceMetres == 0
+              && request.resource.data.fraisService == 0
+              && request.resource.data.montantLivraison == getAfter(commandePath(commandeId)).data.montantLivraisonBoutique
+              && request.resource.data.montantTotal == getAfter(commandePath(commandeId)).data.montantLivraisonBoutique))
+          && request.resource.data.devise == "FCFA"
+          && request.resource.data.createdAt == request.time;
+        allow read: if estAdmin()
+          || (estConnecte()
+            && get(commandePath(commandeId)).data.clientId == request.auth.uid)
+          || (estConnecte()
+            && get(commandePath(commandeId)).data.partenaireId == request.auth.uid
+            && (get(commandePath(commandeId)).data.statut == "arrive_destination"
+              || get(commandePath(commandeId)).data.statut == "livre"));
+        allow update: if estAdmin()
+          || (docId == "prix"
+            && estConnecte()
+            && get(commandePath(commandeId)).data.typeCommande == "boutique"
+            && get(commandePath(commandeId)).data.boutiqueUid == request.auth.uid
+            && get(commandePath(commandeId)).data.statut == "commande_boutique"
+            && getAfter(commandePath(commandeId)).data.statut == "en_attente"
+            && getAfter(commandePath(commandeId)).data.publicVersion == true
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["montantLivraison","montantTotal"])
+            && request.resource.data.montantLivraison is int
+            && request.resource.data.montantLivraison > 0
+            && request.resource.data.montantLivraison <= 100000
+            && request.resource.data.montantTotal == request.resource.data.montantLivraison
+            && request.resource.data.montantLivraison == getAfter(commandePath(commandeId)).data.montantLivraisonBoutique);
+        allow delete: if estAdmin();
+      }
+
+    }
+
+
+    // Service de cars de ramassage : profils, offres publiques et demandes privées.
+    function compagnieRamassageActive(uid) {
+      return exists(/databases/$(database)/documents/comptes_ramassage/$(uid))
+        && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.role == "compagnie"
+        && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.statut == "approuve"
+        && (
+          (get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.abonnement == "actif"
+            && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.dateExpirationAbonnement is timestamp
+            && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.dateExpirationAbonnement > request.time)
+          ||
+          (get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.abonnement == "essai"
+            && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.dateFinEssai is timestamp
+            && get(/databases/$(database)/documents/comptes_ramassage/$(uid)).data.dateFinEssai > request.time)
+        );
+    }
+
+    match /comptes_ramassage/{uid} {
+      allow create: if estConnecte()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.keys().hasAll(["uid","role","nom","telephone","email","statut","abonnement","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","role","nom","telephone","email","statut","abonnement","createdAt"])
+        && (request.resource.data.role == "usager"
+          ? request.resource.data.statut == "actif" && request.resource.data.abonnement == "non_applicable"
+          : request.resource.data.role == "compagnie"
+            && request.resource.data.statut == "en_attente"
+            && request.resource.data.abonnement == "inactif")
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
+      // L'administration peut approuver le dossier, mais aucun client ni administrateur
+      // via le SDK navigateur ne peut activer ou prolonger l'abonnement payant.
+      allow update: if estAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","abonnement","dateDebutEssai","dateFinEssai"])
+        && request.resource.data.statut == "approuve"
+        && request.resource.data.abonnement == "essai"
+        && request.resource.data.dateDebutEssai is timestamp
+        && request.resource.data.dateDebutEssai == request.time
+        && request.resource.data.dateFinEssai is timestamp
+        && request.resource.data.dateFinEssai > request.time + duration.value(29, "d")
+        && request.resource.data.dateFinEssai < request.time + duration.value(31, "d")
+        && (resource.data.statut != "approuve" || !("dateFinEssai" in resource.data));
+      allow delete: if estAdmin();
+    }
+
+    match /offres_ramassage/{offreId} {
+      allow read: if resource.data.statut == "publiee";
+      allow create: if estConnecte()
+        && request.resource.data.compagnieId == request.auth.uid
+        && compagnieRamassageActive(request.auth.uid)
+        && request.resource.data.keys().hasAll([
+          "compagnieId","compagnieNom","telephone","communeDepart","points","destination",
+          "jours","heure","placesDisponibles","tarif","statut","createdAt"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "compagnieId","compagnieNom","telephone","communeDepart","points","destination",
+          "jours","heure","placesDisponibles","tarif","statut","createdAt"
+        ])
+        && request.resource.data.statut == "publiee"
+        && request.resource.data.placesDisponibles is int
+        && request.resource.data.placesDisponibles > 0
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if estAdmin();
+    }
+
+    match /demandes_ramassage/{demandeId} {
+      allow create: if estConnecte()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasAll([
+          "userId","communeDepart","pointDepart","destination","jours",
+          "heure","places","statut","createdAt"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "userId","communeDepart","pointDepart","destination","jours",
+          "heure","places","statut","createdAt"
+        ])
+        && request.resource.data.statut == "ouverte"
+        && request.resource.data.places is int
+        && request.resource.data.places > 0
+        && request.resource.data.places <= 10
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin()
+        || (estConnecte() && resource.data.userId == request.auth.uid)
+        || (estConnecte() && compagnieRamassageActive(request.auth.uid));
+      allow update, delete: if estAdmin();
+    }
+
+    match /demandes_publicites/{demandeId} {
+      allow create: if demandePaiementManuelEnAttente(request.resource.data.statut)
+        && request.resource.data.keys().hasAll([
+          "nom","telephone","activite","description","forfait","forfaitTexte",
+          "dureeJours","montantFCFA","statut","createdAt"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "nom","telephone","activite","description","forfait","forfaitTexte",
+          "dureeJours","montantFCFA","statut","createdAt"
+        ])
+        && request.resource.data.nom is string
+        && request.resource.data.nom.size() > 0
+        && request.resource.data.nom.size() <= 80
+        && request.resource.data.telephone is string
+        && request.resource.data.telephone.size() >= 8
+        && request.resource.data.telephone.size() <= 20
+        && request.resource.data.activite is string
+        && request.resource.data.activite.size() > 0
+        && request.resource.data.activite.size() <= 100
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 1000
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time
+        && (
+          (request.resource.data.forfait == "Découverte"
+            && request.resource.data.dureeJours == 3
+            && request.resource.data.montantFCFA == 2000)
+          || (request.resource.data.forfait == "Visibilité"
+            && request.resource.data.dureeJours == 7
+            && request.resource.data.montantFCFA == 5000)
+          || (request.resource.data.forfait == "Professionnel"
+            && request.resource.data.dureeJours == 15
+            && request.resource.data.montantFCFA == 9000)
+          || (request.resource.data.forfait == "Premium"
+            && request.resource.data.dureeJours == 30
+            && request.resource.data.montantFCFA == 15000)
+        );
+      allow read, update, delete: if estAdmin();
+    }
+
+    match /abonnements_petites_annonces/{uid} {
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
+      allow create: if estConnecte() && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.keys().hasOnly(["uid","email","statut","essaiGratuitUtilise","dateDebut","dateExpiration","paiementStatut","createdAt"])
+        && request.resource.data.statut == "actif"
+        && request.resource.data.essaiGratuitUtilise == true
+        && request.resource.data.paiementStatut == "gratuit"
+        && request.resource.data.dateDebut == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.dateExpiration is timestamp
+        && abonnementAutorise("petites_annonces")
+        && abonnementChamp("petites_annonces", "essai", 30) > 0
+        && request.resource.data.dateExpiration >= request.time + duration.value(abonnementChamp("petites_annonces", "essai", 30) - 1, "d")
+        && request.resource.data.dateExpiration <= request.time + duration.value(abonnementChamp("petites_annonces", "essai", 30) + 1, "d");
+      // Seul le Worker Jèko (Admin SDK, qui contourne les règles) peut modifier
+      // l'état, la date d'expiration ou les champs de paiement d'un abonnement.
+      // L'admin depuis le navigateur peut encore modifier des champs non financiers.
+      allow update: if estAdmin()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          "statut","dateExpiration","dateDebut","paiementStatut","paiementMoyen",
+          "paiementReference","montantRenouvellement","dureeRenouvellementJours",
+          "demandeRenouvellementLe","dateConfirmationPaiement","confirmePar",
+          "dernierPaiementFCFA","dernierPaiementLe","paymentId"
+        ]);
+      allow delete: if estAdmin();
+    }
+
+    match /demandes_nouveaux_services/{demandeId} {
+      allow create: if estConnecte()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","telephone","description","email","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","quartier","telephone","description","infosProfessionnelles","email","photoUrl","adresseBoutique","montantAbonnement","dureeAbonnementJours","paiementStatut","modePartenaire","planAbonnementId","abonnementStatut","statut","createdAt"])
+        && request.resource.data.type in ["auto_ecole","vulcanisateur","depannage","hebergement","depannage_domicile","commerce","annonce"]
+        && (!request.resource.data.keys().hasAny(["modePartenaire"]) || request.resource.data.get("modePartenaire", false) == true)
+        && (request.resource.data.type != "commerce"
+          || request.resource.data.get("modePartenaire", false) == true
+          || (request.resource.data.adresseBoutique is string
+            && request.resource.data.adresseBoutique.size() > 4
+            && request.resource.data.adresseBoutique.size() <= 220
+            && request.resource.data.planAbonnementId in ["boutiques_1mois","boutiques_2mois","boutiques_3mois"]
+            && request.resource.data.abonnementStatut == "a_payer"
+            && request.resource.data.paiementStatut == "a_payer"
+            && request.resource.data.montantAbonnement is int
+            && request.resource.data.montantAbonnement > 0
+            && request.resource.data.montantAbonnement <= 10000000
+            && request.resource.data.dureeAbonnementJours is int
+            && request.resource.data.dureeAbonnementJours > 0
+            && request.resource.data.dureeAbonnementJours <= 90))
+        && request.resource.data.titre is string && request.resource.data.titre.size() > 0 && request.resource.data.titre.size() <= 100
+        && request.resource.data.categorie is string && request.resource.data.categorie.size() <= 80
+        && request.resource.data.commune is string && request.resource.data.commune.size() > 0 && request.resource.data.commune.size() <= 60
+        && (!["hebergement","depannage_domicile","auto_ecole","vulcanisateur"].hasAny([request.resource.data.type]) || (request.resource.data.get("quartier", "") is string && request.resource.data.get("quartier", "").size() > 0 && request.resource.data.get("quartier", "").size() <= 80))
+        && (!request.resource.data.keys().hasAny(["quartier"]) || (request.resource.data.quartier is string && request.resource.data.quartier.size() <= 80))
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 20
+        && request.resource.data.description is string && request.resource.data.description.size() > 0 && request.resource.data.description.size() <= 1200
+        && request.resource.data.email is string
+        && request.resource.data.email.matches("^[^@ ]+@[^@ ]+\\.[^@ ]+$")
+        && request.resource.data.email.size() <= 120
+        && (request.resource.data.type != "depannage_domicile"
+          || (request.resource.data.infosProfessionnelles is string
+            && request.resource.data.infosProfessionnelles.size() >= 10
+            && request.resource.data.infosProfessionnelles.size() <= 1200
+            && request.resource.data.photoUrl is string
+            && request.resource.data.photoUrl.size() >= 40))
+        && (request.resource.data.type != "auto_ecole" && request.resource.data.type != "vulcanisateur"
+          || (request.resource.data.infosProfessionnelles is string
+            && request.resource.data.infosProfessionnelles.size() >= 10
+            && request.resource.data.infosProfessionnelles.size() <= 1200))
+        && (!request.resource.data.keys().hasAny(["infosProfessionnelles"])
+          || (request.resource.data.infosProfessionnelles is string
+            && request.resource.data.infosProfessionnelles.size() <= 1200))
+        && (!request.resource.data.keys().hasAny(["photoUrl"])
+          || (request.resource.data.photoUrl is string
+            && request.resource.data.photoUrl.size() >= 40
+            && request.resource.data.photoUrl.size() <= 400000
+            && request.resource.data.photoUrl.matches("^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$")))
+        && (request.resource.data.type != "annonce"
+          || (existsAfter(/databases/$(database)/documents/abonnements_petites_annonces/$(request.auth.uid))
+            && getAfter(/databases/$(database)/documents/abonnements_petites_annonces/$(request.auth.uid)).data.dateExpiration is timestamp
+            && getAfter(/databases/$(database)/documents/abonnements_petites_annonces/$(request.auth.uid)).data.dateExpiration > request.time))
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin()
+        || (estConnecte() && resource.data.uid == request.auth.uid)
+        || (resource.data.type != "annuaire"
+          && resource.data.statut == "approuve"
+          && (resource.data.type != "depannage" || estAbonneAutomobiliste()));
+      allow update: if estAdmin()
+        && resource.data.type != "annuaire"
+        && (resource.data.type != "commerce"
+          || !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            "abonnementDebut","abonnementFin","abonnementStatut","paiementStatut",
+            "montantAbonnement","dureeAbonnementJours","dernierPaiementFCFA",
+            "dernierPaiementConfirmeLe","renouvellementJekoPaymentId","renouvellementJekoStatut"
+          ])
+          || (resource.data.statut == "en_attente"
+            && request.resource.data.statut == "approuve"
+            && ((resource.data.get("modePartenaire", false) == true
+              && request.resource.data.abonnementStatut == "essai_gratuit"
+              && request.resource.data.paiementStatut == "gratuit"
+              && request.resource.data.abonnementDebut == request.time
+              && request.resource.data.abonnementFin is timestamp
+              && request.resource.data.abonnementFin >= request.time + duration.value(29, "d")
+              && request.resource.data.abonnementFin <= request.time + duration.value(31, "d"))
+              || (resource.data.get("modePartenaire", false) != true
+                && request.resource.data.abonnementStatut == "a_payer"
+                && request.resource.data.paiementStatut == "a_payer"
+                && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                  "abonnementDebut","abonnementFin","dernierPaiementFCFA","dernierPaiementConfirmeLe"
+                ])))));
+      allow delete: if estAdmin();
+    }
+
+    match /demandes_renouvellement_boutiques/{demandeId} {
+      // Legacy manual payment requests are retained for history only.
+      // New renewals use the authenticated Jeko Worker; no browser can create
+      // or approve a manual payment request.
+      allow create, update, delete: if false;
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+    }
+
+    match /avis_boutiques/{avisId} {
+      allow create: if request.resource.data.keys().hasAll([
+          "boutiqueId","boutiqueUid","nom","produit","commentaire",
+          "satisfaction","achatDeclare","createdAt"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "boutiqueId","boutiqueUid","nom","produit","commentaire",
+          "satisfaction","achatDeclare","createdAt"
+        ])
+        && request.resource.data.boutiqueId is string
+        && exists(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId))
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.type == "commerce"
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.uid == request.resource.data.boutiqueUid
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.statut == "approuve"
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin is timestamp
+        && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin > request.time
+        && request.resource.data.nom is string
+        && request.resource.data.nom.size() > 0
+        && request.resource.data.nom.size() <= 80
+        && request.resource.data.produit is string
+        && request.resource.data.produit.size() > 0
+        && request.resource.data.produit.size() <= 100
+        && request.resource.data.commentaire is string
+        && request.resource.data.commentaire.size() > 0
+        && request.resource.data.commentaire.size() <= 700
+        && request.resource.data.satisfaction in ["satisfait","mitige","insatisfait"]
+        && request.resource.data.achatDeclare == true
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin()
+        || (estConnecte() && resource.data.boutiqueUid == request.auth.uid);
+      allow update, delete: if estAdmin();
+    }
+
+    match /publicites/{publiciteId} {
+      allow read: if estAdmin() || resource.data.statut == "publiee";
+      allow create, update, delete: if estAdmin();
+    }
+
+    match /demandes_abonnement_automobiliste/{demandeId} {
+      // Historical manual payment requests are retained for review only.
+      allow create: if false;
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update: if estAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","traiteLe","traitePar"])
+        && request.resource.data.statut == "refuse";
+      allow delete: if estAdmin();
+    }
+
+    match /abonnements_automobiliste/{uid} {
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
+      // Only the Jèko Worker Admin SDK can create or change paid subscriptions.
+      allow create, update, delete: if false;
+    }
+
+    match /configuration_application/{configId} {
+      allow read: if true;
+      allow create, update, delete: if estAdmin();
+    }
+
+
+    match /annonceurs/{uid} {
+      allow create: if estConnecte() && request.auth.uid == uid && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly(["uid","nom","telephone","email","createdAt"])
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 2
+        && request.resource.data.telephone is string && request.resource.data.email == request.auth.token.email
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
+      allow update: if estAdmin() || (estConnecte() && request.auth.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nom","telephone"]));
+      allow delete: if estAdmin();
+    }
+    // Offres d'emploi : soumissions utilisateurs en attente ; validation par l'administrateur.
+    match /annonces_offres/{id} {
+      allow create: if estConnecte()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasAll(["uid","titre","entreprise","categorie","commune","telephone","description","typeAnnonce","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","titre","entreprise","categorie","commune","telephone","description","typeAnnonce","statut","createdAt","annonceurNom","paiementMoyen","referencePaiement","montantFCFA","dureeJours","paiementStatut"])
+        && request.resource.data.typeAnnonce == "emploi"
+        && request.resource.data.titre is string && request.resource.data.titre.size() >= 3 && request.resource.data.titre.size() <= 120
+        && request.resource.data.entreprise is string && request.resource.data.entreprise.size() >= 2 && request.resource.data.entreprise.size() <= 120
+        && request.resource.data.categorie in ["Emploi","Stage","Formation","Appel à candidatures","Autre opportunité"]
+        && request.resource.data.commune is string && request.resource.data.commune.size() >= 2 && request.resource.data.commune.size() <= 80
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 6 && request.resource.data.telephone.size() <= 25
+        && request.resource.data.description is string && request.resource.data.description.size() >= 20 && request.resource.data.description.size() <= 1800
+        && request.resource.data.createdAt == request.time
+        && (request.resource.data.statut == "en_attente" || (estAdmin() && request.resource.data.statut == "publiee"));
+      allow read: if estAdmin() || resource.data.statut == "publiee" || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update: if estAdmin() && resource.data.typeAnnonce == "emploi"
+        && resource.data.statut == "en_attente" && request.resource.data.statut == "publiee"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","valideePar","dateValidation"])
+        && request.resource.data.valideePar == request.auth.uid && request.resource.data.dateValidation == request.time;
+      allow delete: if estAdmin();
+    }
+    match /informations_admin/{id} {
+      allow read: if estAdmin() || resource.data.statut == "publiee";
+      allow create: if estAdmin() && request.resource.data.keys().hasOnly(["message","statut","publieLe","createdBy"])
+        && request.resource.data.message is string && request.resource.data.message.size() >= 3 && request.resource.data.message.size() <= 1500
+        && request.resource.data.statut == "publiee" && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if estAdmin();
+    }
+    match /gbairai_profils/{uid} {
+      allow create: if estConnecte() && request.auth.uid == uid && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly(["uid","pseudonyme","gratuitRestant","bonusRestant","resetAt","createdAt"])
+        && request.resource.data.pseudonyme is string && request.resource.data.pseudonyme.size() >= 2 && request.resource.data.pseudonyme.size() <= 24
+        && request.resource.data.gratuitRestant == 15 && request.resource.data.bonusRestant == 0
+        && (request.resource.data.resetAt == null || request.resource.data.resetAt is timestamp) && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
+      allow update: if estAdmin() || (estConnecte() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["gratuitRestant","bonusRestant","resetAt","lastMessageId","lastSentAt"])
+        && request.resource.data.lastMessageId is string
+        && getAfter(/databases/$(database)/documents/gbairai_messages/$(request.resource.data.lastMessageId)).data.senderUid == uid
+        && ((request.resource.data.gratuitRestant == resource.data.gratuitRestant - 1 && request.resource.data.bonusRestant == resource.data.bonusRestant)
+          || (request.resource.data.bonusRestant == resource.data.bonusRestant - 1 && request.resource.data.gratuitRestant == resource.data.gratuitRestant)
+          || (resource.data.resetAt is timestamp && resource.data.resetAt <= request.time
+            && request.resource.data.gratuitRestant in [14,15]
+            && request.resource.data.resetAt == null
+            && request.resource.data.bonusRestant in [resource.data.bonusRestant,resource.data.bonusRestant - 1])
+          || (resource.data.gratuitRestant == 1 && request.resource.data.gratuitRestant == 0
+            && request.resource.data.bonusRestant == resource.data.bonusRestant
+            && request.resource.data.resetAt is timestamp && request.resource.data.resetAt > request.time)));
+      allow delete: if estAdmin();
+    }
+    match /gbairai_messages/{id} {
+      allow read: if true;
+      allow create: if estConnecte() && request.resource.data.keys().hasOnly(["senderUid","pseudonyme","texte","createdAt","expiresAt"])
+        && request.resource.data.senderUid == request.auth.uid && request.resource.data.pseudonyme is string
+        && request.resource.data.texte is string && request.resource.data.texte.size() >= 1 && request.resource.data.texte.size() <= 500
+        && request.resource.data.createdAt == request.time && request.resource.data.expiresAt is timestamp && request.resource.data.expiresAt > request.time
+        && existsAfter(/databases/$(database)/documents/gbairai_profils/$(request.auth.uid))
+        && getAfter(/databases/$(database)/documents/gbairai_profils/$(request.auth.uid)).data.lastMessageId == id;
+      allow update: if false;
+      allow delete: if estAdmin();
+    }
+    match /gbairai_recharges/{id} {
+      allow create: if demandePaiementManuelEnAttente(request.resource.data.statut) && estConnecte() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(["uid","pseudonyme","operateur","referencePaiement","montantFCFA","messages","statut","createdAt"])
+        && request.resource.data.operateur in ["Wave","Orange Money"] && request.resource.data.referencePaiement is string
+        && request.resource.data.referencePaiement.size() >= 4 && request.resource.data.montantFCFA == 100
+        && request.resource.data.messages == 15 && request.resource.data.statut == "en_attente" && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update, delete: if estAdmin();
+    }
+
+
+    // Déclarations publiques : seuls les champs non sensibles sont stockés ici.
+    match /objets_retrouves/{objetId} {
+      allow read: if estAdmin() || resource.data.statut == "publie";
+      allow create: if request.resource.data.keys().hasOnly(["type","description","lieu","statut","createdAt"])
+        && request.resource.data.keys().hasAll(["type","description","lieu","statut","createdAt"])
+        && request.resource.data.type in ["Objet","Document"]
+        && request.resource.data.description is string
+        && request.resource.data.description.size() >= 1
+        && request.resource.data.description.size() <= 500
+        && request.resource.data.lieu is string
+        && request.resource.data.lieu.size() >= 1
+        && request.resource.data.lieu.size() <= 180
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if estAdmin();
+    }
+
+    // Coordonnées du trouveur et identité du document : administrateur uniquement.
+    match /objets_retrouves_prives/{objetId} {
+      allow create: if request.resource.data.keys().hasOnly(["objetId","trouveurNom","trouveurTelephone","nomDocument","createdAt"])
+        && request.resource.data.keys().hasAll(["objetId","trouveurNom","trouveurTelephone","nomDocument","createdAt"])
+        && request.resource.data.objetId == objetId
+        && request.resource.data.trouveurNom is string
+        && request.resource.data.trouveurNom.size() >= 2
+        && request.resource.data.trouveurNom.size() <= 100
+        && request.resource.data.trouveurTelephone is string
+        && request.resource.data.trouveurTelephone.size() >= 6
+        && request.resource.data.trouveurTelephone.size() <= 25
+        && request.resource.data.nomDocument is string
+        && request.resource.data.nomDocument.size() <= 100
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if estAdmin();
+    }
+
+    // Coordonnées du demandeur et références de paiement : aucun accès public en lecture.
+    match /demandes_recuperation_objets/{demandeId} {
+      // Création réservée au Worker Jèko via le compte de service après confirmation du webhook.
+      allow create: if false;
+      allow read, update, delete: if estAdmin();
+    }
+
+    // Répertoire public des supermarchés importés depuis OpenStreetMap.
+    // Seul l'administrateur peut importer, corriger ou supprimer les fiches.
+    match /supermarches/{supermarcheId} {
+      allow read: if true;
+      allow create, update, delete: if estAdmin();
+    }
+
+
+    // Dons et solidarité : seules les publications approuvées sont visibles publiquement.
+    // Les coordonnées personnelles sont conservées dans une sous-collection privée.
+    match /dons_solidarite/{dossierId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","description","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","description","statut","createdAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.type in ["don","besoin"]
+        && request.resource.data.titre is string
+        && request.resource.data.titre.size() >= 2
+        && request.resource.data.titre.size() <= 100
+        && request.resource.data.categorie is string
+        && request.resource.data.categorie.size() <= 80
+        && request.resource.data.commune is string
+        && request.resource.data.commune.size() >= 2
+        && request.resource.data.commune.size() <= 60
+        && request.resource.data.description is string
+        && request.resource.data.description.size() >= 2
+        && request.resource.data.description.size() <= 1000
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/dons_solidarite/$(dossierId)/informations_privees/contact)
+        && getAfter(/databases/$(database)/documents/dons_solidarite/$(dossierId)/informations_privees/contact).data.uid == request.auth.uid;
+      allow read: if estAdmin() || resource.data.statut == "approuve";
+      allow update, delete: if estAdmin();
+
+      match /informations_privees/{contactId} {
+        allow create: if estConnecte()
+          && contactId == "contact"
+          && request.resource.data.keys().hasAll(["uid","nom","telephone","email","createdAt"])
+          && request.resource.data.keys().hasOnly(["uid","nom","telephone","email","createdAt"])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.nom is string
+          && request.resource.data.nom.size() >= 2
+          && request.resource.data.nom.size() <= 100
+          && request.resource.data.telephone is string
+          && request.resource.data.telephone.size() >= 6
+          && request.resource.data.telephone.size() <= 20
+          && request.resource.data.email is string
+          && request.resource.data.email.size() <= 120
+          && request.resource.data.createdAt == request.time
+          && existsAfter(/databases/$(database)/documents/dons_solidarite/$(dossierId))
+          && getAfter(/databases/$(database)/documents/dons_solidarite/$(dossierId)).data.uid == request.auth.uid;
+        allow read: if estAdmin();
+        allow update, delete: if estAdmin();
+      }
+    }
+
+    // Répertoire de proximité : lecture publique, gestion réservée à l'administrateur.
+    match /services_proximite/{serviceId} {
+      allow read: if true;
+      allow create, update, delete: if estAdmin();
+    }
+
+    match /demandes_foncieres_privees/{demandeId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["uid","email","nom","telephone","typeDemande","question","refs","statut","reponseAdmin","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["uid","email","nom","telephone","typeDemande","question","refs","statut","reponseAdmin","createdAt","updatedAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 2 && request.resource.data.nom.size() <= 100
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 6 && request.resource.data.telephone.size() <= 25
+        && request.resource.data.typeDemande in ["verification_lotissement","verification_parcelle","comprendre_document","suivi_demande"]
+        && request.resource.data.question is string && request.resource.data.question.size() >= 5 && request.resource.data.question.size() <= 1200
+        && request.resource.data.refs is map && request.resource.data.refs.keys().hasOnly(["localite","lotissement","ilot","lot","idufci"])
+        && request.resource.data.statut == "reçue" && request.resource.data.reponseAdmin == ""
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update, delete: if estAdmin();
+    }
+
+
+    // Ma commune en direct : lecture publique des seules publications visibles, écriture administrateur.
+    match /actualites_communes/{actualiteId} {
+      allow read: if estAdmin() || resource.data.statut == "publiee";
+      allow create: if estAdmin()
+        && request.resource.data.keys().hasAll(["titre","commune","categorie","description","source","lienSource","dateFin","statut","createdAt","publiePar"])
+        && request.resource.data.keys().hasOnly(["titre","commune","categorie","description","source","lienSource","dateFin","statut","createdAt","publiePar"])
+        && request.resource.data.titre is string && request.resource.data.titre.size() >= 4 && request.resource.data.titre.size() <= 120
+        && request.resource.data.commune is string && request.resource.data.commune.size() >= 2 && request.resource.data.commune.size() <= 80
+        && request.resource.data.categorie in ["routes","eau_electricite","municipal","securite","evenement","autre"]
+        && request.resource.data.description is string && request.resource.data.description.size() >= 10 && request.resource.data.description.size() <= 1800
+        && request.resource.data.source is string && request.resource.data.source.size() <= 160
+        && request.resource.data.lienSource is string && request.resource.data.lienSource.size() <= 500
+        && request.resource.data.dateFin is string && request.resource.data.dateFin.size() <= 10
+        && request.resource.data.statut == "publiee"
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.publiePar == request.auth.uid;
+      allow update: if estAdmin();
+      allow delete: if estAdmin();
+    }
+
+    // Propositions d'informations locales : lecture privée à l'administrateur, création par un compte connecté.
+    match /propositions_communes/{propositionId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["uid","email","titre","commune","categorie","description","source","lienSource","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","email","titre","commune","categorie","description","source","lienSource","statut","createdAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.titre is string && request.resource.data.titre.size() >= 4 && request.resource.data.titre.size() <= 120
+        && request.resource.data.commune is string && request.resource.data.commune.size() >= 2 && request.resource.data.commune.size() <= 80
+        && request.resource.data.categorie in ["routes","eau_electricite","municipal","securite","evenement","autre"]
+        && request.resource.data.description is string && request.resource.data.description.size() >= 10 && request.resource.data.description.size() <= 1800
+        && request.resource.data.source is string && request.resource.data.source.size() <= 160
+        && request.resource.data.lienSource is string && request.resource.data.lienSource.size() <= 500
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin();
+      allow update: if estAdmin();
+      allow delete: if estAdmin();
+    }
+
+    // Paramètres des abonnements : lecture publique des tarifs et informations de paiement.
+    // Toute modification reste réservée à l'administrateur. Les annuaires ne sont pas configurables ici.
+    match /configuration_abonnements/{configId} {
+      allow read: if configId == "globale";
+      allow create, update, delete: if estAdmin() && configId == "globale";
+    }
+
+
+    // Articles de boutiques : les vendeurs ne peuvent gérer que les articles de leur boutique active.
+    match /articles_boutiques/{articleId} {
+      function boutiqueActive(boutiqueId) {
+        return estConnecte()
+          && exists(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId))
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.type == "commerce"
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.uid == request.auth.uid
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.statut == "approuve"
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.abonnementFin is timestamp
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.abonnementFin > request.time;
+      }
+      allow read: if estAdmin()
+        || (estConnecte() && resource.data.boutiqueUid == request.auth.uid)
+        || resource.data.statut == "approuve";
+      allow create: if boutiqueActive(request.resource.data.boutiqueId)
+        && request.resource.data.boutiqueUid == request.auth.uid
+        && request.resource.data.keys().hasAll(["boutiqueId","boutiqueUid","boutiqueNom","nom","categorie","prix","description","photoUrl","disponible","statut","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["boutiqueId","boutiqueUid","boutiqueNom","nom","categorie","prix","description","photoUrl","disponible","statut","createdAt","updatedAt"])
+        && request.resource.data.nom is string && request.resource.data.nom.size() > 0 && request.resource.data.nom.size() <= 100
+        && request.resource.data.categorie is string && request.resource.data.categorie.size() > 0 && request.resource.data.categorie.size() <= 70
+        && request.resource.data.prix is int && request.resource.data.prix > 0 && request.resource.data.prix <= 100000000
+        && request.resource.data.description is string && request.resource.data.description.size() <= 700
+        && request.resource.data.photoUrl is string && request.resource.data.photoUrl.size() <= 400000 && request.resource.data.photoUrl.matches("^data:image/jpeg;base64,.*$")
+        && request.resource.data.disponible is bool
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if estAdmin();
+      allow delete: if estAdmin()
+        || (estConnecte() && resource.data.boutiqueUid == request.auth.uid && boutiqueActive(resource.data.boutiqueId));
+    }
+
+    // Déclarations d’enfants : données publiques limitées, coordonnées privées séparées.
+    match /declarations_enfants/{dossierId} {
+      allow read: if estAdmin()
+        || resource.data.statut == "approuve"
+        || (estConnecte()
+          && resource.data.statut == "en_attente"
+          && exists(/databases/$(database)/documents/declarations_enfants/$(dossierId)/informations_privees/contact)
+          && get(/databases/$(database)/documents/declarations_enfants/$(dossierId)/informations_privees/contact).data.uid == request.auth.uid);
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["type","nom","age","photoUrl","telephonePublic","presencePublic","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["type","nom","age","photoUrl","telephonePublic","presencePublic","statut","createdAt"])
+        && request.resource.data.type in ["perdu","retrouve"]
+        && request.resource.data.nom is string && request.resource.data.nom.size() <= 120
+        && request.resource.data.age is string && request.resource.data.age.size() <= 3
+        && request.resource.data.photoUrl == ""
+        && request.resource.data.telephonePublic == ""
+        && request.resource.data.presencePublic == ""
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/declarations_enfants/$(dossierId)/informations_privees/contact)
+        && getAfter(/databases/$(database)/documents/declarations_enfants/$(dossierId)/informations_privees/contact).data.uid == request.auth.uid;
+      allow update: if estAdmin()
+        && (resource.data.photoUrl == "" || request.resource.data.photoUrl == resource.data.photoUrl);
+      allow delete: if estAdmin() && resource.data.photoUrl == "";
+      match /informations_privees/{contactId} {
+        allow create: if estConnecte() && contactId == "contact"
+          && request.resource.data.uid == request.auth.uid
+          && getAfter(/databases/$(database)/documents/declarations_enfants/$(dossierId)).data.statut == "en_attente";
+        allow read: if estAdmin()
+          || (estConnecte() && resource.data.uid == request.auth.uid);
+        allow update, delete: if estAdmin();
+      }
+    }
+
+    // Module Logement : comptes et abonnements indépendants des autres partenaires/annuaires.
+    function logementAbonnementActif(uid) {
+      return exists(/databases/$(database)/documents/partenaires_logement/$(uid))
+        && get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.statutCompte == "actif"
+        && (
+          (get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.statutAbonnement == "essai"
+            && get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.finEssai is timestamp
+            && get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.finEssai > request.time)
+          ||
+          (get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.statutAbonnement == "actif"
+            && get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.finAbonnement is timestamp
+            && get(/databases/$(database)/documents/partenaires_logement/$(uid)).data.finAbonnement > request.time)
+        );
+    }
+    match /partenaires_logement/{uid} {
+      allow create: if estConnecte() && request.auth.uid == uid
+        && request.resource.data.keys().hasAll(["uid","type","nom","telephone","email","statutCompte","statutAbonnement","debutEssai","finEssai","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","nom","telephone","email","statutCompte","statutAbonnement","debutEssai","finEssai","createdAt","updatedAt"])
+        && request.resource.data.uid == uid
+        && request.resource.data.type in ["particulier","agence"]
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 2 && request.resource.data.nom.size() <= 120
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 24
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.statutCompte == "actif"
+        && request.resource.data.statutAbonnement == "essai"
+        && request.resource.data.finEssai is timestamp
+        && request.resource.data.finEssai > request.time
+        && request.resource.data.finEssai <= request.time + duration.value(30, "d")
+        && request.resource.data.createdAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
+      allow update: if estAdmin()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          "statutAbonnement","debutAbonnement","finAbonnement",
+          "renouvellementJekoPaymentId","renouvellementJekoStatut",
+          "dernierPaiementJekoMontant","dernierPaiementJekoLe"
+        ]);
+      allow delete: if estAdmin();
+    }
+    match /annonces_logement/{annonceId} {
+      allow read: if estAdmin()
+        || resource.data.statut == "publiee"
+        || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow create: if estConnecte()
+        && logementAbonnementActif(request.auth.uid)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasAll(["uid","nomPublieur","typePublieur","titre","categorie","transaction","prix","periodePrix","commune","quartier","description","telephone","whatsapp","photos","statut","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["uid","nomPublieur","typePublieur","titre","categorie","transaction","prix","periodePrix","commune","quartier","adresse","superficie","description","telephone","whatsapp","photos","statut","createdAt","updatedAt"])
+        && request.resource.data.typePublieur in ["particulier","agence"]
+        && request.resource.data.titre is string && request.resource.data.titre.size() >= 4 && request.resource.data.titre.size() <= 120
+        && request.resource.data.categorie in ["Hôtel","Résidence meublée","Chambre à louer","Studio à louer","Appartement à louer","Maison à louer","Appartement à vendre","Maison à vendre","Terrain à vendre"]
+        && request.resource.data.transaction in ["location","vente"]
+        && request.resource.data.prix is number && request.resource.data.prix > 0 && request.resource.data.prix <= 10000000000
+        && request.resource.data.periodePrix in ["par nuit","par mois","par an","prix total"]
+        && request.resource.data.commune is string && request.resource.data.commune.size() >= 2 && request.resource.data.commune.size() <= 80
+        && request.resource.data.quartier is string && request.resource.data.quartier.size() >= 2 && request.resource.data.quartier.size() <= 100
+        && (!("adresse" in request.resource.data) || (request.resource.data.adresse is string && request.resource.data.adresse.size() <= 250))
+        && (!("superficie" in request.resource.data) || (request.resource.data.superficie is string && request.resource.data.superficie.size() <= 100))
+        && request.resource.data.description is string && request.resource.data.description.size() >= 20 && request.resource.data.description.size() <= 2500
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 24
+        && request.resource.data.whatsapp is string && request.resource.data.whatsapp.size() <= 24
+        && request.resource.data.photos is list && request.resource.data.photos.size() >= 1 && request.resource.data.photos.size() <= 8
+        && ((get(/databases/$(database)/documents/partenaires_logement/$(request.auth.uid)).data.get("premierePublicationValidee", false) == true && request.resource.data.statut == "publiee") || (get(/databases/$(database)/documents/partenaires_logement/$(request.auth.uid)).data.get("premierePublicationValidee", false) != true && request.resource.data.statut == "en_attente"))
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if estAdmin();
+      allow delete: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+    }
+    match /historique_suppressions_logement/{auditId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll(["uid","annonceId","titre","commune","deletedAt"])
+        && request.resource.data.keys().hasOnly(["uid","annonceId","titre","commune","deletedAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.annonceId is string
+        && request.resource.data.titre is string
+        && request.resource.data.commune is string
+        && request.resource.data.deletedAt == request.time
+        && exists(/databases/$(database)/documents/annonces_logement/$(request.resource.data.annonceId))
+        && get(/databases/$(database)/documents/annonces_logement/$(request.resource.data.annonceId)).data.uid == request.auth.uid;
+      allow read: if estAdmin();
+      allow update, delete: if estAdmin();
+    }
+    match /demandes_abonnement_logement/{demandeId} {
+      // Historical manual payment requests remain readable; no new manual requests or confirmations.
+      allow create: if false;
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow update: if estAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","reviewedAt","reviewedBy"])
+        && request.resource.data.statut == "refuse";
+      allow delete: if estAdmin();
+    }
+
+
+    // Trajet partagé : profils soumis à validation, trajets publiés et réservations privées.
+    match /trajet_partage_profils/{uid} {
+      allow create: if estConnecte() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(["uid","nom","telephone","categorie","statutVerification","documents","createdAt","updatedAt"])
+        && request.resource.data.keys().hasAll(["uid","nom","telephone","categorie","statutVerification","documents","createdAt","updatedAt"])
+        && request.resource.data.uid == uid
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 2 && request.resource.data.nom.size() <= 100
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 24
+        && request.resource.data.categorie in ["particulier","entreprise"]
+        && request.resource.data.statutVerification == "en_attente"
+        && request.resource.data.documents is map
+        && request.resource.data.documents.keys().hasOnly(["permis","carteGrise","assurance"])
+        && request.resource.data.documents.keys().hasAll(["permis","carteGrise","assurance"])
+        && request.resource.data.documents.permis == true
+        && request.resource.data.documents.carteGrise == true
+        && request.resource.data.documents.assurance == true
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == uid);
+      allow update: if estAdmin()
+        ? resource.data.statutVerification == "en_attente"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statutVerification","updatedAt"])
+          && request.resource.data.statutVerification in ["approuve","refuse"]
+          && request.resource.data.updatedAt == request.time
+        : estConnecte() && request.auth.uid == uid
+          && resource.data.statutVerification == "en_attente"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nom","telephone","categorie","updatedAt"])
+          && request.resource.data.statutVerification == resource.data.statutVerification
+          && request.resource.data.uid == resource.data.uid;
+      allow delete: if estAdmin();
+    }
+    match /trajets_partages/{trajetId} {
+      allow create: if estConnecte()
+        && request.resource.data.conducteurUid == request.auth.uid
+        && exists(/databases/$(database)/documents/trajet_partage_profils/$(request.auth.uid))
+        && get(/databases/$(database)/documents/trajet_partage_profils/$(request.auth.uid)).data.statutVerification == "approuve"
+        && request.resource.data.keys().hasOnly(["conducteurUid","conducteurNom","depart","destination","dateTrajet","heureDepart","pointRencontre","placesDisponibles","tarifParPlace","statut","createdAt","updatedAt"])
+        && request.resource.data.conducteurNom is string
+        && request.resource.data.depart is string && request.resource.data.depart.size() >= 2 && request.resource.data.depart.size() <= 80
+        && request.resource.data.destination is string && request.resource.data.destination.size() >= 2 && request.resource.data.destination.size() <= 80
+        && request.resource.data.dateTrajet is timestamp && request.resource.data.dateTrajet > request.time
+        && request.resource.data.heureDepart is string && request.resource.data.heureDepart.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        && request.resource.data.pointRencontre is string && request.resource.data.pointRencontre.size() >= 2 && request.resource.data.pointRencontre.size() <= 120
+        && request.resource.data.placesDisponibles is int && request.resource.data.placesDisponibles >= 1 && request.resource.data.placesDisponibles <= 7
+        && request.resource.data.tarifParPlace is int && request.resource.data.tarifParPlace >= 100 && request.resource.data.tarifParPlace <= 100000
+        && request.resource.data.statut == "publie"
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && resource.data.conducteurUid == request.auth.uid) || resource.data.statut == "publie";
+      allow update: if estAdmin() || (estConnecte() && resource.data.conducteurUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["placesDisponibles","statut","updatedAt"])
+        && request.resource.data.placesDisponibles == resource.data.placesDisponibles - 1
+        && request.resource.data.placesDisponibles >= 0
+        && request.resource.data.statut == (request.resource.data.placesDisponibles == 0 ? "complet" : "publie")
+        && request.resource.data.updatedAt == request.time);
+      allow delete: if estAdmin() || (estConnecte() && resource.data.conducteurUid == request.auth.uid);
+    }
+    match /reservations_trajets/{reservationId} {
+      function trajetLie() {
+        return exists(/databases/$(database)/documents/trajets_partages/$(request.resource.data.trajetId))
+          && get(/databases/$(database)/documents/trajets_partages/$(request.resource.data.trajetId)).data.conducteurUid == request.resource.data.conducteurUid
+          && get(/databases/$(database)/documents/trajets_partages/$(request.resource.data.trajetId)).data.statut == "publie"
+          && get(/databases/$(database)/documents/trajets_partages/$(request.resource.data.trajetId)).data.placesDisponibles >= 1
+          && get(/databases/$(database)/documents/trajets_partages/$(request.resource.data.trajetId)).data.dateTrajet == request.resource.data.dateTrajet
+          && get(/databases/$(database)/documents/trajets_partages/$(request.resource.data.trajetId)).data.tarifParPlace == request.resource.data.tarifParPlace;
+      }
+      allow create: if estConnecte()
+        && request.resource.data.passagerUid == request.auth.uid
+        && request.resource.data.conducteurUid is string && request.resource.data.conducteurUid != request.auth.uid
+        && request.resource.data.keys().hasOnly(["trajetId","conducteurUid","passagerUid","passagerNom","dateTrajet","heureDepart","depart","destination","pointRencontre","tarifParPlace","places","statut","createdAt","updatedAt"])
+        && request.resource.data.trajetId is string && request.resource.data.passagerNom is string
+        && request.resource.data.dateTrajet is timestamp && request.resource.data.dateTrajet > request.time
+        && request.resource.data.heureDepart is string
+        && request.resource.data.depart is string && request.resource.data.destination is string
+        && request.resource.data.pointRencontre is string && request.resource.data.pointRencontre.size() <= 120
+        && request.resource.data.tarifParPlace is int && request.resource.data.tarifParPlace >= 100
+        && request.resource.data.places == 1 && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time
+        && trajetLie();
+      allow read: if estAdmin() || (estConnecte() && (resource.data.passagerUid == request.auth.uid || resource.data.conducteurUid == request.auth.uid));
+      allow update: if estAdmin() || (estConnecte()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","updatedAt"])
+        && request.resource.data.updatedAt == request.time
+        && ((resource.data.conducteurUid == request.auth.uid && resource.data.statut == "en_attente" && request.resource.data.statut == "refusee")
+          || (resource.data.conducteurUid == request.auth.uid && resource.data.statut == "en_attente" && request.resource.data.statut == "acceptee"
+            && getAfter(/databases/$(database)/documents/trajets_partages/$(resource.data.trajetId)).data.placesDisponibles
+              == get(/databases/$(database)/documents/trajets_partages/$(resource.data.trajetId)).data.placesDisponibles - 1)));
+      allow delete: if estAdmin();
+    }
+
+
+    match /pharmacies_professionnelles/{pharmacieUid} {
+      allow create: if estConnecte() && request.auth.uid == pharmacieUid
+        && request.resource.data.keys().hasOnly(["uid","nom","responsable","telephone","email","commune","adresse","referenceAutorisation","statut","createdAt","updatedAt"])
+        && request.resource.data.keys().hasAll(["uid","nom","responsable","telephone","email","commune","adresse","referenceAutorisation","statut","createdAt","updatedAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 3 && request.resource.data.nom.size() <= 120
+        && request.resource.data.responsable is string && request.resource.data.responsable.size() >= 3 && request.resource.data.responsable.size() <= 100
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 24
+        && request.resource.data.email is string && request.resource.data.email.size() <= 120
+        && request.resource.data.commune is string && request.resource.data.commune.size() >= 2 && request.resource.data.commune.size() <= 60
+        && request.resource.data.adresse is string && request.resource.data.adresse.size() >= 5 && request.resource.data.adresse.size() <= 300
+        && request.resource.data.referenceAutorisation is string && request.resource.data.referenceAutorisation.size() >= 3 && request.resource.data.referenceAutorisation.size() <= 100
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == pharmacieUid);
+      allow update, delete: if estAdmin();
+    }
+    match /demandes_pharmacie/{demandeId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasOnly(["uid","nom","telephone","commune","adresse","produits","documentPath","statut","createdAt","updatedAt"])
+        && request.resource.data.keys().hasAll(["uid","nom","telephone","commune","adresse","produits","documentPath","statut","createdAt","updatedAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 2 && request.resource.data.nom.size() <= 100
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 24
+        && request.resource.data.commune is string && request.resource.data.commune.size() >= 2 && request.resource.data.commune.size() <= 60
+        && request.resource.data.adresse is string && request.resource.data.adresse.size() >= 5 && request.resource.data.adresse.size() <= 350
+        && request.resource.data.produits is string && request.resource.data.produits.size() >= 2 && request.resource.data.produits.size() <= 1200
+        && request.resource.data.documentPath is string && request.resource.data.documentPath.size() <= 500
+        && (request.resource.data.documentPath == "" || request.resource.data.documentPath.matches("^demandes_pharmacie_documents/" + request.auth.uid + "/" + demandeId + "/[A-Za-z0-9._-]+$"))
+        && request.resource.data.statut == "a_traiter"
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow read: if estAdmin()
+        || (estConnecte() && resource.data.uid == request.auth.uid)
+        || (pharmacienApprouve() && resource.data.get("pharmacieAssigneeUid", "") == request.auth.uid);
+      allow update: if estAdmin()
+        || (pharmacienApprouve()
+          && resource.data.get("pharmacieAssigneeUid", "") == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","prixPropose","reponsePharmacie","updatedAt"])
+          && request.resource.data.statut in ["a_traiter","pharmacie_confirmee","indisponible","en_preparation","prete_a_livrer"]
+          && (!("prixPropose" in request.resource.data.keys()) || request.resource.data.prixPropose == null || (request.resource.data.prixPropose is int && request.resource.data.prixPropose >= 0 && request.resource.data.prixPropose <= 10000000))
+          && request.resource.data.reponsePharmacie is string && request.resource.data.reponsePharmacie.size() <= 500
+          && request.resource.data.updatedAt == request.time);
+      allow delete: if estAdmin();
+    }
+
+    // Cabines téléphoniques : comptes partenaires, demandes et suivi des transferts.
+    match /cabines_telephoniques/{cabineUid} {
+      allow create: if estConnecte() && request.auth.uid == cabineUid
+        && request.resource.data.keys().hasOnly(["uid","nom","responsable","email","telephone","commune","adresse","horaires","operateurs","statut","createdAt","updatedAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 2 && request.resource.data.nom.size() <= 100
+        && request.resource.data.responsable is string && request.resource.data.responsable.size() >= 2 && request.resource.data.responsable.size() <= 100
+        && request.resource.data.email is string && request.resource.data.email.size() <= 120
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 24
+        && request.resource.data.commune is string && request.resource.data.commune.size() >= 2 && request.resource.data.commune.size() <= 60
+        && request.resource.data.adresse is string && request.resource.data.adresse.size() >= 5 && request.resource.data.adresse.size() <= 200
+        && request.resource.data.horaires is string && request.resource.data.horaires.size() <= 100
+        && request.resource.data.operateurs is list && request.resource.data.operateurs.size() >= 1 && request.resource.data.operateurs.size() <= 3
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == cabineUid) || resource.data.statut == "approuve";
+      allow update: if estAdmin() || (estConnecte() && request.auth.uid == cabineUid && resource.data.statut == "en_attente"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["telephone","horaires","operateurs","updatedAt"])
+        && request.resource.data.updatedAt == request.time);
+      allow delete: if estAdmin();
+    }
+    match /demandes_cabines/{demandeId} {
+      function cabineValidee() {
+        return exists(/databases/$(database)/documents/cabines_telephoniques/$(request.resource.data.cabineUid))
+          && get(/databases/$(database)/documents/cabines_telephoniques/$(request.resource.data.cabineUid)).data.statut == "approuve";
+      }
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasOnly(["clientUid","cabineUid","cabineNom","cabineCommune","operateur","typeService","numeroBeneficiaire","montantPrestation","fraisService","totalClient","details","telephonePaiement","moyenPaiement","referencePaiement","statut","createdAt","updatedAt"])
+        && request.resource.data.clientUid == request.auth.uid && request.resource.data.cabineUid is string && cabineValidee()
+        && request.resource.data.operateur in ["Orange","MTN","Moov Africa"]
+        && request.resource.data.typeService in ["transfert_unites","forfait_internet","forfait_appels","forfait_mixte","forfait_sms"]
+        && request.resource.data.numeroBeneficiaire is string && request.resource.data.numeroBeneficiaire.size() >= 8 && request.resource.data.numeroBeneficiaire.size() <= 20
+        && request.resource.data.montantPrestation is int && request.resource.data.montantPrestation > 0 && request.resource.data.montantPrestation <= 500000
+        && request.resource.data.fraisService == 18 && request.resource.data.totalClient == request.resource.data.montantPrestation + 18
+        && request.resource.data.details is string && request.resource.data.details.size() >= 2 && request.resource.data.details.size() <= 180
+        && request.resource.data.telephonePaiement is string && request.resource.data.telephonePaiement.size() >= 8 && request.resource.data.telephonePaiement.size() <= 20
+        && request.resource.data.moyenPaiement in ["Orange Money","MTN MoMo","Moov Money","Wave"]
+        && request.resource.data.referencePaiement == "" && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow read: if estAdmin() || (estConnecte() && resource.data.clientUid == request.auth.uid)
+        || (estConnecte() && resource.data.cabineUid == request.auth.uid
+          && exists(/databases/$(database)/documents/cabines_telephoniques/$(request.auth.uid))
+          && get(/databases/$(database)/documents/cabines_telephoniques/$(request.auth.uid)).data.statut == "approuve");
+      allow update: if estAdmin()
+        || (estConnecte() && resource.data.clientUid == request.auth.uid && resource.data.statut == "acceptee"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["referencePaiement","statut","updatedAt"])
+          && request.resource.data.referencePaiement is string && request.resource.data.referencePaiement.size() >= 4 && request.resource.data.referencePaiement.size() <= 100
+          && request.resource.data.statut == "paiement_a_verifier" && request.resource.data.updatedAt == request.time)
+        || (estConnecte() && resource.data.cabineUid == request.auth.uid
+          && exists(/databases/$(database)/documents/cabines_telephoniques/$(request.auth.uid))
+          && get(/databases/$(database)/documents/cabines_telephoniques/$(request.auth.uid)).data.statut == "approuve"
+          && ((resource.data.statut == "en_attente" && request.resource.data.statut in ["acceptee","refusee"])
+            || (resource.data.statut == "fonds_transferes" && request.resource.data.statut == "en_cours")
+            || (resource.data.statut == "en_cours" && request.resource.data.statut == "terminee"
+              && request.resource.data.referenceOperation is string && request.resource.data.referenceOperation.size() >= 3 && request.resource.data.referenceOperation.size() <= 100))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","referenceOperation","updatedAt"])
+          && request.resource.data.updatedAt == request.time);
+      allow delete: if estAdmin();
+    }
+
+    // Paiements Jèko : seules les Cloud Functions Admin SDK peuvent écrire ces documents.
+    match /payments/{paymentId} {
+      allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+    match /payment_webhooks/{eventId} {
+      allow read: if estAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    // File d'attente des notifications : seul l'administrateur peut créer ou consulter les événements.
+    // Le Worker utilise un compte de service côté serveur et contourne les règles Firestore.
+    match /notifications_queue/{eventId} {
+      allow read, create, update, delete: if estAdmin();
+    }
+
+  }
+}
+);
 
       allow update: if (estAdmin()
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
