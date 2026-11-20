@@ -3879,7 +3879,7 @@ chargerPublicitesAccueil();
 
 const NOUVEAUX_SERVICES = {
  depannage:{titre:"Dépannage automobile",icone:"🚗",categories:["Mécanicien","Dépannage général","Remorquage","Panne de batterie","Crevaison","Dépannage carburant"]},
- commerce:{titre:"Annuaire des commerces",icone:"🏪",categories:["Alimentation","Restaurant","Boutique","Pièces détachées","Électronique","Autre commerce"]},
+ commerce:{titre:"Commerces et boutiques",icone:"🏪",categories:["Alimentation","Restaurant","Boutique","Pièces détachées","Électronique","Autre commerce"]},
  annonce:{titre:"Petites annonces et emplois",icone:"📢",categories:["Offre d'emploi","Demande d'emploi","Véhicule à vendre","Véhicule à louer","Autre annonce"]}
 };
 let nouveauServiceActif="depannage";
@@ -4814,7 +4814,7 @@ async function chargerConfigurationAbonnementsAdmin(){
    zone.appendChild(card);
   });
   const save=document.createElement("button");save.type="button";save.className="primary";save.textContent="Enregistrer tous les paramètres";save.onclick=sauvegarderConfigurationAbonnementsAdmin;zone.appendChild(save);
-  const note=document.createElement("p");note.className="notice";note.textContent="Les tarifs proposés ci-dessus reprennent les valeurs identifiées dans le code actuel lorsqu’elles sont connues. Vérifie les formules avant de les modifier. Les annuaires ne figurent volontairement pas dans cette liste.";zone.appendChild(note);
+  const note=document.createElement("p");note.className="notice";note.textContent="Les tarifs proposés ci-dessus reprennent les valeurs identifiées dans le code actuel lorsqu’elles sont connues. Vérifie les formules avant de les modifier. Les anciennes formules de l’Annuaire professionnel ont été retirées.";zone.appendChild(note);
  }catch(e){console.error(e);zone.textContent="Chargement impossible : "+e.message;}
 }
 async function sauvegarderConfigurationAbonnementsAdmin(){
@@ -12533,11 +12533,10 @@ body{font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial
     const input=document.getElementById("mqciRechercheUniverselle");
     const commune=document.getElementById("mqciCommuneChoisie");
     if(input&&!input.dataset.mqciBound){input.dataset.mqciBound="1";input.addEventListener("input",rendreResultats);}
-    if(window.chargerPartenairesAccueil)chargerPartenairesAccueil();
     if(commune&&!commune.dataset.mqciBound){
       commune.dataset.mqciBound="1";
       try{commune.value=localStorage.getItem("mqci_commune_choisie")||"";}catch(e){}
-      commune.addEventListener("change",()=>{try{localStorage.setItem("mqci_commune_choisie",commune.value.trim());}catch(e){}if(window.chargerPartenairesAccueil)chargerPartenairesAccueil();});
+      commune.addEventListener("change",()=>{try{localStorage.setItem("mqci_commune_choisie",commune.value.trim());}catch(e){}});
     }
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
