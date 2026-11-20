@@ -3937,12 +3937,18 @@ function inscrirePartenaireAutomobile(type){
  ouvrirEspacePartenaire("inscription");
  choisirNouveauService(type,null,true,"partenaireFormulaireChoisi");
 }
+function abonnementServicePartenaireValide(d,maintenant=Date.now()){
+ const date=v=>v&&v.toDate?v.toDate():(v?new Date(v):null);
+ const finEssai=date(d.abonnementFinEssai),finAbonnement=date(d.abonnementFin);
+ return (d.abonnementStatut==="essai_gratuit"&&finEssai&&finEssai.getTime()>maintenant)
+  ||(d.abonnementStatut==="actif"&&finAbonnement&&finAbonnement.getTime()>maintenant);
+}
 async function chargerCatalogueAutomobile(type){
  const zone=document.getElementById("catalogueAutomobilePartenaires");if(!zone||!["auto_ecole","vulcanisateur"].includes(type))return;
  zone.innerHTML='<p class="notice">Chargement des professionnels...</p>';
  try{
   const snap=await db.collection("demandes_nouveaux_services").where("type","==",type).where("statut","==","approuve").limit(300).get();
-  const docs=snap.docs.filter(x=>x.data().visibleManuellement!==false).map(x=>({id:x.id,...x.data()}));
+  const docs=snap.docs.filter(x=>{const d=x.data();return d.visibleManuellement!==false&&(d.modePartenaire!==true||abonnementServicePartenaireValide(d));}).map(x=>({id:x.id,...x.data()}));
   if(!docs.length){zone.innerHTML='<p class="notice">Aucun partenaire validé dans cette rubrique pour le moment.</p>';return;}
   const groupes=new Map();
   docs.forEach(d=>{const c=String(d.commune||"Commune non renseignée").trim()||"Commune non renseignée",q=String(d.quartier||"Quartier non renseigné").trim()||"Quartier non renseigné";if(!groupes.has(c))groupes.set(c,new Map());if(!groupes.get(c).has(q))groupes.get(c).set(q,[]);groupes.get(c).get(q).push(d);});
@@ -3991,7 +3997,7 @@ async function chargerCatalogueDomicile(categorie){
    const d=doc.data();
    const categorieEnregistree=normaliser(d.categorie);
    const correspond=normaliser(categorie)==="depots de gaz"?["gaz","depots de gaz"].includes(categorieEnregistree):categorieEnregistree===normaliser(categorie);
-   return d.visibleManuellement!==false&&correspond;
+   return d.visibleManuellement!==false&&correspond&&(d.modePartenaire!==true||abonnementServicePartenaireValide(d));
   }).map(doc=>({id:doc.id,...doc.data()}));
   if(!documents.length){
    zone.innerHTML='<button type="button" onclick="afficherChoixCatalogueDomicile()">← Retour aux services</button><p class="notice">Aucun professionnel validé dans cette catégorie pour le moment.</p>';
