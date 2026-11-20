@@ -84,7 +84,7 @@ import { validateJekoPaymentPlan } from "../cloudflare/worker.js";
 test("webhook valide les forfaits fixes Logement et Ramassage", () => {
   assert.equal(validateJekoPaymentPlan({provider:"jeko",currency:"XOF",serviceId:"logement_renewal",planId:"trimestriel",amountXof:8000,amountCents:800000,durationDays:90}),true);
   assert.equal(validateJekoPaymentPlan({provider:"jeko",currency:"XOF",serviceId:"ramassage",planId:"ramassage",amountXof:2000,amountCents:200000,durationDays:30}),true);
-  assert.equal(validateJekoPaymentPlan({provider:"jeko",currency:"XOF",serviceId:"annuaire_renewal",planId:"annuaire",amountXof:1000,amountCents:100000,durationDays:30}),true);
+  assert.equal(validateJekoPaymentPlan({provider:"jeko",currency:"XOF",serviceId:"annuaire_renewal",planId:"annuaire",amountXof:1000,amountCents:100000,durationDays:30}),false);
 });
 
 test("webhook refuse un montant ou une durée fixe incohérents", () => {
