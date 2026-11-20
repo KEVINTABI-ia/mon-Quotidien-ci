@@ -142,3 +142,17 @@ test("webhook vérifie le HMAC-SHA256 sur le corps brut", async () => {
   assert.equal(await verifyHmac(raw, "00".repeat(32), secret), false);
   assert.equal(await verifyHmac(new TextEncoder().encode('{"id":"changed"}'), signature, secret), false);
 });
+
+import { isJekoCheckoutLocked } from "../cloudflare/worker.js";
+
+test("un paiement Jèko en attente ou à vérifier verrouille un nouveau checkout", () => {
+  assert.equal(isJekoCheckoutLocked("pending"), true);
+  assert.equal(isJekoCheckoutLocked("initialization_unknown"), true);
+  assert.equal(isJekoCheckoutLocked("review_required"), true);
+});
+
+test("un paiement Jèko échoué ou confirmé ne conserve pas le verrou", () => {
+  assert.equal(isJekoCheckoutLocked("failed"), false);
+  assert.equal(isJekoCheckoutLocked("succeeded"), false);
+  assert.equal(isJekoCheckoutLocked(undefined), false);
+});
