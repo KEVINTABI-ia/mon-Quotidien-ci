@@ -122,7 +122,7 @@ async function firebaseUser(token, apiKey) {
   const user=data.users?.[0];
   if(!user?.localId) { const err=new Error("firebase_auth_USER_NOT_FOUND");err.authCode="USER_NOT_FOUND";throw err; }
   if(user.disabled===true) { const err=new Error("firebase_auth_USER_DISABLED");err.authCode="USER_DISABLED";throw err; }
-  return {sub:user.localId,email:user.email||null};
+  return {sub:user.localId,email:user.email||null,createdAt:user.createdAt||null};
 }
 async function requireUser(request, env) {
   const token=(request.headers.get("authorization")||"").match(/^Bearer\s+(.+)$/i)?.[1];
@@ -307,9 +307,10 @@ async function createCheckout(request,env) {
     initial={uid:user.sub,serviceId,planId:"petites_annonces",targetPath:"abonnements_petites_annonces/"+user.sub,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",durationDays:duration,status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString(),petitesAnnoncesLockUpdateTime:subDoc.updateTime};
   } else {
     const autoPath="abonnements_automobiliste/"+user.sub,autoDoc=await getDoc(env,autoPath),autoSub=docData(autoDoc)||{};
-    const userProfileDoc=await getDoc(env,"utilisateurs/"+user.sub),userProfile=docData(userProfileDoc)||{};
-    const accountCreated=userProfile.createdAt instanceof Date?userProfile.createdAt:(userProfile.createdAt?new Date(userProfile.createdAt):null);
-    if(!accountCreated||!Number.isFinite(accountCreated.getTime()))return json({error:"account_trial_start_missing"},409);
+    // La date d'inscription provient de Firebase Authentication (accounts:lookup),
+    // jamais d'un champ de profil modifiable ou créé lors de l'ouverture de l'espace.
+    const accountCreated=user.createdAt?new Date(Number(user.createdAt)):null;
+    if(!accountCreated||!Number.isFinite(accountCreated.getTime())||accountCreated.getTime()>now.getTime())return json({error:"account_trial_start_missing"},409);
     if(now.getTime()-accountCreated.getTime()<30*86400000)return json({error:"driver_trial_still_active",trialEndsAt:new Date(accountCreated.getTime()+30*86400000).toISOString()},409);
     if(autoSub.renouvellementJekoPaymentId){
       const previous=await getDoc(env,"payments/"+autoSub.renouvellementJekoPaymentId);
