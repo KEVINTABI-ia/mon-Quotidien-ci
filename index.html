@@ -8239,7 +8239,10 @@ async function verifierRetourPaiementJeko(user){
  const partnerServiceZone=null;
  const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:(serviceId==="ramassage"?ramassageZone:(serviceId==="partenaire_services"?partnerServiceZone:document.getElementById("etatAbonnementAuto"))))));
  if(paymentState==="error"){
-  if(serviceId==="partenaire_services")await chargerEspaceAbonnementServicesPartenaires(user);
+  if(serviceId==="partenaire_services"){
+   try{if(paymentId){const token=await user.getIdToken(true);await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/status?paymentId="+encodeURIComponent(paymentId),{headers:{Authorization:"Bearer "+token}});}}catch(e){}
+   await chargerEspaceAbonnementServicesPartenaires(user);
+  }
   if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été finalisé. Aucune demande de récupération n’a été transmise.":serviceId==="compagnie_voyage"?"Le paiement n’a pas été finalisé. Aucun abonnement de compagnie n’a été activé.":serviceId==="boutique_renewal"?"Le paiement n’a pas été finalisé. Votre boutique reste masquée tant que le paiement n’est pas confirmé.":serviceId==="logement_renewal"?"Le paiement n’a pas été finalisé. La publication de vos annonces reste suspendue si l’abonnement est expiré.":"Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
   params.delete("payment");params.delete("paymentId");params.delete("serviceId");history.replaceState({},document.title,location.pathname+(params.toString()?"?"+params.toString():""));return;
  }
