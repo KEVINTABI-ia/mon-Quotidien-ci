@@ -42,5 +42,16 @@ service firebase.storage {
       allow read: if estAdmin();
       allow update, delete: if false;
     }
+
+    
+    match /logement_photos/{uid}/{annonceId}/{fileName} {
+      allow create: if resource == null
+        && request.auth != null && request.auth.uid == uid
+        && fileName.size() <= 180
+        && request.resource.size <= 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow read: if true;
+      allow update, delete: if false;
+    }
   }
 }
