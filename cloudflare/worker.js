@@ -586,7 +586,7 @@ async function webhook(request,env) {
     }catch(e){if(!(await getDoc(env,receiptPath)))throw e;}
     return new Response("OK",{status:200});
   }
-
+  if(payment.serviceId==="partenaire_colis") {
     const partnerPath=payment.targetPath,partnerDoc=await getDoc(env,partnerPath),partner=docData(partnerDoc);
     if(!partnerDoc||!partner||partner.uid!==payment.uid||partner.statut!=="approuve"||!Number.isSafeInteger(payment.durationMonths)||payment.durationMonths<1||payment.durationMonths>6){
       await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"partner_target_or_duration_invalid",updatedAt:now.toISOString()}))});
