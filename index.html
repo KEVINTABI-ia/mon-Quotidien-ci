@@ -1631,21 +1631,6 @@ header .header-badge{margin-top:6px!important;font-size:8px!important}
 </style>
 
 <style>
-/* Boutons de contact des fiches de l'annuaire */
-.annuaire-contact-btn{
-  display:inline-flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-  box-sizing:border-box !important;
-  min-height:44px;
-  padding:11px 18px !important;
-  margin:4px !important;
-  text-align:center !important;
-  text-decoration:none !important;
-  line-height:1.2 !important;
-  white-space:nowrap;
-  vertical-align:middle;
-}
 </style>
 <style id="refonte-accueil-professionnel-css">
 /* REFONTE ACCUEIL PROFESSIONNELLE — Mon Quotidien CI */
@@ -2060,10 +2045,10 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
       <option value="commercant">🏪 Commerçant / boutique</option>
       <option value="compagnie">🚌 Compagnie de voyage</option>
       <option value="compagnie_ramassage">🚐 Compagnie de cars de ramassage</option>
-      <option value="annuaire">📒 Professionnel de l’annuaire</option>
+      
     </select>
     <div id="partenaireFormulaireChoisi" aria-live="polite"></div>
-    <div id="zoneInscriptionAnnuairePartenaire"></div>
+    
   </div>
   <div id="zoneConnexionPartenaire" style="display:none;">
     <button type="button" onclick="ouvrirEspacePartenaire('accueil')">← Retour à l’espace partenaire</button>
@@ -2192,7 +2177,7 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
 <div id="gestionValidationBoutiques" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🛍️ Validation des boutiques</h3><p class="notice">Vérifie les boutiques, les paiements d’abonnement et leur visibilité.</p><div id="listeValidationBoutiquesAdmin">Chargement...</div><h4>🔄 Demandes de renouvellement des partenaires commerçants</h4><div id="listeRenouvellementsBoutiquesAdmin">Chargement...</div><h4>📦 Articles soumis par les vendeurs</h4><p class="notice">Les articles restent invisibles au public jusqu’à leur approbation.</p><div id="listeValidationArticlesBoutiquesAdmin">Chargement...</div></div>
 <div id="gestionDonsSolidarite" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🤝 Dons et demandes d’aide</h3><p class="notice">Les coordonnées des personnes sont privées et visibles uniquement ici.</p><div id="listeDonsSolidariteAdmin">Chargement...</div></div>
 <div id="gestionServicesProximite" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📍 Services de proximité</h3><p class="notice">Gère les stations-service, banques, hôtels et supermarchés de la plateforme.</p><button type="button" class="primary" onclick="importerServicesQuotidiensOSM()">⬇️ Importer / actualiser stations, banques et hôtels</button><p id="statutGestionServicesProximite" class="notice"></p><div id="resumeGestionServicesProximite">Chargement...</div></div>
-<div id="gestionValidationAnnuaires" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>📒 Validation des annuaires professionnels</h3><p class="notice">Vérifie les coordonnées et l’activité avant publication.</p><div id="listeValidationAnnuairesAdmin">Chargement...</div></div>
+</div>
 <div id="gestionLogementAdmin" style="display:none;margin-top:20px;border-top:2px solid #16834A;padding-top:18px;"><h3>🏠 Modération des annonces Logement</h3><button type="button" class="primary" onclick="chargerGestionLogementAdmin()">Actualiser les annonces en attente</button><div id="logementAdminAds"></div><h3>🗂️ Anciennes demandes de paiement Logement</h3><p class="notice">Historique des anciennes demandes manuelles. Les renouvellements actuels sont traités automatiquement par Jèko.</p><button type="button" onclick="chargerDemandesAbonnementLogementAdmin()">Actualiser l’historique</button><div id="logementAdminPayments"></div><h3>Journal des suppressions</h3><button type="button" onclick="chargerHistoriqueSuppressionsLogementAdmin()">Consulter le journal</button><div id="logementAdminDeletions"></div></div>
 <div id="gestionValidationAnnonces" style="display:none;margin-top:20px;border-top:2px solid #D5A84B;padding-top:18px;"><h3>📢 Validation des annonces</h3><p class="notice">Examine les petites annonces et les offres avant leur publication.</p><div id="listeValidationAnnoncesAdmin">Chargement...</div><h4>💳 Renouvellements d’abonnement</h4><button type="button" onclick="chargerPaiementsAnnoncesAdmin()">Actualiser les paiements en attente</button><div id="listePaiementsAnnoncesAdmin"></div></div>
 <div id="gestionObjetsPerdus" style="display:none;margin-top:20px;border-top:2px solid #176B52;padding-top:18px;"><h3>🔎 Gestion des objets et documents retrouvés</h3><p class="notice">Les coordonnées des trouveurs et les demandes sont privées et visibles uniquement ici. Vérifie les paiements avant la mise en relation.</p><div id="listeObjetsRetrouvesAdmin">Chargement...</div><h3>Demandes de récupération et paiements</h3><div id="listeReclamationsObjetsAdmin">Chargement...</div></div>
@@ -3209,12 +3194,7 @@ function chargerPublicitesAccueil() {
   <div class="grille-services-quotidiens">
 <button type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacie et santé')" class="tuile-quotidien">💊 Pharmacie et santé<small>Pharmacies de garde, centres de santé, urgences et laboratoires</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('pharmacieDomicile','Pharmacie à domicile')" class="tuile-quotidien">🛵 Pharmacie à domicile<small>Envoyez votre ordonnance ou demandez un médicament avec livraison</small></button>
-<button type="button" onclick="ouvrirSectionPleinEcran('educationFormation','Éducation et formation')" class="tuile-quotidien">🎓 Éducation et formation<small>Écoles, universités et formations</small></button>
-    <button type="button" onclick="ouvrirSectionPleinEcran('depannageDomicile','Dépannage à domicile')" class="tuile-quotidien">🛠️ Dépannage à domicile<small>Plomberie, électricité et réparations</small></button>
-    <button type="button" onclick="ouvrirSectionPleinEcran('agricultureElevage','Agriculture et élevage')" class="tuile-quotidien">🌱 Agriculture et élevage<small>Producteurs, fournisseurs et matériel</small></button>
-    <button type="button" onclick="ouvrirSectionPleinEcran('facturesServicesPratiques','Factures et services pratiques')" class="tuile-quotidien">🧾 Factures et services pratiques<small>CIE, SODECI et rappels de paiement</small></button>
-    <button type="button" onclick="ouvrirSectionPleinEcran('evenementsPrestations','Événements et prestations')" class="tuile-quotidien">🎉 Événements et prestations<small>Traiteurs, salles et photographes</small></button>
-    <button type="button" onclick="ouvrirSectionPleinEcran('artisansProfessionnels','Artisans et professionnels')" class="tuile-quotidien">🔧 Artisans et professionnels<small>Artisans et prestataires près de vous</small></button>
+<button type="button" onclick="ouvrirSectionPleinEcran('facturesServicesPratiques','Factures et services pratiques')" class="tuile-quotidien">🧾 Factures et services pratiques<small>CIE, SODECI et rappels de paiement</small></button>
     <button type="button" onclick="ouvrirSectionPleinEcran('servicesPublicsDemarches','Services publics et démarches')" class="tuile-quotidien">🏛️ Services publics et démarches<small>Accès aux portails officiels</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('toilettesPubliques','Toilettes publiques')" class="tuile-quotidien">🚻 Toilettes publiques<small>Rechercher les toilettes autour de vous</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('nouveauxServices','Petites annonces de ma commune');choisirNouveauService('annonce');chargerNouveauxServicesPublics('annonce')" class="tuile-quotidien">📢 Petites annonces de ma commune<small>Publier ou consulter les annonces et offres près de chez vous</small></button>
@@ -3222,16 +3202,6 @@ function chargerPublicitesAccueil() {
   </div>
 </section>
 
-<section class="card" id="annuaireInterne" style="display:none;"><h2 id="annuaireInterneTitre">📒 Annuaire des professionnels</h2><p>Consultez les professionnels référencés dans Mon Quotidien CI. Les fiches affichées ont été validées par l’administration.</p><label>Rechercher un nom ou un service</label><input id="annuaireRecherche" maxlength="100" placeholder="Ex. plombier, école, traiteur" oninput="chargerAnnuaireInterne()"><div class="modes"><div><label>Catégorie</label><select id="annuaireFiltreCategorie" onchange="chargerAnnuaireInterne()"><option value="">Toutes les catégories</option></select></div><div><label>Commune</label><input id="annuaireFiltreCommune" placeholder="Ex. Cocody" oninput="chargerAnnuaireInterne()"></div></div><div id="annuaireInscriptionZone" style="display:none"></div><h3>Professionnels validés</h3><div id="annuaireResultats"></div></section><section class="card" id="educationFormation" style="display:none;">
-  <h2>🎓 Éducation et formation</h2>
-  <p>Accédez rapidement aux établissements et organismes de formation autour de vous.</p>
-  <div class="modes">
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('educationFormation','École')">🏫 Trouver une école</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('educationFormation','Université')">🎓 Trouver une université</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('educationFormation','Centre de formation')">🧑‍🏫 Centres de formation</button>
-  </div>
-  <p class="notice">Les inscriptions, agréments, frais et conditions doivent être confirmés directement auprès de chaque établissement.</p>
-</section>
 <section class="card" id="logementImmobilier" style="display:none;">
   <h2>🏠 Logements à louer</h2>
   <p>Trouvez une maison, un appartement, un studio ou une chambre à louer, proposés par nos partenaires immobiliers.</p>
@@ -3303,27 +3273,6 @@ function chargerPublicitesAccueil() {
     <button type="button" onclick="logementLogout()">Déconnexion</button>
   </div>
 </section>
-<section class="card" id="depannageDomicile" style="display:none;">
-  <h2>🛠️ Dépannage à domicile</h2>
-  <p>Trouvez des techniciens et prestataires à proximité de votre quartier.</p>
-  <div class="modes">
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile','Plomberie')">🚰 Plombiers</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile','Électricité')">💡 Électriciens</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile','Climatisation')">❄️ Climatisation</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('depannageDomicile','Réparation électroménager')">🔌 Électroménager</button>
-  </div>
-  <p class="notice">Demandez un devis et confirmez le prix et le déplacement avant toute intervention.</p>
-</section>
-<section class="card" id="agricultureElevage" style="display:none;">
-  <h2>🌱 Agriculture et élevage</h2>
-  <p>Repérez les fournisseurs, marchés et professionnels du secteur agricole.</p>
-  <div class="modes">
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('agricultureElevage','Producteur agricole')">🥬 Marchés agricoles</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('agricultureElevage','Matériel agricole')">🚜 Fournitures et matériel</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('agricultureElevage','Élevage')">🐓 Élevage et alimentation animale</button>
-  </div>
-  <p class="notice">Vérifiez la qualité, l’origine des produits et les conditions de vente directement avec le fournisseur.</p>
-</section>
 <section class="card" id="facturesServicesPratiques" style="display:none;">
   <h2>🧾 Factures et services pratiques</h2>
   <p>Retrouvez les accès aux services de facturation et conservez vos échéances personnelles au même endroit.</p>
@@ -3335,29 +3284,6 @@ function chargerPublicitesAccueil() {
   </div>
   <p class="notice">Les paiements s’effectuent sur les services officiels ou dans l’application de paiement choisie. Mon Quotidien CI ne collecte pas vos codes secrets ni vos références de paiement.</p>
   <section class="card" id="rappelsPaiement" style="display:block;"><h3>🔔 Mes rappels de paiement</h3><p class="notice">Ajoutez vos échéances personnelles. Elles sont enregistrées localement sur cet appareil et ne déclenchent pas encore de notification automatique.</p><label>Motif du paiement</label><input id="paiementMotif" maxlength="100" placeholder="Ex. loyer, facture CIE, abonnement"><label>Montant (FCFA, facultatif)</label><input id="paiementMontant" type="number" min="0"><label>Date d’échéance</label><input id="paiementDate" type="date"><button class="primary" type="button" onclick="enregistrerRappelPaiement()">Enregistrer le rappel</button><p id="statutRappelPaiement" class="notice"></p><div id="listeRappelsPaiement"></div></section>
-</section>
-<section class="card" id="evenementsPrestations" style="display:none;">
-  <h2>🎉 Événements et prestations</h2>
-  <p>Recherchez des prestataires pour vos cérémonies et événements.</p>
-  <div class="modes">
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations','Traiteur')">🍽️ Traiteurs</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations','Salle de réception')">🏛️ Salles de réception</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations','Photographe')">📸 Photographes et vidéastes</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('evenementsPrestations','Décoration')">🎈 Décoration</button>
-  </div>
-  <p class="notice">Contactez les prestataires pour confirmer leurs disponibilités, tarifs et références.</p>
-</section>
-<section class="card" id="artisansProfessionnels" style="display:none;">
-  <h2>🔧 Artisans et professionnels</h2>
-  <p>Accédez aux métiers et services de proximité.</p>
-  <div class="modes">
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Couturier')">🧵 Couturiers</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Menuisier')">🪚 Menuisiers</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Soudeur')">⚒️ Soudeurs</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Mécanicien')">🚗 Mécaniciens</button>
-    <button type="button" class="mode" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Coiffeur')">💇 Coiffeurs</button>
-  </div>
-  <p class="notice">Les fiches de cet annuaire sont publiées directement dans Mon Quotidien CI après validation administrative.</p>
 </section>
 <section class="card" id="servicesPublicsDemarches" style="display:none;">
   <h2>🏛️ Services publics et démarches</h2>
@@ -3948,134 +3874,12 @@ chargerPublicitesAccueil();
 
 const NOUVEAUX_SERVICES = {
  depannage:{titre:"Dépannage automobile",icone:"🚗",categories:["Mécanicien","Dépannage général","Remorquage","Panne de batterie","Crevaison","Dépannage carburant"]},
- commerce:{titre:"Annuaire des commerces",icone:"🏪",categories:["Alimentation","Restaurant","Boutique","Pièces détachées","Électronique","Autre commerce"]},
+ commerce:{titre:"Commerces et boutiques",icone:"🏪",categories:["Alimentation","Restaurant","Boutique","Pièces détachées","Électronique","Autre commerce"]},
  annonce:{titre:"Petites annonces et emplois",icone:"📢",categories:["Offre d'emploi","Demande d'emploi","Véhicule à vendre","Véhicule à louer","Autre annonce"]}
 };
 let nouveauServiceActif="depannage";
 let filtrePublicCommerce="tout";
 function ouvrirAnnuaireCommerce(type){if(!["commerce","boutique"].includes(type))return;filtrePublicCommerce=type;ouvrirSectionPleinEcran("nouveauxServices",type==="boutique"?"Boutiques":"Commerces");choisirNouveauService("commerce");const c=document.getElementById("nsCategorie");if(c){if(type==="boutique")c.value="Boutique";c.disabled=false;}chargerNouveauxServicesPublics("commerce");}
-
-// ANNUAIRES INTERNES DE MON QUOTIDIEN CI
-const CATEGORIES_ANNUAIRE={
- educationFormation:["École","Université","Centre de formation","Cours particuliers"],
- logementImmobilier:["Agence immobilière","Location de logement","Promoteur immobilier","Gestion locative"],
- depannageDomicile:["Plomberie","Électricité","Climatisation","Réparation électroménager","Nettoyage"],
- agricultureElevage:["Producteur agricole","Fournisseur agricole","Élevage","Matériel agricole"],
- evenementsPrestations:["Traiteur","Salle de réception","Photographe","Décoration","Location de matériel"],
- artisansProfessionnels:["Couturier","Menuisier","Soudeur","Mécanicien","Coiffeur","Autre artisan"]
-};
-let annuaireRubriqueActive="educationFormation";
-function ouvrirAnnuaireInterne(rubrique,categorie){
- if(!CATEGORIES_ANNUAIRE[rubrique])return;
- annuaireRubriqueActive=rubrique;
- const noms={educationFormation:"Éducation et formation",logementImmobilier:"Logement et immobilier",depannageDomicile:"Dépannage à domicile",agricultureElevage:"Agriculture et élevage",evenementsPrestations:"Événements et prestations",artisansProfessionnels:"Artisans et professionnels"};
- ouvrirSectionPleinEcran("annuaireInterne",noms[rubrique]);
- document.getElementById("annuaireInterneTitre").textContent="📒 "+noms[rubrique];
- const filtre=document.getElementById("annuaireFiltreCategorie");
- filtre.innerHTML='<option value="">Toutes les catégories</option>'+CATEGORIES_ANNUAIRE[rubrique].map(c=>'<option>'+c+'</option>').join("");
- filtre.value=CATEGORIES_ANNUAIRE[rubrique].includes(categorie)?categorie:"";
- document.getElementById("annuaireInscriptionZone").style.display="none";
- chargerAnnuaireInterne();
-}
-function afficherInscriptionAnnuaire(){
- const z=document.getElementById("zoneInscriptionAnnuairePartenaire")||document.getElementById("annuaireInscriptionZone");if(!z)return;z.style.display="block";
- const noms={educationFormation:"Éducation et formation",logementImmobilier:"Logement et immobilier",depannageDomicile:"Dépannage à domicile",agricultureElevage:"Agriculture et élevage",evenementsPrestations:"Événements et prestations",artisansProfessionnels:"Artisans et professionnels"};
- const choixRubrique=Object.keys(CATEGORIES_ANNUAIRE).map(k=>'<option value="'+k+'"'+(k===annuaireRubriqueActive?' selected':'')+'>'+noms[k]+'</option>').join("");
- z.innerHTML='<div class="card" style="padding:14px"><h3>Inscrire gratuitement mon activité</h3><p class="notice">Premier mois gratuit à compter de l’approbation administrative. Ensuite, abonnement obligatoire de 1 000 FCFA par mois pour rester visible dans l’annuaire.</p><label>Type d’activité professionnelle</label><select id="annuaireRubriquePartenaire" onchange="annuaireRubriqueActive=this.value;afficherInscriptionAnnuaire()">'+choixRubrique+'</select><label>Nom de l’établissement / professionnel</label><input id="annTitre" maxlength="100"><label>Catégorie</label><select id="annCategorie">'+CATEGORIES_ANNUAIRE[annuaireRubriqueActive].map(c=>'<option>'+c+'</option>').join("")+'</select><label>Commune</label><input id="annCommune" maxlength="60"><label>Quartier / adresse</label><input id="annQuartier" maxlength="120"><label>Téléphone / WhatsApp</label><input id="annTelephone" type="tel" maxlength="20"><label>Description</label><textarea id="annDescription" rows="4" maxlength="1000"></textarea><label>E-mail</label><input id="annEmail" type="email" maxlength="120"><label>Mot de passe (6 caractères minimum)</label><input id="annPassword" type="password" minlength="6"><button type="button" class="primary" onclick="envoyerInscriptionAnnuaire()">Envoyer mon inscription gratuite</button><button type="button" onclick="connecterEspaceAnnuaire()">Se connecter à mon espace professionnel</button><p id="annStatut" class="notice"></p><div id="espaceAnnuaireCompte"></div></div>';
-}
-async function connecterEspaceAnnuaire(){
- const email=document.getElementById("annEmail")?.value.trim()||"",password=document.getElementById("annPassword")?.value||"",status=document.getElementById("annStatut");
- if(!email||!password){if(status)status.textContent="Saisissez l’adresse e-mail et le mot de passe de votre compte.";return;}
- try{
-  if(auth.currentUser&&auth.currentUser.email!==email)await auth.signOut();
-  if(!auth.currentUser)await auth.signInWithEmailAndPassword(email,password);
-  await chargerEspaceAnnuaire();
- }catch(e){if(status)status.textContent="Connexion impossible : "+(e.code==="auth/wrong-password"||e.code==="auth/invalid-credential"?"Vérifiez votre mot de passe.":e.message);}
-}
-async function chargerEspaceAnnuaire(){
- const zone=document.getElementById("espaceAnnuaireCompte")||document.getElementById("zoneInscriptionAnnuairePartenaire")||document.getElementById("annuaireInscriptionZone");
- if(!zone)return;
- const user=auth.currentUser;if(!user){zone.textContent="Connectez-vous à votre compte professionnel.";return;}
- zone.innerHTML='<p class="notice">Chargement de votre abonnement...</p>';
- try{
-  const snap=await db.collection("demandes_nouveaux_services").where("uid","==",user.uid).where("type","==","annuaire").limit(10).get();
-  if(snap.empty){zone.innerHTML='<p class="notice">Aucune inscription à l’annuaire n’est associée à ce compte.</p>';return;}
-  zone.innerHTML=snap.docs.map(doc=>{
-   const d=doc.data(),fin=d.abonnementFin?.toDate?d.abonnementFin.toDate():null,expire=!fin||fin.getTime()<=Date.now();
-   let statut=d.statut==="en_attente"?"Dossier en attente de validation":d.statut==="refuse"?"Dossier refusé":d.statut!=="approuve"?"Dossier non approuvé":expire?"Abonnement expiré":d.abonnementStatut==="essai_gratuit"?"Période gratuite":"Abonnement actif";
-   const date=fin?fin.toLocaleDateString("fr-FR"):"Non définie";
-   const payment= d.statut==="approuve"&&expire?'<label>Moyen de paiement Jèko</label><select id="methodeJekoAnnuaire_'+doc.id+'"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select><button type="button" class="primary" onclick="demarrerPaiementAnnuaire(\''+doc.id+'\')">Payer 1 000 FCFA avec Jèko</button>':'';
-   return '<article class="card" style="padding:12px;margin:10px 0;"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(statut)+'</p><p>Échéance : '+date+'</p>'+payment+'</article>';
-  }).join("");
- }catch(e){zone.textContent="Impossible de charger votre espace : "+e.message;}
-}
-async function demarrerPaiementAnnuaire(id){
- const user=auth.currentUser,method=document.getElementById("methodeJekoAnnuaire_"+id)?.value,zone=document.getElementById("espaceAnnuaireCompte");
- if(!user||!["wave","orange","mtn","moov","djamo"].includes(method)){if(zone)zone.textContent="Connexion ou moyen de paiement invalide.";return;}
- if(zone)zone.textContent="Préparation du paiement Jèko...";
- try{
-  const token=await user.getIdToken(),r=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceId:"annuaire_renewal",annuaireId:id,paymentMethod:method})});
-  const data=await r.json().catch(()=>({}));
-  if(!r.ok||!data.checkoutUrl){const messages={annuaire_not_found_or_not_authorized:"Inscription introuvable ou compte non autorisé.",annuaire_subscription_not_expired:"Votre période gratuite ou votre abonnement est encore actif.",existing_payment_requires_review:"Un paiement précédent doit être vérifié. Ne recommencez pas."};throw new Error(messages[data.error]||data.diagnostic||"Initialisation Jèko impossible.");}
-  if(zone)zone.textContent="Redirection vers Jèko...";
-  window.location.assign(data.checkoutUrl);
- }catch(e){if(zone)zone.textContent=e.message||"Erreur de paiement.";}
-}
-async function envoyerInscriptionAnnuaire(){
- const v=id=>document.getElementById(id)?.value.trim()||"",titre=v("annTitre"),categorie=v("annCategorie"),commune=v("annCommune"),quartier=v("annQuartier"),telephone=v("annTelephone"),description=v("annDescription"),email=v("annEmail"),password=document.getElementById("annPassword")?.value||"",statut=document.getElementById("annStatut");
- if(!titre||!categorie||!commune||!telephone||!description||!email||password.length<6){statut.textContent="Complétez les champs obligatoires. Mot de passe : 6 caractères minimum.";return;}
- statut.textContent="Envoi du dossier...";
- try{
-  let user=auth.currentUser;if(user&&user.email!==email){await auth.signOut();user=null;}
-  if(!user){try{user=(await auth.createUserWithEmailAndPassword(email,password)).user;}catch(e){if(e.code==="auth/email-already-in-use")user=(await auth.signInWithEmailAndPassword(email,password)).user;else throw e;}}
-  await db.collection("demandes_nouveaux_services").add({uid:user.uid,type:"annuaire",rubrique:annuaireRubriqueActive,titre,categorie,commune,quartier,telephone,description,email,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-  statut.textContent="Dossier envoyé. Votre fiche sera visible après validation administrative.";await chargerEspaceAnnuaire();
- }catch(e){console.error(e);statut.textContent="Envoi impossible : "+(e.code==="permission-denied"?"règles Firestore à mettre à jour.":e.message);}
-}
-async function chargerAnnuaireInterne(){
- const z=document.getElementById("annuaireResultats");if(!z)return;z.innerHTML='<p class="notice">Chargement...</p>';
- try{
-  const snap=await db.collection("demandes_nouveaux_services").where("type","==","annuaire").where("statut","==","approuve").where("abonnementFin",">",firebase.firestore.Timestamp.now()).limit(250).get();
-  const q=(document.getElementById("annuaireRecherche")?.value||"").toLocaleLowerCase("fr"),c=(document.getElementById("annuaireFiltreCommune")?.value||"").toLocaleLowerCase("fr"),cat=document.getElementById("annuaireFiltreCategorie")?.value||"";
-  const docs=snap.docs.filter(doc=>{const d=doc.data();return d.rubrique===annuaireRubriqueActive&&(!cat||d.categorie===cat)&&(!c||String(d.commune||"").toLocaleLowerCase("fr").includes(c))&&(!q||[d.titre,d.description,d.categorie,d.commune,d.quartier].join(" ").toLocaleLowerCase("fr").includes(q));});
-  if(!docs.length){z.innerHTML='<p class="notice">Aucun professionnel validé pour le moment. Vous pouvez proposer une inscription gratuite.</p>';return;}
-  z.innerHTML=docs.map(doc=>{const d=doc.data(),tel=String(d.telephone||"").replace(/[^+0-9]/g,""),wa=tel.replace(/^\+/,"").replace(/^0/,"225");return '<article class="card" style="padding:14px;margin:10px 0"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+(d.quartier?' · '+echapperTextePublicite(d.quartier):'')+'</p><p>'+echapperTextePublicite(d.description)+'</p><a class="primary annuaire-contact-btn" href="tel:'+tel+'">📞 Appeler</a><a class="primary annuaire-contact-btn" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+wa+'">WhatsApp</a></article>';}).join("");
- }catch(e){console.error('Erreur chargement annuaire Firestore:',e);const p=document.createElement('p');p.className='notice';p.textContent='Erreur Firestore ('+(e&&e.code?e.code:'code inconnu')+') : '+(e&&e.message?e.message:String(e));z.replaceChildren(p);}
-}
-async function chargerAnnuairesAdmin(){
- const z=document.getElementById("listeValidationAnnuairesAdmin");if(!z)return;
- if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){z.textContent="Accès administrateur requis.";return;}
- z.innerHTML='<p class="notice">Chargement des inscriptions...</p>';
- try{
-  const snap=await db.collection("demandes_nouveaux_services").where("type","==","annuaire").orderBy("createdAt","desc").limit(200).get();
-  if(snap.empty){z.innerHTML='<p class="notice">Aucune inscription.</p>';return;}
-  z.innerHTML=snap.docs.map(doc=>{
-   const d=doc.data(),fin=d.abonnementFin&&d.abonnementFin.toDate?d.abonnementFin.toDate():null,expire=!fin||fin.getTime()<=Date.now();
-   const infos=d.statut==="approuve"?'<p><strong>Abonnement :</strong> '+(d.abonnementStatut==="essai_gratuit"?"Premier mois gratuit":d.abonnementStatut==="actif"?"Payé":"À activer")+'</p><p><strong>Visibilité :</strong> '+(expire?"Masquée — période expirée":"Visible jusqu’au "+fin.toLocaleDateString("fr-FR"))+'</p><p>Après l’essai : 1 000 FCFA / mois.</p><p class="notice">Renouvellement : paiement de 1 000 FCFA à effectuer par le professionnel depuis son espace annuaire avec Jèko.</p>':"";
-   const actions=d.statut==="en_attente"?'<button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'approuve\')">Approuver et démarrer 30 jours gratuits</button><button type="button" onclick="traiterInscriptionAnnuaire(\''+doc.id+'\',\'refuse\')">Refuser</button>':'<span class="notice">Statut : '+echapperTextePublicite(d.statut)+'</span>';
-   return '<article class="card" style="padding:12px;margin:10px 0"><strong>'+echapperTextePublicite(d.titre)+'</strong><p>'+echapperTextePublicite(d.rubrique)+' · '+echapperTextePublicite(d.categorie)+' · '+echapperTextePublicite(d.commune)+'</p><p>'+echapperTextePublicite(d.quartier||"")+' · '+echapperTextePublicite(d.telephone)+'</p><p>'+echapperTextePublicite(d.description)+'</p><p>'+echapperTextePublicite(d.email)+'</p>'+infos+actions+'</article>';
-  }).join("");
- }catch(e){console.error(e);z.textContent="Erreur de chargement : "+e.message;}
-}
-async function traiterInscriptionAnnuaire(id,statut){
- if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
- if(!["approuve","refuse"].includes(statut))return;
- try{
-  const maj={statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp()};
-  if(statut==="approuve"){
-   const debut=new Date(),fin=new Date(debut.getTime()+30*24*60*60*1000);
-   maj.abonnementDebut=firebase.firestore.FieldValue.serverTimestamp();
-   maj.abonnementFin=firebase.firestore.Timestamp.fromDate(fin);
-   maj.abonnementStatut="essai_gratuit";
-  }
-  await db.collection("demandes_nouveaux_services").doc(id).update(maj);
-  await chargerAnnuairesAdmin();
- }catch(e){console.error(e);alert("Modification impossible : "+e.message);}
-}
-async function renouvelerAbonnementAnnuaire(id){
- if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
- alert("La validation manuelle est désactivée. Le professionnel doit régler les 1 000 FCFA depuis son espace annuaire avec Jèko.");
-}
 
 function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId){
  if(!NOUVEAUX_SERVICES[type])return;
@@ -4310,7 +4114,7 @@ async function chargerNouveauxServicesPublics(type){
  zone.innerHTML='<p class="notice">Chargement...</p>';
  try{
   let requete=db.collection("demandes_nouveaux_services").where("type","==",type).where("statut","==","approuve");
-  if(type==="annuaire")requete=requete.where("abonnementFin",">",firebase.firestore.Timestamp.now());
+
   const snap=await requete.limit(100).get();
   const maintenant=Date.now();
   const documents=snap.docs.filter(doc=>{const d=doc.data();if(type!=="commerce")return true;const estBoutique=String(d.categorie||"").toLowerCase()==="boutique"&&!d.modePartenaire;if(filtrePublicCommerce==="boutique"&&!estBoutique)return false;if(filtrePublicCommerce==="commerce"&&estBoutique)return false;if(d.modePartenaire===true)return d.visibleManuellement!==false&&d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;return d.visibleManuellement!==false&&d.abonnementFin&&d.abonnementFin.toDate&&d.abonnementFin.toDate().getTime()>maintenant;});
@@ -5005,7 +4809,7 @@ async function chargerConfigurationAbonnementsAdmin(){
    zone.appendChild(card);
   });
   const save=document.createElement("button");save.type="button";save.className="primary";save.textContent="Enregistrer tous les paramètres";save.onclick=sauvegarderConfigurationAbonnementsAdmin;zone.appendChild(save);
-  const note=document.createElement("p");note.className="notice";note.textContent="Les tarifs proposés ci-dessus reprennent les valeurs identifiées dans le code actuel lorsqu’elles sont connues. Vérifie les formules avant de les modifier. Les annuaires ne figurent volontairement pas dans cette liste.";zone.appendChild(note);
+  const note=document.createElement("p");note.className="notice";note.textContent="Les tarifs proposés ci-dessus reprennent les valeurs identifiées dans le code actuel lorsqu’elles sont connues. Vérifie les formules avant de les modifier. Les anciennes formules de l’Annuaire professionnel ont été retirées.";zone.appendChild(note);
  }catch(e){console.error(e);zone.textContent="Chargement impossible : "+e.message;}
 }
 async function sauvegarderConfigurationAbonnementsAdmin(){
@@ -5033,7 +4837,7 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionRoutes",groupe:"Transport",icone:"🛣️",titre:"Itinéraires et tarifs",description:"Gérer les lignes, arrêts et prix."},
   {id:"gestionCompagnies",groupe:"Transport",icone:"🚍",image:"compagnies",titre:"Compagnies de voyage",description:"Gérer les agences et leurs dessertes."},
   {id:"gestionAbonnementsRamassage",groupe:"Professionnels",icone:"🚌",titre:"Compagnies de ramassage",description:"Valider les dossiers et abonnements."},
-  {id:"gestionValidationAnnuaires",groupe:"Professionnels",icone:"📒",titre:"Annuaires professionnels",description:"Valider les inscriptions avant publication.",notification:"annuaire"},
+
   {id:"gestionLogementAdmin",groupe:"Vie communautaire",icone:"🏠",titre:"Logement",description:"Modérer les annonces et vérifier les abonnements."},
   {id:"gestionPartenaires",groupe:"Professionnels",icone:"👥",titre:"Partenaires",description:"Gérer les partenaires de services."},
   {id:"gestionPharmaciesAdmin",groupe:"Professionnels",icone:"💊",titre:"Pharmacies à domicile",description:"Approuver les pharmacies et attribuer les demandes clients."},
@@ -5057,7 +4861,7 @@ function surveillerNotificationsAdmin(){
  if(arretNotificationsAdmin){arretNotificationsAdmin();arretNotificationsAdmin=null;}
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;
  arretNotificationsAdmin=db.collection("demandes_nouveaux_services").onSnapshot(snap=>{
-  const comptes={depannage:0,commerce:0,boutique:0,annonce:0,annuaire:0};
+  const comptes={depannage:0,commerce:0,boutique:0,annonce:0};
   snap.forEach(doc=>{const d=doc.data()||{};if((d.statut||"en_attente")!=="en_attente")return;if(d.type==="commerce"){if(String(d.categorie||"").toLowerCase()==="boutique")comptes.boutique++;else comptes.commerce++;}else if(Object.prototype.hasOwnProperty.call(comptes,d.type))comptes[d.type]++;});
   document.querySelectorAll("[data-notification-type]").forEach(el=>{
    const n=comptes[el.dataset.notificationType]||0;el.textContent=String(n);el.hidden=n===0;
@@ -5090,7 +4894,7 @@ function ouvrirRubriqueAdmin(id){
   if(id==="gestionDonsSolidarite") chargerDonsSolidariteAdmin();
   if(id==="gestionServicesProximite") chargerGestionServicesProximiteAdmin();
   if(id==="gestionValidationAnnonces") chargerNouveauxServicesAdmin("annonce");
-  if(id==="gestionValidationAnnuaires") chargerAnnuairesAdmin();
+
   if(id==="gestionLogementAdmin"){chargerGestionLogementAdmin();chargerDemandesAbonnementLogementAdmin();}
   if(id==="gestionObjetsPerdus") chargerObjetsPerdusAdmin();
    if(id==="gestionCommunautaire") chargerGestionCommunautaireAdmin();
@@ -6586,10 +6390,10 @@ function ouvrirInscriptionLivreur(){
 function retourChoixPartenaire(){
   const select=document.getElementById("typePartenaireSouhaite");
   const zone=document.getElementById("partenaireFormulaireChoisi");
-  const annuaire=document.getElementById("zoneInscriptionAnnuairePartenaire");
+
   if(select)select.value="";
   if(zone)zone.replaceChildren();
-  if(annuaire)annuaire.replaceChildren();
+
   document.getElementById("devenirPartenaire")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
 function afficherFormulairePartenaire(type){
@@ -6597,12 +6401,6 @@ function afficherFormulairePartenaire(type){
   if(!zone)return;
   zone.replaceChildren();
   if(!type){zone.style.display="none";return;}
-  if(type==="annuaire"){
-    const select=document.getElementById("typePartenaireSouhaite");
-    const cible=document.getElementById("zoneInscriptionAnnuairePartenaire");
-    if(cible){cible.replaceChildren();afficherInscriptionAnnuaire();}
-    return;
-  }
   if(type==="compagnie_ramassage"){
     const authZone=document.getElementById("ramassageCompagnieAuth");
     if(authZone){
@@ -8123,13 +7921,13 @@ async function verifierRetourPaiementJeko(user){
  const params=new URLSearchParams(window.location.search),paymentState=params.get("payment"),paymentId=params.get("paymentId"),serviceId=params.get("serviceId")||"automobiliste";
  if(paymentState!=="return"&&paymentState!=="error")return;
  const companyZone=serviceId==="compagnie_voyage"?(document.getElementById("zonePaiementRenouvellementCompagnie")||document.getElementById("connexionPartenaire")):null;
- const annuaireZone=serviceId==="annuaire_renewal"?(document.getElementById("espaceAnnuaireCompte")||document.getElementById("zoneInscriptionAnnuairePartenaire")):null;
+
  const boutiqueZone=serviceId==="boutique_renewal"?(document.getElementById("boutiqueCompteConnecte")||document.getElementById("connexionBoutiqueStatut")):null;
  const logementZone=serviceId==="logement_renewal"?(document.getElementById("logementSubscriptionStatus")||document.getElementById("logementRenewal")):null;
  const ramassageZone=serviceId==="ramassage"?(document.getElementById("ramassageJekoPaymentStatus")||document.getElementById("ramassageCompanyStatus")):null;
- const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="annuaire_renewal"?annuaireZone:(serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:(serviceId==="ramassage"?ramassageZone:document.getElementById("etatAbonnementAuto"))))));
+ const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:(serviceId==="ramassage"?ramassageZone:document.getElementById("etatAbonnementAuto")))));
  if(paymentState==="error"){
-  if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été finalisé. Aucune demande de récupération n’a été transmise.":serviceId==="compagnie_voyage"?"Le paiement n’a pas été finalisé. Aucun abonnement de compagnie n’a été activé.":serviceId==="annuaire_renewal"?"Le paiement n’a pas été finalisé. Votre fiche reste masquée si son abonnement est expiré.":serviceId==="boutique_renewal"?"Le paiement n’a pas été finalisé. Votre boutique reste masquée tant que le paiement n’est pas confirmé.":serviceId==="logement_renewal"?"Le paiement n’a pas été finalisé. La publication de vos annonces reste suspendue si l’abonnement est expiré.":"Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
+  if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été finalisé. Aucune demande de récupération n’a été transmise.":serviceId==="compagnie_voyage"?"Le paiement n’a pas été finalisé. Aucun abonnement de compagnie n’a été activé.":serviceId==="boutique_renewal"?"Le paiement n’a pas été finalisé. Votre boutique reste masquée tant que le paiement n’est pas confirmé.":serviceId==="logement_renewal"?"Le paiement n’a pas été finalisé. La publication de vos annonces reste suspendue si l’abonnement est expiré.":"Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
   params.delete("payment");params.delete("paymentId");params.delete("serviceId");history.replaceState({},document.title,location.pathname+(params.toString()?"?"+params.toString():""));return;
  }
  if(!paymentId)return;
@@ -8148,9 +7946,6 @@ async function verifierRetourPaiementJeko(user){
      const companyUser=partnerAuth.currentUser||user;
      const companySnap=await partnerDb.collection("compagnies").where("uid","==",companyUser.uid).limit(1).get();
      if(!companySnap.empty)await afficherEspaceCompagnie(companySnap.docs[0].id,companySnap.docs[0].data());
-    }else if(serviceId==="annuaire_renewal"){
-     if(zone)zone.textContent="Paiement confirmé par Jèko. Votre fiche annuaire est de nouveau visible.";
-     await chargerEspaceAnnuaire();
     }else if(serviceId==="boutique_renewal"){
      if(zone)zone.textContent="Paiement confirmé par Jèko. Actualisez votre espace boutique pour retrouver la visibilité et gérer vos articles.";
     }else if(serviceId==="logement_renewal"){
@@ -11860,13 +11655,12 @@ window.mtcAfficherActeJudiciaire = function(type){
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeAutomobile')"><span class="family-entry-icon">🚘</span><strong>Automobile</strong><small>Dépannage, entretien, assurance et pièces</small></button>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeDemarches')"><span class="family-entry-icon">🛍️</span><strong>Commerce et emploi</strong><small>Boutiques, annonces et opportunités</small></button>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeLogement')"><span class="family-entry-icon">🏠</span><strong>Logement et immobilier</strong><small>Locations, ventes et résidences</small></button>
-        <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeSante')"><span class="family-entry-icon">🏥</span><strong>Santé et proximité</strong><small>Pharmacies, artisans et services locaux</small></button>
+        <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeSante')"><span class="family-entry-icon">🏥</span><strong>Santé et proximité</strong><small>Pharmacies et services locaux</small></button>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeVieCitoyenne')"><span class="family-entry-icon">⚖️</span><strong>Vie citoyenne</strong><small>Démarches, foncier, justice et solidarité</small></button>
       </section>
       <section class="home-panel" id="homePopular">
         <div class="home-section-heading"><div><h2>Services populaires</h2><p>Des professionnels et services recherchés près de vous.</p></div></div>
         <div class="family-shortcuts">
-          <button class="family-shortcut" type="button" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Mécanicien')"><span>🛠️</span>Trouver un mécanicien</button>
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('logementImmobilier','Logement et immobilier');chargerAnnoncesLogementPubliques()"><span>🏠</span>Trouver un logement</button>
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacies et santé')"><span>💊</span>Pharmacies et santé</button>
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('transportColis','Livraison et expédition')"><span>📦</span>Livraison et colis</button>
@@ -11904,8 +11698,6 @@ window.mtcAfficherActeJudiciaire = function(type){
         <div class="home-section-heading"><div><h2>🏥 Santé et proximité</h2><p>Pharmacies, santé, artisans et services près de vous</p></div></div>
         <div class="family-shortcuts">
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacies et santé')"><span>💊</span>Pharmacies et santé</button>
-          <button class="family-shortcut" type="button" onclick="ouvrirAnnuaireInterne('artisansProfessionnels','Autre artisan')"><span>🧑🏽‍🔧</span>Artisans et professionnels</button>
-          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('depannageDomicile','Dépannage à domicile')"><span>🛠️</span>Services à domicile</button>
           <button class="family-shortcut" type="button" onclick="ouvrirRepertoireServicesQuotidiens('station','Stations-service')"><span>⛽</span>Services de proximité</button>
         </div>
       </section>
@@ -11957,7 +11749,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     const logementModule=document.getElementById('logementImmobilier');
     if(logementModule) logement.appendChild(logementModule);
     const sante=document.getElementById('homeSante');
-    ['servicesSante','annuaireInterne','depannageDomicile','artisansProfessionnels'].forEach(id=>{const el=document.getElementById(id);if(el)sante.appendChild(el);});
+    ['servicesSante'].forEach(id=>{const el=document.getElementById(id);if(el)sante.appendChild(el);});
     const commerce=document.getElementById('homeDemarches');
     ['nouveauxServices','espaceEmploisOpportunites'].forEach(id=>{const el=document.getElementById(id);if(el)commerce.appendChild(el);});
     const citoyen=document.getElementById('homeVieCitoyenne');
@@ -12700,20 +12492,8 @@ body{font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial
     if(candidat&&!["domicile","proximite","proche","moi","louer","location"].includes(candidat))return candidat;
     return normaliser(document.getElementById("mqciCommuneChoisie")?.value||"");
   }
-  function ouvrirAnnuaireAvecFiltres(rubrique,categorie,terme){
-    ouvrirAnnuaireInterne(rubrique,categorie);
-    const recherche=document.getElementById("annuaireRecherche");
-    const commune=document.getElementById("annuaireFiltreCommune");
-    const filtre=document.getElementById("annuaireFiltreCategorie");
-    if(recherche)recherche.value=terme;
-    if(commune)commune.value=extraireCommune(document.getElementById("mqciRechercheUniverselle")?.value||"");
-    if(filtre)filtre.value=categorie;
-    chargerAnnuaireInterne();
-  }
   const routes=[
-    {mots:["mecanicien","mecanique","garage","garagiste"],titre:"Mécaniciens et garages",desc:"Rechercher dans l’annuaire des professionnels validés",ouvrir:()=>ouvrirAnnuaireAvecFiltres("artisansProfessionnels","Mécanicien","Mécanicien")},
     {mots:["pharmacie","pharmacien","medicament"],titre:"Pharmacies et santé",desc:"Accéder au service santé et aux informations disponibles",ouvrir:()=>ouvrirSectionPleinEcran("servicesSante","Pharmacies et santé")},
-    {mots:["electricien","electricite","plombier","plomberie","reparation domicile"],titre:"Dépannage à domicile",desc:"Rechercher les techniciens référencés par métier et commune",ouvrir:()=>ouvrirAnnuaireAvecFiltres("depannageDomicile",normaliser(document.getElementById("mqciRechercheUniverselle")?.value).includes("plomb")?"Plomberie":"Électricité",normaliser(document.getElementById("mqciRechercheUniverselle")?.value).includes("plomb")?"Plomberie":"Électricité")},
     {mots:["appartement","maison","studio","logement","location","louer","immobilier","terrain"],titre:"Logement et immobilier",desc:"Consulter les annonces et filtrer par commune",ouvrir:()=>{ouvrirSectionPleinEcran("logementImmobilier","Logement et immobilier");const c=document.getElementById("logementFilterCommune");if(c)c.value=extraireCommune(document.getElementById("mqciRechercheUniverselle")?.value||"");const q=normaliser(document.getElementById("mqciRechercheUniverselle")?.value||"");const cat=document.getElementById("logementFilterCategory");if(cat&&q.includes("appartement")&&q.includes("louer"))cat.value="Appartement à louer";chargerAnnoncesLogementPubliques();}},
     {mots:["gbaka","woro","woro woro","taxi","gare","adjam","transport","bouake","compagnie de voyage","car interurbain"],titre:"Mobilité et transport",desc:"Accéder aux gares, trajets et compagnies de voyage",ouvrir:()=>ouvrirFamilleAccueil("homeMobilite")},
     {mots:["livraison","colis","expedition","envoyer un colis","livreur"],titre:"Livraison et expédition",desc:"Accéder aux services de livraison et d’envoi de colis",ouvrir:()=>ouvrirSectionPleinEcran("transportColis","Livraison et expédition")},
@@ -12736,35 +12516,9 @@ body{font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial
       b.addEventListener("click",()=>r.ouvrir());zone.appendChild(b);
     });
     const note=document.createElement("small");note.className="notice";
-    note.textContent=trouves.length?"Choisissez une rubrique pour poursuivre la recherche. Les résultats détaillés proviennent des annuaires et services existants.":"Aucune rubrique exacte détectée. Voici les services les plus proches.";
+    note.textContent=trouves.length?"Choisissez une rubrique pour poursuivre la recherche. Les résultats détaillés proviennent des services disponibles.":"Aucune rubrique exacte détectée. Voici les services les plus proches.";
     zone.appendChild(note);
   }
-  window.chargerPartenairesAccueil=async function(){
-    const zone=document.getElementById("homePartnersListe");if(!zone||!window.db||!window.firebase)return;
-    zone.textContent="Chargement des partenaires validés…";
-    try{
-      const snap=await db.collection("demandes_nouveaux_services").where("type","==","annuaire").where("statut","==","approuve").where("abonnementFin",">",firebase.firestore.Timestamp.now()).limit(100).get();
-      const commune=normaliser(document.getElementById("mqciCommuneChoisie")?.value||"");
-      const docs=snap.docs.map(doc=>({id:doc.id,data:doc.data()})).filter(x=>!commune||normaliser(x.data.commune).includes(commune)).slice(0,4);
-      zone.replaceChildren();
-      if(!docs.length){
-        const p=document.createElement("p");p.className="notice";p.textContent=commune?"Aucun partenaire validé avec abonnement actif n’a été trouvé dans cette commune pour le moment.":"Les partenaires validés apparaîtront ici selon leur activité et leur abonnement.";zone.appendChild(p);return;
-      }
-      docs.forEach(x=>{
-        const d=x.data,card=document.createElement("article");card.className="card";card.style.cssText="padding:12px;margin:8px 0;border-radius:14px";
-        const name=document.createElement("strong");name.textContent=d.titre||"Professionnel référencé";
-        const meta=document.createElement("p");meta.className="notice";meta.textContent=[d.categorie,d.commune,d.quartier].filter(Boolean).join(" · ");
-        const desc=document.createElement("p");desc.textContent=d.description||"Fiche professionnelle validée sur Mon Quotidien CI.";
-        card.append(name,meta,desc);
-        const tel=String(d.telephone||"").replace(/[^+0-9]/g,"");
-        if(tel){const call=document.createElement("a");call.className="annuaire-contact-btn primary";call.href="tel:"+tel;call.textContent="Appeler";card.appendChild(call);}
-        zone.appendChild(card);
-      });
-    }catch(e){
-      console.error("Partenaires accueil:",e);
-      zone.textContent="Les partenaires ne peuvent pas être chargés pour le moment.";
-    }
-  };
   window.mqciActualiserCompte=function(){
     const z=document.getElementById("mqciCompteIdentite");if(!z)return;
     const u=window.auth&&auth.currentUser;
@@ -12774,11 +12528,10 @@ body{font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial
     const input=document.getElementById("mqciRechercheUniverselle");
     const commune=document.getElementById("mqciCommuneChoisie");
     if(input&&!input.dataset.mqciBound){input.dataset.mqciBound="1";input.addEventListener("input",rendreResultats);}
-    if(window.chargerPartenairesAccueil)chargerPartenairesAccueil();
     if(commune&&!commune.dataset.mqciBound){
       commune.dataset.mqciBound="1";
       try{commune.value=localStorage.getItem("mqci_commune_choisie")||"";}catch(e){}
-      commune.addEventListener("change",()=>{try{localStorage.setItem("mqci_commune_choisie",commune.value.trim());}catch(e){}if(window.chargerPartenairesAccueil)chargerPartenairesAccueil();});
+      commune.addEventListener("change",()=>{try{localStorage.setItem("mqci_commune_choisie",commune.value.trim());}catch(e){}});
     }
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
