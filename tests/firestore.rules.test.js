@@ -1291,7 +1291,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     it("exige une photo et les informations professionnelles pour le dépannage à domicile", async () => {
       const {doc,setDoc}=require("firebase/firestore");
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      await assertFails(setDoc(doc(db,"demandes_nouveaux_services","missing-photo"),application({photoUrl:undefined})));
+      await assertFails(setDoc(doc(db,"demandes_nouveaux_services","missing-photo"),application({photoUrl:""})));
       await assertFails(setDoc(doc(db,"demandes_nouveaux_services","missing-details"),application({infosProfessionnelles:""})));
     });
 
@@ -1321,7 +1321,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     it("refuse un profil sans photo et interdit toute auto-approbation", async () => {
       const {doc,setDoc,updateDoc}=require("firebase/firestore");
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      await assertFails(setDoc(doc(db,"partenaires",CLIENT_UID),validProfile(CLIENT_UID,{photoProfil:undefined})));
+      await assertFails(setDoc(doc(db,"partenaires",CLIENT_UID),validProfile(CLIENT_UID,{photoProfil:""})));
       const ref=doc(db,"partenaires",CLIENT_UID);
       await assertSucceeds(setDoc(ref,validProfile(CLIENT_UID)));
       await assertFails(updateDoc(ref,{statut:"approuve"}));
