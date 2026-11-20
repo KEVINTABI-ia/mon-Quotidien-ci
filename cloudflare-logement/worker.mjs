@@ -29,24 +29,38 @@ function detectImage(bytes) {
   return null;
 }
 async function verifyUser(request, env) {
-  const match = /^Bearer\s+(.+)$/i.exec(request.headers.get("Authorization") || "");
-  if (!match) return null;
-  const response = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + encodeURIComponent(env.FIREBASE_API_KEY), {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken: match[1] })
-  });
-  if (!response.ok) return null;
-  const payload = await response.json();
+  const match = /^Bearer\\s+(.+)$/i.exec(request.headers.get("Authorization") || "");
+  if (!match) return { error: "missing_bearer_token" };
+  if (!env.FIREBASE_API_KEY) return { error: "firebase_api_key_not_configured" };
+  let response;
+  try {
+    response = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + encodeURIComponent(env.FIREBASE_API_KEY), {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken: match[1] })
+    });
+  } catch (error) {
+    console.error("Firebase Auth network error:", error && error.name);
+    return { error: "firebase_auth_network_error" };
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const reason = payload && payload.error && payload.error.message;
+    const allowed = new Set(["INVALID_ID_TOKEN", "TOKEN_EXPIRED", "USER_DISABLED", "USER_NOT_FOUND", "INVALID_ARGUMENT", "API_KEY_INVALID", "API_KEY_SERVICE_BLOCKED", "PROJECT_NOT_FOUND"]);
+    const code = allowed.has(reason) ? reason : "FIREBASE_AUTH_REJECTED";
+    console.warn("Firebase Auth rejected token:", response.status, code);
+    return { error: "firebase_auth_" + code.toLowerCase() };
+  }
   const user = payload.users && payload.users[0];
-  if (!user || user.disabled) return null;
-  return { uid: user.localId, token: match[1] };
+  if (!user) return { error: "firebase_auth_user_not_found" };
+  if (user.disabled) return { error: "firebase_auth_user_disabled" };
+  return { user: { uid: user.localId, token: match[1] } };
 }
 async function firestoreDocument(path, token) {
   const response = await fetch("https://firestore.googleapis.com/v1/projects/" + PROJECT_ID + "/databases/(default)/documents/" + path, {
     headers: { Authorization: "Bearer " + token }
   });
   if (response.status === 404) return null;
-  if (!response.ok) throw new Error("firestore_unavailable");
+  if (!response.ok) { console.warn("Firestore authorization request failed:", response.status); throw new Error("firestore_unavailable"); }
   return response.json();
 }
 async function authorizePartner(user) {
@@ -70,8 +84,9 @@ export default {
     if (request.method === "POST" && url.pathname === "/upload") {
       if (!cors["Access-Control-Allow-Origin"]) return json({ error: "origin_not_allowed" }, 403);
       try {
-        const user = await verifyUser(request, env);
-        if (!user) return json({ error: "unauthorized" }, 401, cors);
+        const authResult = await verifyUser(request, env);
+        if (authResult.error) return json({ error: authResult.error }, 401, cors);
+        const user = authResult.user;
         if (!(await authorizePartner(user))) return json({ error: "partner_profile_required" }, 403, cors);
         const form = await request.formData();
         const annonceId = form.get("annonceId");
