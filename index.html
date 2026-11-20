@@ -8236,9 +8236,10 @@ async function verifierRetourPaiementJeko(user){
  const boutiqueZone=serviceId==="boutique_renewal"?(document.getElementById("boutiqueCompteConnecte")||document.getElementById("connexionBoutiqueStatut")):null;
  const logementZone=serviceId==="logement_renewal"?(document.getElementById("logementSubscriptionStatus")||document.getElementById("logementRenewal")):null;
  const ramassageZone=serviceId==="ramassage"?(document.getElementById("ramassageJekoPaymentStatus")||document.getElementById("ramassageCompanyStatus")):null;
- const partnerServiceZone=serviceId==="partenaire_services"?document.getElementById("espaceAbonnementServicesPartenaires"):null;
+ const partnerServiceZone=null;
  const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:(serviceId==="ramassage"?ramassageZone:(serviceId==="partenaire_services"?partnerServiceZone:document.getElementById("etatAbonnementAuto"))))));
  if(paymentState==="error"){
+  if(serviceId==="partenaire_services")await chargerEspaceAbonnementServicesPartenaires(user);
   if(zone)zone.textContent=serviceId==="objet_retrouve"?"Le paiement n’a pas été finalisé. Aucune demande de récupération n’a été transmise.":serviceId==="compagnie_voyage"?"Le paiement n’a pas été finalisé. Aucun abonnement de compagnie n’a été activé.":serviceId==="boutique_renewal"?"Le paiement n’a pas été finalisé. Votre boutique reste masquée tant que le paiement n’est pas confirmé.":serviceId==="logement_renewal"?"Le paiement n’a pas été finalisé. La publication de vos annonces reste suspendue si l’abonnement est expiré.":"Le paiement n'a pas été finalisé. Aucun abonnement n'a été activé.";
   params.delete("payment");params.delete("paymentId");params.delete("serviceId");history.replaceState({},document.title,location.pathname+(params.toString()?"?"+params.toString():""));return;
  }
