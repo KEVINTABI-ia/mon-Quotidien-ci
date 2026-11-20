@@ -11903,6 +11903,15 @@ window.mtcAfficherActeJudiciaire = function(type){
       #homeMobilite .accueil-services{margin:0}
       #homeAutomobile #espaceAutomobiliste,#homeLogement #logementImmobilier{margin:0!important}
       #homeSante .family-shortcuts{margin-bottom:12px}
+      #homeSante .sante-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      #homeSante .sante-shortcut{position:relative;min-height:104px;align-items:flex-start;gap:9px;padding:13px 11px;background:linear-gradient(145deg,#fff 0%,#f3f8f5 100%);border:1px solid #dce9e0;border-radius:16px;box-shadow:0 3px 12px rgba(24,75,53,.055)}
+      #homeSante .sante-shortcut-icon{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:11px;background:#e5f2e9;font-size:20px}
+      #homeSante .sante-shortcut-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}
+      #homeSante .sante-shortcut-copy strong{color:#174b35;font-size:12px;font-weight:850;line-height:1.25}
+      #homeSante .sante-shortcut-copy small{color:#718078;font-size:10px;font-weight:500;line-height:1.35}
+      #homeSante .sante-shortcut-arrow{align-self:center;color:#39815c;font-size:22px;font-weight:500}
+      #homeSante .sante-shortcut:focus-visible{outline:3px solid rgba(8,124,98,.28);outline-offset:2px}
+      @media(max-width:380px){#homeSante .sante-shortcut{min-height:112px;padding:10px 8px;gap:7px}#homeSante .sante-shortcut-icon{width:31px;height:31px;flex-basis:31px;font-size:18px}#homeSante .sante-shortcut-copy strong{font-size:11px}#homeSante .sante-shortcut-copy small{font-size:9px}}
       #homeMobilite,#homeAutomobile,#homeDemarches,#homeLogement,#homeSante,#homeVieCitoyenne{display:none}
       #homeFamilyLauncher{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
       #homeFamilyLauncher>.home-section-heading{grid-column:1/-1}
@@ -12018,10 +12027,12 @@ window.mtcAfficherActeJudiciaire = function(type){
         </div>
       </section>
       <section class="home-panel" id="homeSante">
-        <div class="home-section-heading"><div><h2>🏥 Santé et proximité</h2><p>Pharmacies, santé, artisans et services près de vous</p></div></div>
-        <div class="family-shortcuts">
-          <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Pharmacies et santé')"><span>💊</span>Pharmacies et santé</button>
-          <button class="family-shortcut" type="button" onclick="ouvrirRepertoireServicesQuotidiens('station','Stations-service')"><span>⛽</span>Services de proximité</button>
+        <div class="home-section-heading"><div><h2>🏥 Santé et proximité</h2><p>Accédez rapidement aux pharmacies, aux soins et aux services de santé près de vous.</p></div></div>
+        <div class="family-shortcuts sante-shortcuts">
+          <button class="family-shortcut sante-shortcut" type="button" onclick="ouvrirSectionPleinEcran('pharmaciesProches','Pharmacies de garde et à proximité')"><span class="sante-shortcut-icon">🌙</span><span class="sante-shortcut-copy"><strong>Pharmacies de garde</strong><small>Consulter les gardes par ville et commune</small></span><span class="sante-shortcut-arrow" aria-hidden="true">›</span></button>
+          <button class="family-shortcut sante-shortcut" type="button" onclick="ouvrirSectionPleinEcran('pharmaciesProches','Pharmacies à proximité')"><span class="sante-shortcut-icon">📍</span><span class="sante-shortcut-copy"><strong>Pharmacies à proximité</strong><small>Localiser une pharmacie autour de vous</small></span><span class="sante-shortcut-arrow" aria-hidden="true">›</span></button>
+          <button class="family-shortcut sante-shortcut" type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Centres de santé et laboratoires')"><span class="sante-shortcut-icon">🏥</span><span class="sante-shortcut-copy"><strong>Centres de santé</strong><small>Hôpitaux, centres médicaux et soins</small></span><span class="sante-shortcut-arrow" aria-hidden="true">›</span></button>
+          <button class="family-shortcut sante-shortcut" type="button" onclick="ouvrirSectionPleinEcran('servicesSante','Laboratoires et urgences')"><span class="sante-shortcut-icon">🧪</span><span class="sante-shortcut-copy"><strong>Laboratoires et urgences</strong><small>Analyses médicales et numéros utiles</small></span><span class="sante-shortcut-arrow" aria-hidden="true">›</span></button>
         </div>
       </section>
       <section class="home-panel" id="homeVieCitoyenne">
@@ -12069,7 +12080,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     const logementModule=document.getElementById('logementImmobilier');
     if(logementModule) logement.appendChild(logementModule);
     const sante=document.getElementById('homeSante');
-    ['servicesSante'].forEach(id=>{const el=document.getElementById(id);if(el)sante.appendChild(el);});
+    ['pharmaciesProches','servicesSante'].forEach(id=>{const el=document.getElementById(id);if(el)sante.appendChild(el);});
     const commerce=document.getElementById('homeDemarches');
     ['nouveauxServices','espaceEmploisOpportunites'].forEach(id=>{const el=document.getElementById(id);if(el)commerce.appendChild(el);});
     const citoyen=document.getElementById('homeVieCitoyenne');
