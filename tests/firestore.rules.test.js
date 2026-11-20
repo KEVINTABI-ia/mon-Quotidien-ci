@@ -856,7 +856,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       const db=testEnv.authenticatedContext(PARTNER_UID).firestore();
       const {doc,setDoc,serverTimestamp,getDoc}=require("firebase/firestore");
       const ref=doc(db,"compagnies",COMPANY_ID,"informations_privees","gare_principale");
-      await assertSucceeds(setDoc(ref,{uid:PARTNER_UID,telephoneResponsable:"0100000000",createdAt:serverTimestamp()}));
+      await assertSucceeds(setDoc(ref,{uid:PARTNER_UID,telephoneResponsable:"0100000000",numeroIdentite:"ID-GARE-12345",createdAt:serverTimestamp()}));
       await assertFails(getDoc(ref));
       await assertFails(getDoc(doc(testEnv.authenticatedContext(OTHER_UID).firestore(),"compagnies",COMPANY_ID,"informations_privees","gare_principale")));
       await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(),"compagnies",COMPANY_ID,"informations_privees","gare_principale")));
@@ -1092,7 +1092,8 @@ describe("Mon Transport CI — règles Firestore", function () {
       await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","boutique-paiement-manuel"),{
         uid:CLIENT_UID,type:"commerce",titre:"Boutique test",categorie:"Boutique",
         commune:"Yopougon",telephone:"0700000000",description:"Boutique de test",
-        email:"client@example.test",adresseBoutique:"Yopougon, Abidjan",
+        email:"client@example.test",numeroIdentite:"ID-BOUTIQUE-12345",
+        adresseBoutique:"Yopougon, Abidjan",
         planAbonnementId:"boutiques_3mois",abonnementStatut:"a_payer",
         montantAbonnement:7000,dureeAbonnementJours:90,paiementStatut:"a_payer",
         statut:"en_attente",createdAt:serverTimestamp()
@@ -1114,9 +1115,10 @@ describe("Mon Transport CI — règles Firestore", function () {
   describe("Contrôles complémentaires — paiements et parcours gratuits", () => {
     it("accepte le dépôt d’un dossier compagnie sans paiement manuel et réserve l’activation à Jèko", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
+      const {doc,setDoc,updateDoc,writeBatch,serverTimestamp}=require("firebase/firestore");
       const compagnieRef=doc(db,"compagnies","compagnie-paiement-manuel");
-      await assertSucceeds(setDoc(compagnieRef,{
+      const batch=writeBatch(db);
+      batch.set(compagnieRef,{
         uid:CLIENT_UID,nom:"Compagnie test",agence:"Agence principale",
         localisation:"Yopougon, Abidjan",telephone:"0700000000",email:"client@example.test",
         destinations:[{ville:"Bouaké"}],
@@ -1125,10 +1127,30 @@ describe("Mon Transport CI — règles Firestore", function () {
         formule:"Essentielle",periodicite:"Mensuel",montant:5000,dureeMois:1,
         statutAbonnement:"Dossier à vérifier",dateCreation:serverTimestamp(),
         dateDebut:null,dateExpiration:null
-      }));
+      });
+      batch.set(doc(compagnieRef,"informations_privees","gare_principale"),{
+        uid:CLIENT_UID,telephoneResponsable:"0700000003",
+        numeroIdentite:"ID-COMPAGNIE-12345",createdAt:serverTimestamp()
+      });
+      await assertSucceeds(batch.commit());
       await assertFails(updateDoc(compagnieRef,{
         statutAbonnement:"Actif",dateDebut:serverTimestamp(),dateExpiration:serverTimestamp()
       }));
+      const sansIdentite=doc(db,"compagnies","compagnie-sans-identite"),badBatch=writeBatch(db);
+      badBatch.set(sansIdentite,{
+        uid:CLIENT_UID,nom:"Compagnie test",agence:"Agence principale",
+        localisation:"Yopougon, Abidjan",telephone:"0700000000",email:"client@example.test",
+        destinations:[{ville:"Bouaké"}],
+        photoGarePrincipale:"data:image/jpeg;base64,abcdefghijklmnopqrstuvwxyz0123456789",
+        telephoneGarePrincipale:"0700000001",telephoneServiceCourrier:"0700000002",
+        formule:"Essentielle",periodicite:"Mensuel",montant:5000,dureeMois:1,
+        statutAbonnement:"Dossier à vérifier",dateCreation:serverTimestamp(),
+        dateDebut:null,dateExpiration:null
+      });
+      badBatch.set(doc(sansIdentite,"informations_privees","gare_principale"),{
+        uid:CLIENT_UID,telephoneResponsable:"0700000003",createdAt:serverTimestamp()
+      });
+      await assertFails(badBatch.commit());
       const adminDb=testEnv.authenticatedContext(ADMIN_UID).firestore();
       await assertSucceeds(updateDoc(doc(adminDb,"compagnies","compagnie-paiement-manuel"),{
         statutAbonnement:"À payer",dossierApprouveLe:serverTimestamp(),dossierApprouvePar:ADMIN_UID
@@ -1138,11 +1160,18 @@ describe("Mon Transport CI — règles Firestore", function () {
     it("conserve l'inscription partenaire gratuite d'une boutique pour 30 jours", async () => {
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
       const {doc,setDoc,serverTimestamp}=require("firebase/firestore");
-      await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","boutique-partenaire-essai-gratuit"),{
+      await assertFails(setDoc(doc(db,"demandes_nouveaux_services","boutique-partenaire-sans-identite"),{
         uid:CLIENT_UID,type:"commerce",titre:"Boutique partenaire test",
         categorie:"Boutique",commune:"Yopougon",telephone:"0700000000",
         description:"Présentation de la boutique partenaire de test.",
         email:"client@example.test",modePartenaire:true,
+        statut:"en_attente",createdAt:serverTimestamp()
+      }));
+      await assertSucceeds(setDoc(doc(db,"demandes_nouveaux_services","boutique-partenaire-essai-gratuit"),{
+        uid:CLIENT_UID,type:"commerce",titre:"Boutique partenaire test",
+        categorie:"Boutique",commune:"Yopougon",telephone:"0700000000",
+        description:"Présentation de la boutique partenaire de test.",
+        email:"client@example.test",numeroIdentite:"ID-BOUTIQUE-12345",modePartenaire:true,
         statut:"en_attente",createdAt:serverTimestamp()
       }));
     });
@@ -1259,6 +1288,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       description: "Interventions électriques à domicile et dépannage.",
       infosProfessionnelles: "Dépannage électrique, installation et entretien.",
       email: "client@example.test",
+      numeroIdentite: "ID-PARTENAIRE-12345",
       photoUrl: "data:image/jpeg;base64,QUJDREVGR0hJSktMTU5PUA==",
       modePartenaire: true,
       statut: "en_attente",
@@ -1291,6 +1321,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     it("exige une photo et les informations professionnelles pour le dépannage à domicile", async () => {
       const {doc,setDoc}=require("firebase/firestore");
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      await assertFails(setDoc(doc(db,"demandes_nouveaux_services","missing-id"),application({numeroIdentite:""})));
       await assertFails(setDoc(doc(db,"demandes_nouveaux_services","missing-photo"),application({photoUrl:""})));
       await assertFails(setDoc(doc(db,"demandes_nouveaux_services","missing-details"),application({infosProfessionnelles:""})));
     });

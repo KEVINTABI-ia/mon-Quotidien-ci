@@ -4114,6 +4114,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <label>Catégorie</label><select id="nsCategorie">${cfg.categories.map(c=>'<option'+(c===categorieInitiale?" selected":"")+' >'+c+'</option>').join("")}</select>
  ${type==="depannage_domicile"?'<p class="notice">Pour la catégorie « Dépôts de gaz », inscrivez uniquement les points de vente et de recharge de bouteilles de gaz.</p>':''}
  <label>Commune</label><input id="nsCommune" maxlength="60" placeholder="Ex. Yopougon" required>
+ ${modePartenaire?'<label>Numéro de carte nationale d’identité / NNI (obligatoire)</label><input id="nsNumeroIdentite" type="text" maxlength="60" autocomplete="off" required>':''}
  ${["hebergement","depannage_domicile","auto_ecole","vulcanisateur"].includes(type)?'<label>Quartier</label><input id="nsQuartier" maxlength="80" placeholder="Ex. Niangon, Angré, Riviera" required>':''}
  ${type==="commerce"?'<label>Adresse précise de récupération de la boutique</label><input id="nsAdresseBoutique" maxlength="220" placeholder="Quartier, rue, repère, commune" required>':''}
  <label>Téléphone</label><input id="nsTelephone" type="tel" maxlength="20" placeholder="Ex. 07 00 00 00 00" required>
@@ -4183,10 +4184,11 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
  const statut=document.getElementById("nsStatut");
  const valeur=id=>document.getElementById(id)?.value.trim()||"";
  const modePartenaire=!!document.querySelector("#devenirPartenaire [data-mode-partenaire=\"1\"]");
- const titre=valeur("nsTitre"),commune=valeur("nsCommune"),quartier=valeur("nsQuartier"),telephone=valeur("nsTelephone"),description=valeur("nsDescription"),email=valeur("nsEmail"),password=document.getElementById("nsPassword")?.value||"";
+ const titre=valeur("nsTitre"),commune=valeur("nsCommune"),quartier=valeur("nsQuartier"),telephone=valeur("nsTelephone"),description=valeur("nsDescription"),email=valeur("nsEmail"),password=document.getElementById("nsPassword")?.value||"",numeroIdentite=valeur("nsNumeroIdentite");
  const comptePartenaire=modePartenaire?auth.currentUser:null;
  if(modePartenaire&&!comptePartenaire){statut.textContent="Connectez-vous à votre compte utilisateur avant de déposer une demande partenaire.";return;}
  if(modePartenaire&&comptePartenaire.email&&email&&comptePartenaire.email.toLowerCase()!==email.toLowerCase()){statut.textContent="L’adresse e-mail doit correspondre au compte utilisateur connecté.";return;}
+ if(modePartenaire&&numeroIdentite.length<5){statut.textContent="Saisissez un numéro de carte nationale d’identité ou NNI valide.";return;}
  const estBoutique=nouveauServiceActif==="commerce";
  const boutiquePartenaire=estBoutique&&modePartenaire;
  
@@ -4224,7 +4226,7 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
    description:infosProfessionnelles?description+"\n\nInformations professionnelles : "+infosProfessionnelles:description,email,
    ...(["hebergement","depannage_domicile","auto_ecole","vulcanisateur"].includes(nouveauServiceActif)?{quartier}:{}),
    ...(infosProfessionnelles?{infosProfessionnelles}:{}),
-   ...(modePartenaire?{modePartenaire:true}:{}),
+   ...(modePartenaire?{modePartenaire:true,numeroIdentite}:{}),
    ...(photoUrl?{photoUrl}:{}),
    ...(estBoutique?{adresseBoutique}:{}),
    ...(estBoutique&&!boutiquePartenaire?{planAbonnementId:dureeOption.dataset.config,montantAbonnement,dureeAbonnementJours,abonnementStatut:"a_payer",paiementStatut:"a_payer"}:{}),
@@ -12513,6 +12515,7 @@ function analyserDestinationsCompagnie(texte){
 function afficherFormulaireInscriptionCompagnie(zone){
  zone.innerHTML='<div class="card" style="padding:14px"><h3>🚌 Inscription – Compagnie de voyage</h3><p>Utilisez votre compte utilisateur existant.</p>'+
  '<label>Nom de la compagnie</label><input id="partCompagnieNom" maxlength="100">'+
+ '<label>Numéro de carte nationale d’identité / NNI du représentant légal ou de la personne qui crée le compte (obligatoire)</label><input id="partCompagnieNumeroIdentite" type="text" maxlength="60" autocomplete="off" required>'+
  '<label>Nom de la gare principale / agence</label><input id="partCompagnieAgence" maxlength="100">'+
  '<label>Localisation précise de la gare principale</label><input id="partCompagnieLocalisation" maxlength="160">'+
  '<label>Photo obligatoire de la gare principale</label><input id="partCompagniePhotoGare" type="file" accept="image/*">'+
@@ -12533,10 +12536,10 @@ function afficherFormulaireInscriptionCompagnie(zone){
 async function envoyerInscriptionCompagnie(){
  const user=auth.currentUser,val=id=>document.getElementById(id)?.value.trim()||"",status=document.getElementById("partCompagnieStatut");
  if(!user){status.textContent="Connectez-vous à votre compte utilisateur.";return;}
- const nom=val("partCompagnieNom"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),telephoneGare=val("partCompagnieTelephoneGare"),telephoneResponsable=val("partCompagnieTelephoneResponsable"),courrier=val("partCompagnieTelephoneCourrier"),texte=val("partCompagnieDestinations"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite");
+ const nom=val("partCompagnieNom"),numeroIdentite=val("partCompagnieNumeroIdentite"),agence=val("partCompagnieAgence"),localisation=val("partCompagnieLocalisation"),telephone=val("partCompagnieTelephone"),telephoneGare=val("partCompagnieTelephoneGare"),telephoneResponsable=val("partCompagnieTelephoneResponsable"),courrier=val("partCompagnieTelephoneCourrier"),texte=val("partCompagnieDestinations"),formule=val("partCompagnieFormule"),periodicite=val("partCompagniePeriodicite");
  let destinations;try{destinations=analyserDestinationsCompagnie(texte);}catch(e){status.textContent=e.message;return;}
  const photoFile=document.getElementById("partCompagniePhotoGare")?.files?.[0];
- if(!nom||!agence||!localisation||!telephone||!telephoneGare||!telephoneResponsable||!courrier||!photoFile){status.textContent="Tous les champs obligatoires sont requis, y compris la photo de la gare principale.";return;}
+ if(!nom||numeroIdentite.length<5||!agence||!localisation||!telephone||!telephoneGare||!telephoneResponsable||!courrier||!photoFile){status.textContent="Tous les champs obligatoires sont requis, y compris le numéro d’identité et la photo de la gare principale.";return;}
  try{
   const old=await db.collection("compagnies").where("uid","==",user.uid).limit(1).get();if(!old.empty)throw new Error("Un dossier compagnie existe déjà pour ce compte.");
   const cfg=await obtenirConfigurationAbonnement(cleConfigurationCompagnie(formule,periodicite));if(!cfg.actif||cfg.unite!=="mois")throw new Error("Formule indisponible.");
@@ -12546,7 +12549,7 @@ async function envoyerInscriptionCompagnie(){
   let logo="";const logoFile=document.getElementById("partCompagnieLogo")?.files?.[0];if(logoFile){logo=await compresserImage(logoFile);if(logo.length>300000)throw new Error("Logo trop volumineux.");}
   const compagnieRef=db.collection("compagnies").doc(),batch=db.batch(),now=firebase.firestore.FieldValue.serverTimestamp();
   batch.set(compagnieRef,{uid:user.uid,nom,agence,localisation,telephone,telephoneGarePrincipale:telephoneGare,telephoneServiceCourrier:courrier,email:user.email||"",logo,photoGarePrincipale,destinations,formule,periodicite,montant,dureeMois,statutAbonnement:"Dossier à vérifier",dateCreation:now,dateDebut:null,dateExpiration:null});
-  batch.set(compagnieRef.collection("informations_privees").doc("gare_principale"),{uid:user.uid,telephoneResponsable,createdAt:now});
+  batch.set(compagnieRef.collection("informations_privees").doc("gare_principale"),{uid:user.uid,telephoneResponsable,numeroIdentite,createdAt:now});
   await batch.commit();
   status.textContent="Dossier transmis. Après approbation, vous pourrez régler votre abonnement exclusivement avec Jèko depuis votre espace compagnie.";
  }catch(e){status.textContent="Erreur : "+e.message;}
