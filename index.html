@@ -4106,10 +4106,10 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <p>Proposez votre service ou votre annonce. La publication sera possible après validation de l'administration.</p>
  <label>Nom / entreprise / titre de l'annonce</label><input id="nsTitre" maxlength="100" placeholder="Nom ou titre" required>
  <div id="nsPhotoZone" style="display:${["depannage","hebergement","depannage_domicile","auto_ecole","vulcanisateur","commerce","annonce"].includes(type)?"block":"none"};margin:12px 0;">
- <label>${type==="commerce"?"Photo de la boutique":type==="annonce"?"Photo de votre annonce":"Photo de profil du service de dépannage"} (facultatif)</label>
- <input id="nsPhoto" type="file" accept="image/jpeg,image/png,image/webp" onchange="previsualiserPhotoNouveauService(event)">
- <small>Formats JPG, PNG ou WEBP · 3 Mo maximum.</small>
- <img id="nsPhotoPreview" alt="Aperçu de la photo sélectionnée" style="display:none;width:120px;height:120px;object-fit:cover;border-radius:12px;margin-top:8px;">
+ <label>${type==="commerce"?"Photo de la boutique":type==="annonce"?"Photo de votre annonce":type==="depannage_domicile"?"Photo de profil du professionnel (obligatoire)":"Photo de l'établissement"}${type==="depannage_domicile"?"":" (facultatif)"}</label>
+ <input id="nsPhoto" type="file" accept="image/jpeg,image/png,image/webp" ${type==="depannage_domicile"?"required":""} onchange="previsualiserPhotoNouveauService(event)">
+ <small>${type==="depannage_domicile"?"Ajoutez une photo claire de votre visage pour permettre aux clients de vous reconnaître. ":""}Formats JPG, PNG ou WEBP · 3 Mo maximum.</small>
+ <img id="nsPhotoPreview" alt="Aperçu de la photo sélectionnée" style="display:none;width:120px;height:120px;object-fit:cover;border-radius:50%;margin-top:8px;">
  </div>
  <label>Catégorie</label><select id="nsCategorie">${cfg.categories.map(c=>'<option'+(c===categorieInitiale?" selected":"")+' >'+c+'</option>').join("")}</select>
  ${type==="depannage_domicile"?'<p class="notice">Pour la catégorie « Dépôts de gaz », inscrivez uniquement les points de vente et de recharge de bouteilles de gaz.</p>':''}
@@ -4117,7 +4117,8 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  ${["hebergement","depannage_domicile","auto_ecole","vulcanisateur"].includes(type)?'<label>Quartier</label><input id="nsQuartier" maxlength="80" placeholder="Ex. Niangon, Angré, Riviera" required>':''}
  ${type==="commerce"?'<label>Adresse précise de récupération de la boutique</label><input id="nsAdresseBoutique" maxlength="220" placeholder="Quartier, rue, repère, commune" required>':''}
  <label>Téléphone</label><input id="nsTelephone" type="tel" maxlength="20" placeholder="Ex. 07 00 00 00 00" required>
- <label>Description et détails</label><textarea id="nsDescription" rows="4" maxlength="1200" placeholder="Décrivez le service, le commerce ou l'annonce" required></textarea>
+ ${type==="auto_ecole"?'<label>Informations sur l’auto-école</label><textarea id="nsInfosProfessionnelles" rows="4" maxlength="1200" placeholder="Numéro d’agrément, catégories de permis enseignées, nombre de véhicules, modalités et horaires de formation." required></textarea>':type==="vulcanisateur"?'<label>Prestations de vulcanisation</label><textarea id="nsInfosProfessionnelles" rows="4" maxlength="1200" placeholder="Réparation de pneus, crevaison, équilibrage, vente de pneus, dépannage mobile ou atelier fixe, horaires." required></textarea>':type==="depannage_domicile"?'<label>Expérience et prestations proposées</label><textarea id="nsInfosProfessionnelles" rows="4" maxlength="1200" placeholder="Décrivez vos prestations, votre expérience, vos disponibilités et les quartiers desservis." required></textarea>':''}
+ <label>Description et détails</label><textarea id="nsDescription" rows="4" maxlength="1200" placeholder="Présentez votre activité et vos services" required></textarea>
  ${type==="commerce"?'<div style="padding:12px;background:#F0F7F1;border:1px solid #DCEBDD;border-radius:10px;margin:12px 0;"><strong>Après approbation</strong><p class="notice">Une fois votre établissement approuvé par l’administration, connectez-vous à votre espace commerçant pour ajouter vos articles, leurs prix et leurs photos.</p><p class="notice">Les frais de livraison seront fixés plus tard, lorsque vous recevrez une commande et déciderez de demander un livreur.</p></div>':''}
  <label>Adresse e-mail</label><input id="nsEmail" type="email" maxlength="120" placeholder="Votre adresse e-mail" required>
  <label>Mot de passe (6 caractères minimum)</label><input id="nsPassword" type="password" minlength="6" placeholder="Créer ou utiliser votre mot de passe" required>
@@ -4198,7 +4199,11 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
  if(estBoutique&&!adresseBoutique){statut.textContent="Renseignez l’adresse précise de récupération de votre établissement.";return;}
 
  if(estBoutique&&!boutiquePartenaire&&(!dureeSelect||!dureeOption||!Number.isInteger(montantAbonnement)||montantAbonnement<=0||!Number.isInteger(dureeAbonnementJours)||dureeAbonnementJours<=0)){statut.textContent="Choisissez une formule d’abonnement disponible avant de continuer.";return;}
- if(!titre||!commune||(["hebergement","depannage_domicile"].includes(nouveauServiceActif)&&!quartier)||!telephone||!description||!(modePartenaire?(comptePartenaire?.email||email):email)||(!modePartenaire&&password.length<6)){statut.textContent="Remplissez tous les champs obligatoires."+(modePartenaire?"":" Le mot de passe doit contenir au moins 6 caractères.");return;}
+ const infosProfessionnelles=document.getElementById("nsInfosProfessionnelles")?.value.trim()||"";
+ const photoSelectionnee=document.getElementById("nsPhoto")?.files?.[0]||null;
+ if(nouveauServiceActif==="depannage_domicile"&&!photoSelectionnee){statut.textContent="Ajoutez obligatoirement votre photo de profil avant d’envoyer la demande.";return;}
+ if(["auto_ecole","vulcanisateur","depannage_domicile"].includes(nouveauServiceActif)&&!infosProfessionnelles){statut.textContent="Renseignez les informations professionnelles demandées.";return;}
+ if(!titre||!commune||(["hebergement","depannage_domicile","auto_ecole","vulcanisateur"].includes(nouveauServiceActif)&&!quartier)||!telephone||!description||!(modePartenaire?(comptePartenaire?.email||email):email)||(!modePartenaire&&password.length<6)){statut.textContent="Remplissez tous les champs obligatoires."+(modePartenaire?"":" Le mot de passe doit contenir au moins 6 caractères.");return;}
  statut.textContent="Envoi du dossier...";
  try{
   let user=auth.currentUser;
@@ -4208,7 +4213,7 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
    catch(e){if(e.code==="auth/email-already-in-use"){const cred=await auth.signInWithEmailAndPassword(email,password);user=cred.user;}else throw e;}
   }
   let photoUrl=null;
-  const photo=document.getElementById("nsPhoto")?.files?.[0];
+  const photo=photoSelectionnee;
   if(photo&&["depannage","hebergement","depannage_domicile","auto_ecole","vulcanisateur","commerce","annonce"].includes(nouveauServiceActif)){
    if(!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>3*1024*1024)throw new Error("Photo JPG, PNG ou WEBP de 3 Mo maximum.");
    statut.textContent="Préparation de la photo...";
@@ -4217,6 +4222,7 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
   const donneesDossier={
    uid:user.uid,type:nouveauServiceActif,titre,categorie:valeur("nsCategorie"),commune,telephone,description,email,
    ...(["hebergement","depannage_domicile","auto_ecole","vulcanisateur"].includes(nouveauServiceActif)?{quartier}:{}),
+   ...(infosProfessionnelles?{infosProfessionnelles}:{}),
    ...(modePartenaire?{modePartenaire:true}:{}),
    ...(photoUrl?{photoUrl}:{}),
    ...(estBoutique?{adresseBoutique}:{}),
@@ -4244,7 +4250,7 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
   }else{
    await db.collection("demandes_nouveaux_services").add(donneesDossier);
   }
-  statut.textContent="Dossier envoyé. Il sera vérifié par l’administration avant publication.";
+  statut.textContent="Demande partenaire envoyée à l’administration. Votre dossier reste en attente de validation ; votre établissement ou profil ne sera publié qu’après approbation.";
   document.getElementById("nsTitre").value="";
   document.getElementById("nsDescription").value="";
  }catch(e){
