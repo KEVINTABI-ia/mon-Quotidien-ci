@@ -4626,14 +4626,38 @@ async function chargerCommandesBoutique(boutiqueId){
    const adresse=document.createElement("p");adresse.textContent="Livraison : "+(d.adresseLivraison||c.destination||"");
    const commentaire=document.createElement("p");commentaire.textContent="Commentaire du client : "+(d.commentaireCommande||"Aucun");
    const prix=document.createElement("p");prix.textContent="Articles : "+Number(d.prixProduit||0).toLocaleString("fr-FR")+" FCFA · Livraison : "+(Number(c.montantLivraisonBoutique||0)>0?Number(c.montantLivraisonBoutique).toLocaleString("fr-FR")+" FCFA":"à définir par la boutique");
-   const status=document.createElement("p");status.textContent="Statut : "+(c.statut==="commande_boutique"?"Non livrée":c.statut==="en_attente"?"Livraison demandée":c.statut==="livreur_affecte"?"Livreur accepté":c.statut==="livre"?"Livrée":c.statut);
-   card.append(h,details,adresse,commentaire,prix,status);
-   if(c.statut==="commande_boutique"){
-    const btn=document.createElement("button");btn.type="button";btn.className="primary";btn.textContent="🚚 Livrer la commande";btn.onclick=()=>declencherLivraisonBoutique(doc.id);card.appendChild(btn);
+   const status=document.createElement("p");status.textContent="Statut livraison : "+(c.statut==="commande_boutique"?"À organiser":c.statut==="en_attente"?"Livraison demandée":c.statut==="livreur_affecte"?"Livreur accepté":c.statut==="livre"?"Livrée":c.statut);
+   const statutsBoutique={recue:"Reçue",confirmee:"Confirmée",preparation:"En préparation",prete:"Prête",annulee:"Annulée"};
+   const statutBoutique=document.createElement("p");statutBoutique.textContent="Suivi boutique : "+(statutsBoutique[c.statutBoutique]||"Reçue");
+   card.append(h,details,adresse,commentaire,prix,status,statutBoutique);
+   if(c.statut!=="livre"&&c.statut!=="annulee"){
+    const actions=document.createElement("div");actions.style.cssText="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;";
+    const etapes=[["confirmee","✅ Confirmer"],["preparation","🧺 En préparation"],["prete","📦 Prête"]];
+    etapes.forEach(([valeur,libelle])=>{const btn=document.createElement("button");btn.type="button";btn.textContent=libelle;btn.onclick=()=>mettreAJourStatutCommandeBoutique(doc.id,valeur);actions.appendChild(btn);});
+    if(c.statut==="commande_boutique"){
+     const btn=document.createElement("button");btn.type="button";btn.className="primary";btn.textContent="🚚 Organiser la livraison";btn.onclick=()=>declencherLivraisonBoutique(doc.id);actions.appendChild(btn);
+    }
+    card.appendChild(actions);
+   }
+   const telClient=String(d.telephoneDestinataire||d.clientTelephone||"").replace(/\D/g,"");
+   if(/^225(?:01|05|07)\d{8}$/.test(telClient)){
+    const wa=document.createElement("a");wa.href="https://wa.me/"+telClient+"?text="+encodeURIComponent("Bonjour "+(d.clientNom||"")+" , concernant votre commande "+(d.trackingNumber||doc.id)+" de "+(d.produitCommande||"votre article")+", statut actuel : "+(statutsBoutique[c.statutBoutique]||"reçue")+". Merci de votre confiance.");wa.target="_blank";wa.rel="noopener noreferrer";wa.textContent="🟢 Informer le client sur WhatsApp";wa.style.cssText="display:inline-block;margin-top:10px;padding:10px 14px;background:#16834A;color:white;border-radius:8px;text-decoration:none;font-weight:700;";card.appendChild(wa);
    }
    zone.appendChild(card);
   }
  }catch(e){console.error(e);zone.textContent="Impossible de charger les commandes : "+e.message;}
+}
+async function mettreAJourStatutCommandeBoutique(commandeId,nouveauStatut){
+ const user=partnerAuth.currentUser;if(!user)return alert("Connectez-vous au compte boutique.");
+ const autorises=["confirmee","preparation","prete"];if(!autorises.includes(nouveauStatut))return;
+ try{
+  const ref=partnerDb.collection("commandes_colis").doc(commandeId),snap=await ref.get();
+  if(!snap.exists)throw new Error("Commande introuvable.");
+  const c=snap.data();if(c.boutiqueUid!==user.uid||c.typeCommande!=="boutique")throw new Error("Vous n'êtes pas autorisé à modifier cette commande.");
+  if(["livre","annulee"].includes(c.statut))throw new Error("Cette commande est déjà clôturée.");
+  await ref.update({statutBoutique:nouveauStatut,statutBoutiqueModifieLe:firebase.firestore.FieldValue.serverTimestamp(),statutBoutiqueModifiePar:user.uid});
+  chargerCommandesBoutique(c.boutiqueId);
+ }catch(e){console.error(e);alert("Mise à jour impossible : "+e.message);}
 }
 async function declencherLivraisonBoutique(commandeId){
  const user=partnerAuth.currentUser,dbBoutique=partnerDb;if(!user)return alert("Connectez-vous au compte boutique.");
@@ -9597,7 +9621,13 @@ async function chargerHistoriqueCommandes(){
       numero.textContent = "Commande : " + (commande.informationsPrivees?.trackingNumber || commande.trackingNumber || commande.id);
 
       const statut = document.createElement("p");
-      statut.textContent = "Statut : " + (statuts[commande.statut] || commande.statut || "Non renseigné");
+      statut.textContent = "Statut livraison : " + (statuts[commande.statut] || (commande.statut==="commande_boutique"?"En attente de prise en charge":commande.statut) || "Non renseigné");
+      const statutsBoutiqueClient={confirmee:"Commande confirmée par la boutique",preparation:"Votre commande est en préparation",prete:"Votre commande est prête",annulee:"Commande annulée par la boutique"};
+      if(commande.typeCommande==="boutique"||commande.statutBoutique){
+        const suiviBoutique=document.createElement("p");
+        suiviBoutique.textContent="🏪 Suivi boutique : "+(statutsBoutiqueClient[commande.statutBoutique]||"Commande reçue par la boutique");
+        carte.appendChild(suiviBoutique);
+      }
 
       const trajet = document.createElement("p");
       trajet.textContent = (commande.depart || "") + " → " + (commande.destination || "");
