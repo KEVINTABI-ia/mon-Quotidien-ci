@@ -222,6 +222,125 @@ async function publiciteDelete(request,env) {
   return json({ok:true});
 }
 
+
+async function beginFirestoreTransaction(env) {
+  const token=await serviceToken(env);
+  const response=await fetch("https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents:beginTransaction",{
+    method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},
+    body:JSON.stringify({options:{readWrite:{}}})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.transaction)throw new Error("firestore_transaction_begin_failed");
+  return data.transaction;
+}
+async function getDocInTransaction(env,path,transaction) {
+  const token=await serviceToken(env);
+  const endpoint=new URL("https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents/"+path);
+  endpoint.searchParams.set("transaction",transaction);
+  const response=await fetch(endpoint.toString(),{headers:{authorization:"Bearer "+token}});
+  if(response.status===404)return null;
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error("firestore_transaction_read_"+response.status);
+  return data;
+}
+async function commitFirestoreTransaction(env,writes,transaction) {
+  const token=await serviceToken(env);
+  const response=await fetch("https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents:commit",{
+    method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},
+    body:JSON.stringify({writes,transaction})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok) {
+    const error=new Error("firestore_transaction_commit_"+response.status);
+    error.status=response.status;
+    throw error;
+  }
+  return data;
+}
+function deleteWrite(path,updateTime) {
+  return {delete:resourceName(path),currentDocument:updateTime?{updateTime}:{exists:true}};
+}
+export function courierProfileCanCompleteMission(profile,uid) {
+  return !!profile&&profile.uid===uid&&profile.type==="livreur_independant"&&
+    profile.statut==="approuve"&&(profile.etatCompte||"actif")==="actif";
+}
+export function buildCourierWalletCommissionLedger({balanceXof,debtXof=0,deliveryFeeXof,serviceType,serviceFeeXof=0}) {
+  const commission=calculateCourierWalletDebit({serviceType,deliveryFeeXof,serviceFeeXof});
+  const applied=applyCourierWalletCommission({balanceXof,debtXof,commissionXof:commission.totalWalletDebitXof});
+  return Object.freeze({...commission,...applied});
+}
+async function completeCourierMission(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized",diagnostic:auth.diagnostic},401);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const commandeId=body.commandeId;
+  if(typeof commandeId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(commandeId))return json({error:"invalid_commande_id"},400);
+  const uid=auth.user.sub,now=new Date(),commandePath="commandes_colis/"+commandeId;
+  const partnerPath="partenaires/"+uid,walletPath="portefeuilles_livreurs/"+uid;
+  const lockPath=partnerPath+"/verrous/missionActive",commissionId="commission_"+commandeId;
+  const journalPath=walletPath+"/journal/"+commissionId;
+  let transaction;
+  try {
+    transaction=await beginFirestoreTransaction(env);
+    const [orderDoc,partnerDoc,priceDoc,detailsDoc,walletDoc,lockDoc,journalDoc]=await Promise.all([
+      getDocInTransaction(env,commandePath,transaction),
+      getDocInTransaction(env,partnerPath,transaction),
+      getDocInTransaction(env,commandePath+"/tarification/prix",transaction),
+      getDocInTransaction(env,commandePath+"/informations_privees/details",transaction),
+      getDocInTransaction(env,walletPath,transaction),
+      getDocInTransaction(env,lockPath,transaction),
+      getDocInTransaction(env,journalPath,transaction)
+    ]);
+    if(!orderDoc)return json({error:"commande_not_found"},404);
+    const order=docData(orderDoc),profile=docData(partnerDoc),price=docData(priceDoc),details=docData(detailsDoc);
+    if(!courierProfileCanCompleteMission(profile,uid)||order.partenaireId!==uid||order.partenaireType!=="livreur_independant")return json({error:"mission_not_owned"},403);
+    if(order.statut==="livre"&&journalDoc)return json({ok:true,alreadyCompleted:true,commissionJournalId:commissionId},200);
+    if(order.statut!=="arrive_destination")return json({error:"mission_not_ready_for_completion"},409);
+    if(!lockDoc||docData(lockDoc)?.commandeId!==commandeId||docData(lockDoc)?.statut!=="active")return json({error:"active_mission_lock_missing"},409);
+    if(!price||!details)return json({error:"private_tariff_or_details_missing"},409);
+    if(!["livraison","livraison_programmee"].includes(order.service))return json({error:"unsupported_courier_service"},409);
+    if(journalDoc)return json({error:"commission_ledger_already_exists"},409);
+    const serviceType=order.typeCommande==="boutique"?"boutique":"classique";
+    const deliveryFeeXof=serviceType==="boutique"?order.montantLivraisonBoutique:price.montantLivraison;
+    if(!Number.isSafeInteger(deliveryFeeXof)||deliveryFeeXof<=0||price.devise!=="FCFA"||price.montantLivraison!==deliveryFeeXof)return json({error:"confirmed_delivery_fee_invalid"},409);
+    if(serviceType==="boutique"&&details.operation!=="livraison_boutique")return json({error:"boutique_operation_mismatch"},409);
+    const wallet=docData(walletDoc)||{},balanceXof=wallet.soldeDisponibleXof??0,debtXof=wallet.detteCommissionXof??0;
+    const totalCommissionXof=wallet.totalCommissionXof??0,totalCommissionEncaisseeXof=wallet.totalCommissionEncaisseeXof??0;
+    if(![balanceXof,debtXof,totalCommissionXof,totalCommissionEncaisseeXof].every(v=>Number.isSafeInteger(v)&&v>=0))return json({error:"courier_wallet_balance_invalid"},409);
+    const applied=buildCourierWalletCommissionLedger({balanceXof,debtXof,deliveryFeeXof,serviceType});
+    const nextWallet={
+      uid,soldeDisponibleXof:applied.balanceAfterXof,detteCommissionXof:applied.debtAfterXof,
+      totalCommissionXof:totalCommissionXof+applied.totalWalletDebitXof,
+      totalCommissionEncaisseeXof:totalCommissionEncaisseeXof+applied.debitXof,
+      updatedAt:now,createdAt:wallet.createdAt||now
+    };
+    const journal={
+      type:"commission",commissionId,commandeId,serviceType,deliveryFeeXof,
+      deliveryCommissionRate:applied.deliveryCommissionRate,
+      commissionDueXof:applied.totalWalletDebitXof,
+      montantDebiteXof:applied.debitXof,detteAjouteeXof:applied.debtAddedXof,
+      balanceBeforeXof:balanceXof,balanceAfterXof:applied.balanceAfterXof,
+      debtBeforeXof:debtXof,debtAfterXof:applied.debtAfterXof,
+      actor:"courier_mission_worker",createdAt:now
+    };
+    const writes=[
+      updateWrite(commandePath,{statut:"livre",dateLivraison:now,commissionPrelevee:true,commissionJournalId:commissionId},orderDoc.updateTime),
+      walletDoc?updateWrite(walletPath,nextWallet,walletDoc.updateTime):createWrite(walletPath,nextWallet),
+      createWrite(journalPath,journal),
+      deleteWrite(lockPath,lockDoc.updateTime)
+    ];
+    await commitFirestoreTransaction(env,writes,transaction);
+    return json({
+      ok:true,alreadyCompleted:false,commissionXof:applied.totalWalletDebitXof,
+      debitXof:applied.debitXof,debtAddedXof:applied.debtAddedXof,
+      balanceAfterXof:applied.balanceAfterXof,debtAfterXof:applied.debtAfterXof
+    },200);
+  } catch(error) {
+    console.error("Courier mission completion failed",{code:error?.message||"unknown"});
+    return json({error:error?.message==="firestore_transaction_commit_409"?"mission_completion_conflict":"mission_completion_failed"},409);
+  }
+}
+
 async function createCheckout(request,env) {
   const authResult=await requireUser(request, env);
   const user=authResult.user;
@@ -230,10 +349,17 @@ async function createCheckout(request,env) {
   const methods=["orange","wave","mtn","moov","djamo"];
   if(!methods.includes(body.paymentMethod)) return json({error:"invalid_payment_method"},400);
   const serviceId=body.serviceId||"automobiliste";
-  if(!["automobiliste","objet_retrouve","petites_annonces","boutique_renewal","partenaire_colis","partenaire_services","compagnie_voyage","logement_renewal","ramassage","publicite"].includes(serviceId)) return json({error:"unsupported_service"},400);
+  if(!["automobiliste","objet_retrouve","petites_annonces","boutique_renewal","partenaire_colis","partenaire_services","compagnie_voyage","logement_renewal","ramassage","publicite","courier_wallet"].includes(serviceId)) return json({error:"unsupported_service"},400);
   const now=new Date();
   let amountXof, initial;
-  if(serviceId==="objet_retrouve"){
+  if(serviceId==="courier_wallet") {
+    const profilePath="partenaires/"+user.sub,profileDoc=await getDoc(env,profilePath),profile=docData(profileDoc);
+    if(!profileDoc||profile?.uid!==user.sub||profile?.type!=="livreur_independant"||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif")return json({error:"courier_profile_not_eligible"},403);
+    amountXof=body.amountXof;
+    if(!isValidCourierWalletRechargeAmount(amountXof))return json({error:"invalid_wallet_recharge_amount",minimumXof:2000},400);
+    if(!["orange","wave","mtn"].includes(body.paymentMethod))return json({error:"wallet_payment_method_not_supported"},400);
+    initial={uid:user.sub,serviceId,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
+  } else if(serviceId==="objet_retrouve"){
     const {objectId,nomComplet,telephone,residence}=body;
     if(typeof objectId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(objectId)||typeof nomComplet!=="string"||nomComplet.trim().length<2||nomComplet.trim().length>100||
        typeof telephone!=="string"||telephone.trim().length<6||telephone.trim().length>25||
@@ -491,6 +617,10 @@ export function validateJekoPaymentPlan(payment) {
     const plans={decouverte:[2000,3],visibilite:[5000,7],professionnel:[9000,15],premium:[15000,30]},plan=plans[payment.planId];
     return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1]&&typeof payment.uid==="string"&&typeof payment.imagePath==="string"&&payment.imagePath.startsWith("publicites/partenaires/"+payment.uid+"/")&&typeof payment.partnerProfilePath==="string"&&(payment.partnerProfilePath==="partenaires/"+payment.uid||/^compagnies\/[A-Za-z0-9_-]{1,128}$/.test(payment.partnerProfilePath)||/^demandes_nouveaux_services\/[A-Za-z0-9_-]{1,128}$/.test(payment.partnerProfilePath))&&/\.(jpg|png|webp)$/i.test(payment.imagePath)&&typeof payment.mediaUrl==="string"&&/^https:\/\//i.test(payment.mediaUrl)&&payment.mediaUrl.includes(encodeURIComponent(payment.imagePath))&&typeof payment.titre==="string"&&payment.titre.length>=2&&payment.titre.length<=100;
   }
+  if(payment.serviceId==="courier_wallet") {
+    return isValidCourierWalletRechargeAmount(payment.amountXof)&&
+      typeof payment.uid==="string"&&/^[A-Za-z0-9_-]{1,128}$/.test(payment.uid);
+  }
   if(payment.serviceId==="objet_retrouve") return payment.amountXof===1000;
   if(payment.serviceId==="logement_renewal"||payment.serviceId==="ramassage"||payment.serviceId==="partenaire_services"){
     const plan=fixed[payment.serviceId]?.[payment.planId];
@@ -563,6 +693,40 @@ async function webhook(request,env) {
     return new Response("OK",{status:200});
   }
   if(payment.status==="succeeded") return new Response("OK",{status:200});
+  if(payment.serviceId==="courier_wallet") {
+    const walletPath="portefeuilles_livreurs/"+payment.uid;
+    const walletDoc=await getDoc(env,walletPath),wallet=docData(walletDoc)||{};
+    const balanceXof=wallet.soldeDisponibleXof??0,debtXof=wallet.detteCommissionXof??0,totalRechargeXof=wallet.totalRechargeXof??0;
+    if(![balanceXof,debtXof,totalRechargeXof].every(v=>Number.isSafeInteger(v)&&v>=0)) {
+      await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"courier_wallet_balance_invalid",updatedAt:now.toISOString()}))});
+      return new Response("OK",{status:200});
+    }
+    const applied=applyCourierWalletRecharge({balanceXof,debtXof,rechargeXof:payment.amountXof});
+    const journalPath=walletPath+"/journal/recharge_"+paymentId;
+    const nextWallet={
+      uid:payment.uid,soldeDisponibleXof:applied.balanceAfterXof,detteCommissionXof:applied.debtAfterXof,
+      totalRechargeXof:totalRechargeXof+payment.amountXof,updatedAt:now.toISOString(),
+      createdAt:wallet.createdAt||now.toISOString()
+    };
+    const journal={
+      type:"recharge",paymentId,provider:"jeko",providerTransactionId:transactionId,
+      montantXof:payment.amountXof,detteRegleeXof:applied.debtPaymentXof,
+      creditDisponibleXof:applied.balanceCreditXof,balanceBeforeXof:balanceXof,
+      balanceAfterXof:applied.balanceAfterXof,debtBeforeXof:debtXof,
+      debtAfterXof:applied.debtAfterXof,actor:"jeko_webhook",createdAt:now.toISOString()
+    };
+    try {
+      await commitWrites(env,[
+        updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
+        updateWrite(walletPath,nextWallet,walletDoc?.updateTime,walletDoc?undefined:false),
+        createWrite(journalPath,journal),
+        createWrite(receiptPath,receiptData)
+      ]);
+    } catch(e) {
+      if(!(await getDoc(env,receiptPath))) throw e;
+    }
+    return new Response("OK",{status:200});
+  }
   if(payment.serviceId==="publicite"){
     const profileDoc=await getDoc(env,payment.partnerProfilePath),profile=docData(profileDoc);
     if(!profileDoc||profile?.uid!==payment.uid||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif"){
@@ -866,6 +1030,106 @@ async function paymentStatus(request,env) {
   }
   return json({paymentId:id,status:payment.status,amountXof:payment.amountXof,currency:payment.currency,serviceId:payment.serviceId||"automobiliste"});
 }
+// Commission rules for courier wallet. Amounts are integer XOF.
+export const COURIER_WALLET_RULES = Object.freeze({
+  lowBalanceAlertXof: 1000,
+  gareServiceFeeXof: 600,
+  garePlatformServiceShareXof: 100,
+  gareCourierServiceShareXof: 500,
+  dynamicPricingMaxMultiplier: 1.20
+});
+
+export function calculateCourierWalletDebit({serviceType,deliveryFeeXof,serviceFeeXof=0}) {
+  const validAmount = value => Number.isSafeInteger(value) && value >= 0;
+  if (!["boutique","classique","gare_expedition","gare_recuperation"].includes(serviceType)) {
+    throw new Error("unsupported_courier_service_type");
+  }
+  if (!validAmount(deliveryFeeXof) || !validAmount(serviceFeeXof)) {
+    throw new Error("invalid_courier_amount");
+  }
+  const rate = serviceType === "boutique" ? 0.10 : 0.15;
+  const deliveryCommissionXof = Math.round(deliveryFeeXof * rate);
+  const gareOperation = serviceType === "gare_expedition" || serviceType === "gare_recuperation";
+  if (gareOperation && serviceFeeXof !== COURIER_WALLET_RULES.gareServiceFeeXof) {
+    throw new Error("invalid_gare_service_fee");
+  }
+  if (!gareOperation && serviceFeeXof !== 0) {
+    throw new Error("unexpected_service_fee");
+  }
+  const platformServiceFeeXof = gareOperation ? COURIER_WALLET_RULES.garePlatformServiceShareXof : 0;
+  const courierServiceShareXof = gareOperation ? COURIER_WALLET_RULES.gareCourierServiceShareXof : 0;
+  return Object.freeze({
+    deliveryCommissionRate: rate,
+    deliveryCommissionXof,
+    platformServiceFeeXof,
+    courierServiceShareXof,
+    totalWalletDebitXof: deliveryCommissionXof + platformServiceFeeXof
+  });
+}
+
+// This predicate authorizes a commission trigger only; it never performs a wallet debit.
+export function courierCommissionTriggerAllowed({
+  serviceType, fromStatus, toStatus, serverConfirmed, postalDepositConfirmed=false
+}) {
+  if (!["boutique","classique","gare_expedition","gare_recuperation"].includes(serviceType)) return false;
+  if (serverConfirmed !== true || fromStatus !== "arrive_destination" || toStatus !== "livre") return false;
+  if (serviceType === "gare_expedition" && postalDepositConfirmed !== true) return false;
+  return true;
+}
+
+// A negative balance is represented as a separate debt, never as a negative wallet balance.
+export function applyCourierWalletCommission({balanceXof,debtXof=0,commissionXof}) {
+  const valid = value => Number.isSafeInteger(value) && value >= 0;
+  if (!valid(balanceXof) || !valid(debtXof) || !valid(commissionXof)) {
+    throw new Error("invalid_courier_wallet_ledger_amount");
+  }
+  const debitXof = Math.min(balanceXof,commissionXof);
+  const unpaidXof = commissionXof - debitXof;
+  return Object.freeze({
+    debitXof,
+    balanceAfterXof: balanceXof - debitXof,
+    debtAddedXof: unpaidXof,
+    debtAfterXof: debtXof + unpaidXof,
+    commissionSettledXof: debitXof
+  });
+}
+
+// New missions require a strictly positive available balance and no outstanding debt.
+export function courierWalletCanAcceptMission(balanceXof,debtXof=0) {
+  return Number.isSafeInteger(balanceXof) && balanceXof > 0 &&
+    Number.isSafeInteger(debtXof) && debtXof === 0;
+}
+
+// Recharges first settle outstanding commission debt; only the remainder becomes spendable.
+export function applyCourierWalletRecharge({balanceXof,debtXof=0,rechargeXof}) {
+  const valid = value => Number.isSafeInteger(value) && value >= 0;
+  if (!valid(balanceXof) || !valid(debtXof) || !valid(rechargeXof) || rechargeXof === 0) {
+    throw new Error("invalid_courier_wallet_recharge_amount");
+  }
+  const debtPaymentXof = Math.min(debtXof,rechargeXof);
+  const balanceCreditXof = rechargeXof - debtPaymentXof;
+  return Object.freeze({
+    debtPaymentXof,
+    debtAfterXof: debtXof - debtPaymentXof,
+    balanceCreditXof,
+    balanceAfterXof: balanceXof + balanceCreditXof
+  });
+}
+
+export function isValidCourierWalletRechargeAmount(amountXof) {
+  return Number.isSafeInteger(amountXof) && amountXof >= 2000 && amountXof <= 10000000;
+}
+
+export function buildCourierWalletRechargeLedger({balanceXof,debtXof=0,rechargeXof,totalRechargeXof=0}) {
+  const applied=applyCourierWalletRecharge({balanceXof,debtXof,rechargeXof});
+  if(!Number.isSafeInteger(totalRechargeXof)||totalRechargeXof<0)throw new Error("invalid_courier_wallet_total_recharge");
+  return Object.freeze({...applied,totalRechargeAfterXof:totalRechargeXof+rechargeXof});
+}
+
+export function courierWalletNeedsLowBalanceAlert(balanceXof) {
+  return Number.isSafeInteger(balanceXof) && balanceXof <= COURIER_WALLET_RULES.lowBalanceAlertXof;
+}
+
 export function buildSubscriptionPlans(requested,services={},now=new Date()) {
   const definitions={
     automobiliste:["automobiliste"],
@@ -948,6 +1212,7 @@ export default {
     if(url.pathname==="/health"&&request.method==="GET") response=json({ok:true,service:"mon-quotidien-jeko",mode:"production-locked"});
     else if(url.pathname==="/webhook") response=await webhook(request,env);
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
+    else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
     else if(url.pathname==="/api/publicites/admin-upload"&&request.method==="POST") response=await publiciteUpload(request,env,true);
     else if(url.pathname==="/api/publicites/image"&&request.method==="GET") response=await publiciteImage(request,env);

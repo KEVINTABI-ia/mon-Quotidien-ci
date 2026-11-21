@@ -93,6 +93,11 @@ service cloud.firestore {
     function verrouPath(uid) {
       return /databases/$(database)/documents/partenaires/$(uid)/verrous/missionActive;
     }
+    function portefeuilleLivreurAutorise(uid) {
+      return exists(/databases/$(database)/documents/portefeuilles_livreurs/$(uid))
+        && get(/databases/$(database)/documents/portefeuilles_livreurs/$(uid)).data.get("soldeDisponibleXof", 0) > 0
+        && get(/databases/$(database)/documents/portefeuilles_livreurs/$(uid)).data.get("detteCommissionXof", 0) == 0;
+    }
 
     function commandePath(commandeId) {
       return /databases/$(database)/documents/commandes_colis/$(commandeId);
@@ -403,8 +408,7 @@ service cloud.firestore {
             && (
               (get(commandePath(resource.data.commandeId)).data.statut == "en_attente"
                 && get(commandePath(resource.data.commandeId)).data.get("partenaireId", null) == null)
-              || ((get(commandePath(resource.data.commandeId)).data.statut == "livre"
-                  || get(commandePath(resource.data.commandeId)).data.statut == "arrive_destination")
+              || (get(commandePath(resource.data.commandeId)).data.statut == "livre"
                 && get(commandePath(resource.data.commandeId)).data.partenaireId == partenaireId)
             ));
         allow update: if false;
@@ -527,6 +531,7 @@ service cloud.firestore {
           && request.resource.data.affectePar == request.auth.uid
           && partenaire(request.resource.data.partenaireId).enLigne == true
           && abonnementValide(partenaire(request.resource.data.partenaireId))
+          && (resource.data['service'] == "compagnie" || portefeuilleLivreurAutorise(request.resource.data.partenaireId))
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation", "affectePar", "statut"])
           && existsAfter(verrouPath(request.resource.data.partenaireId))
@@ -545,6 +550,7 @@ service cloud.firestore {
           && existsAfter(verrouPath(request.auth.uid))
           && getAfter(verrouPath(request.auth.uid)).data.commandeId == commandeId
           && partenaireEnLignePour(resource.data['service'])
+          && (resource.data['service'] == "compagnie" || portefeuilleLivreurAutorise(request.auth.uid))
         )
         || (
           estConnecte()
@@ -597,6 +603,7 @@ service cloud.firestore {
         || (
           estConnecte()
           && resource.data.partenaireId == request.auth.uid
+          && resource.data['service'] == "compagnie"
           && resource.data.statut == "arrive_destination"
           && request.resource.data.statut == "livre"
           && request.resource.data.dateLivraison == request.time
@@ -1683,7 +1690,17 @@ service cloud.firestore {
       allow delete: if estAdmin();
     }
 
-    // Paiements Jèko : seules les Cloud Functions Admin SDK peuvent écrire ces documents.
+    // Portefeuilles livreurs : lecture propriétaire uniquement ; toutes les écritures passent par le Worker.
+    match /portefeuilles_livreurs/{livreurUid} {
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == livreurUid);
+      allow create, update, delete: if false;
+      match /journal/{entryId} {
+        allow read: if estAdmin() || (estConnecte() && request.auth.uid == livreurUid);
+        allow create, update, delete: if false;
+      }
+    }
+
+    // Paiements Jèko : seules les écritures serveur via Worker sont autorisées.
     match /payments/{paymentId} {
       allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
       allow create, update, delete: if false;
