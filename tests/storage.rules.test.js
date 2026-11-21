@@ -74,6 +74,15 @@ describe("Mon Quotidien CI — règles Firebase Storage",function(){
   await assertSucceeds(getBytes(ref(testEnv.unauthenticatedContext().storage(),publicPath)));
  });
 
+ it("autorise uniquement l’administrateur à déposer les médias publicitaires et permet leur lecture publique",async()=>{
+  const path="publicites/publicite-test.jpg";
+  const admin=testEnv.authenticatedContext(ADMIN_UID).storage();
+  await assertSucceeds(uploadBytes(ref(admin,path),jpeg,metadata));
+  await assertSucceeds(getBytes(ref(testEnv.unauthenticatedContext().storage(),path)));
+  await assertFails(uploadBytes(ref(testEnv.authenticatedContext(OWNER_UID).storage(),"publicites/annonce-interdite.jpg"),jpeg,metadata));
+  await assertFails(uploadBytes(ref(admin,"publicites/fichier-interdit.txt"),new Uint8Array([1,2,3]),{contentType:"text/plain"}));
+  await assertFails(uploadBytes(ref(admin,"publicites/trop-volumineuse.jpg"),new Uint8Array(25*1024*1024+1),metadata));
+ });
  it("autorise le propriétaire à déposer les justificatifs du trajet partagé mais réserve leur lecture à l’administration",async()=>{
   const path="trajet_partage_documents/"+OWNER_UID+"/permis.jpg";const owner=testEnv.authenticatedContext(OWNER_UID).storage();
   await assertSucceeds(uploadBytes(ref(owner,path),jpeg,metadata));await assertFails(getBytes(ref(owner,path)));await assertFails(getBytes(ref(testEnv.authenticatedContext(OTHER_UID).storage(),path)));await assertSucceeds(getBytes(ref(testEnv.authenticatedContext(ADMIN_UID).storage(),path)));
