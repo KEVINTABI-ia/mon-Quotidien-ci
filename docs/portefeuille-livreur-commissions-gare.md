@@ -41,13 +41,25 @@ Ces montants remplacent les anciens forfaits de 700 et 500 FCFA.
 - Alerte de solde faible à 1 000 FCFA.
 - À 0 FCFA : aucune nouvelle mission ne peut être acceptée.
 - Une mission déjà acceptée peut être terminée, même si le solde atteint zéro entre-temps.
-- Débit à la clôture confirmée de la mission, une seule fois par commande.
+- **Aucune commission n'est prélevée à l'acceptation d'une mission ni pendant son exécution.**
+- **Le débit intervient une seule fois, après confirmation serveur de la fin effective de la prestation.**
+- Les commandes annulées ou non livrées ne génèrent aucune commission.
 - Recharge par Jèko : le portefeuille est crédité uniquement après validation du webhook Jèko signé, jamais sur la seule base d'une redirection navigateur.
 - Le solde non consommé appartient au livreur ; les commissions effectivement prélevées sont enregistrées séparément.
-- Les commandes annulées ou non livrées ne génèrent aucune commission.
 - Le journal doit tracer recharges, commissions, remboursements d'avances courrier et ajustements administratifs, avec référence unique, horodatage et acteur.
 
 Le montant minimal des recharges, la procédure de remboursement du solde non consommé à la clôture du compte et la gestion d'un solde positif mais inférieur à la prochaine commission estimée restent à préciser avant mise en production.
+
+## Déclencheurs de clôture et de commission
+
+La fonction de calcul de commission ne constitue jamais, à elle seule, une autorisation de débit. Le Worker doit contrôler l'événement métier, l'affectation, le statut courant, le tarif confirmé et l'absence d'un débit antérieur.
+
+- **Livraison classique et livraison boutique :** débit uniquement lors du passage serveur validé de `arrive_destination` à `livre`, après confirmation effective de la fin de course et du règlement convenu.
+- **Récupération à la gare :** débit après remise effective du colis au destinataire et clôture confirmée de la mission. Le retrait du colis au guichet de la gare ne suffit pas.
+- **Expédition depuis le client vers la gare :** débit après confirmation du dépôt effectif du colis au service courrier. La saisie par le livreur du nom de la compagnie, de la gare et du code de suivi ne constitue pas, à elle seule, une preuve vérifiée de dépôt. Le flux actuel enregistre ces références et passe la commande à `livre` ; il devra être complété par une preuve de dépôt et une étape de confirmation avant d'autoriser le débit.
+- **Événements non déclencheurs :** création, acceptation, affectation, récupération du colis, passage en transit, arrivée à destination, refus, annulation ou simple redirection vers une page de paiement.
+- **Idempotence :** une clé financière stable par commande et par type de commission empêche tout double débit, y compris en cas d'appels concurrents ou de répétition de requête.
+- **Atomicité :** le passage au statut final, le débit du solde, l'écriture du journal et la libération du verrou de mission doivent être effectués dans une même transaction Firestore côté Worker. En cas d'échec, aucune de ces opérations ne doit être partiellement appliquée.
 
 ## Flux gare
 
@@ -71,6 +83,8 @@ Les frais du service courrier sont variables : le système doit enregistrer le m
 - Le Worker Cloudflare existant gère déjà l'authentification Firebase, les paiements Jèko, les webhooks signés et les écritures Firestore via compte de service.
 - Le Worker expose actuellement les routes checkout, status, webhook et divers services existants. Le service portefeuille n'est pas encore intégré.
 - Dans `index.html`, l'acceptation et la clôture de missions utilisent des transactions Firestore depuis le navigateur.
+- La clôture standard passe directement de `arrive_destination` à `livre` depuis le navigateur ; elle doit être déplacée côté Worker avant tout débit.
+- La clôture d'expédition gare enregistre actuellement des références saisies par le livreur et passe la commande à `livre`, sans preuve de dépôt vérifiée par le serveur.
 - Les règles Firestore autorisent actuellement le partenaire affecté à faire passer une commande de `arrive_destination` à `livre`. Cette voie directe ne peut pas servir de déclencheur financier fiable.
 - Les règles interdisent déjà les écritures clientes dans `payments` et `payment_webhooks`; le Worker utilise le compte de service pour ces écritures.
 
@@ -87,6 +101,8 @@ Les frais du service courrier sont variables : le système doit enregistrer le m
 - Pourcentages 10 % et 15 % sur les seuls frais de livraison.
 - Gare : ajout fixe de 100 FCFA, exclusion des 500 FCFA du livreur et des frais courrier.
 - Montants entiers, arrondis, zéro et valeurs invalides.
+- Aucun débit lors de l'acceptation, de la récupération, du transit ou de l'arrivée à destination.
+- Débit uniquement sur transition finale serveur autorisée ; expédition gare uniquement après preuve de dépôt confirmée.
 - Webhook Jèko : signature invalide, événement répété, paiement échoué, montant/devise/référence incohérents.
 - Débit de commission exactement une fois malgré appels concurrents ou répétés.
 - Commande annulée/non livrée : aucun débit.
