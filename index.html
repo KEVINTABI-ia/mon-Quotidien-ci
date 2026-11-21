@@ -2615,9 +2615,9 @@ async function publierDemandePublicite(id) {
     alert("Choisis d’abord la photo ou la vidéo reçue sur WhatsApp.");
     return;
   }
-  const types = ["image/jpeg","image/png","image/webp","video/mp4","video/webm","video/quicktime"];
-  if (!types.includes(fichier.type) || fichier.size > 25 * 1024 * 1024) {
-    alert("Format non accepté ou fichier supérieur à 25 Mo. Utilise JPG, PNG, WebP, MP4, WebM ou MOV.");
+  const types = ["image/jpeg","image/png","image/webp"];
+  if (!types.includes(fichier.type) || fichier.size > 10 * 1024 * 1024) {
+    alert("Format non accepté ou fichier supérieur à 10 Mo. Utilise JPG, PNG ou WebP.");
     return;
   }
   try {
@@ -2746,7 +2746,7 @@ async function creerPubliciteManuelle() {
   if (!typesAcceptes.includes(fichier.type) || fichier.size > 10 * 1024 * 1024) { statut.textContent = "Format non accepté ou fichier supérieur à 10 Mo. Formats acceptés : JPG, PNG ou WebP."; return; }
   try {
     statut.textContent = "Envoi du média vers le stockage sécurisé...";
-    const mediaStocke = await envoyerFichierFirebaseStorage(fichier, "publicite");
+    const mediaStocke = await envoyerFichierPubliciteR2(fichier,{admin:true});
     const mediaUrl = mediaStocke.url;
     await db.collection("publicites").add({
       titre, description, typeAffichage, mediaKey:mediaStocke.path, mediaUrl, mediaType:fichier.type,
