@@ -12227,7 +12227,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       </section>
       <section class="home-panel" id="homeQuotidien">
         
-        <div id="annoncesValideesAccueil"><p class="notice">Chargement de l’espace publicitaire...</p></div>
+        <div id="annoncesValideesAccueil"><p class="notice">Chargement...</p></div>
       </section>
       <section class="home-panel" id="homeArticlesBoutiques">
         
@@ -12308,7 +12308,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     menuPanel.innerHTML=`
       <button type="button">➕ Devenir partenaire</button>
       <button type="button">🔐 Connexion à mon espace partenaire</button>
-      `;
+      <button type="button">⚠️ Signaler un problème</button>`;
     const actions=menuPanel.querySelectorAll('button');
     actions[0].addEventListener('click',()=>{fermerMenuPro();ouvrirEspacePartenaire('inscription');});
     actions[1].addEventListener('click',()=>{fermerMenuPro();ouvrirEspacePartenaire('connexion');});
