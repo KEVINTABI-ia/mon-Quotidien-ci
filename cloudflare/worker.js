@@ -222,7 +222,125 @@ async function publiciteDelete(request,env) {
   return json({ok:true});
 }
 
-async function createCheckout(request,env) {
+
+async function beginFirestoreTransaction(env) {
+  const token=await serviceToken(env);
+  const response=await fetch("https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents:beginTransaction",{
+    method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},
+    body:JSON.stringify({options:{readWrite:{}}})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.transaction)throw new Error("firestore_transaction_begin_failed");
+  return data.transaction;
+}
+async function getDocInTransaction(env,path,transaction) {
+  const token=await serviceToken(env);
+  const endpoint=new URL("https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents/"+path);
+  endpoint.searchParams.set("transaction",transaction);
+  const response=await fetch(endpoint.toString(),{headers:{authorization:"Bearer "+token}});
+  if(response.status===404)return null;
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error("firestore_transaction_read_"+response.status);
+  return data;
+}
+async function commitFirestoreTransaction(env,writes,transaction) {
+  const token=await serviceToken(env);
+  const response=await fetch("https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents:commit",{
+    method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},
+    body:JSON.stringify({writes,transaction})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok) {
+    const error=new Error("firestore_transaction_commit_"+response.status);
+    error.status=response.status;
+    throw error;
+  }
+  return data;
+}
+function deleteWrite(path,updateTime) {
+  return {delete:resourceName(path),currentDocument:updateTime?{updateTime}:{exists:true}};
+}
+function courierProfileCanCompleteMission(profile,uid) {
+  return !!profile&&profile.uid===uid&&profile.type==="livreur_independant"&&
+    profile.statut==="approuve"&&(profile.etatCompte||"actif")==="actif";
+}
+export function buildCourierWalletCommissionLedger({balanceXof,debtXof=0,deliveryFeeXof,serviceType,serviceFeeXof=0}) {
+  const commission=calculateCourierWalletDebit({serviceType,deliveryFeeXof,serviceFeeXof});
+  const applied=applyCourierWalletCommission({balanceXof,debtXof,commissionXof:commission.totalWalletDebitXof});
+  return Object.freeze({...commission,...applied});
+}
+async function completeCourierMission(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized",diagnostic:auth.diagnostic},401);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const commandeId=body.commandeId;
+  if(typeof commandeId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(commandeId))return json({error:"invalid_commande_id"},400);
+  const uid=auth.user.sub,now=new Date(),commandePath="commandes_colis/"+commandeId;
+  const partnerPath="partenaires/"+uid,walletPath="portefeuilles_livreurs/"+uid;
+  const lockPath=partnerPath+"/verrous/missionActive",commissionId="commission_"+commandeId;
+  const journalPath=walletPath+"/journal/"+commissionId;
+  let transaction;
+  try {
+    transaction=await beginFirestoreTransaction(env);
+    const [orderDoc,partnerDoc,priceDoc,detailsDoc,walletDoc,lockDoc,journalDoc]=await Promise.all([
+      getDocInTransaction(env,commandePath,transaction),
+      getDocInTransaction(env,partnerPath,transaction),
+      getDocInTransaction(env,commandePath+"/tarification/prix",transaction),
+      getDocInTransaction(env,commandePath+"/informations_privees/details",transaction),
+      getDocInTransaction(env,walletPath,transaction),
+      getDocInTransaction(env,lockPath,transaction),
+      getDocInTransaction(env,journalPath,transaction)
+    ]);
+    if(!orderDoc)return json({error:"commande_not_found"},404);
+    const order=docData(orderDoc),profile=docData(partnerDoc),price=docData(priceDoc),details=docData(detailsDoc);
+    if(!courierProfileCanCompleteMission(profile,uid)||order.partenaireId!==uid||order.partenaireType!=="livreur_independant")return json({error:"mission_not_owned"},403);
+    if(order.statut==="livre"&&journalDoc)return json({ok:true,alreadyCompleted:true,commissionJournalId:commissionId},200);
+    if(order.statut!=="arrive_destination")return json({error:"mission_not_ready_for_completion"},409);
+    if(!lockDoc||docData(lockDoc)?.commandeId!==commandeId||docData(lockDoc)?.statut!=="active")return json({error:"active_mission_lock_missing"},409);
+    if(!price||!details)return json({error:"private_tariff_or_details_missing"},409);
+    if(!["livraison","livraison_programmee"].includes(order.service))return json({error:"unsupported_courier_service"},409);
+    if(journalDoc)return json({error:"commission_ledger_already_exists"},409);
+    const serviceType=order.typeCommande==="boutique"?"boutique":"classique";
+    const deliveryFeeXof=serviceType==="boutique"?order.montantLivraisonBoutique:price.montantLivraison;
+    if(!Number.isSafeInteger(deliveryFeeXof)||deliveryFeeXof<=0||price.devise!=="FCFA"||price.montantLivraison!==deliveryFeeXof)return json({error:"confirmed_delivery_fee_invalid"},409);
+    if(serviceType==="boutique"&&details.operation!=="livraison_boutique")return json({error:"boutique_operation_mismatch"},409);
+    const wallet=docData(walletDoc)||{},balanceXof=wallet.soldeDisponibleXof??0,debtXof=wallet.detteCommissionXof??0;
+    const totalCommissionXof=wallet.totalCommissionXof??0,totalCommissionEncaisseeXof=wallet.totalCommissionEncaisseeXof??0;
+    if(![balanceXof,debtXof,totalCommissionXof,totalCommissionEncaisseeXof].every(v=>Number.isSafeInteger(v)&&v>=0))return json({error:"courier_wallet_balance_invalid"},409);
+    const applied=buildCourierWalletCommissionLedger({balanceXof,debtXof,deliveryFeeXof,serviceType});
+    const nextWallet={
+      uid,soldeDisponibleXof:applied.balanceAfterXof,detteCommissionXof:applied.debtAfterXof,
+      totalCommissionXof:totalCommissionXof+applied.totalWalletDebitXof,
+      totalCommissionEncaisseeXof:totalCommissionEncaisseeXof+applied.debitXof,
+      updatedAt:now,createdAt:wallet.createdAt||now
+    };
+    const journal={
+      type:"commission",commissionId,commandeId,serviceType,deliveryFeeXof,
+      deliveryCommissionRate:applied.deliveryCommissionRate,
+      commissionDueXof:applied.totalWalletDebitXof,
+      montantDebiteXof:applied.debitXof,detteAjouteeXof:applied.debtAddedXof,
+      balanceBeforeXof:balanceXof,balanceAfterXof:applied.balanceAfterXof,
+      debtBeforeXof:debtXof,debtAfterXof:applied.debtAfterXof,
+      actor:"courier_mission_worker",createdAt:now
+    };
+    const writes=[
+      updateWrite(commandePath,{statut:"livre",dateLivraison:now,commissionPrelevee:true,commissionJournalId:commissionId},orderDoc.updateTime),
+      walletDoc?updateWrite(walletPath,nextWallet,walletDoc.updateTime):createWrite(walletPath,nextWallet),
+      createWrite(journalPath,journal),
+      deleteWrite(lockPath,lockDoc.updateTime)
+    ];
+    await commitFirestoreTransaction(env,writes,transaction);
+    return json({
+      ok:true,alreadyCompleted:false,commissionXof:applied.totalWalletDebitXof,
+      debitXof:applied.debitXof,debtAddedXof:applied.debtAddedXof,
+      balanceAfterXof:applied.balanceAfterXof,debtAfterXof:applied.debtAfterXof
+    },200);
+  } catch(error) {
+    console.error("Courier mission completion failed",{code:error?.message||"unknown"});
+    return json({error:error?.message==="firestore_transaction_commit_409"?"mission_completion_conflict":"mission_completion_failed"},409);
+  }
+}
+\nasync function createCheckout(request,env) {
   const authResult=await requireUser(request, env);
   const user=authResult.user;
   if(!user) return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
@@ -1092,7 +1210,7 @@ export default {
     let response;
     if(url.pathname==="/health"&&request.method==="GET") response=json({ok:true,service:"mon-quotidien-jeko",mode:"production-locked"});
     else if(url.pathname==="/webhook") response=await webhook(request,env);
-    else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
+    else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);\n    else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
     else if(url.pathname==="/api/publicites/admin-upload"&&request.method==="POST") response=await publiciteUpload(request,env,true);
     else if(url.pathname==="/api/publicites/image"&&request.method==="GET") response=await publiciteImage(request,env);
