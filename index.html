@@ -14124,3 +14124,29 @@ header.mqci-header-premium .mqci-brand-lockup{
     #mqciPartnerDropdownToggle{width:40px!important;height:40px!important}
   }
 </style>
+
+
+<style id="mqci-ajustement-logo-menu-services">
+/* Le logo ne doit plus être remonté hors de son cadre ; le menu suit son axe vertical. */
+header.mqci-header-premium .mqci-brand-lockup{
+  transform:translateY(0)!important;
+}
+/* Resserre légèrement l'espace avant les raccourcis SERVICE. */
+#accueilHomeShell{
+  padding-top:5px!important;
+}
+#accueilHomeShell #homeFamilyLauncher{
+  margin-top:-3px!important;
+}
+@media(max-width:380px){
+  header.mqci-header-premium .mqci-brand-lockup{
+    transform:translateY(0)!important;
+  }
+  #accueilHomeShell{
+    padding-top:5px!important;
+  }
+  #accueilHomeShell #homeFamilyLauncher{
+    margin-top:-3px!important;
+  }
+}
+</style>
