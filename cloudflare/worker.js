@@ -182,13 +182,13 @@ async function createCheckout(request,env) {
     initial={uid:user.sub,serviceId,objectId,nomComplet:nomComplet.trim(),telephone:telephone.trim(),residence:residence.trim(),provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
   } else if(serviceId==="publicite") {
     const plans={decouverte:{amount:2000,days:3,label:"Découverte"},visibilite:{amount:5000,days:7,label:"Visibilité"},professionnel:{amount:9000,days:15,label:"Professionnel"},premium:{amount:15000,days:30,label:"Premium"}};
-    const plan=plans[body.planId],profileDoc=await getDoc(env,"partenaires/"+user.sub),profile=docData(profileDoc);
+    const plan=plans[body.planId],partnerProfilePath=typeof body.partnerProfilePath==="string"?body.partnerProfilePath:"partenaires/"+user.sub,allowedProfilePath=partnerProfilePath==="partenaires/"+user.sub||/^compagnies\/[A-Za-z0-9_-]{1,128}$/.test(partnerProfilePath)||/^demandes_nouveaux_services\/[A-Za-z0-9_-]{1,128}$/.test(partnerProfilePath),profileDoc=allowedProfilePath?await getDoc(env,partnerProfilePath):null,profile=docData(profileDoc);
     const imagePath=body.imagePath,titre=typeof body.titre==="string"?body.titre.trim():"",description=typeof body.description==="string"?body.description.trim():"",mediaUrl=typeof body.mediaUrl==="string"?body.mediaUrl:"";
     if(!plan)return json({error:"invalid_publicite_plan"},400);
-    if(!profileDoc||profile?.uid!==user.sub||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif")return json({error:"partner_not_eligible"},403);
+    if(!allowedProfilePath||!profileDoc||profile?.uid!==user.sub||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif")return json({error:"partner_not_eligible"},403);
     if(typeof imagePath!=="string"||!imagePath.startsWith("publicites/partenaires/"+user.sub+"/")||!/\.(jpg|png|webp)$/i.test(imagePath)||typeof mediaUrl!=="string"||!/^https:\/\//i.test(mediaUrl)||!mediaUrl.includes(encodeURIComponent(imagePath))||titre.length<2||titre.length>100||description.length>500)return json({error:"invalid_publicite_data"},400);
     amountXof=plan.amount;
-    initial={uid:user.sub,serviceId,planId:body.planId,forfait:plan.label,durationDays:plan.days,imagePath,mediaUrl,titre,description,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
+    initial={uid:user.sub,serviceId,planId:body.planId,forfait:plan.label,durationDays:plan.days,partnerProfilePath,imagePath,mediaUrl,titre,description,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
   } else if(serviceId==="ramassage") {
     const profilePath="comptes_ramassage/"+user.sub,profileDoc=await getDoc(env,profilePath),profile=docData(profileDoc);
     if(!profileDoc||profile?.uid!==user.sub||profile?.role!=="compagnie"||profile?.statut!=="approuve")return json({error:"ramassage_profile_not_approved"},403);
@@ -427,7 +427,7 @@ export function validateJekoPaymentPlan(payment) {
   };
   if(payment.serviceId==="publicite"){
     const plans={decouverte:[2000,3],visibilite:[5000,7],professionnel:[9000,15],premium:[15000,30]},plan=plans[payment.planId];
-    return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1]&&typeof payment.uid==="string"&&typeof payment.imagePath==="string"&&payment.imagePath.startsWith("publicites/partenaires/"+payment.uid+"/")&&/\.(jpg|png|webp)$/i.test(payment.imagePath)&&typeof payment.mediaUrl==="string"&&/^https:\/\//i.test(payment.mediaUrl)&&payment.mediaUrl.includes(encodeURIComponent(payment.imagePath))&&typeof payment.titre==="string"&&payment.titre.length>=2&&payment.titre.length<=100;
+    return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1]&&typeof payment.uid==="string"&&typeof payment.imagePath==="string"&&payment.imagePath.startsWith("publicites/partenaires/"+payment.uid+"/")&&typeof payment.partnerProfilePath==="string"&&(payment.partnerProfilePath==="partenaires/"+payment.uid||/^compagnies\/[A-Za-z0-9_-]{1,128}$/.test(payment.partnerProfilePath)||/^demandes_nouveaux_services\/[A-Za-z0-9_-]{1,128}$/.test(payment.partnerProfilePath))&&/\.(jpg|png|webp)$/i.test(payment.imagePath)&&typeof payment.mediaUrl==="string"&&/^https:\/\//i.test(payment.mediaUrl)&&payment.mediaUrl.includes(encodeURIComponent(payment.imagePath))&&typeof payment.titre==="string"&&payment.titre.length>=2&&payment.titre.length<=100;
   }
   if(payment.serviceId==="objet_retrouve") return payment.amountXof===1000;
   if(payment.serviceId==="logement_renewal"||payment.serviceId==="ramassage"||payment.serviceId==="partenaire_services"){
@@ -502,7 +502,7 @@ async function webhook(request,env) {
   }
   if(payment.status==="succeeded") return new Response("OK",{status:200});
   if(payment.serviceId==="publicite"){
-    const profileDoc=await getDoc(env,"partenaires/"+payment.uid),profile=docData(profileDoc);
+    const profileDoc=await getDoc(env,payment.partnerProfilePath),profile=docData(profileDoc);
     if(!profileDoc||profile?.uid!==payment.uid||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif"){
       await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"publicite_partner_not_eligible",updatedAt:now.toISOString()}))});
       return new Response("OK",{status:200});
