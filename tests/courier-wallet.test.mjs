@@ -4,7 +4,7 @@ import {
   calculateCourierWalletDebit,
   courierWalletCanAcceptMission,
   applyCourierWalletCommission,
-  applyCourierWalletRecharge,
+  applyCourierWalletRecharge,\n  buildCourierWalletRechargeLedger,
   courierCommissionTriggerAllowed,
   courierWalletNeedsLowBalanceAlert,
   COURIER_WALLET_RULES
@@ -159,4 +159,19 @@ test("10,000 XOF prepaid balance loses 300 XOF per completed delivery until 1,00
 
 test("zero prepaid balance blocks new missions", () => {
   assert.equal(courierWalletCanAcceptMission(0, 0), false);
+});
+
+\ntest("Jeko wallet recharge ledger credits the full confirmed payment and records debt settlement separately", () => {
+  assert.deepEqual(buildCourierWalletRechargeLedger({
+    balanceXof:0,debtXof:0,rechargeXof:10000,totalRechargeXof:0
+  }),{
+    debtPaymentXof:0,debtAfterXof:0,balanceCreditXof:10000,balanceAfterXof:10000,
+    totalRechargeAfterXof:10000
+  });
+  assert.deepEqual(buildCourierWalletRechargeLedger({
+    balanceXof:0,debtXof:700,rechargeXof:10000,totalRechargeXof:10000
+  }),{
+    debtPaymentXof:700,debtAfterXof:0,balanceCreditXof:9300,balanceAfterXof:9300,
+    totalRechargeAfterXof:20000
+  });
 });
