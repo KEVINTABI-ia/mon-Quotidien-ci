@@ -264,7 +264,7 @@ export function courierProfileCanCompleteMission(profile,uid) {
   return !!profile&&profile.uid===uid&&profile.type==="livreur_independant"&&
     profile.statut==="approuve"&&(profile.etatCompte||"actif")==="actif";
 }
-export export function buildCourierWalletCommissionLedger({balanceXof,debtXof=0,deliveryFeeXof,serviceType,serviceFeeXof=0}) {
+export function buildCourierWalletCommissionLedger({balanceXof,debtXof=0,deliveryFeeXof,serviceType,serviceFeeXof=0}) {
   const commission=calculateCourierWalletDebit({serviceType,deliveryFeeXof,serviceFeeXof});
   const applied=applyCourierWalletCommission({balanceXof,debtXof,commissionXof:commission.totalWalletDebitXof});
   return Object.freeze({...commission,...applied});
