@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   calculateCourierWalletDebit,
   courierWalletCanAcceptMission,
+  applyCourierWalletCommission,
+  applyCourierWalletRecharge,
   courierCommissionTriggerAllowed,
   courierWalletNeedsLowBalanceAlert,
   COURIER_WALLET_RULES
@@ -46,10 +48,53 @@ test("percentage rounding is to the nearest FCFA", () => {
   assert.equal(calculateCourierWalletDebit({serviceType:"classique",deliveryFeeXof:101}).deliveryCommissionXof,15);
 });
 
-test("zero balance blocks new missions but a positive balance allows them", () => {
+test("zero balance or outstanding commission debt blocks new missions", () => {
   assert.equal(courierWalletCanAcceptMission(0),false);
   assert.equal(courierWalletCanAcceptMission(1),true);
   assert.equal(courierWalletCanAcceptMission(-1),false);
+  assert.equal(courierWalletCanAcceptMission(500,1),false);
+  assert.equal(courierWalletCanAcceptMission(500,0),true);
+});
+
+test("commission is partially collected and unpaid remainder becomes debt", () => {
+  assert.deepEqual(applyCourierWalletCommission({
+    balanceXof:800,debtXof:0,commissionXof:1500
+  }),{
+    debitXof:800,balanceAfterXof:0,debtAddedXof:700,
+    debtAfterXof:700,commissionSettledXof:800
+  });
+});
+
+test("new commission debt is added to existing debt without negative wallet balance", () => {
+  assert.deepEqual(applyCourierWalletCommission({
+    balanceXof:200,debtXof:300,commissionXof:1000
+  }),{
+    debitXof:200,balanceAfterXof:0,debtAddedXof:800,
+    debtAfterXof:1100,commissionSettledXof:200
+  });
+});
+
+test("recharge pays commission debt before restoring spendable balance", () => {
+  assert.deepEqual(applyCourierWalletRecharge({
+    balanceXof:0,debtXof:700,rechargeXof:1000
+  }),{
+    debtPaymentXof:700,debtAfterXof:0,balanceCreditXof:300,balanceAfterXof:300
+  });
+});
+
+test("recharge smaller than debt reduces debt and leaves wallet at zero", () => {
+  assert.deepEqual(applyCourierWalletRecharge({
+    balanceXof:0,debtXof:700,rechargeXof:400
+  }),{
+    debtPaymentXof:400,debtAfterXof:300,balanceCreditXof:0,balanceAfterXof:0
+  });
+});
+
+test("invalid wallet ledger and recharge amounts are rejected", () => {
+  assert.throws(()=>applyCourierWalletCommission({balanceXof:-1,debtXof:0,commissionXof:10}));
+  assert.throws(()=>applyCourierWalletCommission({balanceXof:0,debtXof:0,commissionXof:1.5}));
+  assert.throws(()=>applyCourierWalletRecharge({balanceXof:0,debtXof:-1,rechargeXof:100}));
+  assert.throws(()=>applyCourierWalletRecharge({balanceXof:0,debtXof:0,rechargeXof:0}));
 });
 
 test("low balance alert starts at 1,000 XOF", () => {
