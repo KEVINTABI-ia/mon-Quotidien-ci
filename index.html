@@ -12328,7 +12328,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       const h=headerPro.getBoundingClientRect();
       const b=identite.getBoundingClientRect();
       const milieu=b.top+b.height/2-h.top;
-      menuPro.style.top=Math.max(8,milieu-21)+'px';
+      menuPro.style.setProperty('top',Math.max(0,milieu-21)+'px','important');
     }
     alignerBoutonMenuSurIdentite();
     window.addEventListener('resize',alignerBoutonMenuSurIdentite);
