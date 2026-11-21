@@ -11470,22 +11470,40 @@ async function marquerArriveDestination(commandeId) {
 }
 
 async function terminerMissionPartenaire(commandeId) {
-  const user = partnerAuth.currentUser; if (!user) return;
-  if (!confirm("Confirmez-vous que le règlement convenu a été effectué et que la course est terminée ?")) return;
-  const ref = partnerDb.collection("commandes_colis").doc(commandeId);
-  const lock = partnerDb.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
-  try {
-    await partnerDb.runTransaction(async tx => {
-      const snap = await tx.get(ref);
-      if (!snap.exists || snap.data().partenaireId !== user.uid || snap.data().statut!=="arrive_destination") throw new Error("La course ne peut pas être clôturée avant l'arrivée.");
-      const prix=await tx.get(ref.collection("tarification").doc("prix"));
-      if(!prix.exists) throw new Error("Tarif privé introuvable.");
-      tx.update(ref,{statut:"livre",dateLivraison:firebase.firestore.FieldValue.serverTimestamp()});
+  const user=partnerAuth.currentUser;if(!user)return;
+  if(!confirm("Confirmez-vous que le règlement convenu a été effectué et que la course est terminée ?"))return;
+  const ref=partnerDb.collection("commandes_colis").doc(commandeId);
+  try{
+    const snap=await ref.get();
+    if(!snap.exists||snap.data().partenaireId!==user.uid||snap.data().statut!=="arrive_destination")throw new Error("La course ne peut pas être clôturée avant l'arrivée.");
+    const commande=snap.data();
+    if(commande.service==="compagnie"){
+      const lock=partnerDb.collection("partenaires").doc(user.uid).collection("verrous").doc("missionActive");
+      await partnerDb.runTransaction(async tx=>{
+        const current=await tx.get(ref);
+        if(!current.exists||current.data().partenaireId!==user.uid||current.data().statut!=="arrive_destination")throw new Error("La mission de gare ne peut pas être clôturée.");
+        const prix=await tx.get(ref.collection("tarification").doc("prix"));
+        if(!prix.exists)throw new Error("Tarif privé introuvable.");
+        tx.update(ref,{statut:"livre",dateLivraison:firebase.firestore.FieldValue.serverTimestamp()});
+      });
+      await lock.delete();
+      alert("Mission de gare terminée. Aucune commission livreur indépendant n'a été appliquée.");
+      chargerCommandesPartenaire();
+      return;
+    }
+    const token=await user.getIdToken();
+    const response=await fetch(WORKER_URL+"/api/courier/mission/complete",{
+      method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+      body:JSON.stringify({commandeId})
     });
-    await lock.delete();
-    alert("Course terminée. Vous pouvez maintenant accepter une nouvelle mission.");
-    chargerCommandesPartenaire();
-  } catch(e) { alert("Clôture impossible : " + e.message); }
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok||result.ok!==true)throw new Error(result.error||"La clôture sécurisée a échoué.");
+    const montant=Number(result.commissionXof||0).toLocaleString("fr-FR");
+    const debit=Number(result.debitXof||0).toLocaleString("fr-FR");
+    const dette=Number(result.debtAddedXof||0).toLocaleString("fr-FR");
+    alert("Course terminée. Commission calculée : "+montant+" FCFA. Prélevé : "+debit+" FCFA. Dette ajoutée : "+dette+" FCFA.");
+    await chargerCommandesPartenaire();
+  }catch(e){alert("Clôture impossible : "+e.message);}
 }
 
 async function terminerExpeditionGare(commandeId) {
