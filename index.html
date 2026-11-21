@@ -2858,7 +2858,7 @@ function chargerPublicitesAccueil() {
         const maintenant = Date.now();
         const annonces = (window.publicitesAccueilDocs || [])
           .map(doc => ({id:doc.id,...doc.data()}))
-          .filter(d => d.statut === "publiee" && (!d.dateFin?.toDate || d.dateFin.toDate().getTime() > maintenant) && (d.imageDataUrl || d.mediaUrl))
+          .filter(d => d.statut === "publiee" && (!d.dateFin?.toDate || d.dateFin.toDate().getTime() > maintenant) && (d.imageDataUrl || d.mediaUrl) && (!d.mediaType || String(d.mediaType).startsWith("image/")) )
           .sort((a,b) => (a.dateDebut?.toMillis?.() || 0) - (b.dateDebut?.toMillis?.() || 0));
         const sectionPublicite = document.getElementById("espacePublicitaire");
         if (!annonces.length) {
@@ -8364,7 +8364,7 @@ async function verifierRetourPaiementJeko(user){
      if(window.logementRefreshSpace)await window.logementRefreshSpace();
     }else if(serviceId==="publicite"){
      if(zone)zone.textContent="Paiement confirmé par Jèko. Votre affiche est publiée dans l’Espace publicitaire de l’accueil.";
-     chargerPublicitesAccueil();
+     /* L’écoute Firestore actualise automatiquement l’affiche après le webhook. */
     }else if(serviceId==="ramassage"){
      if(zone)zone.textContent="Paiement de 2 000 FCFA confirmé par Jèko. Activation de votre abonnement…";
      if(partnerAuth.currentUser)await afficherEspaceRamassage(partnerAuth.currentUser);
@@ -12488,7 +12488,7 @@ async function chargerAnnoncesValideesAccueil(){
   const afficher=()=>{
    const maintenant=Date.now();
    const items=(window.publicitesAccueilHomeDocs||[]).map(doc=>({id:doc.id,...doc.data()}))
-    .filter(d=>(!d.dateFin?.toDate||d.dateFin.toDate().getTime()>maintenant)&&(d.mediaUrl||d.imageDataUrl))
+    .filter(d=>(!d.dateFin?.toDate||d.dateFin.toDate().getTime()>maintenant)&&(d.mediaUrl||d.imageDataUrl)&&(!d.mediaType||String(d.mediaType).startsWith("image/")))
     .sort((a,b)=>(a.dateDebut?.toMillis?.()||0)-(b.dateDebut?.toMillis?.()||0));
    if(!items.length){zone.innerHTML='<p class="notice">Aucune affiche publicitaire active pour le moment.</p>';window.indexPubliciteAccueilHome=0;return;}
    window.indexPubliciteAccueilHome=(window.indexPubliciteAccueilHome||0)%items.length;
