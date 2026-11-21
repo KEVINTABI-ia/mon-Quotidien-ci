@@ -237,7 +237,7 @@ async function createCheckout(request,env) {
     const profilePath="partenaires/"+user.sub,profileDoc=await getDoc(env,profilePath),profile=docData(profileDoc);
     if(!profileDoc||profile?.uid!==user.sub||profile?.type!=="livreur_independant"||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif")return json({error:"courier_profile_not_eligible"},403);
     amountXof=body.amountXof;
-    if(!Number.isSafeInteger(amountXof)||amountXof<1||amountXof>10000000)return json({error:"invalid_wallet_recharge_amount"},400);
+    if(!isValidCourierWalletRechargeAmount(amountXof))return json({error:"invalid_wallet_recharge_amount",minimumXof:2000},400);
     if(!["orange","wave","mtn"].includes(body.paymentMethod))return json({error:"wallet_payment_method_not_supported"},400);
     initial={uid:user.sub,serviceId,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
   } else if(serviceId==="objet_retrouve"){
@@ -995,6 +995,10 @@ export function applyCourierWalletRecharge({balanceXof,debtXof=0,rechargeXof}) {
     balanceCreditXof,
     balanceAfterXof: balanceXof + balanceCreditXof
   });
+}
+
+export function isValidCourierWalletRechargeAmount(amountXof) {
+  return Number.isSafeInteger(amountXof) && amountXof >= 2000 && amountXof <= 10000000;
 }
 
 export function buildCourierWalletRechargeLedger({balanceXof,debtXof=0,rechargeXof,totalRechargeXof=0}) {
