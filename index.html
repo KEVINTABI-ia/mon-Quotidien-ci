@@ -2420,8 +2420,9 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
 </section>
 <script>
 
-function ajouterBlocPublicitePartenaire(zone, uid) {
+function ajouterBlocPublicitePartenaire(zone, uid, partnerProfilePath) {
   if (!zone || !uid || document.getElementById("blocPublicitePartenaire")) return;
+  window.publicitePartnerProfilePath=partnerProfilePath||("partenaires/"+uid);
   const bloc=document.createElement("section");
   bloc.id="blocPublicitePartenaire";
   bloc.className="card";
@@ -2484,7 +2485,7 @@ async function payerPublicitePartenaire(){
   const token=await user.getIdToken();
   const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{
    method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
-   body:JSON.stringify({serviceId:"publicite",planId,paymentMethod,imagePath,mediaUrl,titre,description})
+   body:JSON.stringify({serviceId:"publicite",planId,paymentMethod,imagePath,mediaUrl,titre,description,partnerProfilePath:window.publicitePartnerProfilePath||("partenaires/"+user.uid)})
   });
   const data=await response.json().catch(()=>({}));
   if(!response.ok||!data.checkoutUrl)throw new Error(data.error==="partner_not_eligible"?"Votre compte partenaire doit être approuvé et actif.":data.diagnostic||data.error||"Jèko n’a pas pu préparer le paiement.");
@@ -4529,6 +4530,7 @@ async function connecterCompteBoutique(){
     contenu+='<div class="notice"><strong>'+(paiementInitial?"Paiement Jèko requis":"Abonnement expiré")+'</strong><p>'+(paiementInitial?"Votre dossier est approuvé. Réglez votre formule pour activer la visibilité.":"Votre boutique n’est plus visible. Réglez une formule pour rétablir sa visibilité.")+'</p><button type="button" class="primary" onclick="afficherFormulaireRenouvellementBoutique(\''+boutique.id+'\')">'+(paiementInitial?"Payer mon abonnement":"Renouveler mon abonnement")+'</button><div id="formRenouvellementBoutique_'+boutique.id+'"></div></div>';
    }
    zone.innerHTML=contenu;
+   ajouterBlocPublicitePartenaire(zone,resultat.user.uid,"demandes_nouveaux_services/"+boutique.id);
   }
   if(actif){chargerMesArticlesBoutique(boutique.id);chargerCommandesBoutique(boutique.id);}
  }catch(e){console.error(e);statut.textContent="Connexion impossible : "+(e.message||"vérifiez vos identifiants.");}
@@ -12893,7 +12895,7 @@ async function afficherEspaceCompagnie(id,c){
   window.compagnieRenouvellementCourante={formule:c.formule,periodicite:c.periodicite};
   el.insertAdjacentHTML("afterbegin",'<div class="card" style="padding:12px;margin:10px 0;"><h4>'+(c.statutAbonnement==="À payer"?"Régler l’abonnement":"Renouveler l’abonnement")+'</h4><p>Le règlement s’effectue exclusivement via Jèko.</p><button type="button" class="primary" onclick="ouvrirPaiementRenouvellementCompagnie(\''+id+'\')">Payer avec Jèko</button><div id="zonePaiementRenouvellementCompagnie"></div></div>');
  }
- ajouterBlocPublicitePartenaire(el,c.uid||partnerAuth.currentUser?.uid);
+ ajouterBlocPublicitePartenaire(el,c.uid||partnerAuth.currentUser?.uid,"compagnies/"+id);
  await chargerGaresAnnexesCompagnie(id);await chargerAvisCompagnie(id,true);
 }
 async function enregistrerGarePrincipaleCompagnie(id){
