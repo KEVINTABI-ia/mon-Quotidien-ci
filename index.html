@@ -4440,8 +4440,15 @@ async function enregistrerArticleBoutique(id){
   if(!photo||!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>3*1024*1024)throw new Error("Ajoutez une photo JPG, PNG ou WEBP de 3 Mo maximum.");
   status.textContent="Compression et envoi de la photo...";
   const photoUrl=await compresserPhotoNouveauService(photo);
-  await partnerDb.collection("articles_boutiques").add({boutiqueId:id,boutiqueUid:u.uid,boutiqueNom:b.data().titre,nom,categorie,prix,description,photoUrl,disponible,statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-  status.textContent="Article envoyé. Il sera visible après validation de l’administration.";
+  const boutiqueData=b.data();
+  let premierePublicationValidee=boutiqueData.premierePublicationArticlesValidee===true;
+  if(!premierePublicationValidee){
+   const articlesDejaPublies=await partnerDb.collection("articles_boutiques").where("boutiqueId","==",id).where("statut","==","approuve").limit(1).get();
+   premierePublicationValidee=!articlesDejaPublies.empty;
+  }
+  const statutArticle=premierePublicationValidee?"approuve":"en_attente";
+  await partnerDb.collection("articles_boutiques").add({boutiqueId:id,boutiqueUid:u.uid,boutiqueNom:boutiqueData.titre,nom,categorie,prix,description,photoUrl,disponible,statut:statutArticle,validationInitialeRequise:!premierePublicationValidee,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  status.textContent=premierePublicationValidee?"Article publié directement : la première publication de votre boutique a déjà été validée par l’administration.":"Premier article envoyé. La première publication de votre boutique doit être validée par l’administration.";
   await chargerMesArticlesBoutique(id);
  }catch(e){console.error(e);status.textContent="Envoi impossible : "+e.message;}
 }
@@ -4510,7 +4517,18 @@ async function chargerArticlesBoutiquesAdmin(){
 async function traiterArticleBoutiqueAdmin(id,statut){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
  if(!["approuve","refuse"].includes(statut))return;
- try{await db.collection("articles_boutiques").doc(id).update({statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid});await chargerArticlesBoutiquesAdmin();}catch(e){alert("Traitement impossible : "+e.message);}
+ try{
+  const articleRef=db.collection("articles_boutiques").doc(id);
+  const articleSnap=await articleRef.get();
+  if(!articleSnap.exists)throw new Error("Article introuvable.");
+  const article=articleSnap.data();
+  const operations=[articleRef.update({statut,traiteLe:firebase.firestore.FieldValue.serverTimestamp(),traitePar:auth.currentUser.uid})];
+  if(statut==="approuve"&&article.boutiqueId){
+   operations.push(db.collection("demandes_nouveaux_services").doc(article.boutiqueId).update({premierePublicationArticlesValidee:true,premierePublicationArticlesValideeLe:firebase.firestore.FieldValue.serverTimestamp()}));
+  }
+  await Promise.all(operations);
+  await chargerArticlesBoutiquesAdmin();
+ }catch(e){alert("Traitement impossible : "+e.message);}
 }
 
 let boutiqueSessionPartenaire=false;
