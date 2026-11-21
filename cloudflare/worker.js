@@ -499,7 +499,7 @@ export function validateJekoPaymentPlan(payment) {
     return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1]&&typeof payment.uid==="string"&&typeof payment.imagePath==="string"&&payment.imagePath.startsWith("publicites/partenaires/"+payment.uid+"/")&&typeof payment.partnerProfilePath==="string"&&(payment.partnerProfilePath==="partenaires/"+payment.uid||/^compagnies\/[A-Za-z0-9_-]{1,128}$/.test(payment.partnerProfilePath)||/^demandes_nouveaux_services\/[A-Za-z0-9_-]{1,128}$/.test(payment.partnerProfilePath))&&/\.(jpg|png|webp)$/i.test(payment.imagePath)&&typeof payment.mediaUrl==="string"&&/^https:\/\//i.test(payment.mediaUrl)&&payment.mediaUrl.includes(encodeURIComponent(payment.imagePath))&&typeof payment.titre==="string"&&payment.titre.length>=2&&payment.titre.length<=100;
   }
   if(payment.serviceId==="courier_wallet") {
-    return Number.isSafeInteger(payment.amountXof)&&payment.amountXof>0&&payment.amountXof<=10000000&&
+    return isValidCourierWalletRechargeAmount(payment.amountXof)&&
       typeof payment.uid==="string"&&/^[A-Za-z0-9_-]{1,128}$/.test(payment.uid);
   }
   if(payment.serviceId==="objet_retrouve") return payment.amountXof===1000;
