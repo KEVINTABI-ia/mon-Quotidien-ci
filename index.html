@@ -3264,7 +3264,6 @@ function chargerPublicitesAccueil() {
 
 <button type="button" onclick="ouvrirSectionPleinEcran('pharmacieDomicile','Pharmacie à domicile')" class="tuile-quotidien">🛵 Pharmacie à domicile<small>Envoyez votre ordonnance ou demandez un médicament avec livraison</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('facturesServicesPratiques','Rappels de paiement')" class="tuile-quotidien">🔔 Rappels de paiement<small>Gérez vos échéances personnelles</small></button>
-    <button type="button" onclick="ouvrirSectionPleinEcran('servicesPublicsDemarches','Services publics et démarches')" class="tuile-quotidien">🏛️ Services publics et démarches<small>Accès aux portails officiels</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('toilettesPubliques','Toilettes publiques')" class="tuile-quotidien">🚻 Toilettes publiques<small>Rechercher les toilettes autour de vous</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('nouveauxServices','Petites annonces de ma commune');choisirNouveauService('annonce');chargerNouveauxServicesPublics('annonce')" class="tuile-quotidien">📢 Petites annonces de ma commune<small>Publier ou consulter les annonces et offres près de chez vous</small></button>
   </div>
@@ -12255,6 +12254,9 @@ window.mtcAfficherActeJudiciaire = function(type){
     ['servicesMinistereTransport','demarchesJudiciaires','securiserTerrain','servicesPublicsDemarches'].forEach(id=>{const el=document.getElementById(id);if(el)citoyen.appendChild(el);});
     const other=document.getElementById('homeQuotidien');
     other.appendChild(quotidien);
+    const actualites=document.getElementById('homeActualites');
+    const dailyPanel=document.getElementById('dailyServicesPanel');
+    if(actualites&&dailyPanel)dailyPanel.appendChild(actualites);
      chargerAnnoncesValideesAccueil();
      chargerArticlesBoutiquesAccueil();
 
@@ -13758,5 +13760,59 @@ header.mqci-header-premium .mqci-brand-lockup{
   #accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-image{
     height:215px!important;min-height:215px!important;max-height:215px!important;
   }
+}
+</style>
+
+
+<style id="mqci-actualites-dans-autre-service-et-populaires-pleine-largeur">
+/* Accueil uniforme : les services populaires occupent toute la largeur disponible. */
+#accueilHomeShell #homePopular{
+  box-sizing:border-box!important;
+  width:100vw!important;
+  max-width:100vw!important;
+  margin-left:calc(50% - 50vw)!important;
+  margin-right:calc(50% - 50vw)!important;
+  padding:12px clamp(12px,2.5vw,24px)!important;
+  border-left:0!important;
+  border-right:0!important;
+  border-radius:0!important;
+}
+#accueilHomeShell #homePopular>.home-section-heading,
+#accueilHomeShell #homePopular>.family-shortcuts{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+}
+#accueilHomeShell #homePopular>.family-shortcuts{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+}
+#accueilHomeShell #homePopular>.family-shortcuts>.family-shortcut{
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+}
+#dailyServicesPanel>#homeActualites{
+  display:block!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:14px 0 0!important;
+  padding:14px!important;
+  border:1px solid #d6e8dc!important;
+  border-radius:16px!important;
+  background:#fff!important;
+}
+#dailyServicesPanel>#homeActualites .home-discovery-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+@media(max-width:380px){
+  #accueilHomeShell #homePopular{padding-left:9px!important;padding-right:9px!important}
+  #accueilHomeShell #homePopular>.family-shortcuts{gap:7px!important}
+  #dailyServicesPanel>#homeActualites{padding:10px!important}
 }
 </style>
