@@ -39,13 +39,18 @@ Ces montants remplacent les anciens forfaits de 700 et 500 FCFA.
 ### Portefeuille
 - Dépôt initial de référence retenu : 5 000 FCFA.
 - Alerte de solde faible à 1 000 FCFA.
-- À 0 FCFA : aucune nouvelle mission ne peut être acceptée.\n- Si une commission dépasse le solde, le solde disponible est débité jusqu'à zéro et le reliquat est enregistré comme dette distincte. Le solde disponible ne devient jamais négatif.
-- Une mission déjà acceptée peut être terminée, même si le solde atteint zéro entre-temps ou si une dette de commission apparaît à la clôture.\n- Toute dette de commission bloque les nouvelles missions, même si un solde disponible positif subsiste.
+- À 0 FCFA : aucune nouvelle mission ne peut être acceptée.
+- Si une commission dépasse le solde, le solde disponible est débité jusqu'à zéro et le reliquat est enregistré comme dette distincte. Le solde disponible ne devient jamais négatif.
+- Une mission déjà acceptée peut être terminée, même si le solde atteint zéro entre-temps ou si une dette de commission apparaît à la clôture.
+- Toute dette de commission bloque les nouvelles missions, même si un solde disponible positif subsiste.
 - **Aucune commission n'est prélevée à l'acceptation d'une mission ni pendant son exécution.**
 - **Le débit intervient une seule fois, après confirmation serveur de la fin effective de la prestation.**
 - Les commandes annulées ou non livrées ne génèrent aucune commission.
-- Recharge par Jèko : le livreur verse le montant choisi sur le compte Jèko de MON QUOTIDIEN CI. La totalité du paiement confirmé est portée au crédit de son portefeuille (par exemple, 10 000 FCFA payés = 10 000 FCFA affichés). Le crédit intervient uniquement après validation du webhook Jèko signé, jamais sur la seule base d'une redirection navigateur. Les fonds rechargés constituent un solde prépayé dû au livreur, et non un revenu intégral de la plateforme au moment de la recharge.\n- Chaque recharge confirmée rembourse d'abord la dette de commission ; seul le reliquat augmente le solde disponible.
-- À chaque livraison effectivement terminée et confirmée, la commission calculée pour cette prestation est soustraite du solde prépayé (exemple : 300 FCFA de commission font passer 10 000 à 9 700 FCFA).\n- À 1 000 FCFA ou moins, une alerte de solde faible est affichée au livreur. À 0 FCFA, aucune nouvelle mission ne peut être acceptée.\n- Le solde non consommé appartient au livreur ; les commissions effectivement prélevées sont enregistrées séparément et constituent le revenu de commission de la plateforme.
+- Recharge par Jèko : le livreur verse le montant choisi sur le compte Jèko de MON QUOTIDIEN CI. La totalité du paiement confirmé est portée au crédit de son portefeuille (par exemple, 10 000 FCFA payés = 10 000 FCFA affichés). Le crédit intervient uniquement après validation du webhook Jèko signé, jamais sur la seule base d'une redirection navigateur. Les fonds rechargés constituent un solde prépayé dû au livreur, et non un revenu intégral de la plateforme au moment de la recharge.
+- Chaque recharge confirmée rembourse d'abord la dette de commission ; seul le reliquat augmente le solde disponible.
+- À chaque livraison effectivement terminée et confirmée, la commission calculée pour cette prestation est soustraite du solde prépayé (exemple : 300 FCFA de commission font passer 10 000 à 9 700 FCFA).
+- À 1 000 FCFA ou moins, une alerte de solde faible est affichée au livreur. À 0 FCFA, aucune nouvelle mission ne peut être acceptée.
+- Le solde non consommé appartient au livreur ; les commissions effectivement prélevées sont enregistrées séparément et constituent le revenu de commission de la plateforme.
 - Le journal doit tracer recharges, commissions, remboursements d'avances courrier et ajustements administratifs, avec référence unique, horodatage et acteur.
 
 Le montant minimal des recharges et la procédure de remboursement du solde non consommé à la clôture du compte restent à préciser avant mise en production. Le montant de 10 000 FCFA est un exemple de recharge, pas un montant minimum ou obligatoire, sauf décision ultérieure.
@@ -106,7 +111,9 @@ Les frais du service courrier sont variables : le système doit enregistrer le m
 - Webhook Jèko : signature invalide, événement répété, paiement échoué, montant/devise/référence incohérents.
 - Débit de commission exactement une fois malgré appels concurrents ou répétés.
 - Commande annulée/non livrée : aucun débit.
-- Solde nul : refus de nouvelle mission ; mission déjà acceptée terminable.\n- Commission supérieure au solde : débit partiel, dette distincte, blocage des nouvelles missions.\n- Recharge inférieure/supérieure à la dette : remboursement prioritaire de la dette, reliquat crédité au solde disponible.
+- Solde nul : refus de nouvelle mission ; mission déjà acceptée terminable.
+- Commission supérieure au solde : débit partiel, dette distincte, blocage des nouvelles missions.
+- Recharge inférieure/supérieure à la dette : remboursement prioritaire de la dette, reliquat crédité au solde disponible.
 - Recharge confirmée : crédit exactement une fois.
 - Les boutiques conservent leur prix de livraison et le taux de commission de 10 %.
 - Tests de règles Firestore : aucun client ne peut créditer/débiter son portefeuille ou modifier son journal.
