@@ -914,7 +914,6 @@ async function paymentStatus(request,env) {
 // Commission rules for courier wallet. Amounts are integer XOF.
 export const COURIER_WALLET_RULES = Object.freeze({
   lowBalanceAlertXof: 1000,
-  initialDepositXof: 5000,
   gareServiceFeeXof: 600,
   garePlatformServiceShareXof: 100,
   gareCourierServiceShareXof: 500,
