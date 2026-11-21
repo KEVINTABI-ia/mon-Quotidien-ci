@@ -13646,3 +13646,42 @@ header.mqci-header-premium .mqci-brand-lockup{
   }
 }
 </style>
+
+
+<style id="mqci-articles-image-nom-prix-alignement">
+/* Fiche produit : image plus haute, nom placé juste au-dessus du prix. */
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-card{
+  display:flex!important;
+  flex-direction:column!important;
+}
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-image{
+  height:210px!important;
+  min-height:210px!important;
+  max-height:210px!important;
+  margin:0 0 5px!important;
+}
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-image img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:center!important;
+}
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-nom{
+  order:1!important;
+  min-height:38px!important;
+  margin:0!important;
+  padding:0 1px!important;
+  line-height:1.35!important;
+}
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-prix{
+  order:2!important;
+  margin:3px 0 5px!important;
+}
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-boutique{order:3!important}
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-card button{order:4!important}
+@media(max-width:380px){
+  #accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-image{
+    height:194px!important;min-height:194px!important;max-height:194px!important;
+  }
+}
+</style>
