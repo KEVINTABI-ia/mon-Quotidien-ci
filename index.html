@@ -12482,23 +12482,28 @@ async function chargerOffresEmploiPubliques(){const z=document.getElementById('e
 async function chargerOffresEmploiAdmin(){const z=document.getElementById('emploisListeAdmin');if(!z||!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;z.innerHTML='<p class="notice">Chargement...</p>';try{const s=await db.collection('annonces_offres').get(),d=s.docs.filter(x=>x.data().typeAnnonce==='emploi').sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));z.innerHTML=d.length?d.map(x=>{const a=x.data(),pending=a.statut==='en_attente';return '<article class="card" style="padding:12px;margin:9px 0;"><strong>'+echapperEmploi(a.titre)+'</strong><p>'+echapperEmploi(a.entreprise)+' · '+echapperEmploi(a.commune)+'</p><p>'+echapperEmploi(a.telephone)+'</p><p>'+echapperEmploi(a.description)+'</p><p>Statut : '+echapperEmploi(a.statut)+'</p>'+(pending?'<button class="primary" onclick="validerOffreEmploi(\''+x.id+'\')">Valider et publier</button><button onclick="rejeterOffreEmploi(\''+x.id+'\')">Refuser</button>':'')+'<button type="button" style="display:block;margin-top:8px;background:#b42318;color:#fff;" onclick="supprimerOffreEmploiAdmin(\''+x.id+'\')">🗑️ Supprimer l’offre</button></article>';}).join(''):'<p class="notice">Aucune proposition.</p>';}catch(e){console.error(e);z.innerHTML='<p class="notice">Erreur de chargement.</p>';}}
 async function chargerAnnoncesValideesAccueil(){
  const zone=document.getElementById("annoncesValideesAccueil");if(!zone)return;
- zone.innerHTML='<p class="notice">Chargement des annonces validées...</p>';
- try{
-  const snap=await db.collection("demandes_nouveaux_services").where("type","==","annonce").where("statut","==","approuve").limit(100).get();
-  const items=snap.docs.map(doc=>({id:doc.id,data:doc.data()}))
-   .filter(item=>item.data.photoUrl&&String(item.data.telephone||"").trim())
-   .sort((a,b)=>(b.data.createdAt?.toMillis?.()||0)-(a.data.createdAt?.toMillis?.()||0)).slice(0,12);
-  if(!items.length){zone.innerHTML='<p class="notice">Aucune affiche validée avec un contact disponible pour le moment.</p>';return;}
-  zone.innerHTML='<div class="annonces-accueil-defilement" aria-label="Espace publicitaire" tabindex="0" style="display:flex;flex-direction:row;align-items:stretch;gap:14px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:8px 2px 14px;">'+items.map(item=>{
-   const d=item.data;
-   const photo=echapperTextePublicite(d.photoUrl);
-   const contact=String(d.telephone||"").replace(/[^+0-9]/g,"");
-   return '<article class="card" style="box-sizing:border-box;flex:0 0 min(82vw,320px);width:min(82vw,320px);max-width:320px;padding:10px;margin:0;text-align:center;scroll-snap-align:start;">'
-    +'<img src="'+photo+'" alt="Affiche de l’annonce" loading="lazy" style="display:block;width:100%;height:300px;object-fit:contain;border-radius:10px;margin:0 auto 10px;">'
-    +'<a class="primary" style="display:block;width:fit-content;min-width:160px;margin:8px auto 0;padding:12px 24px;text-decoration:none;text-align:center;" href="tel:'+contact+'">📞 Contacter</a>'
-    +'</article>';
-  }).join("")+'</div><p class="notice" style="text-align:center;margin-top:4px;">Faites glisser les annonces horizontalement pour les parcourir</p>';
- }catch(e){console.error("Espace publicitaire accueil :",e);zone.innerHTML='<p class="notice">Impossible de charger les annonces pour le moment.</p>';}
+ if(window.ecoutePublicitesAccueilHome)window.ecoutePublicitesAccueilHome();
+ window.ecoutePublicitesAccueilHome=db.collection("publicites").where("statut","==","publiee").onSnapshot(snapshot=>{
+  window.publicitesAccueilHomeDocs=snapshot.docs;
+  const afficher=()=>{
+   const maintenant=Date.now();
+   const items=(window.publicitesAccueilHomeDocs||[]).map(doc=>({id:doc.id,...doc.data()}))
+    .filter(d=>(!d.dateFin?.toDate||d.dateFin.toDate().getTime()>maintenant)&&(d.mediaUrl||d.imageDataUrl))
+    .sort((a,b)=>(a.dateDebut?.toMillis?.()||0)-(b.dateDebut?.toMillis?.()||0));
+   if(!items.length){zone.innerHTML='<p class="notice">Aucune affiche publicitaire active pour le moment.</p>';window.indexPubliciteAccueilHome=0;return;}
+   window.indexPubliciteAccueilHome=(window.indexPubliciteAccueilHome||0)%items.length;
+   const d=items[window.indexPubliciteAccueilHome],titre=echapperTextePublicite(d.titre||"Publicité");
+   const image=echapperTextePublicite(d.imageDataUrl||d.mediaUrl);
+   zone.innerHTML='<div class="annonces-accueil-defilement" aria-label="Affiches publicitaires" style="width:100%;text-align:center;">'
+    +'<article class="card" style="padding:10px;margin:0 auto;max-width:520px;">'
+    +'<img src="'+image+'" alt="Affiche publicitaire '+titre+'" loading="eager" style="display:block;width:100%;max-height:360px;object-fit:contain;border-radius:10px;margin:auto;">'
+    +(d.description?'<p class="notice" style="margin:8px 0 0;">'+echapperTextePublicite(d.description)+'</p>':"")
+    +'</article></div>';
+  };
+  afficher();
+  if(window.timerPublicitesAccueilHome)clearInterval(window.timerPublicitesAccueilHome);
+  window.timerPublicitesAccueilHome=setInterval(()=>{window.indexPubliciteAccueilHome=(window.indexPubliciteAccueilHome||0)+1;afficher();},15000);
+ },erreur=>{console.error("Espace publicitaire accueil :",erreur);zone.innerHTML='<p class="notice">Impossible de charger les affiches publicitaires pour le moment.</p>';});
 }
 async function chargerArticlesBoutiquesAccueil(){
  const zone=document.getElementById("articlesBoutiquesAccueil");if(!zone)return;
