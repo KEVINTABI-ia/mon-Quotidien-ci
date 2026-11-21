@@ -1933,6 +1933,15 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
   z-index:5500!important;
 }
 </style>
+<style id="mqci-accueil-actions-urgence">
+#mqciAccueilUrgences{box-sizing:border-box;width:100%;margin:8px 0 18px;padding:0 10px}
+#mqciAccueilUrgences .mqci-urgence-boutons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#mqciAccueilUrgences .mqci-urgence-boutons button,#mqciAccueilUrgences .mqci-urgence-boutons a{display:flex;align-items:center;justify-content:center;min-width:0;min-height:64px;margin:0;padding:8px 4px;border:1px solid #dce8df;border-radius:12px;background:#f0f7f1;color:#175b38;text-align:center;text-decoration:none;font-size:11px;font-weight:800;line-height:1.25;overflow-wrap:anywhere}
+#mqciAccueilUrgences .mqci-urgence-boutons button:first-child{background:#fff2ef;border-color:#f0c9c2;color:#a52b20}
+#mqciAccueilUrgences .mqci-urgence-contenu:not([hidden]){display:block;margin-top:10px;padding:12px;border:1px solid #f2b8b5;border-radius:12px;background:#fff8f7}
+#mqciAccueilUrgences .mqci-urgence-contenu[hidden]{display:none!important}
+@media(max-width:360px){#mqciAccueilUrgences .mqci-urgence-boutons{gap:5px}#mqciAccueilUrgences .mqci-urgence-boutons button,#mqciAccueilUrgences .mqci-urgence-boutons a{font-size:10px;padding:7px 3px;min-height:62px}}
+</style>
 </head>
 <body>
 
@@ -2026,7 +2035,7 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
     <h3>Que souhaitez-vous faire ?</h3>
     <button type="button" class="primary" style="width:100%;margin:6px 0;" onclick="ouvrirEspacePartenaire('inscription')">➕ Devenir partenaire</button>
     <button type="button" class="primary" style="width:100%;margin:6px 0;" onclick="ouvrirEspacePartenaire('connexion')">🔐 Connexion à mon espace partenaire</button>
-<button type="button" class="primary" style="width:100%;margin:6px 0;" onclick="ouvrirSectionPleinEcran('pharmacieProfessionnelle','Espace pharmacie')">💊 Espace professionnel Pharmacie</button>
+
   </div>
   <div id="zoneInscriptionPartenaire" style="display:none;">
     <h3>Créer un espace partenaire</h3>
@@ -2060,14 +2069,14 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
     
   </div>
   <div id="zoneConnexionPartenaire" style="display:none;">
-    <h3>Connexion à mon espace partenaire</h3>
-    <p>Choisissez le type de compte utilisé lors de votre inscription. L’accès reste soumis à l’approbation administrative et, si nécessaire, à un abonnement actif.</p>
-    <div id="choixTypeConnexionPartenaire">
-      <button type="button" class="primary" style="width:100%;margin:5px 0;" onclick="ouvrirConnexionPartenaireType('classique')">Partenaire / compagnie de voyage / livreur / gare</button>
-      <button type="button" class="primary" style="width:100%;margin:5px 0;" onclick="ouvrirConnexionPartenaireType('ramassage')">Compagnie de cars de ramassage</button>
-      <button type="button" class="primary" style="width:100%;margin:5px 0;" onclick="ouvrirConnexionPartenaireType('boutique')">Propriétaire de boutique / commerce</button>
+    <h3>🔐 Connexion à mon espace partenaire</h3>
+    <p>Connectez-vous avec l’adresse e-mail et le mot de passe utilisés lors de votre inscription. Votre espace sera reconnu automatiquement selon votre compte.</p>
+    <div id="zoneConnexionPartenaireDetails">
+      <label for="mqciConnexionEmail">Adresse e-mail</label><input type="email" id="mqciConnexionEmail" placeholder="Votre adresse e-mail" autocomplete="username">
+      <label for="mqciConnexionMotDePasse">Mot de passe</label><input type="password" id="mqciConnexionMotDePasse" placeholder="Votre mot de passe" autocomplete="current-password">
+      <button type="button" class="primary" style="width:100%;" onclick="connecterPartenaireTousProfils()">Se connecter</button>
+      <p id="mqciConnexionStatut" class="notice" aria-live="polite"></p>
     </div>
-    <div id="zoneConnexionPartenaireDetails"></div>
   </div>
 </section>
 
@@ -3391,33 +3400,7 @@ function chargerPublicitesAccueil() {
 <label>Moyen de paiement</label><select id="orOperateur"><option value="">Choisir un moyen de paiement</option><option value="orange">Orange Money</option><option value="wave">Wave</option><option value="mtn">MTN MoMo</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select></div>
 <button id="orBoutonPaiement" type="button" class="primary" onclick="envoyerReclamationObjet()">Payer 1 000 FCFA avec Jèko</button>
 <p id="orStatutReclamation" class="notice"></p></div></section>
-<details class="carte-acces-admin" aria-label="Contacts d’urgence" style="margin:0 16px 10px;padding:0;border:0;">
-  <summary style="cursor:pointer;display:block;text-align:center;list-style:none;background:#B42318;color:#fff;padding:13px 16px;border-radius:12px;font-weight:700;">🚨 Contacts d’urgence</summary>
-  <div style="margin-top:10px;padding:12px;border:1px solid #F2B8B5;border-radius:12px;background:#FFF8F7;">
-    <div style="margin-bottom:12px;">
-      <strong style="display:block;margin-bottom:6px;">🚒 Pompiers</strong>
-      <a href="tel:+2250101801328" style="display:block;padding:7px 0;color:#087C62;font-weight:700;">01 01 80 13 28</a>
-      <a href="tel:+2250103019094" style="display:block;padding:7px 0;color:#087C62;font-weight:700;">01 03 01 90 94</a>
-    </div>
-    <div style="margin-bottom:12px;">
-      <strong style="display:block;margin-bottom:6px;">🚨 Police alerte</strong>
-      <a href="tel:+2250170900600" style="display:block;padding:7px 0;color:#087C62;font-weight:700;">01 70 900 600</a>
-      <a href="tel:+2250749146712" style="display:block;padding:7px 0;color:#087C62;font-weight:700;">07 49 146 712</a>
-    </div>
-    <div>
-      <strong style="display:block;margin-bottom:6px;">👮 Police secours</strong>
-      <a href="tel:+2250142950809" style="display:block;padding:7px 0;color:#087C62;font-weight:700;">01 42 950 809</a>
-    </div>
-  </div>
-</details>
 
-<details class="carte-acces-admin" aria-label="Commissariat et gendarmerie proches de moi" style="margin:0;padding:0 16px;border:0;">
-  <summary style="cursor:pointer;display:block;text-align:center;list-style:none;background:#087C62;color:#fff;padding:13px 16px;border-radius:12px;font-weight:700;">📍 Commissariat et gendarmerie proches de moi</summary>
-  <div style="display:grid;gap:9px;margin-top:10px;">
-    <a href="https://www.google.com/maps/search/?api=1&query=commissariat+de+police+près+de+moi" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;background:#E8F3ED;color:#075B46;padding:12px 16px;border:1px solid #B8D8C8;border-radius:10px;font-weight:700;">🚔 Commissariat le plus proche</a>
-    <a href="https://www.google.com/maps/search/?api=1&query=gendarmerie+près+de+moi" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;background:#E8F3ED;color:#075B46;padding:12px 16px;border:1px solid #B8D8C8;border-radius:10px;font-weight:700;">🛡️ Gendarmerie la plus proche</a>
-  </div>
-</details>
 
 <section class="carte-acces-admin" aria-label="Accès administrateur" style="margin:12px 16px;padding:14px;border:1px solid #DCE8DF;border-radius:14px;background:#fff;text-align:center;">
   <p style="margin:0 0 10px;color:#68786E;font-size:13px;">Gestion et administration de Mon Quotidien CI</p>
@@ -3660,7 +3643,7 @@ function chargerPublicitesAccueil() {
 
 <details class="setting-row"><summary>🔒 Confidentialité</summary><div class="setting-content"><p>Les informations personnelles transmises dans les formulaires sont utilisées pour traiter les demandes correspondantes. Les espaces privés restent soumis à leurs contrôles d’accès.</p></div></details>
 <details class="setting-row"><summary>ℹ️ À propos</summary><div class="setting-content"><p><strong>Mon Quotidien CI</strong><br>Tous les services utiles, au même endroit.<br>Version de l’application : 1.0</p></div></details>
-<details class="setting-row"><summary>⚠️ Signaler un problème</summary><div class="setting-content"><p>Signalez un dysfonctionnement ou une difficulté rencontrée dans l’application.</p><button type="button" onclick="signalerProblemeGeneral()">Signaler un problème</button></div></details>
+
 </section>
 <script id="fonctions-parametres-application">
 document.addEventListener('DOMContentLoaded',function(){
@@ -6999,6 +6982,26 @@ function ouvrirEspacePartenaire(mode="accueil",typeInitial=null){
   }
   if(mode==="connexion"&&typeInitial)ouvrirConnexionPartenaireType(typeInitial);
   section.scrollIntoView({behavior:"smooth",block:"start"});
+}
+async function connecterPartenaireTousProfils(){
+  const email=document.getElementById("mqciConnexionEmail")?.value.trim()||"";
+  const motDePasse=document.getElementById("mqciConnexionMotDePasse")?.value||"";
+  const statut=document.getElementById("mqciConnexionStatut");
+  if(!email||!motDePasse){if(statut)statut.textContent="Renseignez votre adresse e-mail et votre mot de passe.";return;}
+  const bouton=document.querySelector("#zoneConnexionPartenaireDetails button[onclick*='connecterPartenaireTousProfils']");
+  if(bouton){bouton.disabled=true;bouton.textContent="Connexion en cours…";}
+  if(statut)statut.textContent="Identification de votre espace…";
+  try{
+    const credential=await partnerAuth.signInWithEmailAndPassword(email,motDePasse),uid=credential.user.uid;
+    const compagnie=await partnerDb.collection("compagnies").where("uid","==",uid).limit(1).get();
+    if(!compagnie.empty){if(statut)statut.textContent="Connexion réussie à votre espace compagnie.";await afficherEspaceCompagnie(compagnie.docs[0].id,compagnie.docs[0].data());return;}
+    const ramassage=await partnerDb.collection("comptes_ramassage").doc(uid).get();
+    if(ramassage.exists&&ramassage.data().role==="compagnie"){ramassageRoleActif="compagnie";await afficherEspaceRamassage(credential.user,ramassage.data());afficherOngletRamassage("compagnie");ouvrirSectionPleinEcran("serviceRamassage","Espace compagnie de cars de ramassage");return;}
+    const boutique=await partnerDb.collection("demandes_nouveaux_services").where("uid","==",uid).where("type","==","commerce").where("statut","==","approuve").limit(10).get();
+    if(!boutique.empty){await partnerAuth.signOut();document.getElementById("connexionBoutiqueEmail").value=email;document.getElementById("connexionBoutiqueMotDePasse").value=motDePasse;const zone=document.getElementById("connexionBoutiqueZone");if(zone){zone.style.display="block";zone.scrollIntoView({behavior:"smooth",block:"start"});}await connecterCompteBoutique();return;}
+    await partnerAuth.signOut();document.getElementById("partenaireEmail").value=email;document.getElementById("partenaireMotDePasse").value=motDePasse;await connecterPartenaire();const resultat=document.getElementById("statutConnexionPartenaire")?.textContent||"";if(statut)statut.textContent=resultat;
+  }catch(erreur){if(partnerAuth.currentUser)await partnerAuth.signOut().catch(()=>{});const code=erreur.code||"";if(statut)statut.textContent=["auth/invalid-credential","auth/wrong-password","auth/user-not-found","auth/invalid-email"].includes(code)?"Adresse e-mail ou mot de passe incorrect.":(erreur.message||"Connexion impossible. Vérifiez vos identifiants et réessayez.");}
+  finally{if(bouton){bouton.disabled=false;bouton.textContent="Se connecter";}}
 }
 function ouvrirConnexionPartenaireType(type){
   const details=document.getElementById("zoneConnexionPartenaireDetails");
@@ -12223,12 +12226,43 @@ window.mtcAfficherActeJudiciaire = function(type){
         </div>
       </section>
       <section class="home-panel" id="homeQuotidien">
-        <div class="home-section-heading"><div><h2>📢 Espace publicitaire</h2></div></div>
+        
         <div id="annoncesValideesAccueil"><p class="notice">Chargement de l’espace publicitaire...</p></div>
       </section>
       <section class="home-panel" id="homeArticlesBoutiques">
-        <div class="home-section-heading"><div><h2>🛍️ Articles des boutiques et commerces</h2></div></div>
+        
         <div id="articlesBoutiquesAccueil"><p class="notice">Chargement des articles publiés...</p></div>
+      </section>
+      <section id="mqciAccueilUrgences" aria-label="Accès rapides de sécurité">
+        <div class="mqci-urgence-boutons">
+          <button type="button" aria-controls="mqciUrgenceContacts" aria-expanded="false" onclick="const z=document.getElementById('mqciUrgenceContacts');z.hidden=!z.hidden;this.setAttribute('aria-expanded',String(!z.hidden))">🚨 Contacts d’urgence</button>
+          <a href="https://www.google.com/maps/search/?api=1&query=commissariat+de+police+près+de+moi" target="_blank" rel="noopener noreferrer">🚔 Commissariats proches</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=gendarmerie+près+de+moi" target="_blank" rel="noopener noreferrer">🛡️ Gendarmeries proches</a>
+        </div>
+        <div id="mqciUrgenceContacts" class="mqci-urgence-contenu" hidden><div class="mqci-urgence-interieur">
+    <div style="margin-bottom:12px;">
+      <strong style="display:block;margin-bottom:6px;">🚒 Pompiers</strong>
+      <a href="tel:+2250101801328" style="display:block;padding:7px 0;color:#087C62;font-weight:700;">01 01 80 13 28</a>
+      <a href="tel:+2250103019094" style="display:block;padding:7px 0;color:#087C62;font-weight:700;">01 03 01 90 94</a>
+    </div>
+    <div style="margin-bottom:12px;">
+      <strong style="display:block;margin-bottom:6px;">🚨 Police alerte</strong>
+      <a href="tel:+2250170900600" style="display:block;padding:7px 0;color:#087C62;font-weight:700;">01 70 900 600</a>
+      <a href="tel:+2250749146712" style="display:block;padding:7px 0;color:#087C62;font-weight:700;">07 49 146 712</a>
+    </div>
+    <div>
+      <strong style="display:block;margin-bottom:6px;">👮 Police secours</strong>
+      <a href="tel:+2250142950809" style="display:block;padding:7px 0;color:#087C62;font-weight:700;">01 42 950 809</a>
+    </div>
+  </div>
+</details>
+
+<details class="carte-acces-admin" aria-label="Commissariat et gendarmerie proches de moi" style="margin:0;padding:0 16px;border:0;">
+  <summary style="cursor:pointer;display:block;text-align:center;list-style:none;background:#087C62;color:#fff;padding:13px 16px;border-radius:12px;font-weight:700;">📍 Commissariat et gendarmerie proches de moi</summary>
+  <div style="display:grid;gap:9px;margin-top:10px;">
+    <a href="https://www.google.com/maps/search/?api=1&query=commissariat+de+police+près+de+moi" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;background:#E8F3ED;color:#075B46;padding:12px 16px;border:1px solid #B8D8C8;border-radius:10px;font-weight:700;">🚔 Commissariat le plus proche</a>
+    <a href="https://www.google.com/maps/search/?api=1&query=gendarmerie+près+de+moi" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;background:#E8F3ED;color:#075B46;padding:12px 16px;border:1px solid #B8D8C8;border-radius:10px;font-weight:700;">🛡️ Gendarmerie la plus proche</a>
+  </div></div>
       </section>`;
     main.insertBefore(shell,recherche||main.firstChild);
     const welcome=document.getElementById("homeWelcome");
@@ -12274,11 +12308,11 @@ window.mtcAfficherActeJudiciaire = function(type){
     menuPanel.innerHTML=`
       <button type="button">➕ Devenir partenaire</button>
       <button type="button">🔐 Connexion à mon espace partenaire</button>
-      <button type="button">💊 Espace professionnel Pharmacie</button>`;
+      `;
     const actions=menuPanel.querySelectorAll('button');
     actions[0].addEventListener('click',()=>{fermerMenuPro();ouvrirEspacePartenaire('inscription');});
     actions[1].addEventListener('click',()=>{fermerMenuPro();ouvrirEspacePartenaire('connexion');});
-    actions[2].addEventListener('click',()=>{fermerMenuPro();ouvrirSectionPleinEcran('pharmacieProfessionnelle','Espace pharmacie');});
+    actions[2].addEventListener('click',()=>{fermerMenuPro();signalerProblemeGeneral();});
     const headerPro=document.querySelector('header.mqci-header-premium');
     function alignerBoutonMenuSurIdentite(){
       const identite=headerPro?.querySelector('.mqci-brand-lockup');
@@ -12532,7 +12566,7 @@ async function chargerArticlesBoutiquesAccueil(){
     +'<div class="mqci-produit-image">'+(photo?'<img src="'+photo+'" alt="'+nom+'" loading="lazy">':'<span aria-hidden="true">🛍️</span>')+'</div>'
     +'<strong class="mqci-produit-nom">'+nom+'</strong><p class="mqci-produit-prix">'+Number(p.prix).toLocaleString("fr-FR")+' FCFA</p>'
     +'<p class="mqci-produit-boutique">'+boutique+'</p><button type="button" class="primary" data-article-index="'+i+'">Commander</button></article>';
-  }).join("")+'</div><p class="notice mqci-produits-aide">Faites glisser pour découvrir les articles</p>';
+  }).join("")+'</div>';
   zone.querySelectorAll("[data-article-index]").forEach(btn=>btn.addEventListener("click",()=>{const p=visibles[Number(btn.dataset.articleIndex)];if(p)ouvrirCommandeBoutique(p.boutiqueId,p.index);}));
   // Défilement automatique d'une carte toutes les 15 secondes, sans désactiver le balayage manuel.
   if(window.timerArticlesBoutiquesAccueil)clearInterval(window.timerArticlesBoutiquesAccueil);
