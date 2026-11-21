@@ -408,8 +408,7 @@ service cloud.firestore {
             && (
               (get(commandePath(resource.data.commandeId)).data.statut == "en_attente"
                 && get(commandePath(resource.data.commandeId)).data.get("partenaireId", null) == null)
-              || ((get(commandePath(resource.data.commandeId)).data.statut == "livre"
-                  || get(commandePath(resource.data.commandeId)).data.statut == "arrive_destination")
+              || (get(commandePath(resource.data.commandeId)).data.statut == "livre"
                 && get(commandePath(resource.data.commandeId)).data.partenaireId == partenaireId)
             ));
         allow update: if false;
