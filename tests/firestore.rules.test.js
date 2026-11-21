@@ -441,6 +441,7 @@ describe("Mon Transport CI — règles Firestore", function () {
         clientId: CLIENT_UID, service: "livraison", statut: "en_attente", publicVersion: true,
         depart: "Yopougon", destination: "Adjamé"
       });
+      await context.firestore().doc(`portefeuilles_livreurs/${PARTNER_UID}`).set({uid:PARTNER_UID,soldeDisponibleXof:5000,detteCommissionXof:0});
     });
     const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
     const { doc, writeBatch, serverTimestamp } = require("firebase/firestore");
@@ -462,6 +463,7 @@ describe("Mon Transport CI — règles Firestore", function () {
         clientId: CLIENT_UID, service: "livraison", statut: "en_attente", publicVersion: true,
         depart: "Yopougon", destination: "Adjamé"
       });
+      await context.firestore().doc(`portefeuilles_livreurs/${PARTNER_UID}`).set({uid:PARTNER_UID,soldeDisponibleXof:5000,detteCommissionXof:0});
     });
     const db = testEnv.authenticatedContext(ADMIN_UID).firestore();
     const { doc, writeBatch, serverTimestamp } = require("firebase/firestore");
@@ -577,6 +579,7 @@ describe("Mon Transport CI — règles Firestore", function () {
         clientId: CLIENT_UID, service: "livraison", statut: "en_attente", publicVersion: true,
         depart: "Yopougon", destination: "Adjamé"
       });
+      await context.firestore().doc(`portefeuilles_livreurs/${PARTNER_UID}`).set({uid:PARTNER_UID,soldeDisponibleXof:5000,detteCommissionXof:0});
     });
     const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
     const { doc, writeBatch, serverTimestamp } = require("firebase/firestore");
@@ -609,7 +612,7 @@ describe("Mon Transport CI — règles Firestore", function () {
     await assertFails(deleteDoc(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive")));
   });
 
-  it("autorise l'arrivée à destination, la lecture du tarif puis la clôture et la suppression du verrou", async () => {
+  it("autorise l'arrivée et la lecture du tarif mais interdit la clôture financière directe depuis le navigateur", async () => {
     await testEnv.withSecurityRulesDisabled(async context => {
       const db = context.firestore();
       await db.doc(`commandes_colis/${ORDER_ID}`).set({
@@ -632,10 +635,10 @@ describe("Mon Transport CI — règles Firestore", function () {
       statut: "arrive_destination", dateArriveeDestination: serverTimestamp()
     }));
     await assertSucceeds(getDoc(doc(db, "commandes_colis", ORDER_ID, "tarification", "prix")));
-    await assertSucceeds(updateDoc(doc(db, "commandes_colis", ORDER_ID), {
+    await assertFails(updateDoc(doc(db, "commandes_colis", ORDER_ID), {
       statut: "livre", dateLivraison: serverTimestamp()
     }));
-    await assertSucceeds(deleteDoc(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive")));
+    await assertFails(deleteDoc(doc(db, "partenaires", PARTNER_UID, "verrous", "missionActive")));
   });
 
   it("interdit au livreur de lire le tarif avant son arrivée à destination", async () => {
