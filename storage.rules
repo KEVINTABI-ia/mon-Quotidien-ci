@@ -43,47 +43,20 @@ service firebase.storage {
       allow update, delete: if false;
     }
 
-    // Affiches publicitaires publiques. Seul l’administrateur gère les annonces historiques.
+    // Publicite images: public read, admin moderation, partner-owned uploads.
     match /publicites/{fileName} {
       allow read: if true;
       allow create: if resource == null && estAdmin()
-        && fileName.matches('^[A-Za-z0-9._-]{1,180}
-
-    match /logement_photos/{uid}/{annonceId}/{fileName} {
-      allow create: if resource == null
-        && request.auth != null && request.auth.uid == uid
-        && fileName.size() <= 180
-        && request.resource.size <= 8 * 1024 * 1024
-        && request.resource.contentType.matches('image/(jpeg|png|webp)');
-      allow read: if true;
-      allow update, delete: if false;
-    }
-  }
-}
-)
+        && fileName.matches('^[A-Za-z0-9._-]+$')
         && request.resource.size <= 10 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
       allow update: if false;
       allow delete: if estAdmin();
     }
-    // Un partenaire peut téléverser uniquement son affiche dans son propre dossier.
     match /publicites/partenaires/{uid}/{fileName} {
       allow read: if true;
       allow create: if resource == null && request.auth != null && request.auth.uid == uid
-        && fileName.matches('^[A-Za-z0-9_-]{20,80}\\.(jpg|png|webp)
-
-    match /logement_photos/{uid}/{annonceId}/{fileName} {
-      allow create: if resource == null
-        && request.auth != null && request.auth.uid == uid
-        && fileName.size() <= 180
-        && request.resource.size <= 8 * 1024 * 1024
-        && request.resource.contentType.matches('image/(jpeg|png|webp)');
-      allow read: if true;
-      allow update, delete: if false;
-    }
-  }
-}
-)
+        && fileName.matches('^[A-Za-z0-9_-]+[.](jpg|png|webp)$')
         && request.resource.size <= 10 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
       allow update: if false;
