@@ -14081,3 +14081,46 @@ header.mqci-header-premium .mqci-brand-lockup{
 #accueilHomeShell #homeFamilyLauncher>#menuQuotidien #dailyServicesPanel[hidden]{display:none!important}
 #accueilHomeShell #homeFamilyLauncher>#menuQuotidien #dailyServicesPanel:not([hidden]){display:block!important}
 </style>
+
+
+
+<style id="mqci-entete-sans-bandeau-menu-aligne">
+  /* En-tête sans bande horizontale : seul le cadre du logo reste blanc. */
+  header.mqci-header-premium{
+    background:transparent!important;
+    box-shadow:none!important;
+    border:0!important;
+    padding:6px 14px 0!important;
+  }
+  header.mqci-header-premium::before,
+  header.mqci-header-premium::after{
+    display:none!important;
+    content:none!important;
+  }
+  header.mqci-header-premium .mqci-brand-lockup{
+    box-sizing:border-box!important;
+    width:100%!important;
+    padding-right:58px!important;
+    margin:0!important;
+  }
+  header.mqci-header-premium .mqci-brand-mark{
+    background:#fff!important;
+    border:1px solid #e1e8e2!important;
+    box-shadow:none!important;
+  }
+  #mqciPartnerDropdown{
+    position:absolute!important;
+    right:14px!important;
+    z-index:10020!important;
+  }
+  #mqciPartnerDropdownToggle{
+    width:42px!important;
+    height:42px!important;
+  }
+  @media(max-width:380px){
+    header.mqci-header-premium{padding:5px 12px 0!important}
+    header.mqci-header-premium .mqci-brand-lockup{padding-right:54px!important}
+    #mqciPartnerDropdown{right:12px!important}
+    #mqciPartnerDropdownToggle{width:40px!important;height:40px!important}
+  }
+</style>
