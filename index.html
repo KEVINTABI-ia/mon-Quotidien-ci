@@ -7311,6 +7311,42 @@ async function connecterPartenaire(){
     }
   }
 }
+async function chargerPortefeuilleLivreur(){
+ const user=partnerAuth.currentUser;if(!user)return;
+ const solde=document.getElementById("soldePortefeuilleLivreur"),alerte=document.getElementById("alertePortefeuilleLivreur"),historique=document.getElementById("historiquePortefeuilleLivreur");
+ if(solde)solde.textContent="Chargement...";
+ try{
+  const ref=partnerDb.collection("portefeuilles_livreurs").doc(user.uid),snap=await ref.get(),wallet=snap.exists?snap.data():{};
+  const balance=Number(wallet.soldeDisponibleXof||0),debt=Number(wallet.detteCommissionXof||0);
+  if(solde)solde.textContent=balance.toLocaleString("fr-FR")+" FCFA";
+  if(alerte)alerte.textContent=debt>0?"Dette de commission : "+debt.toLocaleString("fr-FR")+" FCFA. Rechargez pour régulariser.":(balance<=0?"Solde épuisé : aucune nouvelle mission ne peut être acceptée.":(balance<=1000?"Solde faible : pensez à recharger votre portefeuille.":"Votre portefeuille est actif."));
+  if(historique){
+   const entries=await ref.collection("journal").orderBy("createdAt","desc").limit(8).get();
+   historique.innerHTML=entries.empty?"<p>Aucune opération pour le moment.</p>":entries.docs.map(doc=>{
+    const e=doc.data(),label=e.type==="recharge"?"Recharge Jèko":(e.type==="commission"?"Commission livraison":(e.type||"Opération"));
+    const amount=Number(e.montantXof||e.debitXof||0);
+    const date=e.createdAt&&e.createdAt.toDate?e.createdAt.toDate():new Date(e.createdAt||Date.now());
+    return "<p><strong>"+echapperTexteCompagnie(label)+"</strong> · "+amount.toLocaleString("fr-FR")+" FCFA <small>"+date.toLocaleString("fr-FR")+"</small></p>";
+   }).join("");
+  }
+ }catch(e){if(solde)solde.textContent="Indisponible";if(alerte)alerte.textContent="Impossible de charger le portefeuille : "+(e.message||"erreur");}
+}
+async function rechargerPortefeuilleLivreur(){
+ const user=partnerAuth.currentUser,zone=document.getElementById("statutRechargePortefeuille"),amount=Number(document.getElementById("montantRechargePortefeuille")?.value),paymentMethod=document.getElementById("moyenRechargePortefeuille")?.value||"";
+ if(!user||!Number.isSafeInteger(amount)||amount<1||amount>10000000||!["wave","orange","mtn"].includes(paymentMethod)){if(zone)zone.textContent="Vérifiez le montant et le moyen de paiement.";return;}
+ const button=document.getElementById("boutonRechargePortefeuille");if(button){button.disabled=true;button.textContent="Préparation du paiement...";}
+ if(zone)zone.textContent="Connexion sécurisée à Jèko...";
+ try{
+  const token=await user.getIdToken(),response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{
+   method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
+   body:JSON.stringify({serviceId:"courier_wallet",amountXof:amount,paymentMethod})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.checkoutUrl)throw new Error(data.error==="courier_profile_not_eligible"?"Le profil livreur doit être approuvé et actif.":data.diagnostic||data.error||"Impossible de préparer la recharge Jèko.");
+  if(zone)zone.textContent="Paiement prêt. Redirection vers Jèko...";
+  window.location.assign(data.checkoutUrl);
+ }catch(e){if(zone)zone.textContent=e.message||"Erreur de recharge.";if(button){button.disabled=false;button.textContent="Recharger avec Jèko";}}
+}
 function afficherEspacePartenaire(dossier, uid) {
   let zone = document.getElementById("zoneEspacePartenaire");
   if (!zone) {
@@ -7347,6 +7383,24 @@ function afficherEspacePartenaire(dossier, uid) {
     ${expire ? (renouvellementEnAttente
       ? '<div class="notice" style="border:1px solid #D5A84B;padding:12px;margin:12px 0;"><strong>💳 Renouvellement en attente</strong><p>Votre demande a été reçue. L’administrateur vérifiera le paiement avant de réactiver votre abonnement.</p></div>'
       : '<div class="notice" style="border:1px solid #D5A84B;padding:12px;margin:12px 0;"><strong>Votre abonnement a expiré.</strong><p>Choisissez une formule et réglez directement avec Jèko. Votre abonnement sera réactivé automatiquement après confirmation sécurisée du paiement.</p><button type="button" class="primary" onclick="ouvrirFormulaireRenouvellementPartenaire()">Renouveler avec Jèko</button><div id="formulaireRenouvellementPartenaire"></div></div>') : ""}
+    ${dossier.type === "livreur_independant" ? `
+    <section class="card" style="padding:14px;margin:14px 0;">
+      <h3>💳 Mon portefeuille livreur</h3>
+      <p><strong>Solde disponible :</strong> <span id="soldePortefeuilleLivreur">Chargement...</span></p>
+      <p id="alertePortefeuilleLivreur" class="notice" aria-live="polite"></p>
+      <label for="montantRechargePortefeuille">Montant à recharger (FCFA)</label>
+      <input id="montantRechargePortefeuille" type="number" min="1" max="10000000" step="1" value="10000" style="width:100%;padding:12px;">
+      <label for="moyenRechargePortefeuille">Moyen de paiement</label>
+      <select id="moyenRechargePortefeuille" style="width:100%;padding:12px;">
+        <option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option>
+      </select>
+      <button id="boutonRechargePortefeuille" type="button" class="primary" onclick="rechargerPortefeuilleLivreur()">Recharger avec Jèko</button>
+      <button type="button" onclick="chargerPortefeuilleLivreur()">Actualiser le portefeuille</button>
+      <h4>Historique financier</h4><div id="historiquePortefeuilleLivreur"><p>Aucune opération pour le moment.</p></div>
+      <p class="notice">Le solde est crédité après confirmation du paiement par Jèko. Alerte à 1 000 FCFA ; blocage des nouvelles missions à 0 FCFA.</p>
+      <p id="statutRechargePortefeuille" aria-live="polite"></p>
+    </section>
+    ${": ""}" }
     <h3>📦 Mes commandes attribuées</h3>
     <button type="button" class="primary" onclick="chargerCommandesPartenaire()">Actualiser mes commandes</button>
     <div id="listeCommandesPartenaire"><p>Appuyez sur « Actualiser mes commandes » pour consulter vos missions.</p></div>
@@ -7355,6 +7409,7 @@ function afficherEspacePartenaire(dossier, uid) {
   ajouterBlocPublicitePartenaire(zone, uid);
   zone.scrollIntoView({behavior:"smooth", block:"start"});
   chargerCommandesPartenaire();
+  if(dossier.type==="livreur_independant")chargerPortefeuilleLivreur();
 }
 
 async function ouvrirFormulaireRenouvellementPartenaire(){
