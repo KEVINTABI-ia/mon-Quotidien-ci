@@ -43,20 +43,23 @@ service firebase.storage {
       allow update, delete: if false;
     }
 
-    // Publicite images: public read, admin moderation, partner-owned uploads.
+    // Médias de l’espace publicitaire : dépôt réservé à l’administrateur.
+    // Les fichiers sont consultables publiquement sur la page d’accueil.
+    // Affiches publicitaires publiques. Seul l’administrateur gère les annonces historiques.
     match /publicites/{fileName} {
       allow read: if true;
       allow create: if resource == null && estAdmin()
-        && fileName.matches('^[A-Za-z0-9._-]+$')
+        && fileName.matches('^[A-Za-z0-9._-]{1,180}$')
         && request.resource.size <= 10 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
       allow update: if false;
       allow delete: if estAdmin();
     }
+    // Un partenaire peut téléverser uniquement son affiche dans son propre dossier.
     match /publicites/partenaires/{uid}/{fileName} {
       allow read: if true;
       allow create: if resource == null && request.auth != null && request.auth.uid == uid
-        && fileName.matches('^[A-Za-z0-9_-]+[.](jpg|png|webp)$')
+        && fileName.matches('^[A-Za-z0-9_-]{20,80}\\.(jpg|png|webp)$')
         && request.resource.size <= 10 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
       allow update: if false;
