@@ -1210,7 +1210,8 @@ export default {
     let response;
     if(url.pathname==="/health"&&request.method==="GET") response=json({ok:true,service:"mon-quotidien-jeko",mode:"production-locked"});
     else if(url.pathname==="/webhook") response=await webhook(request,env);
-    else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);\n    else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
+    else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
+    else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
     else if(url.pathname==="/api/publicites/admin-upload"&&request.method==="POST") response=await publiciteUpload(request,env,true);
     else if(url.pathname==="/api/publicites/image"&&request.method==="GET") response=await publiciteImage(request,env);
