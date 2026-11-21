@@ -12228,7 +12228,7 @@ window.mtcAfficherActeJudiciaire = function(type){
         <div id="annoncesValideesAccueil"><p class="notice">Chargement de l’espace publicitaire...</p></div>
       </section>
       <section class="home-panel" id="homeArticlesBoutiques">
-        <div class="home-section-heading"><div><h2>🛍️ Articles des boutiques et commerces</h2><p>Découvrez les articles publiés par les boutiques et commerces partenaires.</p></div></div>
+        <div class="home-section-heading"><div><h2>🛍️ Articles des boutiques et commerces</h2></div></div>
         <div id="articlesBoutiquesAccueil"><p class="notice">Chargement des articles publiés...</p></div>
       </section>`;
     main.insertBefore(shell,recherche||main.firstChild);
@@ -12532,6 +12532,19 @@ async function chargerArticlesBoutiquesAccueil(){
     +'<p class="mqci-produit-boutique">'+boutique+'</p><button type="button" class="primary" data-article-index="'+i+'">Commander</button></article>';
   }).join("")+'</div><p class="notice mqci-produits-aide">Faites glisser pour découvrir les articles</p>';
   zone.querySelectorAll("[data-article-index]").forEach(btn=>btn.addEventListener("click",()=>{const p=visibles[Number(btn.dataset.articleIndex)];if(p)ouvrirCommandeBoutique(p.boutiqueId,p.index);}));
+  // Défilement automatique d'une carte toutes les 15 secondes, sans désactiver le balayage manuel.
+  if(window.timerArticlesBoutiquesAccueil)clearInterval(window.timerArticlesBoutiquesAccueil);
+  const piste=zone.querySelector(".mqci-produits-defilement");
+  if(piste&&visibles.length>1){
+   window.timerArticlesBoutiquesAccueil=setInterval(()=>{
+    const carte=piste.querySelector(".mqci-produit-card");if(!carte)return;
+    const pas=carte.getBoundingClientRect().width+12;
+    const fin=piste.scrollWidth-piste.clientWidth;
+    if(fin<=0)return;
+    if(piste.scrollLeft+pas>=fin-4)piste.scrollTo({left:0,behavior:"smooth"});
+    else piste.scrollBy({left:pas,behavior:"smooth"});
+   },15000);
+  }
  }catch(e){console.error("Articles boutiques accueil :",e);zone.innerHTML='<p class="notice">Impossible de charger les articles pour le moment.</p>';}
 }
 async function supprimerAnnonceAdmin(id){
@@ -13536,5 +13549,70 @@ header.mqci-header-premium .mqci-brand-lockup{
   margin:0!important;
   border-radius:0!important;
   object-fit:contain!important;
+}
+</style>
+\n
+<style id="mqci-articles-boutiques-pleine-largeur">
+/* Catalogue d'accueil en pleine largeur, avec navigation tactile et souris. */
+#accueilHomeShell #homeArticlesBoutiques{
+  box-sizing:border-box!important;
+  width:100vw!important;
+  max-width:100vw!important;
+  margin-left:calc(50% - 50vw)!important;
+  margin-right:calc(50% - 50vw)!important;
+  padding:0!important;
+  overflow:hidden!important;
+  border:0!important;
+  border-radius:0!important;
+}
+#accueilHomeShell #homeArticlesBoutiques>.home-section-heading{
+  box-sizing:border-box!important;
+  width:100%!important;
+  margin:0!important;
+  padding:10px 15px 8px!important;
+}
+#accueilHomeShell #homeArticlesBoutiques>.home-section-heading h2{margin:0!important}
+#accueilHomeShell #homeArticlesBoutiques #articlesBoutiquesAccueil{
+  box-sizing:border-box!important;
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0 10px!important;
+  overflow:hidden!important;
+}
+#accueilHomeShell #homeArticlesBoutiques .mqci-produits-defilement{
+  display:flex!important;
+  flex-flow:row nowrap!important;
+  align-items:stretch!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  overscroll-behavior-x:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+  scroll-snap-type:x mandatory!important;
+  scrollbar-width:thin!important;
+  touch-action:pan-x!important;
+}
+#accueilHomeShell #homeArticlesBoutiques .mqci-produits-defilement>.mqci-produit-card{
+  flex:0 0 min(78vw,230px)!important;
+  width:min(78vw,230px)!important;
+  min-width:min(78vw,230px)!important;
+  max-width:min(78vw,230px)!important;
+  scroll-snap-align:start!important;
+}
+#accueilHomeShell #homeArticlesBoutiques .mqci-produits-aide{
+  margin:0!important;
+  padding:2px 12px 10px!important;
+}
+@media(min-width:700px){
+  #accueilHomeShell #homeArticlesBoutiques .mqci-produits-defilement>.mqci-produit-card{
+    flex-basis:230px!important;width:230px!important;min-width:230px!important;max-width:230px!important;
+  }
 }
 </style>
