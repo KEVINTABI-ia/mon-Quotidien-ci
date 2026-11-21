@@ -1,6 +1,13 @@
 # Spécification technique — Portefeuille livreur et commissions
 
 ## Statut
+- Recharge Jèko livreur : route de checkout intégrée au Worker, montant validé côté serveur, crédit déclenché uniquement après webhook Jèko signé et vérifié (référence, demande, magasin, devise et montant).
+- Le crédit du portefeuille, la mise à jour du solde et l'écriture du journal de recharge sont groupés dans un commit Firestore avec préconditions et reçu idempotent.
+- Espace livreur : affichage du solde, alerte, formulaire de recharge (10 000 FCFA proposé par défaut, montant modifiable), moyens Wave/Orange Money/MTN Money et historique des opérations.
+- Les écritures directes du client sur le portefeuille et son journal sont interdites par les règles Firestore.
+- **Le débit réel des commissions et la clôture serveur des missions ne sont pas encore activés.** Les calculs purs et la préparation de l'architecture ne doivent pas être confondus avec un portefeuille entièrement opérationnel.
+- La migration des missions vers une clôture Worker et l'application des règles de solde à l'acceptation restent à faire ; le flux existant n'est pas bloqué pendant cette étape.
+
 Spécification issue des décisions validées par le responsable du projet. Cette branche ne modifie pas encore les flux de production. Elle sert de référence avant l'implémentation et les tests.
 
 ## Périmètre
