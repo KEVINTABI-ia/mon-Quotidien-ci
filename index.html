@@ -13646,3 +13646,47 @@ header.mqci-header-premium .mqci-brand-lockup{
   }
 }
 </style>
+
+
+<style id="mqci-articles-image-nom-prix-alignement">
+/* Cartes compactes : image un peu moins haute et informations rapprochées. */
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-card{
+  display:flex!important;
+  flex-direction:column!important;
+}
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-image{
+  height:185px!important;
+  min-height:185px!important;
+  max-height:185px!important;
+  margin:0 0 2px!important;
+}
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-image img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:center!important;
+}
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-nom{
+  order:1!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0 1px!important;
+  line-height:1.2!important;
+}
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-prix{
+  order:2!important;
+  margin:2px 0!important;
+  line-height:1.2!important;
+}
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-boutique{
+  order:3!important;
+  margin:2px 0 4px!important;
+  line-height:1.2!important;
+}
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-card button{order:4!important}
+@media(max-width:380px){
+  #accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-image{
+    height:172px!important;min-height:172px!important;max-height:172px!important;
+  }
+}
+</style>
