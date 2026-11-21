@@ -7165,6 +7165,9 @@ async function connecterPartenaireSelonType(){
       const resultat=statutBoutique?.textContent||"";
       if(statut)statut.textContent=resultat||"Vérification de votre compte boutique terminée.";
       if(resultat.startsWith("Connexion impossible")||resultat.startsWith("Aucune boutique"))throw new Error(resultat);
+      const tableauBoutique=document.getElementById("boutiqueCompteConnecte");
+      if(!tableauBoutique||!tableauBoutique.innerHTML.trim())throw new Error("La connexion a été vérifiée, mais l’espace boutique n’a pas pu être chargé. Réessayez.");
+      await ouvrirSectionPleinEcran("nouveauxServices","Espace boutique");
       return;
     }
     ouvrirConnexionPartenaire();
