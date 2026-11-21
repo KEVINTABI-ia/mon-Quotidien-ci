@@ -248,7 +248,7 @@ async function createCheckout(request,env) {
     const imagePath=body.imagePath,titre=typeof body.titre==="string"?body.titre.trim():"",description=typeof body.description==="string"?body.description.trim():"",mediaUrl=typeof body.mediaUrl==="string"?body.mediaUrl:"";
     if(!plan)return json({error:"invalid_publicite_plan"},400);
     if(!allowedProfilePath||!profileDoc||profile?.uid!==user.sub||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif")return json({error:"partner_not_eligible"},403);
-    if(!publiciteKeyValid(imagePath,user.sub)||!/\\.(jpg|png|webp)$/i.test(imagePath)||typeof mediaUrl!=="string"||!/^https:\/\//i.test(mediaUrl)||!mediaUrl.includes(encodeURIComponent(imagePath))||titre.length<2||titre.length>100||description.length>500)return json({error:"invalid_publicite_data"},400);
+    if(!publiciteKeyValid(imagePath,user.sub)||!/\.(jpg|png|webp)$/i.test(imagePath)||typeof mediaUrl!=="string"||!/^https:\/\//i.test(mediaUrl)||!mediaUrl.includes(encodeURIComponent(imagePath))||titre.length<2||titre.length>100||description.length>500)return json({error:"invalid_publicite_data"},400);
     amountXof=plan.amount;
     initial={uid:user.sub,serviceId,planId:body.planId,forfait:plan.label,durationDays:plan.days,partnerProfilePath,imagePath,mediaUrl,titre,description,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
   } else if(serviceId==="ramassage") {
