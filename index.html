@@ -13396,7 +13396,7 @@ async function mqciAdminStatutPharmacie(uid,statut){
       customize.textContent=editMode?'Terminer la personnalisation':'⚙ Personnaliser mes accès';
       status.hidden=!editMode;
       status.textContent=editMode?'Touchez un service dans « Autre service du quotidien », puis l’accès en haut à remplacer.':'';
-      if(editMode){menu.hidden=false;dailyPanel.hidden=false;const dailyToggle=menu.querySelector('.daily-toggle');if(dailyToggle){dailyToggle.hidden=true;dailyToggle.style.display='none';dailyToggle.setAttribute('aria-expanded','true');}menu.scrollIntoView({behavior:'smooth',block:'start');}else{menu.hidden=true;dailyPanel.hidden=true;}
+      if(editMode){menu.hidden=false;dailyPanel.hidden=false;const dailyToggle=menu.querySelector('.daily-toggle');if(dailyToggle){dailyToggle.hidden=true;dailyToggle.style.display='none';dailyToggle.setAttribute('aria-expanded','true');}menu.scrollIntoView({behavior:'smooth',block:'start'});else{menu.hidden=true;dailyPanel.hidden=true;}
     }
     customize.addEventListener('click',()=>setEditMode(!editMode));
 
