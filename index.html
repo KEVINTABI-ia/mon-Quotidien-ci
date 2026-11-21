@@ -2053,8 +2053,7 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
       <option value="hotel">🏨 Hôtel</option>
       <option value="residence_hoteliere">🏢 Résidence hôtelière</option>
       <option value="residence_meublee">🏠 Résidence meublée</option>
-      <option value="commercant">🏪 Commerçant</option>
-      <option value="boutique">🛍️ Boutique</option>
+      <option value="commerce_boutique">🏪 Commerce et boutique</option>
       <option value="livreur">📦 Livreur indépendant</option>
       <option value="representant_gare">🏢 Représentant de gare</option>
       <option value="compagnie">🚌 Compagnie de voyage</option>
@@ -2085,8 +2084,7 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
         <option value="hotel">🏨 Hôtel</option>
         <option value="residence_hoteliere">🏢 Résidence hôtelière</option>
         <option value="residence_meublee">🏠 Résidence meublée</option>
-        <option value="commercant">🏪 Commerçant</option>
-        <option value="boutique">🛍️ Boutique</option>
+        <option value="commerce_boutique">🏪 Commerce et boutique</option>
         <option value="livreur">📦 Livreur indépendant</option>
         <option value="representant_gare">🏢 Représentant de gare</option>
         <option value="compagnie">🚌 Compagnie de voyage</option>
@@ -6877,7 +6875,9 @@ function retourChoixPartenaire(){
 }
 function afficherFormulairePartenaire(type,categorieDemandee){
   var categorieActivite=categorieDemandee||null;
+  const estChoixCommerceBoutique=type==="commerce_boutique";
   const correspondancesActivites={
+    commerce_boutique:{type:"commercant",categorie:"Boutique"},
     electricien:{type:"depannage_domicile",categorie:"Électricien"},
     plombier:{type:"depannage_domicile",categorie:"Plombier"},
     climatisation:{type:"depannage_domicile",categorie:"Climatisation"},
@@ -6958,7 +6958,8 @@ function afficherFormulairePartenaire(type,categorieDemandee){
     const categorie=categorieActivite||(type==="mecanicien"?"Mécanicien":type==="depannage"?"Dépannage général":type==="vendeur_pieces"?"Pièces détachées":"Autre commerce");
     choisirNouveauService(service,categorie,true,"partenaireFormulaireChoisi");
     const select=document.getElementById("nsCategorie");
-    if(select){select.value=categorie;select.disabled=true;}
+    if(select){select.value=categorie;select.disabled=!estChoixCommerceBoutique;}
+    if(estChoixCommerceBoutique){const aide=document.createElement("p");aide.className="notice";aide.textContent="Choisissez la catégorie exacte de votre établissement : boutique, alimentation, restaurant, pièces détachées, électronique ou autre commerce.";select?.insertAdjacentElement("afterend",aide);}
     const titre=document.getElementById("nsTitre");
     if(titre) titre.placeholder=type==="vendeur_pieces"?"Nom du magasin ou vendeur de pièces détachées":"Nom de votre activité ou établissement";
     const description=document.getElementById("nsDescription");
@@ -7137,11 +7138,15 @@ async function connecterPartenaireSelonType(){
   if(statut)statut.textContent="Vérification de votre espace "+(document.querySelector("#mqciTypeConnexionPartenaire option:checked")?.textContent||"partenaire").trim()+"…";
   try{
     if(type==="compagnie"){
+      ouvrirConnexionPartenaire();
       const credential=await partnerAuth.signInWithEmailAndPassword(email,motDePasse);
       const snap=await partnerDb.collection("compagnies").where("uid","==",credential.user.uid).limit(1).get();
       if(snap.empty){await partnerAuth.signOut();throw new Error("Aucun espace compagnie de voyage n’est associé à ce compte.");}
-      if(statut)statut.textContent="Connexion réussie à votre espace compagnie.";
       await afficherEspaceCompagnie(snap.docs[0].id,snap.docs[0].data());
+      const espace=document.getElementById("zoneEspaceCompagnie");
+      if(!espace||!espace.innerHTML.trim())throw new Error("La connexion est validée, mais l’espace compagnie n’a pas pu être affiché.");
+      espace.scrollIntoView({behavior:"smooth",block:"start"});
+      if(statut)statut.textContent="Connexion réussie à votre espace compagnie.";
       return;
     }
     if(type==="compagnie_ramassage"){
@@ -7155,7 +7160,7 @@ async function connecterPartenaireSelonType(){
       if(statut)statut.textContent="Connexion réussie à votre espace de ramassage.";
       return;
     }
-    if(type==="boutique"||type==="commercant"){
+    if(["commerce_boutique","boutique","commercant"].includes(type)){
       const emailBoutique=document.getElementById("connexionBoutiqueEmail");
       const mdpBoutique=document.getElementById("connexionBoutiqueMotDePasse");
       const statutBoutique=document.getElementById("connexionBoutiqueStatut");
@@ -7163,11 +7168,11 @@ async function connecterPartenaireSelonType(){
       emailBoutique.value=email;mdpBoutique.value=motDePasse;
       await connecterCompteBoutique();
       const resultat=statutBoutique?.textContent||"";
-      if(statut)statut.textContent=resultat||"Vérification de votre compte boutique terminée.";
+      if(statut)statut.textContent=resultat||"Vérification de votre compte commerce et boutique terminée.";
       if(resultat.startsWith("Connexion impossible")||resultat.startsWith("Aucune boutique"))throw new Error(resultat);
       const tableauBoutique=document.getElementById("boutiqueCompteConnecte");
       if(!tableauBoutique||!tableauBoutique.innerHTML.trim())throw new Error("La connexion a été vérifiée, mais l’espace boutique n’a pas pu être chargé. Réessayez.");
-      await ouvrirSectionPleinEcran("nouveauxServices","Espace boutique");
+      await ouvrirSectionPleinEcran("nouveauxServices","Espace commerce et boutique");
       return;
     }
     ouvrirConnexionPartenaire();
@@ -7178,7 +7183,12 @@ async function connecterPartenaireSelonType(){
     await connecterPartenaire();
     const resultat=document.getElementById("statutConnexionPartenaire")?.textContent||"";
     if(statut)statut.textContent=resultat||"Vérification de votre compte terminée.";
-    if(resultat.startsWith("Connexion impossible")||resultat.startsWith("Aucun dossier")||resultat.startsWith("Votre demande")||resultat.startsWith("Votre dossier"))throw new Error(resultat);
+    if(resultat.startsWith("Connexion impossible")||resultat.startsWith("Aucun dossier")||resultat.startsWith("Votre demande")||resultat.startsWith("Votre dossier")||resultat.startsWith("Votre compte est temporairement suspendu")||resultat.startsWith("Votre compte est suspendu définitivement"))throw new Error(resultat);
+    const espacePartenaire=document.getElementById("zoneEspacePartenaire");
+    const espaceCompagnie=document.getElementById("zoneEspaceCompagnie");
+    const espaceActif=espaceCompagnie?.innerHTML.trim()||espacePartenaire?.innerHTML.trim();
+    if(!espaceActif)throw new Error("La connexion est validée, mais votre espace partenaire n’a pas pu être affiché. Réessayez.");
+    (espaceCompagnie?.innerHTML.trim()?espaceCompagnie:espacePartenaire).scrollIntoView({behavior:"smooth",block:"start"});
   }catch(erreur){
     if(statut)statut.textContent=erreur.message||"Connexion impossible. Vérifiez vos identifiants et réessayez.";
   }finally{
@@ -7239,7 +7249,7 @@ function ouvrirConnexionPartenaireType(type){
     }
     return;
   }
-  if(type==="boutique"){
+  if(["commerce_boutique","boutique","commercant"].includes(type)){
     const boutique=document.getElementById("connexionBoutiqueZone");
     if(boutique){
       details.appendChild(boutique);
