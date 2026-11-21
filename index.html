@@ -2066,11 +2066,23 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
   </div>
   <div id="zoneConnexionPartenaire" style="display:none;">
     <h3>🔐 Connexion à mon espace partenaire</h3>
-    <p>Connectez-vous avec l’adresse e-mail et le mot de passe utilisés lors de votre inscription. Votre espace sera reconnu automatiquement selon votre compte.</p>
+    <p>Choisissez d’abord votre catégorie de partenaire, puis saisissez les identifiants utilisés lors de votre inscription.</p>
     <div id="zoneConnexionPartenaireDetails">
-      <label for="mqciConnexionEmail">Adresse e-mail</label><input type="email" id="mqciConnexionEmail" placeholder="Votre adresse e-mail" autocomplete="username">
-      <label for="mqciConnexionMotDePasse">Mot de passe</label><input type="password" id="mqciConnexionMotDePasse" placeholder="Votre mot de passe" autocomplete="current-password">
-      <button type="button" class="primary" style="width:100%;" onclick="connecterPartenaireTousProfils()">Se connecter</button>
+      <label for="mqciTypeConnexionPartenaire"><strong>Mon espace partenaire</strong></label>
+      <select id="mqciTypeConnexionPartenaire" style="width:100%;padding:14px;border:1px solid #D5E2D9;border-radius:12px;margin:8px 0 14px;">
+        <option value="">— Sélectionnez votre catégorie —</option>
+        <option value="classique">🤝 Prestataire / partenaire de services</option>
+        <option value="boutique">🛍️ Boutique / commerce</option>
+        <option value="livreur">📦 Livreur indépendant</option>
+        <option value="compagnie">🚌 Compagnie de voyage</option>
+        <option value="compagnie_ramassage">🚐 Compagnie de cars de ramassage</option>
+        <option value="representant_gare">🏢 Représentant de gare</option>
+      </select>
+      <label for="mqciConnexionEmail">Adresse e-mail</label>
+      <input type="email" id="mqciConnexionEmail" placeholder="Votre adresse e-mail" autocomplete="username">
+      <label for="mqciConnexionMotDePasse">Mot de passe</label>
+      <input type="password" id="mqciConnexionMotDePasse" placeholder="Votre mot de passe" autocomplete="current-password">
+      <button type="button" class="primary" style="width:100%;" onclick="connecterPartenaireSelonType()">Se connecter</button>
       <p id="mqciConnexionStatut" class="notice" aria-live="polite"></p>
     </div>
   </div>
@@ -7099,6 +7111,64 @@ function ouvrirEspacePartenaire(mode="accueil",typeInitial=null){
   if(mode==="connexion"&&typeInitial)ouvrirConnexionPartenaireType(typeInitial);
   section.scrollIntoView({behavior:"smooth",block:"start"});
 }
+async function connecterPartenaireSelonType(){
+  const type=document.getElementById("mqciTypeConnexionPartenaire")?.value||"";
+  const email=document.getElementById("mqciConnexionEmail")?.value.trim()||"";
+  const motDePasse=document.getElementById("mqciConnexionMotDePasse")?.value||"";
+  const statut=document.getElementById("mqciConnexionStatut");
+  const bouton=document.querySelector("#zoneConnexionPartenaireDetails button[onclick*='connecterPartenaireSelonType']");
+  if(!type){if(statut)statut.textContent="Sélectionnez votre catégorie de partenaire.";return;}
+  if(!email||!motDePasse){if(statut)statut.textContent="Renseignez votre adresse e-mail et votre mot de passe.";return;}
+  if(bouton){bouton.disabled=true;bouton.textContent="Connexion en cours…";}
+  if(statut)statut.textContent="Vérification de votre espace "+(document.querySelector("#mqciTypeConnexionPartenaire option:checked")?.textContent||"partenaire").trim()+"…";
+  try{
+    if(type==="compagnie"){
+      const credential=await partnerAuth.signInWithEmailAndPassword(email,motDePasse);
+      const snap=await partnerDb.collection("compagnies").where("uid","==",credential.user.uid).limit(1).get();
+      if(snap.empty){await partnerAuth.signOut();throw new Error("Aucun espace compagnie de voyage n’est associé à ce compte.");}
+      if(statut)statut.textContent="Connexion réussie à votre espace compagnie.";
+      await afficherEspaceCompagnie(snap.docs[0].id,snap.docs[0].data());
+      return;
+    }
+    if(type==="compagnie_ramassage"){
+      const credential=await partnerAuth.signInWithEmailAndPassword(email,motDePasse);
+      const snap=await partnerDb.collection("comptes_ramassage").doc(credential.user.uid).get();
+      if(!snap.exists||snap.data().role!=="compagnie"){await partnerAuth.signOut();throw new Error("Ce compte n’est pas enregistré comme compagnie de cars de ramassage.");}
+      ramassageRoleActif="compagnie";
+      await afficherEspaceRamassage(credential.user,snap.data());
+      afficherOngletRamassage("compagnie");
+      ouvrirSectionPleinEcran("serviceRamassage","Espace compagnie de cars de ramassage");
+      if(statut)statut.textContent="Connexion réussie à votre espace de ramassage.";
+      return;
+    }
+    if(type==="boutique"){
+      const emailBoutique=document.getElementById("connexionBoutiqueEmail");
+      const mdpBoutique=document.getElementById("connexionBoutiqueMotDePasse");
+      const statutBoutique=document.getElementById("connexionBoutiqueStatut");
+      if(!emailBoutique||!mdpBoutique)throw new Error("Le formulaire de connexion boutique est indisponible.");
+      emailBoutique.value=email;mdpBoutique.value=motDePasse;
+      await connecterCompteBoutique();
+      const resultat=statutBoutique?.textContent||"";
+      if(statut)statut.textContent=resultat||"Vérification de votre compte boutique terminée.";
+      if(resultat.startsWith("Connexion impossible")||resultat.startsWith("Aucune boutique"))throw new Error(resultat);
+      return;
+    }
+    ouvrirConnexionPartenaire();
+    const emailPartenaire=document.getElementById("partenaireEmail");
+    const mdpPartenaire=document.getElementById("partenaireMotDePasse");
+    if(!emailPartenaire||!mdpPartenaire)throw new Error("Le formulaire partenaire est indisponible.");
+    emailPartenaire.value=email;mdpPartenaire.value=motDePasse;
+    await connecterPartenaire();
+    const resultat=document.getElementById("statutConnexionPartenaire")?.textContent||"";
+    if(statut)statut.textContent=resultat||"Vérification de votre compte terminée.";
+    if(resultat.startsWith("Connexion impossible")||resultat.startsWith("Aucun dossier")||resultat.startsWith("Votre demande")||resultat.startsWith("Votre dossier"))throw new Error(resultat);
+  }catch(erreur){
+    if(statut)statut.textContent=erreur.message||"Connexion impossible. Vérifiez vos identifiants et réessayez.";
+  }finally{
+    if(bouton){bouton.disabled=false;bouton.textContent="Se connecter";}
+  }
+}
+
 async function connecterPartenaireTousProfils(){
   const email=document.getElementById("mqciConnexionEmail")?.value.trim()||"";
   const motDePasse=document.getElementById("mqciConnexionMotDePasse")?.value||"";
