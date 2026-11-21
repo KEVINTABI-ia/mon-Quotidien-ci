@@ -914,8 +914,43 @@ export function courierCommissionTriggerAllowed({
   return true;
 }
 
-export function courierWalletCanAcceptMission(balanceXof) {
-  return Number.isSafeInteger(balanceXof) && balanceXof > 0;
+// A negative balance is represented as a separate debt, never as a negative wallet balance.
+export function applyCourierWalletCommission({balanceXof,debtXof=0,commissionXof}) {
+  const valid = value => Number.isSafeInteger(value) && value >= 0;
+  if (!valid(balanceXof) || !valid(debtXof) || !valid(commissionXof)) {
+    throw new Error("invalid_courier_wallet_ledger_amount");
+  }
+  const debitXof = Math.min(balanceXof,commissionXof);
+  const unpaidXof = commissionXof - debitXof;
+  return Object.freeze({
+    debitXof,
+    balanceAfterXof: balanceXof - debitXof,
+    debtAddedXof: unpaidXof,
+    debtAfterXof: debtXof + unpaidXof,
+    commissionSettledXof: debitXof
+  });
+}
+
+// New missions require a strictly positive available balance and no outstanding debt.
+export function courierWalletCanAcceptMission(balanceXof,debtXof=0) {
+  return Number.isSafeInteger(balanceXof) && balanceXof > 0 &&
+    Number.isSafeInteger(debtXof) && debtXof === 0;
+}
+
+// Recharges first settle outstanding commission debt; only the remainder becomes spendable.
+export function applyCourierWalletRecharge({balanceXof,debtXof=0,rechargeXof}) {
+  const valid = value => Number.isSafeInteger(value) && value >= 0;
+  if (!valid(balanceXof) || !valid(debtXof) || !valid(rechargeXof) || rechargeXof === 0) {
+    throw new Error("invalid_courier_wallet_recharge_amount");
+  }
+  const debtPaymentXof = Math.min(debtXof,rechargeXof);
+  const balanceCreditXof = rechargeXof - debtPaymentXof;
+  return Object.freeze({
+    debtPaymentXof,
+    debtAfterXof: debtXof - debtPaymentXof,
+    balanceCreditXof,
+    balanceAfterXof: balanceXof + balanceCreditXof
+  });
 }
 
 export function courierWalletNeedsLowBalanceAlert(balanceXof) {
