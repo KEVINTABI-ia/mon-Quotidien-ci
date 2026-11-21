@@ -3915,7 +3915,7 @@ async function envoyerFichierPubliciteR2(fichier, options={}) {
   return {path:data.key,url:data.url,contentType:data.contentType};
 }
 async function supprimerFichierPubliciteR2(key) {
-  if(!/^publicites\\/partenaires\\/[A-Za-z0-9_-]{1,128}\\/[A-Za-z0-9-]{36}\\.(jpg|png|webp)$/.test(String(key||"")))return true;
+  if(!/^publicites\/partenaires\/[A-Za-z0-9_-]{1,128}\/[A-Za-z0-9-]{36}\.(jpg|png|webp)$/.test(String(key||"")))return true;
   if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)throw new Error("Accès administrateur requis.");
   const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/publicites/delete",{
     method:"POST",headers:{Authorization:"Bearer "+await auth.currentUser.getIdToken(),"Content-Type":"application/json"},
