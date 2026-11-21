@@ -1683,7 +1683,17 @@ service cloud.firestore {
       allow delete: if estAdmin();
     }
 
-    // Paiements Jèko : seules les Cloud Functions Admin SDK peuvent écrire ces documents.
+    // Portefeuilles livreurs : lecture propriétaire uniquement ; toutes les écritures passent par le Worker.
+    match /portefeuilles_livreurs/{livreurUid} {
+      allow read: if estAdmin() || (estConnecte() && request.auth.uid == livreurUid);
+      allow create, update, delete: if false;
+      match /journal/{entryId} {
+        allow read: if estAdmin() || (estConnecte() && request.auth.uid == livreurUid);
+        allow create, update, delete: if false;
+      }
+    }
+
+    // Paiements Jèko : seules les écritures serveur via Worker sont autorisées.
     match /payments/{paymentId} {
       allow read: if estAdmin() || (estConnecte() && resource.data.uid == request.auth.uid);
       allow create, update, delete: if false;
