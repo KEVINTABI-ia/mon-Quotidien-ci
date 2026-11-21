@@ -160,6 +160,68 @@ async function jeko(env,path,init={}) {
   }
   return {data,meta:{status:response.status,contentType:response.headers.get("content-type")||"unknown"}};
 }
+
+const PUBLICITE_ADMIN_UID = "3LpoTLyQdtVcdtnSMAJFc7Cvnpz2";
+const PUBLICITE_MAX_BYTES = 10 * 1024 * 1024;
+function detectPubliciteImage(bytes) {
+  if(bytes.length>=3&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff)return {ext:"jpg",type:"image/jpeg"};
+  if(bytes.length>=8&&bytes[0]===0x89&&bytes[1]===0x50&&bytes[2]===0x4e&&bytes[3]===0x47&&bytes[4]===0x0d&&bytes[5]===0x0a&&bytes[6]===0x1a&&bytes[7]===0x0a)return {ext:"png",type:"image/png"};
+  if(bytes.length>=12&&String.fromCharCode(...bytes.slice(0,4))==="RIFF"&&String.fromCharCode(...bytes.slice(8,12))==="WEBP")return {ext:"webp",type:"image/webp"};
+  return null;
+}
+function publiciteKeyValid(key,uid) {
+  return typeof key==="string"&&key.startsWith("publicites/partenaires/"+uid+"/")&&/^publicites\/partenaires\/[A-Za-z0-9_-]{1,128}\/[A-Za-z0-9-]{36}\.(jpg|png|webp)$/.test(key);
+}
+function publiciteImageUrl(request,key) {
+  return new URL("/api/publicites/image?key="+encodeURIComponent(key),request.url).toString();
+}
+async function publiciteUpload(request,env,adminOnly=false) {
+  if(!env.PUBLICITES_R2)return json({error:"publicites_storage_not_configured"},503);
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized",diagnostic:auth.diagnostic},401);
+  const isAdmin=auth.user.sub===PUBLICITE_ADMIN_UID;
+  if(adminOnly&&!isAdmin)return json({error:"admin_required"},403);
+  let form;try{form=await request.formData();}catch{return json({error:"invalid_multipart"},400);}
+  const file=form.get("file");
+  if(!(file instanceof File)||file.size<1||file.size>PUBLICITE_MAX_BYTES)return json({error:"invalid_file_size"},413);
+  const bytes=new Uint8Array(await file.arrayBuffer()),image=detectPubliciteImage(bytes);
+  if(!image)return json({error:"unsupported_image_content"},415);
+  let uid=auth.user.sub;
+  if(!isAdmin) {
+    const profilePath=typeof form.get("partnerProfilePath")==="string"?form.get("partnerProfilePath"):"partenaires/"+uid;
+    const allowed=profilePath==="partenaires/"+uid||/^compagnies\/[A-Za-z0-9_-]{1,128}$/.test(profilePath)||/^demandes_nouveaux_services\/[A-Za-z0-9_-]{1,128}$/.test(profilePath);
+    const doc=allowed?await getDoc(env,profilePath):null,profile=docData(doc);
+    if(!doc||profile?.uid!==uid||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif")return json({error:"partner_not_eligible"},403);
+  } else if(typeof form.get("uid")==="string"&&/^[A-Za-z0-9_-]{1,128}$/.test(form.get("uid"))) uid=form.get("uid");
+  const key="publicites/partenaires/"+uid+"/"+crypto.randomUUID()+"."+image.ext;
+  await env.PUBLICITES_R2.put(key,bytes,{httpMetadata:{contentType:image.type,cacheControl:"public, max-age=31536000, immutable"}});
+  return json({key,url:publiciteImageUrl(request,key),contentType:image.type},201);
+}
+async function publiciteImage(request,env) {
+  if(!env.PUBLICITES_R2)return json({error:"publicites_storage_not_configured"},503);
+  const key=new URL(request.url).searchParams.get("key")||"";
+  if(!/^publicites\/partenaires\/[A-Za-z0-9_-]{1,128}\/[A-Za-z0-9-]{36}\.(jpg|png|webp)$/.test(key))return json({error:"not_found"},404);
+  const object=await env.PUBLICITES_R2.get(key);
+  if(!object)return json({error:"not_found"},404);
+  const headers=new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("ETag",object.httpEtag);
+  headers.set("Cache-Control","public, max-age=31536000, immutable");
+  headers.set("X-Content-Type-Options","nosniff");
+  return new Response(object.body,{headers});
+}
+async function publiciteDelete(request,env) {
+  if(!env.PUBLICITES_R2)return json({error:"publicites_storage_not_configured"},503);
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized",diagnostic:auth.diagnostic},401);
+  if(auth.user.sub!==PUBLICITE_ADMIN_UID)return json({error:"admin_required"},403);
+  let body;try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const key=body.key;
+  if(typeof key!=="string"||!/^publicites\/partenaires\/[A-Za-z0-9_-]{1,128}\/[A-Za-z0-9-]{36}\.(jpg|png|webp)$/.test(key))return json({error:"invalid_key"},400);
+  await env.PUBLICITES_R2.delete(key);
+  return json({ok:true});
+}
+
 async function createCheckout(request,env) {
   const authResult=await requireUser(request, env);
   const user=authResult.user;
@@ -186,7 +248,7 @@ async function createCheckout(request,env) {
     const imagePath=body.imagePath,titre=typeof body.titre==="string"?body.titre.trim():"",description=typeof body.description==="string"?body.description.trim():"",mediaUrl=typeof body.mediaUrl==="string"?body.mediaUrl:"";
     if(!plan)return json({error:"invalid_publicite_plan"},400);
     if(!allowedProfilePath||!profileDoc||profile?.uid!==user.sub||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif")return json({error:"partner_not_eligible"},403);
-    if(typeof imagePath!=="string"||!imagePath.startsWith("publicites/partenaires/"+user.sub+"/")||!/\.(jpg|png|webp)$/i.test(imagePath)||typeof mediaUrl!=="string"||!/^https:\/\//i.test(mediaUrl)||!mediaUrl.includes(encodeURIComponent(imagePath))||titre.length<2||titre.length>100||description.length>500)return json({error:"invalid_publicite_data"},400);
+    if(!publiciteKeyValid(imagePath,user.sub)||!/\\.(jpg|png|webp)$/i.test(imagePath)||typeof mediaUrl!=="string"||!/^https:\/\//i.test(mediaUrl)||!mediaUrl.includes(encodeURIComponent(imagePath))||titre.length<2||titre.length>100||description.length>500)return json({error:"invalid_publicite_data"},400);
     amountXof=plan.amount;
     initial={uid:user.sub,serviceId,planId:body.planId,forfait:plan.label,durationDays:plan.days,partnerProfilePath,imagePath,mediaUrl,titre,description,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
   } else if(serviceId==="ramassage") {
@@ -886,6 +948,10 @@ export default {
     if(url.pathname==="/health"&&request.method==="GET") response=json({ok:true,service:"mon-quotidien-jeko",mode:"production-locked"});
     else if(url.pathname==="/webhook") response=await webhook(request,env);
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
+    else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
+    else if(url.pathname==="/api/publicites/admin-upload"&&request.method==="POST") response=await publiciteUpload(request,env,true);
+    else if(url.pathname==="/api/publicites/image"&&request.method==="GET") response=await publiciteImage(request,env);
+    else if(url.pathname==="/api/publicites/delete"&&request.method==="POST") response=await publiciteDelete(request,env);
     else if(url.pathname==="/api/jeko/status"&&request.method==="GET") response=await paymentStatus(request,env);
     else if(url.pathname==="/api/jeko/subscription-plans"&&request.method==="GET") response=await subscriptionPlans(request,env);
     else if(url.pathname==="/api/jeko/diagnostic"&&request.method==="GET") response=await jekoDiagnostic(request,env);
