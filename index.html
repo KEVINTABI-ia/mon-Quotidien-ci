@@ -3696,7 +3696,7 @@ document.addEventListener('DOMContentLoaded',function(){try{const t=localStorage
 </script>
 </main>
 
-<footer>Mon Quotidien CI · Tous les services utiles en Côte d’Ivoire</footer>
+<footer id="mqciFooter">Mon Quotidien CI · Tous les services utiles en Côte d’Ivoire</footer>
 <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore-compat.js"></script>
@@ -12271,6 +12271,9 @@ window.mtcAfficherActeJudiciaire = function(type){
         </section>
       </section>`;
     main.insertBefore(shell,recherche||main.firstChild);
+    // Le pied de page termine désormais le contenu de l’accueil, juste après les accès d’urgence et administrateur.
+    const piedPageAccueil=document.querySelector('footer');
+    if(piedPageAccueil) shell.appendChild(piedPageAccueil);
 
     // Fermer les contacts d’urgence dès qu’un clic/toucher survient à l’extérieur.
     const urgenceAccueil=document.getElementById('mqciAccueilUrgences');
@@ -13512,6 +13515,17 @@ async function mqciAdminStatutPharmacie(uid,statut){
 </style>
 </body>
 </html>
+<style id="mqci-pied-page-sous-admin-sans-espace-vide">
+/* Le pied de page termine l’accueil juste sous le bouton administrateur. */
+#accueilHomeShell{padding-bottom:0!important}
+#accueilHomeShell #mqciAccueilUrgences{margin-bottom:0!important}
+#accueilHomeShell #mqciFooter{
+  display:block!important;box-sizing:border-box!important;width:100%!important;
+  margin:8px 0 0!important;padding:8px 8px 4px!important;
+  text-align:center!important;line-height:1.35!important;
+}
+</style>
+
 
 
 <style id="mqci-header-text-contrast-on-green">
