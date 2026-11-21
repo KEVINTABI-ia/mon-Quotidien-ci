@@ -44,7 +44,7 @@ La tarification dynamique (coefficient local 1,00 / 1,10 / 1,20, rayon 3 km) res
 Ces montants remplacent les anciens forfaits de 700 et 500 FCFA.
 
 ### Portefeuille
-- Aucun montant de recharge obligatoire n’est fixé : le livreur choisit librement un montant positif. La saisie est préremplie à 10 000 FCFA à titre de suggestion modifiable.
+- Montant minimum de recharge : 2 000 FCFA. Le formulaire propose les montants 2 000, 3 000, 4 000, 5 000, 6 000, 7 000, 8 000, 9 000 et 10 000 FCFA ; le livreur peut aussi saisir librement un autre montant, à partir de 2 000 FCFA. La valeur initiale de 10 000 FCFA reste modifiable.
 - Alerte de solde faible à 1 000 FCFA.
 - À 0 FCFA : aucune nouvelle mission ne peut être acceptée.
 - Si une commission dépasse le solde, le solde disponible est débité jusqu'à zéro et le reliquat est enregistré comme dette distincte. Le solde disponible ne devient jamais négatif.
@@ -60,7 +60,7 @@ Ces montants remplacent les anciens forfaits de 700 et 500 FCFA.
 - Le solde non consommé appartient au livreur ; les commissions effectivement prélevées sont enregistrées séparément et constituent le revenu de commission de la plateforme.
 - Le journal doit tracer recharges, commissions, remboursements d'avances courrier et ajustements administratifs, avec référence unique, horodatage et acteur.
 
-La procédure de remboursement du solde non consommé à la clôture du compte reste à préciser avant mise en production. Aucun minimum commercial n’est défini à ce stade ; le Worker applique uniquement les contrôles techniques de validité et de sécurité du montant.
+La procédure de remboursement du solde non consommé à la clôture du compte reste à préciser avant mise en production. Le Worker impose le minimum de 2 000 FCFA et une limite technique de 10 000 000 FCFA.
 
 ## Déclencheurs de clôture et de commission
 
