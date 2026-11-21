@@ -5,6 +5,10 @@ workers_dev = true
 preview_urls = false
 keep_vars = true
 
+[[r2_buckets]]
+binding = "PUBLICITES_R2"
+bucket_name = "mon-quotidien-ci-publicites"
+
 [observability]
 enabled = true
 
