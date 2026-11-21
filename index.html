@@ -4487,6 +4487,13 @@ async function chargerArticlesPublicsBoutique(id){
  }catch(e){console.error(e);}
 }
 let mqciCatalogueBoutiquesActuel={boutiques:[],articles:[]};
+let mqciVuesArticlesSession=new Set();
+async function enregistrerVueArticleBoutique(articleId){
+ const user=auth.currentUser;if(!user||!articleId||mqciVuesArticlesSession.has(articleId))return;
+ mqciVuesArticlesSession.add(articleId);
+ try{await db.collection("articles_boutiques").doc(articleId).update({vues:firebase.firestore.FieldValue.increment(1),derniereVueLe:firebase.firestore.FieldValue.serverTimestamp()});}
+ catch(e){console.warn("Compteur de vues non disponible pour cet article.",e);}
+}
 function ouvrirFicheCommerceCatalogue(id){
  const b=mqciCatalogueBoutiquesActuel.boutiques.find(x=>x.id===id);if(!b)return;
  const zone=document.getElementById("ficheCommerceCatalogue");if(!zone)return;
@@ -4507,6 +4514,7 @@ function filtrerCatalogueBoutiques(){
  if(!articles.length){zone.innerHTML='<p class="notice">Aucun article ne correspond à votre recherche.</p>';return;}
  zone.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;">'+articles.map((p,i)=>'<article class="card" style="padding:9px;margin:0;">'+(p.photoUrl?'<img src="'+p.photoUrl+'" alt="'+echapperTextePublicite(p.nom)+'" style="width:100%;height:140px;object-fit:cover;border-radius:9px;">':'<div style="height:140px;display:grid;place-items:center;background:#F0F7F1;border-radius:9px;font-size:32px;">🛍️</div>')+'<strong style="display:block;margin-top:7px;">'+echapperTextePublicite(p.nom)+'</strong><p style="margin:5px 0;font-weight:700;">'+(p.promotionStatut==="approuve"&&p.promotionFin>=new Date().toISOString().slice(0,10)&&p.promotionDebut<=new Date().toISOString().slice(0,10)?'<span style="text-decoration:line-through;color:#777;font-weight:400;">'+Number(p.prix||0).toLocaleString("fr-FR")+' FCFA</span> <span style="color:#b42318;">'+Number(p.prixPromotion||p.prix).toLocaleString("fr-FR")+' FCFA</span>':' '+Number(p.prix||0).toLocaleString("fr-FR")+' FCFA')+'</p><p class="notice" style="margin:4px 0;">'+echapperTextePublicite(p.boutiqueNom)+'</p><button type="button" class="primary" data-catalogue-commander="'+i+'" style="width:100%;">Commander</button></article>').join("")+'</div>';
  zone.querySelectorAll("[data-catalogue-commander]").forEach(btn=>btn.addEventListener("click",()=>{const p=articles[Number(btn.dataset.catalogueCommander)];if(p)ouvrirCommandeBoutique(p.boutiqueId,p.index);}));
+ articles.forEach(p=>{if(typeof p.index==="string")enregistrerVueArticleBoutique(p.index);});
 }
 async function chargerCatalogueBoutiques(){
  const zone=document.getElementById("nouveauxServicesPublics");if(!zone)return;
@@ -4583,7 +4591,12 @@ async function chargerTableauBordBoutique(boutiqueId){
    partnerDb.collection("commandes_colis").where("boutiqueId","==",boutiqueId).where("boutiqueUid","==",user.uid).get()
   ]);
   const totalArticles=articles.size,publies=articles.docs.filter(d=>d.data().statut==="approuve").length,enAttente=articles.docs.filter(d=>d.data().statut==="en_attente").length,totalCommandes=commandes.size;
-  zone.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px;"><div class="card" style="padding:10px;margin:0;"><strong>'+totalArticles+'</strong><p style="margin:4px 0 0;">Produits</p></div><div class="card" style="padding:10px;margin:0;"><strong>'+publies+'</strong><p style="margin:4px 0 0;">Publiés</p></div><div class="card" style="padding:10px;margin:0;"><strong>'+enAttente+'</strong><p style="margin:4px 0 0;">En attente</p></div><div class="card" style="padding:10px;margin:0;"><strong>'+totalCommandes+'</strong><p style="margin:4px 0 0;">Commandes reçues</p></div></div>';
+  const commandesEnrichies=await Promise.all(commandes.docs.map(async doc=>{const c=doc.data();let details={};try{const p=await doc.ref.collection("informations_privees").doc("details").get();if(p.exists)details=p.data();}catch(e){console.warn("Détails commande indisponibles",doc.id);}return {c,details};}));
+  const confirmees=commandesEnrichies.filter(x=>["confirmee","preparation","prete"].includes(x.c.statutBoutique)||x.c.statut==="livre");
+  const ventesConfirmees=confirmees.reduce((total,x)=>total+Math.max(0,Number(x.details.prixProduit)||0),0);
+  const totalVues=articles.docs.reduce((total,d)=>total+Math.max(0,Number(d.data().vues)||0),0);
+  const plusVus=articles.docs.filter(d=>d.data().statut==="approuve").sort((a,b)=>(Number(b.data().vues)||0)-(Number(a.data().vues)||0)).slice(0,3);
+  zone.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;"><div class="card" style="padding:10px;margin:0;"><strong>'+totalArticles+'</strong><p style="margin:4px 0 0;">Produits</p></div><div class="card" style="padding:10px;margin:0;"><strong>'+publies+'</strong><p style="margin:4px 0 0;">Publiés</p></div><div class="card" style="padding:10px;margin:0;"><strong>'+enAttente+'</strong><p style="margin:4px 0 0;">En attente</p></div><div class="card" style="padding:10px;margin:0;"><strong>'+totalVues.toLocaleString("fr-FR")+'</strong><p style="margin:4px 0 0;">Vues produits*</p></div><div class="card" style="padding:10px;margin:0;"><strong>'+totalCommandes+'</strong><p style="margin:4px 0 0;">Commandes reçues</p></div><div class="card" style="padding:10px;margin:0;"><strong>'+confirmees.length+'</strong><p style="margin:4px 0 0;">Commandes confirmées</p></div><div class="card" style="padding:10px;margin:0;"><strong>'+ventesConfirmees.toLocaleString("fr-FR")+' FCFA</strong><p style="margin:4px 0 0;">Ventes confirmées</p></div></div><p class="notice">* Les vues sont comptabilisées à partir de la mise en place du compteur. Les anciennes consultations ne peuvent pas être reconstituées.</p><h4>🏆 Produits les plus consultés</h4>'+(plusVus.length?plusVus.map(d=>'<p>'+echapperTextePublicite(d.data().nom)+' — '+(Number(d.data().vues)||0).toLocaleString("fr-FR")+' vue(s)</p>').join(""):'<p class="notice">Aucune vue enregistrée pour le moment.</p>');
  }catch(e){console.error(e);zone.textContent="Les indicateurs ne sont pas disponibles pour le moment.";}
 }
 async function deconnecterCompteBoutique(){

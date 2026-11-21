@@ -1353,7 +1353,12 @@ service cloud.firestore {
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
-      allow update: if estAdmin();
+      allow update: if estAdmin()
+        || (estConnecte()
+          && resource.data.statut == "approuve"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["vues","derniereVueLe"])
+          && request.resource.data.get("vues", 0) == resource.data.get("vues", 0) + 1
+          && request.resource.data.derniereVueLe == request.time);
       allow delete: if estAdmin()
         || (estConnecte() && resource.data.boutiqueUid == request.auth.uid && boutiqueActive(resource.data.boutiqueId));
     }
