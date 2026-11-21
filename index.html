@@ -3257,7 +3257,7 @@ function chargerPublicitesAccueil() {
 
 
 <section id="menuQuotidien" class="card" aria-label="Le quotidien" style="margin:14px 0 12px;padding:16px;border:2px solid #D5A84B;background:linear-gradient(145deg,#FFFDF5,#F0F8F4);">
-  <button type="button" class="daily-toggle" aria-expanded="false" aria-controls="dailyServicesPanel" onclick="basculerServicesQuotidiens()" style="width:100%;text-align:left;">🌞 Tous les services du quotidien <span class="daily-toggle-chevron" aria-hidden="true">⌄</span></button>
+  <button type="button" class="daily-toggle" aria-expanded="false" aria-controls="dailyServicesPanel" onclick="basculerServicesQuotidiens()" style="width:100%;text-align:left;">🌞 Autre service du quotidien <span class="daily-toggle-chevron" aria-hidden="true">⌄</span></button>
   <div id="dailyServicesPanel" hidden>
   <p style="margin:0 0 13px;font-size:13px;color:#68786E;">Les services pratiques, la santé et les services près de vous.</p>
   <div class="grille-services-quotidiens">
@@ -12155,7 +12155,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     shell.id='accueilHomeShell';
     shell.innerHTML=`
       <section class="home-panel" id="homeFamilyLauncher" aria-label="Choisir une famille de services">
-        <div class="home-section-heading"><div><h2>Toutes les familles de services</h2></div></div>
+        <div class="home-section-heading mqci-service-heading"><h2>SERVICE</h2><button type="button" id="mqciVoirToutServices" aria-controls="dailyServicesPanel" aria-expanded="false">Voir tout <span aria-hidden="true">›</span></button></div>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeMobilite')"><span class="family-entry-icon">🚌</span><strong>Mobilité et transport</strong><small>Gares, déplacements, colis et compagnies</small></button>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeAutomobile')"><span class="family-entry-icon">🚘</span><strong>Automobile</strong><small>Dépannage, entretien, assurance et pièces</small></button>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeDemarches')"><span class="family-entry-icon">🛍️</span><strong>Commerce et emploi</strong><small>Boutiques, annonces et opportunités</small></button>
@@ -13287,6 +13287,151 @@ async function mqciAdminStatutPharmacie(uid,statut){
   #accueilHomeShell #homeFamilyLauncher .family-entry small{font-size:7px!important}
 }
 </style>
+
+
+<style id="mqci-service-personnalisation">
+#accueilHomeShell #homeFamilyLauncher{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  width:100vw!important;max-width:100vw!important;
+  margin-left:calc(50% - 50vw)!important;margin-right:calc(50% - 50vw)!important;
+  padding-left:clamp(10px,2.5vw,22px)!important;padding-right:clamp(10px,2.5vw,22px)!important;
+}
+#accueilHomeShell #homeFamilyLauncher>.mqci-service-heading{
+  grid-column:1/-1!important;display:flex!important;align-items:center!important;
+  justify-content:space-between!important;gap:10px!important;margin:0 2px 2px!important;
+}
+#accueilHomeShell .mqci-service-heading h2{margin:0!important;font-size:19px!important;font-weight:900!important;color:#174b35!important}
+#mqciVoirToutServices{
+  border:0!important;background:transparent!important;color:#087c62!important;
+  padding:7px 2px!important;font-size:13px!important;font-weight:850!important;white-space:nowrap!important;
+}
+#mqciVoirToutServices span{font-size:19px!important;vertical-align:-1px}
+#mqciServicePersonalizeRow{grid-column:1/-1!important;display:flex!important;justify-content:flex-end!important;align-items:center!important;gap:8px!important;min-width:0!important}
+#mqciPersonnaliserServices{
+  border:1px solid #d6e8dc!important;border-radius:999px!important;background:#f4faf5!important;
+  color:#176044!important;padding:7px 11px!important;font-size:11px!important;font-weight:800!important;
+}
+#mqciServicePersonalizeStatus{grid-column:1/-1!important;margin:0!important;color:#68786e!important;font-size:11px!important;line-height:1.4!important}
+#accueilHomeShell #homeFamilyLauncher>.mqci-service-choice{
+  box-sizing:border-box!important;min-width:0!important;width:100%!important;min-height:94px!important;
+  margin:0!important;padding:10px 6px!important;border:1px solid #dfe9e2!important;border-radius:15px!important;
+  background:#fff!important;box-shadow:0 2px 7px #00000008!important;color:#202522!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+  text-align:center!important;gap:6px!important;font-size:11px!important;font-weight:800!important;line-height:1.2!important;
+}
+#accueilHomeShell #homeFamilyLauncher>.mqci-service-choice .family-entry-icon,
+#accueilHomeShell #homeFamilyLauncher>.mqci-service-choice>span:first-child{
+  display:grid!important;place-items:center!important;width:34px!important;height:34px!important;
+  flex:0 0 34px!important;border-radius:11px!important;background:#fff2e7!important;color:#c96512!important;font-size:22px!important;
+}
+#accueilHomeShell #homeFamilyLauncher>.mqci-service-choice strong{font-size:11px!important;line-height:1.2!important}
+#accueilHomeShell #homeFamilyLauncher>.mqci-service-choice small{font-size:9px!important;line-height:1.2!important;color:#778079!important}
+#dailyServicesPanel .grille-services-quotidiens{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+#dailyServicesPanel .grille-services-quotidiens>.mqci-service-choice{
+  box-sizing:border-box!important;min-width:0!important;width:100%!important;min-height:62px!important;
+  margin:0!important;padding:10px!important;border:1px solid #dfe9e2!important;border-radius:13px!important;
+  background:#fff!important;color:#174b35!important;text-align:left!important;font-size:11px!important;line-height:1.25!important;
+}
+#dailyServicesPanel .grille-services-quotidiens>.mqci-service-choice.family-entry{
+  display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;gap:7px!important;
+}
+#dailyServicesPanel .grille-services-quotidiens>.mqci-service-choice.family-entry .family-entry-icon{width:27px!important;height:27px!important;flex:0 0 27px!important;font-size:18px!important}
+#dailyServicesPanel .grille-services-quotidiens>.mqci-service-choice.family-entry strong{font-size:10px!important}
+#dailyServicesPanel .grille-services-quotidiens>.mqci-service-choice.family-entry small{display:none!important}
+#dailyServicesPanel .grille-services-quotidiens>.mqci-service-choice.mqci-selected-for-swap,
+#accueilHomeShell #homeFamilyLauncher>.mqci-service-choice.mqci-selected-for-swap{
+  outline:3px solid #d5a84b!important;outline-offset:1px!important;
+}
+#accueilHomeShell #homeFamilyLauncher>.mqci-service-choice{grid-column:auto!important}
+@media(max-width:370px){
+  #accueilHomeShell #homeFamilyLauncher{grid-template-columns:repeat(3,minmax(0,1fr))!important;padding-left:8px!important;padding-right:8px!important}
+  #accueilHomeShell #homeFamilyLauncher>.mqci-service-choice{min-height:86px!important;padding:8px 4px!important}
+  #dailyServicesPanel .grille-services-quotidiens{gap:6px!important}
+}
+</style>
+<script id="mqci-service-personnalisation-js">
+(function(){
+  function init(){
+    const launcher=document.getElementById('homeFamilyLauncher');
+    const menu=document.getElementById('menuQuotidien');
+    const dailyPanel=document.getElementById('dailyServicesPanel');
+    const dailyGrid=dailyPanel&&dailyPanel.querySelector('.grille-services-quotidiens');
+    if(!launcher||!menu||!dailyPanel||!dailyGrid||launcher.dataset.mqciPersonalized==='1')return;
+    launcher.dataset.mqciPersonalized='1';
+    const heading=launcher.querySelector('.mqci-service-heading');
+    if(!heading)return;
+    const controls=document.createElement('div');
+    controls.id='mqciServicePersonalizeRow';
+    controls.innerHTML='<button type="button" id="mqciPersonnaliserServices" aria-pressed="false">⚙ Personnaliser mes accès</button>';
+    const status=document.createElement('p');
+    status.id='mqciServicePersonalizeStatus';
+    status.hidden=true;
+    status.setAttribute('aria-live','polite');
+    status.textContent='Choisissez un service en bas, puis un accès en haut à remplacer.';
+    heading.insertAdjacentElement('afterend',controls);
+    controls.insertAdjacentElement('afterend',status);
+    const families=Array.from(launcher.children).filter(el=>el.classList.contains('family-entry'));
+    const daily=Array.from(dailyGrid.querySelectorAll('.tuile-quotidien'));
+    families.forEach((el,i)=>{el.dataset.mqciAccessId='famille-'+i;el.classList.add('mqci-service-choice');});
+    daily.forEach((el,i)=>{el.dataset.mqciAccessId='quotidien-'+i;el.classList.add('mqci-service-choice');});
+    const all=[...families,...daily];
+    const byId=new Map(all.map(el=>[el.dataset.mqciAccessId,el]));
+    let topIds=[];
+    try{topIds=JSON.parse(localStorage.getItem('mqci_services_rapides_v1')||'[]');}catch(e){}
+    topIds=Array.isArray(topIds)?topIds.filter((id,i,a)=>byId.has(id)&&a.indexOf(id)===i).slice(0,6):[];
+    for(const el of families){if(topIds.length>=6)break;if(!topIds.includes(el.dataset.mqciAccessId))topIds.push(el.dataset.mqciAccessId);}
+    for(const el of all){if(topIds.length>=6)break;if(!topIds.includes(el.dataset.mqciAccessId))topIds.push(el.dataset.mqciAccessId);}
+    topIds.forEach(id=>launcher.appendChild(byId.get(id)));
+    all.filter(el=>!topIds.includes(el.dataset.mqciAccessId)).forEach(el=>dailyGrid.appendChild(el));
+    function saveOrder(){
+      const ids=Array.from(launcher.children).filter(el=>el.classList.contains('mqci-service-choice')).map(el=>el.dataset.mqciAccessId);
+      try{localStorage.setItem('mqci_services_rapides_v1',JSON.stringify(ids));}catch(e){}
+    }
+    let editMode=false,pendingBottom=null;
+    const customize=document.getElementById('mqciPersonnaliserServices');
+    const voirTout=document.getElementById('mqciVoirToutServices');
+    function clearSelection(){launcher.querySelectorAll('.mqci-selected-for-swap').forEach(el=>el.classList.remove('mqci-selected-for-swap'));dailyGrid.querySelectorAll('.mqci-selected-for-swap').forEach(el=>el.classList.remove('mqci-selected-for-swap'));}
+    function setEditMode(value){
+      editMode=!!value;pendingBottom=null;clearSelection();
+      customize.setAttribute('aria-pressed',String(editMode));
+      customize.textContent=editMode?'Terminer la personnalisation':'⚙ Personnaliser mes accès';
+      status.hidden=!editMode;
+      status.textContent=editMode?'Touchez un service dans « Autre service du quotidien », puis l’accès en haut à remplacer.':'';
+      if(editMode){dailyPanel.hidden=false;if(voirTout)voirTout.setAttribute('aria-expanded','true');menu.scrollIntoView({behavior:'smooth',block:'start'});}
+    }
+    customize.addEventListener('click',()=>setEditMode(!editMode));
+    if(voirTout)voirTout.addEventListener('click',()=>{
+      dailyPanel.hidden=false;voirTout.setAttribute('aria-expanded','true');
+      menu.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+    document.addEventListener('click',function(event){
+      if(!editMode)return;
+      const item=event.target.closest('.mqci-service-choice');
+      if(!item||(item.parentElement!==launcher&&item.parentElement!==dailyGrid))return;
+      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+      if(item.parentElement===dailyGrid){
+        pendingBottom=item;clearSelection();item.classList.add('mqci-selected-for-swap');
+        status.textContent='Service sélectionné : '+item.textContent.trim().replace(/\s+/g,' ') +'. Touchez maintenant un des 6 accès en haut.';
+        return;
+      }
+      if(!pendingBottom){
+        status.textContent='Choisissez d’abord un service dans « Autre service du quotidien ».';
+        return;
+      }
+      const topItem=item,bottomItem=pendingBottom;
+      const placeholder=document.createComment('mqci-swap');
+      launcher.replaceChild(placeholder,topItem);
+      dailyGrid.replaceChild(topItem,bottomItem);
+      launcher.replaceChild(bottomItem,placeholder);
+      pendingBottom=null;clearSelection();saveOrder();
+      status.textContent='Accès mis à jour. Vous pouvez effectuer un autre échange ou terminer.';
+    },true);
+    saveOrder();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
+})();
+</script>
 
 </body>
 </html>
