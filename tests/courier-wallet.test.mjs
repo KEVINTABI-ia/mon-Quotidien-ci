@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   calculateCourierWalletDebit,
-  courierWalletCanAcceptMission,\n  courierCommissionTriggerAllowed,
+  courierWalletCanAcceptMission,
+  courierCommissionTriggerAllowed,
   courierWalletNeedsLowBalanceAlert,
   COURIER_WALLET_RULES
 } from "../cloudflare/worker.js";
