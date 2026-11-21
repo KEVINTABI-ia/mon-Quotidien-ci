@@ -13357,6 +13357,8 @@ async function mqciAdminStatutPharmacie(uid,statut){
     const dailyPanel=document.getElementById('dailyServicesPanel');
     const dailyGrid=dailyPanel&&dailyPanel.querySelector('.grille-services-quotidiens');
     if(!launcher||!menu||!dailyPanel||!dailyGrid||launcher.dataset.mqciPersonalized==='1')return;
+    /* Masquer tout le bloc Autre service sur l'accueil. Il sera ouvert uniquement par Voir tout. */
+    menu.hidden=true;
     /* Le panneau quotidien doit vivre dans la zone SERVICE visible, pas dans le bloc masqué. */
     launcher.appendChild(menu);
     launcher.dataset.mqciPersonalized='1';
@@ -13404,10 +13406,11 @@ async function mqciAdminStatutPharmacie(uid,statut){
     }
     customize.addEventListener('click',()=>setEditMode(!editMode));
     if(voirTout)voirTout.addEventListener('click',()=>{
+      menu.hidden=false;
       controls.hidden=false;
       dailyPanel.hidden=false;
       const dailyToggle=menu.querySelector('.daily-toggle');
-      if(dailyToggle)dailyToggle.setAttribute('aria-expanded','true');
+      if(dailyToggle){dailyToggle.hidden=true;dailyToggle.style.display='none';dailyToggle.setAttribute('aria-expanded','true');}
       voirTout.setAttribute('aria-expanded','true');
       menu.scrollIntoView({behavior:'smooth',block:'start'});
     });
