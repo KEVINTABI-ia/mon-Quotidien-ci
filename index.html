@@ -12909,6 +12909,7 @@ async function afficherEspaceCompagnie(id,c){
   window.compagnieRenouvellementCourante={formule:c.formule,periodicite:c.periodicite};
   el.insertAdjacentHTML("afterbegin",'<div class="card" style="padding:12px;margin:10px 0;"><h4>'+(c.statutAbonnement==="À payer"?"Régler l’abonnement":"Renouveler l’abonnement")+'</h4><p>Le règlement s’effectue exclusivement via Jèko.</p><button type="button" class="primary" onclick="ouvrirPaiementRenouvellementCompagnie(\''+id+'\')">Payer avec Jèko</button><div id="zonePaiementRenouvellementCompagnie"></div></div>');
  }
+ ajouterBlocPublicitePartenaire(el,c.uid||partnerAuth.currentUser?.uid);
  await chargerGaresAnnexesCompagnie(id);await chargerAvisCompagnie(id,true);
 }
 async function enregistrerGarePrincipaleCompagnie(id){
