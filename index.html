@@ -13370,6 +13370,53 @@ async function mqciAdminStatutPharmacie(uid,statut){
 })();
 </script>
 
+
+<style id="mqci-sante-centrage-texte-final">
+/* Santé et proximité : icône et libellé centrés dans chaque bouton. */
+#homeSante .sante-shortcut{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  gap:10px!important;
+  min-height:150px!important;
+  padding:16px 10px!important;
+}
+#homeSante .sante-shortcut .sante-shortcut-icon{
+  display:grid!important;
+  place-items:center!important;
+  flex:0 0 42px!important;
+  width:42px!important;
+  height:42px!important;
+  margin:0 auto!important;
+}
+#homeSante .sante-shortcut .sante-shortcut-copy{
+  display:flex!important;
+  flex:0 0 auto!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  min-width:0!important;
+  text-align:center!important;
+}
+#homeSante .sante-shortcut-copy strong{
+  display:block!important;
+  width:100%!important;
+  color:#174b35!important;
+  text-align:center!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+}
+#homeSante .sante-shortcut-copy small{
+  display:block!important;
+  width:100%!important;
+  text-align:center!important;
+}
+#homeSante .sante-shortcut-arrow{display:none!important}
+</style>
+
 </body>
 </html>
 
