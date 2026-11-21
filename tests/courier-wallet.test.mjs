@@ -106,7 +106,7 @@ test("low balance alert starts at 1,000 XOF", () => {
 
 test("validated wallet constants are stable", () => {
   assert.deepEqual(COURIER_WALLET_RULES,{
-    lowBalanceAlertXof:1000,initialDepositXof:5000,gareServiceFeeXof:600,
+    lowBalanceAlertXof:1000,gareServiceFeeXof:600,
     garePlatformServiceShareXof:100,gareCourierServiceShareXof:500,dynamicPricingMaxMultiplier:1.20
   });
 });
@@ -176,4 +176,14 @@ test("Jeko wallet recharge ledger credits the full confirmed payment and records
     debtPaymentXof:700,debtAfterXof:0,balanceCreditXof:9300,balanceAfterXof:9300,
     totalRechargeAfterXof:20000
   });
+});
+
+\ntest("courier may choose different positive recharge amounts; 10,000 XOF is only the UI suggestion", () => {
+  for (const amount of [500,2500,3500,10000,25000]) {
+    const result=buildCourierWalletRechargeLedger({
+      balanceXof:0,debtXof:0,rechargeXof:amount,totalRechargeXof:0
+    });
+    assert.equal(result.balanceAfterXof,amount);
+    assert.equal(result.totalRechargeAfterXof,amount);
+  }
 });
