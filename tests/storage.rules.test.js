@@ -81,7 +81,7 @@ describe("Mon Quotidien CI — règles Firebase Storage",function(){
   await assertSucceeds(getBytes(ref(testEnv.unauthenticatedContext().storage(),path)));
   await assertFails(uploadBytes(ref(testEnv.authenticatedContext(OWNER_UID).storage(),"publicites/annonce-interdite.jpg"),jpeg,metadata));
   await assertFails(uploadBytes(ref(admin,"publicites/fichier-interdit.txt"),new Uint8Array([1,2,3]),{contentType:"text/plain"}));
-  await assertFails(uploadBytes(ref(admin,"publicites/trop-volumineuse.jpg"),new Uint8Array(25*1024*1024+1),metadata));
+  await assertFails(uploadBytes(ref(admin,"publicites/trop-volumineuse.jpg"),new Uint8Array(10*1024*1024+1),metadata));
  });
  it("autorise un partenaire à déposer uniquement une affiche image dans son propre dossier et réserve la suppression à l’administrateur",async()=>{
   const filename="123e4567-e89b-12d3-a456-426614174000.jpg";
@@ -93,6 +93,17 @@ describe("Mon Quotidien CI — règles Firebase Storage",function(){
   await assertFails(uploadBytes(ref(owner,"publicites/partenaires/"+OWNER_UID+"/video.mp4"),new Uint8Array([1,2,3]),{contentType:"video/mp4"}));
   await assertFails(deleteObject(ref(owner,ownPath)));
   await assertSucceeds(deleteObject(ref(testEnv.authenticatedContext(ADMIN_UID).storage(),ownPath)));
+ });
+ it("autorise un partenaire à déposer uniquement sa propre affiche JPG/PNG/WebP",async()=>{
+  const own="publicites/partenaires/"+OWNER_UID+"/123e4567-e89b-12d3-a456-426614174000.jpg";
+  const other="publicites/partenaires/"+OTHER_UID+"/123e4567-e89b-12d3-a456-426614174001.jpg";
+  const owner=testEnv.authenticatedContext(OWNER_UID).storage();
+  await assertSucceeds(uploadBytes(ref(owner,own),jpeg,metadata));
+  await assertSucceeds(getBytes(ref(testEnv.unauthenticatedContext().storage(),own)));
+  await assertFails(uploadBytes(ref(owner,other),jpeg,metadata));
+  await assertFails(uploadBytes(ref(owner,"publicites/partenaires/"+OWNER_UID+"/not-an-image.mp4"),jpeg,{contentType:"video/mp4"}));
+  await assertFails(uploadBytes(ref(testEnv.authenticatedContext(OTHER_UID).storage(),own),jpeg,metadata));
+  await assertSucceeds(deleteObject(ref(testEnv.authenticatedContext(ADMIN_UID).storage(),own)));
  });
  it("autorise le propriétaire à déposer les justificatifs du trajet partagé mais réserve leur lecture à l’administration",async()=>{
   const path="trajet_partage_documents/"+OWNER_UID+"/permis.jpg";const owner=testEnv.authenticatedContext(OWNER_UID).storage();
