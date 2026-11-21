@@ -12126,8 +12126,8 @@ window.mtcAfficherActeJudiciaire = function(type){
         </div>
       </section>
       <section class="home-panel" id="homeQuotidien">
-        <div class="home-section-heading"><div><h2>📢 Annonces validées</h2><p>Petites annonces et offres publiées après validation de l’administrateur.</p></div></div>
-        <div id="annoncesValideesAccueil"><p class="notice">Chargement des annonces validées...</p></div>
+        <div class="home-section-heading"><div><h2>📢 Espace publicitaire</h2><p>Retrouvez les annonces et offres publiées après validation de l’administrateur.</p></div></div>
+        <div id="annoncesValideesAccueil"><p class="notice">Chargement de l’espace publicitaire...</p></div>
       </section>
       <section class="home-panel" id="homeArticlesBoutiques">
         <div class="home-section-heading"><div><h2>🛍️ Articles des boutiques et commerces</h2><p>Découvrez les articles publiés par les boutiques et commerces partenaires.</p></div></div>
@@ -12393,7 +12393,7 @@ async function chargerAnnoncesValideesAccueil(){
    .filter(item=>item.data.photoUrl&&String(item.data.telephone||"").trim())
    .sort((a,b)=>(b.data.createdAt?.toMillis?.()||0)-(a.data.createdAt?.toMillis?.()||0)).slice(0,12);
   if(!items.length){zone.innerHTML='<p class="notice">Aucune affiche validée avec un contact disponible pour le moment.</p>';return;}
-  zone.innerHTML='<div class="annonces-accueil-defilement" aria-label="Annonces validées" tabindex="0" style="display:flex;flex-direction:row;align-items:stretch;gap:14px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:8px 2px 14px;">'+items.map(item=>{
+  zone.innerHTML='<div class="annonces-accueil-defilement" aria-label="Espace publicitaire" tabindex="0" style="display:flex;flex-direction:row;align-items:stretch;gap:14px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:8px 2px 14px;">'+items.map(item=>{
    const d=item.data;
    const photo=echapperTextePublicite(d.photoUrl);
    const contact=String(d.telephone||"").replace(/[^+0-9]/g,"");
@@ -12402,7 +12402,7 @@ async function chargerAnnoncesValideesAccueil(){
     +'<a class="primary" style="display:block;width:fit-content;min-width:160px;margin:8px auto 0;padding:12px 24px;text-decoration:none;text-align:center;" href="tel:'+contact+'">📞 Contacter</a>'
     +'</article>';
   }).join("")+'</div><p class="notice" style="text-align:center;margin-top:4px;">Faites glisser les annonces horizontalement pour les parcourir</p>';
- }catch(e){console.error("Annonces validées accueil :",e);zone.innerHTML='<p class="notice">Impossible de charger les annonces pour le moment.</p>';}
+ }catch(e){console.error("Espace publicitaire accueil :",e);zone.innerHTML='<p class="notice">Impossible de charger les annonces pour le moment.</p>';}
 }
 async function chargerArticlesBoutiquesAccueil(){
  const zone=document.getElementById("articlesBoutiquesAccueil");if(!zone)return;
