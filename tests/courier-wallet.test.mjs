@@ -4,7 +4,8 @@ import {
   calculateCourierWalletDebit,
   courierWalletCanAcceptMission,
   applyCourierWalletCommission,
-  applyCourierWalletRecharge,\n  buildCourierWalletRechargeLedger,
+  applyCourierWalletRecharge,
+  buildCourierWalletRechargeLedger,
   courierCommissionTriggerAllowed,
   courierWalletNeedsLowBalanceAlert,
   COURIER_WALLET_RULES
@@ -161,7 +162,8 @@ test("zero prepaid balance blocks new missions", () => {
   assert.equal(courierWalletCanAcceptMission(0, 0), false);
 });
 
-\ntest("Jeko wallet recharge ledger credits the full confirmed payment and records debt settlement separately", () => {
+
+test("Jeko wallet recharge ledger credits the full confirmed payment and records debt settlement separately", () => {
   assert.deepEqual(buildCourierWalletRechargeLedger({
     balanceXof:0,debtXof:0,rechargeXof:10000,totalRechargeXof:0
   }),{
