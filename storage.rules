@@ -44,6 +44,27 @@ service firebase.storage {
     }
 
     
+    // Médias de l'espace publicitaire : dépôt réservé à l'administrateur.
+    // Les fichiers sont ensuite consultables publiquement sur la page d'accueil.
+    match /publicites/{fileName} {
+      allow read: if true;
+      allow create: if resource == null && estAdmin()
+        && fileName.matches('^[A-Za-z0-9._-]{1,180}
+      allow create: if resource == null
+        && request.auth != null && request.auth.uid == uid
+        && fileName.size() <= 180
+        && request.resource.size <= 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow read: if true;
+      allow update, delete: if false;
+    }
+  }
+})
+        && request.resource.size <= 25 * 1024 * 1024
+        && request.resource.contentType.matches('(image/(jpeg|png|webp)|video/(mp4|webm|quicktime))');
+      allow update, delete: if false;
+    }
+
     match /logement_photos/{uid}/{annonceId}/{fileName} {
       allow create: if resource == null
         && request.auth != null && request.auth.uid == uid
