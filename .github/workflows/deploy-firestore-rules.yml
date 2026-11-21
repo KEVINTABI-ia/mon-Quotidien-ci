@@ -1,6 +1,10 @@
 name: Deploy Firestore Rules
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "firestore.rules"
   workflow_dispatch:
     inputs:
       confirmation:
@@ -19,7 +23,7 @@ concurrency:
 jobs:
   test:
     name: Test Firestore rules before deployment
-    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'DEPLOY'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.confirmation == 'DEPLOY')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main
