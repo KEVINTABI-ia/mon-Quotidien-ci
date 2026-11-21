@@ -866,6 +866,52 @@ async function paymentStatus(request,env) {
   }
   return json({paymentId:id,status:payment.status,amountXof:payment.amountXof,currency:payment.currency,serviceId:payment.serviceId||"automobiliste"});
 }
+// Commission rules for courier wallet. Amounts are integer XOF.
+export const COURIER_WALLET_RULES = Object.freeze({
+  lowBalanceAlertXof: 1000,
+  initialDepositXof: 5000,
+  gareServiceFeeXof: 600,
+  garePlatformServiceShareXof: 100,
+  gareCourierServiceShareXof: 500,
+  dynamicPricingMaxMultiplier: 1.20
+});
+
+export function calculateCourierWalletDebit({serviceType,deliveryFeeXof,serviceFeeXof=0}) {
+  const validAmount = value => Number.isSafeInteger(value) && value >= 0;
+  if (!["boutique","classique","gare_expedition","gare_recuperation"].includes(serviceType)) {
+    throw new Error("unsupported_courier_service_type");
+  }
+  if (!validAmount(deliveryFeeXof) || !validAmount(serviceFeeXof)) {
+    throw new Error("invalid_courier_amount");
+  }
+  const rate = serviceType === "boutique" ? 0.10 : 0.15;
+  const deliveryCommissionXof = Math.round(deliveryFeeXof * rate);
+  const gareOperation = serviceType === "gare_expedition" || serviceType === "gare_recuperation";
+  if (gareOperation && serviceFeeXof !== COURIER_WALLET_RULES.gareServiceFeeXof) {
+    throw new Error("invalid_gare_service_fee");
+  }
+  if (!gareOperation && serviceFeeXof !== 0) {
+    throw new Error("unexpected_service_fee");
+  }
+  const platformServiceFeeXof = gareOperation ? COURIER_WALLET_RULES.garePlatformServiceShareXof : 0;
+  const courierServiceShareXof = gareOperation ? COURIER_WALLET_RULES.gareCourierServiceShareXof : 0;
+  return Object.freeze({
+    deliveryCommissionRate: rate,
+    deliveryCommissionXof,
+    platformServiceFeeXof,
+    courierServiceShareXof,
+    totalWalletDebitXof: deliveryCommissionXof + platformServiceFeeXof
+  });
+}
+
+export function courierWalletCanAcceptMission(balanceXof) {
+  return Number.isSafeInteger(balanceXof) && balanceXof > 0;
+}
+
+export function courierWalletNeedsLowBalanceAlert(balanceXof) {
+  return Number.isSafeInteger(balanceXof) && balanceXof <= COURIER_WALLET_RULES.lowBalanceAlertXof;
+}
+
 export function buildSubscriptionPlans(requested,services={},now=new Date()) {
   const definitions={
     automobiliste:["automobiliste"],
