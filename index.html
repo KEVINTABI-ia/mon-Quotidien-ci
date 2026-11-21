@@ -12155,7 +12155,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     shell.id='accueilHomeShell';
     shell.innerHTML=`
       <section class="home-panel" id="homeFamilyLauncher" aria-label="Choisir une famille de services">
-        <div class="home-section-heading mqci-service-heading"><h2>SERVICE</h2><button type="button" id="mqciVoirToutServices" aria-controls="dailyServicesPanel" aria-expanded="false">Voir tout <span aria-hidden="true">›</span></button></div>
+        <div class="home-section-heading mqci-service-heading"><h2>SERVICE</h2></div>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeMobilite')"><span class="family-entry-icon">🚌</span><strong>Mobilité et transport</strong><small>Gares, déplacements, colis et compagnies</small></button>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeAutomobile')"><span class="family-entry-icon">🚘</span><strong>Automobile</strong><small>Dépannage, entretien, assurance et pièces</small></button>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeDemarches')"><span class="family-entry-icon">🛍️</span><strong>Commerce et emploi</strong><small>Boutiques, annonces et opportunités</small></button>
@@ -13298,14 +13298,9 @@ async function mqciAdminStatutPharmacie(uid,statut){
 }
 #accueilHomeShell #homeFamilyLauncher>.mqci-service-heading{
   grid-column:1/-1!important;display:flex!important;align-items:center!important;
-  justify-content:space-between!important;gap:10px!important;margin:0 2px 2px!important;
+  justify-content:flex-start!important;gap:10px!important;margin:0 2px 2px!important;
 }
 #accueilHomeShell .mqci-service-heading h2{margin:0!important;font-size:19px!important;font-weight:900!important;color:#174b35!important}
-#mqciVoirToutServices{
-  border:0!important;background:transparent!important;color:#087c62!important;
-  padding:7px 2px!important;font-size:13px!important;font-weight:850!important;white-space:nowrap!important;
-}
-#mqciVoirToutServices span{font-size:19px!important;vertical-align:-1px}
 #mqciServicePersonalizeRow{grid-column:1/-1!important;display:flex!important;justify-content:flex-end!important;align-items:center!important;gap:8px!important;min-width:0!important}
 #mqciPersonnaliserServices{
   border:1px solid #d6e8dc!important;border-radius:999px!important;background:#f4faf5!important;
@@ -13366,7 +13361,7 @@ async function mqciAdminStatutPharmacie(uid,statut){
     if(!heading)return;
     const controls=document.createElement('div');
     controls.id='mqciServicePersonalizeRow';
-    controls.hidden=true;
+    controls.hidden=false;
     controls.innerHTML='<button type="button" id="mqciPersonnaliserServices" aria-pressed="false">⚙ Personnaliser mes accès</button>';
     const status=document.createElement('p');
     status.id='mqciServicePersonalizeStatus';
@@ -13394,7 +13389,6 @@ async function mqciAdminStatutPharmacie(uid,statut){
     }
     let editMode=false,pendingBottom=null;
     const customize=document.getElementById('mqciPersonnaliserServices');
-    const voirTout=document.getElementById('mqciVoirToutServices');
     function clearSelection(){launcher.querySelectorAll('.mqci-selected-for-swap').forEach(el=>el.classList.remove('mqci-selected-for-swap'));dailyGrid.querySelectorAll('.mqci-selected-for-swap').forEach(el=>el.classList.remove('mqci-selected-for-swap'));}
     function setEditMode(value){
       editMode=!!value;pendingBottom=null;clearSelection();
@@ -13402,18 +13396,10 @@ async function mqciAdminStatutPharmacie(uid,statut){
       customize.textContent=editMode?'Terminer la personnalisation':'⚙ Personnaliser mes accès';
       status.hidden=!editMode;
       status.textContent=editMode?'Touchez un service dans « Autre service du quotidien », puis l’accès en haut à remplacer.':'';
-      if(editMode){dailyPanel.hidden=false;if(voirTout)voirTout.setAttribute('aria-expanded','true');menu.scrollIntoView({behavior:'smooth',block:'start'});}
+      if(editMode){menu.hidden=false;dailyPanel.hidden=false;const dailyToggle=menu.querySelector('.daily-toggle');if(dailyToggle){dailyToggle.hidden=true;dailyToggle.style.display='none';dailyToggle.setAttribute('aria-expanded','true');}menu.scrollIntoView({behavior:'smooth',block:'start'});}else{menu.hidden=true;dailyPanel.hidden=true;}
     }
     customize.addEventListener('click',()=>setEditMode(!editMode));
-    if(voirTout)voirTout.addEventListener('click',()=>{
-      menu.hidden=false;
-      controls.hidden=false;
-      dailyPanel.hidden=false;
-      const dailyToggle=menu.querySelector('.daily-toggle');
-      if(dailyToggle){dailyToggle.hidden=true;dailyToggle.style.display='none';dailyToggle.setAttribute('aria-expanded','true');}
-      voirTout.setAttribute('aria-expanded','true');
-      menu.scrollIntoView({behavior:'smooth',block:'start'});
-    });
+
     document.addEventListener('click',function(event){
       if(!editMode)return;
       const item=event.target.closest('.mqci-service-choice');
@@ -14021,7 +14007,7 @@ header.mqci-header-premium .mqci-brand-lockup{
 
  
 <style id="mqci-fix-ouverture-autres-services">
-/* Le panneau Autre service est rattaché à SERVICE et s'ouvre depuis Voir tout. */
+/* Le panneau Autre service reste masqué, sauf pendant la personnalisation des accès. */
 #accueilHomeShell #homeFamilyLauncher>#menuQuotidien{
   grid-column:1/-1!important;box-sizing:border-box!important;width:100%!important;
   max-width:100%!important;min-width:0!important;margin:8px 0 0!important;
