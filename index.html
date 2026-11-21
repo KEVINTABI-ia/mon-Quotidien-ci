@@ -12224,7 +12224,7 @@ window.mtcAfficherActeJudiciaire = function(type){
         </div>
       </section>
       <section class="home-panel" id="homeQuotidien">
-        <div class="home-section-heading"><div><h2>📢 Espace publicitaire</h2><p>Retrouvez les annonces et offres publiées après validation de l’administrateur.</p></div></div>
+        <div class="home-section-heading"><div><h2>📢 Espace publicitaire</h2></div></div>
         <div id="annoncesValideesAccueil"><p class="notice">Chargement de l’espace publicitaire...</p></div>
       </section>
       <section class="home-panel" id="homeArticlesBoutiques">
@@ -12497,8 +12497,8 @@ async function chargerAnnoncesValideesAccueil(){
    const d=items[window.indexPubliciteAccueilHome],titre=echapperTextePublicite(d.titre||"Publicité");
    const image=echapperTextePublicite(d.imageDataUrl||d.mediaUrl);
    zone.innerHTML='<div class="annonces-accueil-defilement" aria-label="Affiches publicitaires" style="width:100%;text-align:center;">'
-    +'<article class="card" style="padding:10px;margin:0 auto;max-width:520px;">'
-    +'<img src="'+image+'" alt="Affiche publicitaire '+titre+'" loading="eager" style="display:block;width:100%;max-height:360px;object-fit:contain;border-radius:10px;margin:auto;">'
+    +'<article class="mqci-affiche-publicitaire" style="padding:0;margin:0;width:100%;max-width:none;border:0;border-radius:0;box-shadow:none;background:transparent;">'
+    +'<img src="'+image+'" alt="Affiche publicitaire '+titre+'" loading="eager" style="display:block;width:100%;max-width:100%;height:auto;max-height:none;object-fit:contain;border-radius:0;margin:0;">'
     +(d.description?'<p class="notice" style="margin:8px 0 0;">'+echapperTextePublicite(d.description)+'</p>':"")
     +'</article></div>';
   };
@@ -13473,5 +13473,68 @@ header.mqci-header-premium .mqci-brand-lockup{
 }
 @media(max-width:380px){
   header.mqci-header-premium .mqci-brand-lockup{transform:translateY(-10px)!important}
+}
+</style>
+
+
+<style id="mqci-espace-publicitaire-pleine-largeur">
+/* Bannière publicitaire : bord à bord, directement sous le titre. */
+#accueilHomeShell #homeQuotidien{
+  box-sizing:border-box!important;
+  width:100vw!important;
+  max-width:100vw!important;
+  margin-left:calc(50% - 50vw)!important;
+  margin-right:calc(50% - 50vw)!important;
+  padding:0!important;
+  overflow:hidden!important;
+  border:0!important;
+  border-radius:0!important;
+}
+#accueilHomeShell #homeQuotidien>.home-section-heading{
+  box-sizing:border-box!important;
+  width:100%!important;
+  margin:0!important;
+  padding:10px 15px 8px!important;
+}
+#accueilHomeShell #homeQuotidien>.home-section-heading h2{
+  margin:0!important;
+}
+#accueilHomeShell #homeQuotidien #annoncesValideesAccueil{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:0!important;
+  padding:0!important;
+}
+#accueilHomeShell #homeQuotidien .annonces-accueil-defilement{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+#accueilHomeShell #homeQuotidien .annonces-accueil-defilement>.mqci-affiche-publicitaire{
+  display:block!important;
+  box-sizing:border-box!important;
+  flex:0 0 100%!important;
+  width:100%!important;
+  min-width:100%!important;
+  max-width:100%!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+#accueilHomeShell #homeQuotidien .mqci-affiche-publicitaire img{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  height:auto!important;
+  max-height:none!important;
+  margin:0!important;
+  border-radius:0!important;
+  object-fit:contain!important;
 }
 </style>
