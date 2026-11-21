@@ -233,7 +233,14 @@ async function createCheckout(request,env) {
   if(!["automobiliste","objet_retrouve","petites_annonces","boutique_renewal","partenaire_colis","partenaire_services","compagnie_voyage","logement_renewal","ramassage","publicite"].includes(serviceId)) return json({error:"unsupported_service"},400);
   const now=new Date();
   let amountXof, initial;
-  if(serviceId==="objet_retrouve"){
+  if(serviceId==="courier_wallet") {
+    const profilePath="partenaires/"+user.sub,profileDoc=await getDoc(env,profilePath),profile=docData(profileDoc);
+    if(!profileDoc||profile?.uid!==user.sub||profile?.type!=="livreur_independant"||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif")return json({error:"courier_profile_not_eligible"},403);
+    amountXof=body.amountXof;
+    if(!Number.isSafeInteger(amountXof)||amountXof<1||amountXof>10000000)return json({error:"invalid_wallet_recharge_amount"},400);
+    if(!["orange","wave","mtn"].includes(body.paymentMethod))return json({error:"wallet_payment_method_not_supported"},400);
+    initial={uid:user.sub,serviceId,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
+  } else if(serviceId==="objet_retrouve"){
     const {objectId,nomComplet,telephone,residence}=body;
     if(typeof objectId!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(objectId)||typeof nomComplet!=="string"||nomComplet.trim().length<2||nomComplet.trim().length>100||
        typeof telephone!=="string"||telephone.trim().length<6||telephone.trim().length>25||
@@ -491,6 +498,10 @@ export function validateJekoPaymentPlan(payment) {
     const plans={decouverte:[2000,3],visibilite:[5000,7],professionnel:[9000,15],premium:[15000,30]},plan=plans[payment.planId];
     return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1]&&typeof payment.uid==="string"&&typeof payment.imagePath==="string"&&payment.imagePath.startsWith("publicites/partenaires/"+payment.uid+"/")&&typeof payment.partnerProfilePath==="string"&&(payment.partnerProfilePath==="partenaires/"+payment.uid||/^compagnies\/[A-Za-z0-9_-]{1,128}$/.test(payment.partnerProfilePath)||/^demandes_nouveaux_services\/[A-Za-z0-9_-]{1,128}$/.test(payment.partnerProfilePath))&&/\.(jpg|png|webp)$/i.test(payment.imagePath)&&typeof payment.mediaUrl==="string"&&/^https:\/\//i.test(payment.mediaUrl)&&payment.mediaUrl.includes(encodeURIComponent(payment.imagePath))&&typeof payment.titre==="string"&&payment.titre.length>=2&&payment.titre.length<=100;
   }
+  if(payment.serviceId==="courier_wallet") {
+    return Number.isSafeInteger(payment.amountXof)&&payment.amountXof>0&&payment.amountXof<=10000000&&
+      typeof payment.uid==="string"&&/^[A-Za-z0-9_-]{1,128}$/.test(payment.uid);
+  }
   if(payment.serviceId==="objet_retrouve") return payment.amountXof===1000;
   if(payment.serviceId==="logement_renewal"||payment.serviceId==="ramassage"||payment.serviceId==="partenaire_services"){
     const plan=fixed[payment.serviceId]?.[payment.planId];
@@ -563,6 +574,40 @@ async function webhook(request,env) {
     return new Response("OK",{status:200});
   }
   if(payment.status==="succeeded") return new Response("OK",{status:200});
+  if(payment.serviceId==="courier_wallet") {
+    const walletPath="portefeuilles_livreurs/"+payment.uid;
+    const walletDoc=await getDoc(env,walletPath),wallet=docData(walletDoc)||{};
+    const balanceXof=wallet.soldeDisponibleXof??0,debtXof=wallet.detteCommissionXof??0,totalRechargeXof=wallet.totalRechargeXof??0;
+    if(![balanceXof,debtXof,totalRechargeXof].every(v=>Number.isSafeInteger(v)&&v>=0)) {
+      await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"courier_wallet_balance_invalid",updatedAt:now.toISOString()}))});
+      return new Response("OK",{status:200});
+    }
+    const applied=applyCourierWalletRecharge({balanceXof,debtXof,rechargeXof:payment.amountXof});
+    const journalPath=walletPath+"/journal/recharge_"+paymentId;
+    const nextWallet={
+      uid:payment.uid,soldeDisponibleXof:applied.balanceAfterXof,detteCommissionXof:applied.debtAfterXof,
+      totalRechargeXof:totalRechargeXof+payment.amountXof,updatedAt:now.toISOString(),
+      createdAt:wallet.createdAt||now.toISOString()
+    };
+    const journal={
+      type:"recharge",paymentId,provider:"jeko",providerTransactionId:transactionId,
+      montantXof:payment.amountXof,detteRegleeXof:applied.debtPaymentXof,
+      creditDisponibleXof:applied.balanceCreditXof,balanceBeforeXof:balanceXof,
+      balanceAfterXof:applied.balanceAfterXof,debtBeforeXof:debtXof,
+      debtAfterXof:applied.debtAfterXof,actor:"jeko_webhook",createdAt:now.toISOString()
+    };
+    try {
+      await commitWrites(env,[
+        updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
+        updateWrite(walletPath,nextWallet,walletDoc?.updateTime,walletDoc?undefined:false),
+        createWrite(journalPath,journal),
+        createWrite(receiptPath,receiptData)
+      ]);
+    } catch(e) {
+      if(!(await getDoc(env,receiptPath))) throw e;
+    }
+    return new Response("OK",{status:200});
+  }
   if(payment.serviceId==="publicite"){
     const profileDoc=await getDoc(env,payment.partnerProfilePath),profile=docData(profileDoc);
     if(!profileDoc||profile?.uid!==payment.uid||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif"){
@@ -951,6 +996,12 @@ export function applyCourierWalletRecharge({balanceXof,debtXof=0,rechargeXof}) {
     balanceCreditXof,
     balanceAfterXof: balanceXof + balanceCreditXof
   });
+}
+
+export function buildCourierWalletRechargeLedger({balanceXof,debtXof=0,rechargeXof,totalRechargeXof=0}) {
+  const applied=applyCourierWalletRecharge({balanceXof,debtXof,rechargeXof});
+  if(!Number.isSafeInteger(totalRechargeXof)||totalRechargeXof<0)throw new Error("invalid_courier_wallet_total_recharge");
+  return Object.freeze({...applied,totalRechargeAfterXof:totalRechargeXof+rechargeXof});
 }
 
 export function courierWalletNeedsLowBalanceAlert(balanceXof) {
