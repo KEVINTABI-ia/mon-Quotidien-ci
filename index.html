@@ -2809,7 +2809,7 @@ async function remplacerImagePublicite(id){
  if(!fichier||!["image/jpeg","image/png","image/webp"].includes(fichier.type)||fichier.size>10*1024*1024)return alert("Choisis une image JPG, PNG ou WebP de 10 Mo maximum.");
  try{
   const media=await envoyerFichierPubliciteR2(fichier,{admin:true}),ref=db.collection("publicites").doc(id),snap=await ref.get(),ancien=snap.exists?snap.data()?.mediaKey:null;
-  await ref.update({mediaKey:media.path,mediaUrl:media.url,mediaType:"image/jpeg",imageDataUrl:firebase.firestore.FieldValue.delete(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  await ref.update({mediaKey:media.path,mediaUrl:media.url,mediaType:media.contentType,imageDataUrl:firebase.firestore.FieldValue.delete(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
   if(ancien){try{await supprimerFichierPubliciteR2(ancien);}catch(e){console.error("Ancienne affiche non supprimée :",e);}}
   await chargerPublicitesAdmin();alert("Affiche remplacée.");
  }catch(e){alert("Remplacement impossible : "+(e.message||"erreur"));}
