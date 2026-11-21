@@ -2355,8 +2355,7 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
   <p class="notice">Choisis une affiche JPG, PNG ou WebP. Taille maximale : 10 Mo. La publicité sera enregistrée masquée ; tu décideras ensuite de l’afficher.</p>
   <button type="button" class="primary" onclick="creerPubliciteManuelle()">Enregistrer la publicité</button>
   <p id="statutNouvellePub" class="notice"></p>
-  <h4>Demandes reçues</h4><button type="button" class="primary" onclick="chargerDemandesPublicitesAdmin()">Actualiser les demandes</button>
-  <div id="listeDemandesPublicitesAdmin"><p class="notice">Connecte-toi comme administrateur pour consulter les demandes.</p></div>
+  <div id="listeDemandesPublicitesAdmin" style="display:none"></div>
   <h4>Publicités enregistrées</h4><div id="listePublicitesAdmin"><p class="notice">Aucune annonce chargée.</p></div>
 </div>
 
@@ -2708,6 +2707,8 @@ async function chargerPublicitesAdmin() {
         + '<label>Description</label><textarea id="descriptionPub_' + doc.id + '" maxlength="1000" rows="3" readonly>' + echapperTextePublicite(d.description) + '</textarea>'
         + '<button type="button" onclick="activerEditionPublicite(&quot;' + doc.id + '&quot;)">Modifier</button>'
         + '<button type="button" id="enregistrerPub_' + doc.id + '" onclick="modifierPublicite(&quot;' + doc.id + '&quot;)" disabled>Enregistrer les modifications</button>'
+        + '<label>Remplacer l’affiche</label><input id="imageRemplacementPub_' + doc.id + '" type="file" accept="image/jpeg,image/png,image/webp">'
+        + '<button type="button" onclick="remplacerImagePublicite(&quot;' + doc.id + '&quot;)">Enregistrer la nouvelle affiche</button>'
         + '<button type="button" class="primary" onclick="basculerVisibilitePublicite(&quot;' + doc.id + '&quot;,&quot;' + (visible ? 'masquee' : 'publiee') + '&quot;)">' + (visible ? 'Masquer' : 'Afficher') + '</button>'
         + '<button type="button" onclick="supprimerPublicite(&quot;' + doc.id + '&quot;)">Supprimer définitivement</button>'
         + '</article>';
@@ -2822,6 +2823,17 @@ async function modifierPublicite(id) {
   }
 }
 
+async function remplacerImagePublicite(id){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ const fichier=document.getElementById("imageRemplacementPub_"+id)?.files?.[0];
+ if(!fichier||!["image/jpeg","image/png","image/webp"].includes(fichier.type)||fichier.size>10*1024*1024)return alert("Choisis une image JPG, PNG ou WebP de 10 Mo maximum.");
+ try{
+  const media=await envoyerFichierFirebaseStorage(fichier,"publicite"),ref=db.collection("publicites").doc(id),snap=await ref.get(),ancien=snap.exists?snap.data()?.mediaKey:null;
+  await ref.update({mediaKey:media.path,mediaUrl:media.url,mediaType:"image/jpeg",imageDataUrl:firebase.firestore.FieldValue.delete(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  if(ancien){try{await storage.ref().child(ancien).delete();}catch(e){if(e.code!=="storage/object-not-found")console.error("Ancienne affiche non supprimée :",e);}}
+  await chargerPublicitesAdmin();alert("Affiche remplacée.");
+ }catch(e){alert("Remplacement impossible : "+(e.message||"erreur"));}
+}
 async function supprimerPublicite(id) {
   if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
   if (!confirm("Supprimer cette publicité de l’affichage public ?")) return;
@@ -3885,7 +3897,7 @@ auth.onAuthStateChanged(function(user){
 // la session du client principal : le retour Jèko doit reprendre le jeton compagnie.
 partnerAuth.onAuthStateChanged(function(user){
   const paymentService=new URLSearchParams(window.location.search).get("serviceId");
-  if(user&&paymentService==="ramassage")verifierRetourPaiementJeko(user);
+  if(user&&(paymentService==="ramassage"||paymentService==="publicite"))verifierRetourPaiementJeko(user);
 });
 
 
@@ -8318,8 +8330,9 @@ async function verifierRetourPaiementJeko(user){
  const boutiqueZone=serviceId==="boutique_renewal"?(document.getElementById("boutiqueCompteConnecte")||document.getElementById("connexionBoutiqueStatut")):null;
  const logementZone=serviceId==="logement_renewal"?(document.getElementById("logementSubscriptionStatus")||document.getElementById("logementRenewal")):null;
  const ramassageZone=serviceId==="ramassage"?(document.getElementById("ramassageJekoPaymentStatus")||document.getElementById("ramassageCompanyStatus")):null;
+ const publiciteZone=serviceId==="publicite"?(document.getElementById("statutPublicitePartenaire")||document.getElementById("blocPublicitePartenaire")):null;
  const partnerServiceZone=null;
- const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:(serviceId==="ramassage"?ramassageZone:(serviceId==="partenaire_services"?partnerServiceZone:document.getElementById("etatAbonnementAuto"))))));
+ const zone=serviceId==="publicite"?publiciteZone:(serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:(serviceId==="ramassage"?ramassageZone:(serviceId==="partenaire_services"?partnerServiceZone:document.getElementById("etatAbonnementAuto")))))));
  if(paymentState==="error"){
   if(serviceId==="partenaire_services"){
    try{if(paymentId){const token=await user.getIdToken(true);await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/status?paymentId="+encodeURIComponent(paymentId),{headers:{Authorization:"Bearer "+token}});}}catch(e){}
@@ -8349,6 +8362,9 @@ async function verifierRetourPaiementJeko(user){
     }else if(serviceId==="logement_renewal"){
      if(zone)zone.textContent="Paiement confirmé par Jèko. Actualisation de votre espace Logement…";
      if(window.logementRefreshSpace)await window.logementRefreshSpace();
+    }else if(serviceId==="publicite"){
+     if(zone)zone.textContent="Paiement confirmé par Jèko. Votre affiche est publiée dans l’Espace publicitaire de l’accueil.";
+     chargerPublicitesAccueil();
     }else if(serviceId==="ramassage"){
      if(zone)zone.textContent="Paiement de 2 000 FCFA confirmé par Jèko. Activation de votre abonnement…";
      if(partnerAuth.currentUser)await afficherEspaceRamassage(partnerAuth.currentUser);
