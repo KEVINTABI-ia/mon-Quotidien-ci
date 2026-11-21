@@ -44,11 +44,11 @@ Ces montants remplacent les anciens forfaits de 700 et 500 FCFA.
 - **Aucune commission n'est prélevée à l'acceptation d'une mission ni pendant son exécution.**
 - **Le débit intervient une seule fois, après confirmation serveur de la fin effective de la prestation.**
 - Les commandes annulées ou non livrées ne génèrent aucune commission.
-- Recharge par Jèko : le portefeuille est crédité uniquement après validation du webhook Jèko signé, jamais sur la seule base d'une redirection navigateur.\n- Chaque recharge confirmée rembourse d'abord la dette de commission ; seul le reliquat augmente le solde disponible.
-- Le solde non consommé appartient au livreur ; les commissions effectivement prélevées sont enregistrées séparément.
+- Recharge par Jèko : le livreur verse le montant choisi sur le compte Jèko de MON QUOTIDIEN CI. La totalité du paiement confirmé est portée au crédit de son portefeuille (par exemple, 10 000 FCFA payés = 10 000 FCFA affichés). Le crédit intervient uniquement après validation du webhook Jèko signé, jamais sur la seule base d'une redirection navigateur. Les fonds rechargés constituent un solde prépayé dû au livreur, et non un revenu intégral de la plateforme au moment de la recharge.\n- Chaque recharge confirmée rembourse d'abord la dette de commission ; seul le reliquat augmente le solde disponible.
+- À chaque livraison effectivement terminée et confirmée, la commission calculée pour cette prestation est soustraite du solde prépayé (exemple : 300 FCFA de commission font passer 10 000 à 9 700 FCFA).\n- À 1 000 FCFA ou moins, une alerte de solde faible est affichée au livreur. À 0 FCFA, aucune nouvelle mission ne peut être acceptée.\n- Le solde non consommé appartient au livreur ; les commissions effectivement prélevées sont enregistrées séparément et constituent le revenu de commission de la plateforme.
 - Le journal doit tracer recharges, commissions, remboursements d'avances courrier et ajustements administratifs, avec référence unique, horodatage et acteur.
 
-Le montant minimal des recharges et la procédure de remboursement du solde non consommé à la clôture du compte restent à préciser avant mise en production.
+Le montant minimal des recharges et la procédure de remboursement du solde non consommé à la clôture du compte restent à préciser avant mise en production. Le montant de 10 000 FCFA est un exemple de recharge, pas un montant minimum ou obligatoire, sauf décision ultérieure.
 
 ## Déclencheurs de clôture et de commission
 
