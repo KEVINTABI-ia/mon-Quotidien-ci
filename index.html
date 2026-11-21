@@ -2003,11 +2003,7 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
     <div class="mqci-brand-mark">
       <img src="./E806C6C4-A1B3-469C-9D73-7EC9FBC1899C.png" alt="Logo de Mon Quotidien CI">
     </div>
-    <div class="mqci-brand-copy">
-      <span class="mqci-brand-eyebrow">LA CÔTE D’IVOIRE À PORTÉE DE MAIN</span>
-      <span class="mqci-brand-name">MON QUOTIDIEN <em>CI</em></span>
-      <span class="mqci-brand-promise">Tous les services utiles, au même endroit.</span>
-    </div>
+
   </div>
   <div class="mqci-header-footer">
     <span class="mqci-header-line"></span>
@@ -3402,10 +3398,7 @@ function chargerPublicitesAccueil() {
 <p id="orStatutReclamation" class="notice"></p></div></section>
 
 
-<section class="carte-acces-admin" aria-label="Accès administrateur" style="margin:12px 16px;padding:14px;border:1px solid #DCE8DF;border-radius:14px;background:#fff;text-align:center;">
-  <p style="margin:0 0 10px;color:#68786E;font-size:13px;">Gestion et administration de Mon Quotidien CI</p>
-  <button type="button" class="bouton-acces-admin" onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur')">🔐 Espace administrateur</button>
-</section>
+
 
 <style id="mqci-compte-profil-direct">
 .mqci-compte-panel h2{margin-bottom:14px}
@@ -12257,6 +12250,9 @@ window.mtcAfficherActeJudiciaire = function(type){
   </div>
 </div>
 
+        <section class="carte-acces-admin" aria-label="Accès administrateur" style="margin:10px 0 0;padding:12px;border:1px solid #DCE8DF;border-radius:14px;background:#fff;text-align:center;">
+          <button type="button" class="bouton-acces-admin" onclick="ouvrirSectionPleinEcran('espaceAdmin','Espace administrateur')">🔐 Espace administrateur</button>
+        </section>
       </section>`;
     main.insertBefore(shell,recherche||main.firstChild);
 
@@ -13462,6 +13458,42 @@ async function mqciAdminStatutPharmacie(uid,statut){
 #homeSante .sante-shortcut-arrow{display:none!important}
 </style>
 
+
+<style id="mqci-entete-epure-menu-vert">
+  header.mqci-header-premium{
+    min-height:0!important;height:auto!important;padding:10px 14px!important;
+    background:#fff!important;color:#18352A!important;border-radius:0!important;
+    box-shadow:0 2px 8px rgba(24,53,42,.08)!important;
+    overflow:visible!important;isolation:auto!important;
+  }
+  header.mqci-header-premium .mqci-brand-lockup{
+    display:flex!important;justify-content:flex-start!important;align-items:center!important;
+    min-height:0!important;padding:0 58px 0 0!important;margin:0!important;
+  }
+  header.mqci-header-premium .mqci-brand-mark{
+    width:54px!important;height:54px!important;flex:0 0 54px!important;
+    background:#fff!important;border:1px solid #e1e8e2!important;
+    box-shadow:none!important;border-radius:12px!important;
+  }
+  header.mqci-header-premium .mqci-brand-copy{display:none!important}
+  header.mqci-header-premium .mqci-header-footer,
+  header.mqci-header-premium .mqci-header-orbit,
+  header.mqci-header-premium .mqci-flag-stripe{display:none!important}
+  #mqciPartnerDropdownPanel{
+    background:#12663B!important;border:1px solid #0D512F!important;
+    box-shadow:0 14px 34px rgba(0,0,0,.28)!important;
+  }
+  #mqciPartnerDropdownPanel button{
+    background:#fff!important;color:#145B38!important;
+    border:1px solid rgba(255,255,255,.55)!important;
+  }
+  #mqciPartnerDropdownPanel button:active{background:#E7F3EA!important}
+  #mqciPartnerDropdownToggle{
+    background:#12663B!important;color:#fff!important;
+    border:1px solid #0D512F!important;box-shadow:0 3px 10px rgba(0,0,0,.18)!important;
+  }
+  #mqciPartnerDropdownToggle[aria-expanded="true"]{background:#0D512F!important;color:#fff!important}
+</style>
 </body>
 </html>
 
