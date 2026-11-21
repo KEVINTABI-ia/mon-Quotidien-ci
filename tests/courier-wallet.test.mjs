@@ -141,3 +141,22 @@ test("unknown service cannot trigger a commission", () => {
     serviceType:"unknown",fromStatus:"arrive_destination",toStatus:"livre",serverConfirmed:true
   }),false);
 });
+
+
+test("10,000 XOF prepaid balance loses 300 XOF per completed delivery until 1,000 XOF alert threshold", () => {
+  let balanceXof = 10000;
+  for (let i = 0; i < 30; i++) {
+    const result = applyCourierWalletCommission({
+      balanceXof, debtXof: 0, commissionXof: 300
+    });
+    balanceXof = result.balanceAfterXof;
+    assert.equal(result.debtAddedXof, 0);
+  }
+  assert.equal(balanceXof, 1000);
+  assert.equal(courierWalletNeedsLowBalanceAlert(balanceXof), true);
+  assert.equal(courierWalletCanAcceptMission(balanceXof, 0), true);
+});
+
+test("zero prepaid balance blocks new missions", () => {
+  assert.equal(courierWalletCanAcceptMission(0, 0), false);
+});
