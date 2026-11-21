@@ -13301,12 +13301,6 @@ async function mqciAdminStatutPharmacie(uid,statut){
   justify-content:flex-start!important;gap:10px!important;margin:0 2px 2px!important;
 }
 #accueilHomeShell .mqci-service-heading h2{margin:0!important;font-size:19px!important;font-weight:900!important;color:#174b35!important}
-#mqciServicePersonalizeRow{grid-column:1/-1!important;display:flex!important;justify-content:flex-end!important;align-items:center!important;gap:8px!important;min-width:0!important}
-#mqciPersonnaliserServices{
-  border:1px solid #d6e8dc!important;border-radius:999px!important;background:#f4faf5!important;
-  color:#176044!important;padding:7px 11px!important;font-size:11px!important;font-weight:800!important;
-}
-#mqciServicePersonalizeStatus{grid-column:1/-1!important;margin:0!important;color:#68786e!important;font-size:11px!important;line-height:1.4!important}
 #accueilHomeShell #homeFamilyLauncher>.mqci-service-choice{
   box-sizing:border-box!important;min-width:0!important;width:100%!important;min-height:94px!important;
   margin:0!important;padding:10px 6px!important;border:1px solid #dfe9e2!important;border-radius:15px!important;
@@ -13357,19 +13351,6 @@ async function mqciAdminStatutPharmacie(uid,statut){
     /* Le panneau quotidien reste masqué sur l'accueil et accessible pendant la personnalisation. */
     launcher.appendChild(menu);
     launcher.dataset.mqciPersonalized='1';
-    const heading=launcher.querySelector('.mqci-service-heading');
-    if(!heading)return;
-    const controls=document.createElement('div');
-    controls.id='mqciServicePersonalizeRow';
-    controls.hidden=false;
-    controls.innerHTML='<button type="button" id="mqciPersonnaliserServices" aria-pressed="false">⚙ Personnaliser mes accès</button>';
-    const status=document.createElement('p');
-    status.id='mqciServicePersonalizeStatus';
-    status.hidden=true;
-    status.setAttribute('aria-live','polite');
-    status.textContent='Choisissez un service en bas, puis un accès en haut à remplacer.';
-    heading.insertAdjacentElement('afterend',controls);
-    controls.insertAdjacentElement('afterend',status);
     const families=Array.from(launcher.children).filter(el=>el.classList.contains('family-entry'));
     const daily=Array.from(dailyGrid.querySelectorAll('.tuile-quotidien'));
     families.forEach((el,i)=>{el.dataset.mqciAccessId='famille-'+i;el.classList.add('mqci-service-choice');});
@@ -13383,46 +13364,6 @@ async function mqciAdminStatutPharmacie(uid,statut){
     for(const el of all){if(topIds.length>=6)break;if(!topIds.includes(el.dataset.mqciAccessId))topIds.push(el.dataset.mqciAccessId);}
     topIds.forEach(id=>launcher.appendChild(byId.get(id)));
     all.filter(el=>!topIds.includes(el.dataset.mqciAccessId)).forEach(el=>dailyGrid.appendChild(el));
-    function saveOrder(){
-      const ids=Array.from(launcher.children).filter(el=>el.classList.contains('mqci-service-choice')).map(el=>el.dataset.mqciAccessId);
-      try{localStorage.setItem('mqci_services_rapides_v1',JSON.stringify(ids));}catch(e){}
-    }
-    let editMode=false,pendingBottom=null;
-    const customize=document.getElementById('mqciPersonnaliserServices');
-    function clearSelection(){launcher.querySelectorAll('.mqci-selected-for-swap').forEach(el=>el.classList.remove('mqci-selected-for-swap'));dailyGrid.querySelectorAll('.mqci-selected-for-swap').forEach(el=>el.classList.remove('mqci-selected-for-swap'));}
-    function setEditMode(value){
-      editMode=!!value;pendingBottom=null;clearSelection();
-      customize.setAttribute('aria-pressed',String(editMode));
-      customize.textContent=editMode?'Terminer la personnalisation':'⚙ Personnaliser mes accès';
-      status.hidden=!editMode;
-      status.textContent=editMode?'Touchez un service dans « Autre service du quotidien », puis l’accès en haut à remplacer.':'';
-      if(editMode){menu.hidden=false;dailyPanel.hidden=false;const dailyToggle=menu.querySelector('.daily-toggle');if(dailyToggle){dailyToggle.hidden=true;dailyToggle.style.display='none';dailyToggle.setAttribute('aria-expanded','true');}menu.scrollIntoView({behavior:'smooth',block:'start'});}else{menu.hidden=true;dailyPanel.hidden=true;}
-    }
-    customize.addEventListener('click',()=>setEditMode(!editMode));
-
-    document.addEventListener('click',function(event){
-      if(!editMode)return;
-      const item=event.target.closest('.mqci-service-choice');
-      if(!item||(item.parentElement!==launcher&&item.parentElement!==dailyGrid))return;
-      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-      if(item.parentElement===dailyGrid){
-        pendingBottom=item;clearSelection();item.classList.add('mqci-selected-for-swap');
-        status.textContent='Service sélectionné : '+item.textContent.trim().replace(/\s+/g,' ') +'. Touchez maintenant un des 6 accès en haut.';
-        return;
-      }
-      if(!pendingBottom){
-        status.textContent='Choisissez d’abord un service dans « Autre service du quotidien ».';
-        return;
-      }
-      const topItem=item,bottomItem=pendingBottom;
-      const placeholder=document.createComment('mqci-swap');
-      launcher.replaceChild(placeholder,topItem);
-      dailyGrid.replaceChild(topItem,bottomItem);
-      launcher.replaceChild(bottomItem,placeholder);
-      pendingBottom=null;clearSelection();saveOrder();
-      status.textContent='Accès mis à jour. Vous pouvez effectuer un autre échange ou terminer.';
-    },true);
-    saveOrder();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
   else init();
