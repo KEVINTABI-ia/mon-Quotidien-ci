@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   calculateCourierWalletDebit,
-  courierWalletCanAcceptMission,
+  courierWalletCanAcceptMission,\n  courierCommissionTriggerAllowed,
   courierWalletNeedsLowBalanceAlert,
   COURIER_WALLET_RULES
 } from "../cloudflare/worker.js";
@@ -62,4 +62,36 @@ test("validated wallet constants are stable", () => {
     lowBalanceAlertXof:1000,initialDepositXof:5000,gareServiceFeeXof:600,
     garePlatformServiceShareXof:100,gareCourierServiceShareXof:500,dynamicPricingMaxMultiplier:1.20
   });
+});
+
+test("commission trigger is forbidden at acceptance, pickup, transit and arrival", () => {
+  for (const status of ["livreur_affecte","colis_recupere","en_transit","arrive_destination"]) {
+    assert.equal(courierCommissionTriggerAllowed({
+      serviceType:"classique",fromStatus:status,toStatus:status==="arrive_destination"?"arrive_destination":status,
+      serverConfirmed:true
+    }),false);
+  }
+});
+
+test("standard and boutique commission triggers require server-confirmed final transition", () => {
+  for (const serviceType of ["classique","boutique","gare_recuperation"]) {
+    assert.equal(courierCommissionTriggerAllowed({
+      serviceType,fromStatus:"arrive_destination",toStatus:"livre",serverConfirmed:true
+    }),true);
+    assert.equal(courierCommissionTriggerAllowed({
+      serviceType,fromStatus:"arrive_destination",toStatus:"livre",serverConfirmed:false
+    }),false);
+  }
+});
+
+test("gare dispatch commission requires confirmed postal deposit", () => {
+  const base={serviceType:"gare_expedition",fromStatus:"arrive_destination",toStatus:"livre",serverConfirmed:true};
+  assert.equal(courierCommissionTriggerAllowed(base),false);
+  assert.equal(courierCommissionTriggerAllowed({...base,postalDepositConfirmed:true}),true);
+});
+
+test("unknown service cannot trigger a commission", () => {
+  assert.equal(courierCommissionTriggerAllowed({
+    serviceType:"unknown",fromStatus:"arrive_destination",toStatus:"livre",serverConfirmed:true
+  }),false);
 });
