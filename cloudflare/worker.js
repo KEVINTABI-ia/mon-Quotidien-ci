@@ -340,7 +340,8 @@ async function completeCourierMission(request,env) {
     return json({error:error?.message==="firestore_transaction_commit_409"?"mission_completion_conflict":"mission_completion_failed"},409);
   }
 }
-\nasync function createCheckout(request,env) {
+
+async function createCheckout(request,env) {
   const authResult=await requireUser(request, env);
   const user=authResult.user;
   if(!user) return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
