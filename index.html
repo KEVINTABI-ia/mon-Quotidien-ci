@@ -13352,7 +13352,7 @@ async function mqciAdminStatutPharmacie(uid,statut){
     const dailyPanel=document.getElementById('dailyServicesPanel');
     const dailyGrid=dailyPanel&&dailyPanel.querySelector('.grille-services-quotidiens');
     if(!launcher||!menu||!dailyPanel||!dailyGrid||launcher.dataset.mqciPersonalized==='1')return;
-    /* Masquer tout le bloc Autre service sur l'accueil. Il sera ouvert uniquement par Voir tout. */
+    /* Masquer tout le bloc Autre service sur l'accueil. Il reste accessible pendant la personnalisation. */
     menu.hidden=true;
     /* Le panneau quotidien reste masqué sur l'accueil et accessible pendant la personnalisation. */
     launcher.appendChild(menu);
@@ -13361,7 +13361,7 @@ async function mqciAdminStatutPharmacie(uid,statut){
     if(!heading)return;
     const controls=document.createElement('div');
     controls.id='mqciServicePersonalizeRow';
-    controls.hidden=true;
+    controls.hidden=false;
     controls.innerHTML='<button type="button" id="mqciPersonnaliserServices" aria-pressed="false">⚙ Personnaliser mes accès</button>';
     const status=document.createElement('p');
     status.id='mqciServicePersonalizeStatus';
@@ -13396,7 +13396,7 @@ async function mqciAdminStatutPharmacie(uid,statut){
       customize.textContent=editMode?'Terminer la personnalisation':'⚙ Personnaliser mes accès';
       status.hidden=!editMode;
       status.textContent=editMode?'Touchez un service dans « Autre service du quotidien », puis l’accès en haut à remplacer.':'';
-      if(editMode){menu.hidden=false;dailyPanel.hidden=false;const dailyToggle=menu.querySelector('.daily-toggle');if(dailyToggle){dailyToggle.hidden=true;dailyToggle.style.display='none';dailyToggle.setAttribute('aria-expanded','true');}menu.scrollIntoView({behavior:'smooth',block:'start'});else{menu.hidden=true;dailyPanel.hidden=true;}
+      if(editMode){menu.hidden=false;dailyPanel.hidden=false;const dailyToggle=menu.querySelector('.daily-toggle');if(dailyToggle){dailyToggle.hidden=true;dailyToggle.style.display='none';dailyToggle.setAttribute('aria-expanded','true');}menu.scrollIntoView({behavior:'smooth',block:'start'});}else{menu.hidden=true;dailyPanel.hidden=true;}
     }
     customize.addEventListener('click',()=>setEditMode(!editMode));
 
