@@ -43,8 +43,7 @@ service firebase.storage {
       allow update, delete: if false;
     }
 
-    // Médias de l’espace publicitaire : dépôt réservé à l’administrateur.
-    // Les fichiers sont consultables publiquement sur la page d’accueil.
+    // Affiches publicitaires publiques. Seul l’administrateur gère les annonces historiques.
     match /publicites/{fileName} {
       allow read: if true;
       allow create: if resource == null && estAdmin()
@@ -67,6 +66,7 @@ service firebase.storage {
       allow update: if false;
       allow delete: if estAdmin();
     }
+    // Un partenaire peut téléverser uniquement son affiche dans son propre dossier.
     match /publicites/partenaires/{uid}/{fileName} {
       allow read: if true;
       allow create: if resource == null && request.auth != null && request.auth.uid == uid
