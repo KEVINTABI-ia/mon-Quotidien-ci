@@ -2819,8 +2819,11 @@ async function supprimerPublicite(id) {
   if (!confirm("Supprimer cette publicité de l’affichage public ?")) return;
   try {
     const ref=db.collection("publicites").doc(id),snap=await ref.get(),data=snap.exists?snap.data():null;
+    if(data?.mediaKey){
+      try{await storage.ref().child(data.mediaKey).delete();}
+      catch(storageErreur){if(storageErreur.code!=="storage/object-not-found")throw new Error("Le fichier image n’a pas pu être supprimé. La publication a été conservée : "+(storageErreur.message||"erreur Storage"));}
+    }
     await ref.delete();
-    if(data?.mediaKey){try{await storage.ref().child(data.mediaKey).delete();}catch(storageErreur){if(storageErreur.code!=="storage/object-not-found")console.error("Suppression fichier publicitaire :",storageErreur);}}
     await chargerPublicitesAdmin();
   } catch (erreur) {
     alert("Suppression impossible : " + erreur.message);
