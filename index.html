@@ -12156,7 +12156,7 @@ window.mtcAfficherActeJudiciaire = function(type){
     shell.id='accueilHomeShell';
     shell.innerHTML=`
       <section class="home-panel" id="homeFamilyLauncher" aria-label="Choisir une famille de services">
-        <div class="home-section-heading"><div><h2>Toutes les familles de services</h2><p>Accédez également aux autres rubriques de Mon Quotidien CI.</p></div></div>
+        <div class="home-section-heading"><div><h2>Toutes les familles de services</h2></div></div>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeMobilite')"><span class="family-entry-icon">🚌</span><strong>Mobilité et transport</strong><small>Gares, déplacements, colis et compagnies</small></button>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeAutomobile')"><span class="family-entry-icon">🚘</span><strong>Automobile</strong><small>Dépannage, entretien, assurance et pièces</small></button>
         <button class="family-entry" type="button" onclick="ouvrirFamilleAccueil('homeDemarches')"><span class="family-entry-icon">🛍️</span><strong>Commerce et emploi</strong><small>Boutiques, annonces et opportunités</small></button>
@@ -13220,6 +13220,72 @@ async function mqciAdminStatutPharmacie(uid,statut){
 </script>
 <style id="mqci-annonces-accueil">#homeQuotidien{display:block!important}#homeQuotidien #menuQuotidien{display:none!important}#homeQuotidien #annoncesValideesAccueil .card{border:1px solid #e0e9e2;border-radius:14px;background:#fff;box-shadow:0 3px 12px rgba(23,61,41,.05)}</style>
 <script src="./cabines.js"></script>
+
+<style id="mqci-familles-services-pleine-largeur-grille-3x2">
+/* Familles de services : pleine largeur et six accès compacts en 3 colonnes. */
+#accueilHomeShell #homeFamilyLauncher{
+  position:relative!important;
+  left:50%!important;
+  width:100vw!important;
+  max-width:none!important;
+  margin-left:-50vw!important;
+  box-sizing:border-box!important;
+  padding:8px clamp(10px,2.5vw,24px) 14px!important;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+#accueilHomeShell #homeFamilyLauncher>.home-section-heading{
+  grid-column:1/-1!important;
+  margin:8px 2px 5px!important;
+}
+#accueilHomeShell #homeFamilyLauncher .family-entry{
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:94px!important;
+  height:100%!important;
+  padding:8px 5px!important;
+  gap:5px!important;
+  border-radius:13px!important;
+}
+#accueilHomeShell #homeFamilyLauncher .family-entry .family-entry-icon{
+  width:32px!important;
+  height:32px!important;
+  flex:0 0 32px!important;
+  border-radius:10px!important;
+  font-size:20px!important;
+}
+#accueilHomeShell #homeFamilyLauncher .family-entry strong{
+  font-size:10px!important;
+  line-height:1.15!important;
+  overflow-wrap:anywhere!important;
+}
+#accueilHomeShell #homeFamilyLauncher .family-entry small{
+  font-size:8px!important;
+  line-height:1.15!important;
+  overflow-wrap:anywhere!important;
+}
+@media(max-width:380px){
+  #accueilHomeShell #homeFamilyLauncher{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:6px!important;
+    padding-left:8px!important;
+    padding-right:8px!important;
+  }
+  #accueilHomeShell #homeFamilyLauncher .family-entry{
+    min-height:88px!important;
+    padding:7px 3px!important;
+    gap:4px!important;
+  }
+  #accueilHomeShell #homeFamilyLauncher .family-entry .family-entry-icon{
+    width:28px!important;height:28px!important;flex-basis:28px!important;font-size:18px!important;
+  }
+  #accueilHomeShell #homeFamilyLauncher .family-entry strong{font-size:9px!important}
+  #accueilHomeShell #homeFamilyLauncher .family-entry small{font-size:7px!important}
+}
+</style>
+
 </body>
 </html>
 
