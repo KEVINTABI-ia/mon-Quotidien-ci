@@ -13357,11 +13357,14 @@ async function mqciAdminStatutPharmacie(uid,statut){
     const dailyPanel=document.getElementById('dailyServicesPanel');
     const dailyGrid=dailyPanel&&dailyPanel.querySelector('.grille-services-quotidiens');
     if(!launcher||!menu||!dailyPanel||!dailyGrid||launcher.dataset.mqciPersonalized==='1')return;
+    /* Le panneau quotidien doit vivre dans la zone SERVICE visible, pas dans le bloc masqué. */
+    launcher.appendChild(menu);
     launcher.dataset.mqciPersonalized='1';
     const heading=launcher.querySelector('.mqci-service-heading');
     if(!heading)return;
     const controls=document.createElement('div');
     controls.id='mqciServicePersonalizeRow';
+    controls.hidden=true;
     controls.innerHTML='<button type="button" id="mqciPersonnaliserServices" aria-pressed="false">⚙ Personnaliser mes accès</button>';
     const status=document.createElement('p');
     status.id='mqciServicePersonalizeStatus';
@@ -13401,7 +13404,11 @@ async function mqciAdminStatutPharmacie(uid,statut){
     }
     customize.addEventListener('click',()=>setEditMode(!editMode));
     if(voirTout)voirTout.addEventListener('click',()=>{
-      dailyPanel.hidden=false;voirTout.setAttribute('aria-expanded','true');
+      controls.hidden=false;
+      dailyPanel.hidden=false;
+      const dailyToggle=menu.querySelector('.daily-toggle');
+      if(dailyToggle)dailyToggle.setAttribute('aria-expanded','true');
+      voirTout.setAttribute('aria-expanded','true');
       menu.scrollIntoView({behavior:'smooth',block:'start'});
     });
     document.addEventListener('click',function(event){
@@ -14007,4 +14014,16 @@ header.mqci-header-premium .mqci-brand-lockup{
     padding:7px 3px!important;
   }
 }
+</style>
+
+ 
+<style id="mqci-fix-ouverture-autres-services">
+/* Le panneau Autre service est rattaché à SERVICE et s'ouvre depuis Voir tout. */
+#accueilHomeShell #homeFamilyLauncher>#menuQuotidien{
+  grid-column:1/-1!important;box-sizing:border-box!important;width:100%!important;
+  max-width:100%!important;min-width:0!important;margin:8px 0 0!important;
+}
+#mqciServicePersonalizeRow[hidden]{display:none!important}
+#accueilHomeShell #homeFamilyLauncher>#menuQuotidien #dailyServicesPanel[hidden]{display:none!important}
+#accueilHomeShell #homeFamilyLauncher>#menuQuotidien #dailyServicesPanel:not([hidden]){display:block!important}
 </style>
