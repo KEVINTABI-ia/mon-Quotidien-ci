@@ -2763,7 +2763,7 @@ async function creerPubliciteManuelle() {
   const statut = document.getElementById("statutNouvellePub");
   const typesAcceptes = ["image/jpeg","image/png","image/webp"];
   if (!titre || !description || !fichier) { statut.textContent = "Renseigne le titre, la description et sélectionne une affiche."; return; }
-  if (!typesAcceptes.includes(fichier.type) || fichier.size > 25 * 1024 * 1024) { statut.textContent = "Format non accepté ou fichier supérieur à 25 Mo. Formats acceptés : JPG, PNG ou WebP."; return; }
+  if (!typesAcceptes.includes(fichier.type) || fichier.size > 10 * 1024 * 1024) { statut.textContent = "Format non accepté ou fichier supérieur à 10 Mo. Formats acceptés : JPG, PNG ou WebP."; return; }
   try {
     statut.textContent = "Envoi du média vers le stockage sécurisé...";
     const mediaStocke = await envoyerFichierFirebaseStorage(fichier, "publicite");
@@ -3915,15 +3915,15 @@ async function envoyerFichierFirebaseStorage(fichier, categorie) {
   if (!fichier) throw new Error("Sélectionne un fichier.");
   const estLogo = categorie === "logo";
   const estImage = fichier.type.startsWith("image/");
-  const typesAutorises = estLogo
+  const typesAutorises = (estLogo || categorie === "publicite")
     ? ["image/jpeg", "image/png", "image/webp"]
     : ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/quicktime"];
   if (!typesAutorises.includes(fichier.type)) {
     throw new Error("Format non accepté. Utilise JPG, PNG, WebP ou une vidéo MP4, WebM ou MOV.");
   }
-  const limite = estLogo ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
+  const limite = (estLogo || categorie === "publicite") ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
   if (fichier.size > limite) {
-    throw new Error("Fichier trop volumineux. Taille maximale : " + (estLogo ? "10 Mo" : "25 Mo") + ".");
+    throw new Error("Fichier trop volumineux. Taille maximale : " + (estLogo || categorie === "publicite" ? "10 Mo" : "25 Mo") + ".");
   }
   let fichierAEnvoyer = fichier;
   if (estImage) {
