@@ -4539,15 +4539,27 @@ async function connecterCompteBoutique(){
   if(zone){
    let contenu='<p>Connecté à : <strong>'+echapperTextePublicite(d.titre)+'</strong></p><button type="button" onclick="deconnecterCompteBoutique()">Se déconnecter de mon espace boutique</button>';
    if(actif){
-    contenu+='<button type="button" class="primary" onclick="ouvrirFormulaireArticleBoutique(\''+boutique.id+'\')">➕ Ajouter un article</button><div id="formArticleBoutique_'+boutique.id+'"></div><h4>Mes articles</h4><div id="mesArticlesBoutique_'+boutique.id+'"></div><button type="button" onclick="chargerCommandesBoutique(\''+boutique.id+'\')">📦 Ouvrir mes commandes</button><div id="commandesBoutique_'+boutique.id+'"></div>';
+    contenu+='<section class="card" style="padding:14px;margin:12px 0;border:1px solid #dcebdd;"><h3 style="margin-top:0;">📊 Tableau de bord vendeur</h3><p>Retrouvez ici les informations essentielles de votre commerce.</p><div id="tableauBordBoutique_'+boutique.id+'" class="notice">Chargement de votre activité...</div><div class="modes" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;"><button type="button" onclick="document.getElementById(\'maBoutiqueProfil_'+boutique.id+'\')?.scrollIntoView({behavior:\'smooth\'})">🏪 Ma boutique</button><button type="button" onclick="document.getElementById(\'mesArticlesBoutique_'+boutique.id+'\')?.scrollIntoView({behavior:\'smooth\'})">🛍️ Mes produits</button><button type="button" onclick="document.getElementById(\'commandesBoutique_'+boutique.id+'\')?.scrollIntoView({behavior:\'smooth\'})">📦 Mes commandes</button></div><div id="maBoutiqueProfil_'+boutique.id+'" class="card" style="padding:12px;margin-top:12px;"><h4>🏪 Ma boutique</h4><p><strong>'+echapperTextePublicite(d.titre||"Commerce")+'</strong></p><p>'+echapperTextePublicite(d.categorie||"Catégorie non renseignée")+' · '+echapperTextePublicite(d.commune||"Commune non renseignée")+'</p><p>'+echapperTextePublicite(d.adresseBoutique||"Adresse non renseignée")+'</p><p>'+echapperTextePublicite(d.description||"Aucune présentation renseignée")+'</p></div></section><button type="button" class="primary" onclick="ouvrirFormulaireArticleBoutique(\''+boutique.id+'\')">➕ Ajouter un article</button><div id="formArticleBoutique_'+boutique.id+'"></div><h4>🛍️ Mes produits</h4><div id="mesArticlesBoutique_'+boutique.id+'"></div><h4>📦 Mes commandes</h4><button type="button" onclick="chargerCommandesBoutique(\''+boutique.id+'\')">Actualiser mes commandes</button><div id="commandesBoutique_'+boutique.id+'"></div>';
    }else{
     contenu+='<div class="notice"><strong>'+(paiementInitial?"Paiement Jèko requis":"Abonnement expiré")+'</strong><p>'+(paiementInitial?"Votre dossier est approuvé. Réglez votre formule pour activer la visibilité.":"Votre boutique n’est plus visible. Réglez une formule pour rétablir sa visibilité.")+'</p><button type="button" class="primary" onclick="afficherFormulaireRenouvellementBoutique(\''+boutique.id+'\')">'+(paiementInitial?"Payer mon abonnement":"Renouveler mon abonnement")+'</button><div id="formRenouvellementBoutique_'+boutique.id+'"></div></div>';
    }
    zone.innerHTML=contenu;
    ajouterBlocPublicitePartenaire(zone,resultat.user.uid,"demandes_nouveaux_services/"+boutique.id);
   }
-  if(actif){chargerMesArticlesBoutique(boutique.id);chargerCommandesBoutique(boutique.id);}
+  if(actif){chargerTableauBordBoutique(boutique.id);chargerMesArticlesBoutique(boutique.id);chargerCommandesBoutique(boutique.id);}
  }catch(e){console.error(e);statut.textContent="Connexion impossible : "+(e.message||"vérifiez vos identifiants.");}
+}
+async function chargerTableauBordBoutique(boutiqueId){
+ const zone=document.getElementById("tableauBordBoutique_"+boutiqueId),user=partnerAuth.currentUser;
+ if(!zone||!user)return;
+ try{
+  const [articles,commandes]=await Promise.all([
+   partnerDb.collection("articles_boutiques").where("boutiqueId","==",boutiqueId).where("boutiqueUid","==",user.uid).get(),
+   partnerDb.collection("commandes_colis").where("boutiqueId","==",boutiqueId).where("boutiqueUid","==",user.uid).get()
+  ]);
+  const totalArticles=articles.size,publies=articles.docs.filter(d=>d.data().statut==="approuve").length,enAttente=articles.docs.filter(d=>d.data().statut==="en_attente").length,totalCommandes=commandes.size;
+  zone.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px;"><div class="card" style="padding:10px;margin:0;"><strong>'+totalArticles+'</strong><p style="margin:4px 0 0;">Produits</p></div><div class="card" style="padding:10px;margin:0;"><strong>'+publies+'</strong><p style="margin:4px 0 0;">Publiés</p></div><div class="card" style="padding:10px;margin:0;"><strong>'+enAttente+'</strong><p style="margin:4px 0 0;">En attente</p></div><div class="card" style="padding:10px;margin:0;"><strong>'+totalCommandes+'</strong><p style="margin:4px 0 0;">Commandes reçues</p></div></div>';
+ }catch(e){console.error(e);zone.textContent="Les indicateurs ne sont pas disponibles pour le moment.";}
 }
 async function deconnecterCompteBoutique(){
  try{await partnerAuth.signOut();boutiqueSessionPartenaire=false;
