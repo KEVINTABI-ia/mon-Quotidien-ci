@@ -13616,3 +13616,33 @@ header.mqci-header-premium .mqci-brand-lockup{
   }
 }
 </style>
+\n
+<style id="mqci-images-articles-remplissage-cadre">
+/* Les photos remplissent entièrement leur cadre : plus de bandes blanches latérales. */
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-image{
+  display:block!important;
+  width:100%!important;
+  height:190px!important;
+  min-height:190px!important;
+  max-height:190px!important;
+  padding:0!important;
+  overflow:hidden!important;
+  background:#F6F8F6!important;
+}
+#accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-image img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:none!important;
+  max-height:none!important;
+  object-fit:cover!important;
+  object-position:center!important;
+}
+@media(max-width:380px){
+  #accueilHomeShell #articlesBoutiquesAccueil .mqci-produit-image{
+    height:174px!important;
+    min-height:174px!important;
+    max-height:174px!important;
+  }
+}
+</style>
