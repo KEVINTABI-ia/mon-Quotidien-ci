@@ -7155,7 +7155,7 @@ async function connecterPartenaireSelonType(){
       if(statut)statut.textContent="Connexion réussie à votre espace de ramassage.";
       return;
     }
-    if(type==="boutique"){
+    if(type==="boutique"||type==="commercant"){
       const emailBoutique=document.getElementById("connexionBoutiqueEmail");
       const mdpBoutique=document.getElementById("connexionBoutiqueMotDePasse");
       const statutBoutique=document.getElementById("connexionBoutiqueStatut");
