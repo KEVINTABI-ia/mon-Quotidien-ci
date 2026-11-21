@@ -94,6 +94,7 @@ service cloud.firestore {
       return /databases/$(database)/documents/partenaires/$(uid)/verrous/missionActive;
     }
     // Une nouvelle mission indépendante exige un solde disponible positif et aucune dette de commission.
+    // Seules les opérations serveur autorisées peuvent débiter le portefeuille et inscrire son journal.
     function portefeuilleLivreurAutorise(uid) {
       return exists(/databases/$(database)/documents/portefeuilles_livreurs/$(uid))
         && get(/databases/$(database)/documents/portefeuilles_livreurs/$(uid)).data.get("soldeDisponibleXof", 0) > 0
