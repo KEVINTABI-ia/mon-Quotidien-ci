@@ -2351,12 +2351,11 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
   <label>Nom de l'entreprise / titre</label><input id="nouvellePubTitre" maxlength="100" placeholder="Ex. : Restaurant Le Délice">
   <label>Description</label><textarea id="nouvellePubDescription" maxlength="1000" rows="3" placeholder="Description de l'activité"></textarea>
   <label>Présentation</label><select id="nouvellePubType"><option value="banniere">Bannière publicitaire</option><option value="logo">Logo partenaire</option></select>
-  <label>Image ou vidéo publicitaire</label><input id="nouvellePubImage" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime">
-  <p class="notice">Choisis une image JPG, PNG, WebP ou une vidéo MP4, WebM ou MOV depuis ton appareil. Taille maximale : 25 Mo. La publicité sera enregistrée masquée ; tu décideras ensuite de l’afficher.</p>
+  <label>Affiche publicitaire</label><input id="nouvellePubImage" type="file" accept="image/jpeg,image/png,image/webp">
+  <p class="notice">Choisis une affiche JPG, PNG ou WebP. Taille maximale : 10 Mo. La publicité sera enregistrée masquée ; tu décideras ensuite de l’afficher.</p>
   <button type="button" class="primary" onclick="creerPubliciteManuelle()">Enregistrer la publicité</button>
   <p id="statutNouvellePub" class="notice"></p>
-  <h4>Demandes reçues</h4><button type="button" class="primary" onclick="chargerDemandesPublicitesAdmin()">Actualiser les demandes</button>
-  <div id="listeDemandesPublicitesAdmin"><p class="notice">Connecte-toi comme administrateur pour consulter les demandes.</p></div>
+  <div id="listeDemandesPublicitesAdmin" style="display:none"></div>
   <h4>Publicités enregistrées</h4><div id="listePublicitesAdmin"><p class="notice">Aucune annonce chargée.</p></div>
 </div>
 
@@ -2417,29 +2416,89 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
       <span>Réservez un emplacement et présentez votre activité à nos utilisateurs.</span>
     </div>
   </div>
-  <form id="formulairePublicite" class="formulaire-publicite" onsubmit="envoyerDemandePublicite(event)" style="display:none">
-    <h3>Votre demande de publicité</h3>
-    <div class="forfaits-publicite">
-      <label class="forfait-publicite"><input type="radio" name="forfaitPublicite" value="Découverte - 3 jours - 2 000 FCFA" required><span><strong>Découverte</strong><br>3 jours · 2 000 FCFA</span></label>
-      <label class="forfait-publicite"><input type="radio" name="forfaitPublicite" value="Visibilité - 7 jours - 5 000 FCFA"><span><strong>Visibilité</strong><br>7 jours · 5 000 FCFA</span></label>
-      <label class="forfait-publicite"><input type="radio" name="forfaitPublicite" value="Professionnel - 15 jours - 9 000 FCFA"><span><strong>Professionnel</strong><br>15 jours · 9 000 FCFA</span></label>
-      <label class="forfait-publicite"><input type="radio" name="forfaitPublicite" value="Premium - 30 jours - 15 000 FCFA"><span><strong>Premium</strong><br>30 jours · 15 000 FCFA</span></label>
-    </div>
-    <label for="publiciteNom">Votre nom</label>
-    <input id="publiciteNom" name="nom" type="text" maxlength="80" autocomplete="name" required placeholder="Nom et prénom">
-    <label for="publiciteTelephone">Votre numéro de téléphone</label>
-    <input id="publiciteTelephone" name="telephone" type="tel" maxlength="20" autocomplete="tel" required placeholder="Ex. 07 00 00 00 00">
-    <label for="publiciteActivite">Votre activité / entreprise</label>
-    <input id="publiciteActivite" name="activite" type="text" maxlength="100" required placeholder="Nom de votre entreprise ou activité">
-    <label for="publiciteDescription">Description de la publicité</label>
-    <textarea id="publiciteDescription" name="description" maxlength="1000" rows="4" required placeholder="Décrivez le produit ou service à promouvoir"></textarea>
-    <p id="statutPublicite" class="notice" aria-live="polite"></p>
-    <p class="publicite-note">Après l’ouverture de WhatsApp, joignez votre photo ou vidéo directement à la conversation. Le paiement sera confirmé avec notre équipe avant toute publication.</p>
-    <button type="submit" class="primary">Envoyer ma demande sur WhatsApp</button>
-    <button type="button" class="secondaire" onclick="fermerFormulairePublicite()">Annuler</button>
-  </form>
+  <!-- Les commandes publicitaires sont désormais accessibles depuis les espaces partenaires. -->
 </section>
 <script>
+
+function ajouterBlocPublicitePartenaire(zone, uid, partnerProfilePath) {
+  if (!zone || !uid || document.getElementById("blocPublicitePartenaire")) return;
+  window.publicitePartnerProfilePath=partnerProfilePath||("partenaires/"+uid);
+  const bloc=document.createElement("section");
+  bloc.id="blocPublicitePartenaire";
+  bloc.className="card";
+  bloc.style.marginTop="18px";
+  bloc.innerHTML=`
+    <h3>📢 Faire une publicité</h3>
+    <p class="notice">Publiez une affiche dans l’Espace publicitaire de l’accueil. Votre annonce sera activée automatiquement après confirmation du paiement Jèko.</p>
+    <button type="button" class="primary" onclick="ouvrirFormulairePublicitePartenaire()">Créer ma publicité</button>
+    <div id="formulairePublicitePartenaire" style="display:none;margin-top:12px;">
+      <label for="pubPartenaireTitre">Nom de votre activité</label>
+      <input id="pubPartenaireTitre" maxlength="100" placeholder="Nom de votre entreprise">
+      <label for="pubPartenaireDescription">Courte description (facultatif)</label>
+      <textarea id="pubPartenaireDescription" maxlength="500" rows="2" placeholder="Présentez votre activité"></textarea>
+      <label for="pubPartenaireImage">Votre affiche (JPG, PNG ou WebP)</label>
+      <input id="pubPartenaireImage" type="file" accept="image/jpeg,image/png,image/webp">
+      <p class="notice">Image uniquement · 10 Mo maximum.</p>
+      <label for="pubPartenaireForfait">Forfait publicitaire</label>
+      <select id="pubPartenaireForfait">
+        <option value="decouverte">Découverte — 3 jours — 2 000 FCFA</option>
+        <option value="visibilite">Visibilité — 7 jours — 5 000 FCFA</option>
+        <option value="professionnel">Professionnel — 15 jours — 9 000 FCFA</option>
+        <option value="premium">Premium — 30 jours — 15 000 FCFA</option>
+      </select>
+      <label for="pubPartenairePaiement">Moyen de paiement</label>
+      <select id="pubPartenairePaiement">
+        <option value="wave">Wave</option><option value="orange">Orange Money</option>
+        <option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option>
+      </select>
+      <button type="button" class="primary" id="pubPartenairePayer" onclick="payerPublicitePartenaire()">Continuer vers le paiement Jèko</button>
+      <button type="button" onclick="fermerFormulairePublicitePartenaire()">Annuler</button>
+      <p id="statutPublicitePartenaire" class="notice" aria-live="polite"></p>
+    </div>`;
+  zone.appendChild(bloc);
+}
+function ouvrirFormulairePublicitePartenaire(){
+ const f=document.getElementById("formulairePublicitePartenaire");if(f){f.style.display="block";f.scrollIntoView({behavior:"smooth",block:"center"});}
+}
+function fermerFormulairePublicitePartenaire(){
+ const f=document.getElementById("formulairePublicitePartenaire");if(f)f.style.display="none";
+}
+async function payerPublicitePartenaire(){
+ const user=partnerAuth.currentUser,zone=document.getElementById("statutPublicitePartenaire"),button=document.getElementById("pubPartenairePayer");
+ const titre=document.getElementById("pubPartenaireTitre")?.value.trim()||"",description=document.getElementById("pubPartenaireDescription")?.value.trim()||"";
+ const fichier=document.getElementById("pubPartenaireImage")?.files?.[0],planId=document.getElementById("pubPartenaireForfait")?.value||"",paymentMethod=document.getElementById("pubPartenairePaiement")?.value||"";
+ if(!user){if(zone)zone.textContent="Connectez-vous à votre espace partenaire.";return;}
+ if(titre.length<2||!fichier){if(zone)zone.textContent="Indiquez le nom de votre activité et sélectionnez une affiche.";return;}
+ if(!["image/jpeg","image/png","image/webp"].includes(fichier.type)||fichier.size>10*1024*1024){if(zone)zone.textContent="Format invalide. Choisissez une image JPG, PNG ou WebP de 10 Mo maximum.";return;}
+ if(!["decouverte","visibilite","professionnel","premium"].includes(planId)||!["wave","orange","mtn","moov","djamo"].includes(paymentMethod))return;
+ if(button){button.disabled=true;button.textContent="Préparation de l’affiche...";}
+ if(zone)zone.textContent="Compression et envoi sécurisé de votre affiche...";
+ let imagePath="";
+ try{
+  const dataUrl=await compresserImagePublicite(fichier),blob=convertirDataUrlEnBlob(dataUrl);
+  if(!blob||!blob.size)throw new Error("Compression de l’affiche impossible.");
+  imagePath="publicites/partenaires/"+user.uid+"/"+crypto.randomUUID()+".jpg";
+  const ref=partnerStorage.ref().child(imagePath);
+  await ref.put(blob,{contentType:"image/jpeg",cacheControl:"public,max-age=31536000"});
+  const mediaUrl=await ref.getDownloadURL();
+  if(zone)zone.textContent="Affiche envoyée. Préparation du paiement Jèko...";
+  const token=await user.getIdToken();
+  const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{
+   method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
+   body:JSON.stringify({serviceId:"publicite",planId,paymentMethod,imagePath,mediaUrl,titre,description,partnerProfilePath:window.publicitePartnerProfilePath||("partenaires/"+user.uid)})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.checkoutUrl)throw new Error(data.error==="partner_not_eligible"?"Votre compte partenaire doit être approuvé et actif.":data.diagnostic||data.error||"Jèko n’a pas pu préparer le paiement.");
+  if(zone)zone.textContent="Redirection vers Jèko...";
+  window.location.assign(data.checkoutUrl);
+ }catch(e){
+  console.error("Paiement publicité partenaire :",e);
+  if(zone)zone.textContent="Impossible de démarrer le paiement : "+(e.message||"erreur inconnue");
+  if(button){button.disabled=false;button.textContent="Réessayer le paiement Jèko";}
+  if(imagePath){/* Le fichier non payé est conservé temporairement pour permettre une reprise sans perdre l'affiche. */}
+ }
+}
+
 function ouvrirFormulairePublicite() {
   const formulaire = document.getElementById("formulairePublicite");
   formulaire.style.display = "block";
@@ -2619,9 +2678,7 @@ async function chargerPublicitesAdmin() {
       const etat = visible ? "Affichée" : "Masquée";
       const visuel = d.imageDataUrl || d.mediaUrl || "";
       const apercuMedia = visuel
-        ? (String(d.mediaType || "").startsWith("video/")
-          ? '<video src="' + echapperTextePublicite(visuel) + '" controls muted playsinline preload="metadata" style="width:100%;max-width:260px;max-height:180px;border-radius:10px;"></video>'
-          : '<img src="' + echapperTextePublicite(visuel) + '" alt="" style="width:100%;max-width:220px;max-height:140px;object-fit:contain;border-radius:10px;">')
+        ? '<img src="' + echapperTextePublicite(visuel) + '" alt="Affiche publicitaire" style="width:100%;max-width:220px;max-height:180px;object-fit:contain;border-radius:10px;">'
         : "";
       return '<article class="card" style="margin:12px 0;padding:14px;">'
         + apercuMedia
@@ -2631,6 +2688,8 @@ async function chargerPublicitesAdmin() {
         + '<label>Description</label><textarea id="descriptionPub_' + doc.id + '" maxlength="1000" rows="3" readonly>' + echapperTextePublicite(d.description) + '</textarea>'
         + '<button type="button" onclick="activerEditionPublicite(&quot;' + doc.id + '&quot;)">Modifier</button>'
         + '<button type="button" id="enregistrerPub_' + doc.id + '" onclick="modifierPublicite(&quot;' + doc.id + '&quot;)" disabled>Enregistrer les modifications</button>'
+        + '<label>Remplacer l’affiche</label><input id="imageRemplacementPub_' + doc.id + '" type="file" accept="image/jpeg,image/png,image/webp">'
+        + '<button type="button" onclick="remplacerImagePublicite(&quot;' + doc.id + '&quot;)">Enregistrer la nouvelle affiche</button>'
         + '<button type="button" class="primary" onclick="basculerVisibilitePublicite(&quot;' + doc.id + '&quot;,&quot;' + (visible ? 'masquee' : 'publiee') + '&quot;)">' + (visible ? 'Masquer' : 'Afficher') + '</button>'
         + '<button type="button" onclick="supprimerPublicite(&quot;' + doc.id + '&quot;)">Supprimer définitivement</button>'
         + '</article>';
@@ -2683,9 +2742,9 @@ async function creerPubliciteManuelle() {
   const typeAffichage = document.getElementById("nouvellePubType").value;
   const fichier = document.getElementById("nouvellePubImage").files[0];
   const statut = document.getElementById("statutNouvellePub");
-  const typesAcceptes = ["image/jpeg","image/png","image/webp","video/mp4","video/webm","video/quicktime"];
-  if (!titre || !description || !fichier) { statut.textContent = "Renseigne le titre, la description et sélectionne une image ou une vidéo."; return; }
-  if (!typesAcceptes.includes(fichier.type) || fichier.size > 25 * 1024 * 1024) { statut.textContent = "Format non accepté ou fichier supérieur à 25 Mo. Formats acceptés : JPG, PNG, WebP, MP4, WebM ou MOV."; return; }
+  const typesAcceptes = ["image/jpeg","image/png","image/webp"];
+  if (!titre || !description || !fichier) { statut.textContent = "Renseigne le titre, la description et sélectionne une affiche."; return; }
+  if (!typesAcceptes.includes(fichier.type) || fichier.size > 10 * 1024 * 1024) { statut.textContent = "Format non accepté ou fichier supérieur à 10 Mo. Formats acceptés : JPG, PNG ou WebP."; return; }
   try {
     statut.textContent = "Envoi du média vers le stockage sécurisé...";
     const mediaStocke = await envoyerFichierFirebaseStorage(fichier, "publicite");
@@ -2745,11 +2804,27 @@ async function modifierPublicite(id) {
   }
 }
 
+async function remplacerImagePublicite(id){
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return alert("Accès administrateur requis.");
+ const fichier=document.getElementById("imageRemplacementPub_"+id)?.files?.[0];
+ if(!fichier||!["image/jpeg","image/png","image/webp"].includes(fichier.type)||fichier.size>10*1024*1024)return alert("Choisis une image JPG, PNG ou WebP de 10 Mo maximum.");
+ try{
+  const media=await envoyerFichierFirebaseStorage(fichier,"publicite"),ref=db.collection("publicites").doc(id),snap=await ref.get(),ancien=snap.exists?snap.data()?.mediaKey:null;
+  await ref.update({mediaKey:media.path,mediaUrl:media.url,mediaType:"image/jpeg",imageDataUrl:firebase.firestore.FieldValue.delete(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  if(ancien){try{await storage.ref().child(ancien).delete();}catch(e){if(e.code!=="storage/object-not-found")console.error("Ancienne affiche non supprimée :",e);}}
+  await chargerPublicitesAdmin();alert("Affiche remplacée.");
+ }catch(e){alert("Remplacement impossible : "+(e.message||"erreur"));}
+}
 async function supprimerPublicite(id) {
   if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
   if (!confirm("Supprimer cette publicité de l’affichage public ?")) return;
   try {
-    await db.collection("publicites").doc(id).delete();
+    const ref=db.collection("publicites").doc(id),snap=await ref.get(),data=snap.exists?snap.data():null;
+    if(data?.mediaKey){
+      try{await storage.ref().child(data.mediaKey).delete();}
+      catch(storageErreur){if(storageErreur.code!=="storage/object-not-found")throw new Error("Le fichier image n’a pas pu être supprimé. La publication a été conservée : "+(storageErreur.message||"erreur Storage"));}
+    }
+    await ref.delete();
     await chargerPublicitesAdmin();
   } catch (erreur) {
     alert("Suppression impossible : " + erreur.message);
@@ -2767,31 +2842,31 @@ function chargerPublicitesAccueil() {
         const maintenant = Date.now();
         const annonces = (window.publicitesAccueilDocs || [])
           .map(doc => ({id:doc.id,...doc.data()}))
-          .filter(d => !d.dateFin?.toDate || d.dateFin.toDate().getTime() > maintenant)
+          .filter(d => d.statut === "publiee" && (!d.dateFin?.toDate || d.dateFin.toDate().getTime() > maintenant) && (d.imageDataUrl || d.mediaUrl) && (!d.mediaType || String(d.mediaType).startsWith("image/")) )
           .sort((a,b) => (a.dateDebut?.toMillis?.() || 0) - (b.dateDebut?.toMillis?.() || 0));
         const sectionPublicite = document.getElementById("espacePublicitaire");
         if (!annonces.length) {
           if (sectionPublicite) sectionPublicite.style.display = "none";
           zone.innerHTML = "";
+          window.indexPubliciteAccueil=0;
           return;
         }
         if (sectionPublicite) sectionPublicite.style.display = "";
-        zone.innerHTML = annonces.map(d => {
-          const titre = echapperTextePublicite(d.titre);
-          const description = echapperTextePublicite(d.description);
-          const sourceVisuel = d.imageDataUrl || d.mediaUrl || "";
-          const media = String(d.mediaType || "").startsWith("video/")
-            ? '<video src="' + echapperTextePublicite(sourceVisuel) + '" controls muted playsinline preload="metadata" style="width:100%;max-height:380px;object-fit:contain;border-radius:14px;"></video>'
-            : '<img src="' + echapperTextePublicite(sourceVisuel) + '" alt="Publicité ' + titre + '" loading="lazy" style="width:100%;max-height:260px;object-fit:contain;border-radius:14px;">';
-          return '<article class="publicite-annonce" style="padding:0;">'
-            + '<strong style="display:block;">' + titre + '</strong>'
-            + '<p>' + description + '</p>'
-            + media + '</article>';
-        }).join("");
+        window.indexPubliciteAccueil=(window.indexPubliciteAccueil||0)%annonces.length;
+        const d=annonces[window.indexPubliciteAccueil],titre=echapperTextePublicite(d.titre);
+        const sourceVisuel=d.imageDataUrl||d.mediaUrl||"";
+        zone.innerHTML='<article class="publicite-annonce" style="padding:0;text-align:center;">'
+          +'<strong style="display:block;margin-bottom:8px;">'+titre+'</strong>'
+          +(d.description?'<p>'+echapperTextePublicite(d.description)+'</p>':"")
+          +'<img src="'+echapperTextePublicite(sourceVisuel)+'" alt="Affiche publicitaire '+titre+'" loading="eager" style="display:block;width:100%;max-height:380px;object-fit:contain;border-radius:14px;margin:auto;">'
+          +'</article>';
       };
       afficherAnnoncesActives();
       if (window.timerPublicitesAccueil) clearInterval(window.timerPublicitesAccueil);
-      window.timerPublicitesAccueil = setInterval(afficherAnnoncesActives, 30000);
+      window.timerPublicitesAccueil = setInterval(()=>{
+        window.indexPubliciteAccueil=(window.indexPubliciteAccueil||0)+1;
+        afficherAnnoncesActives();
+      },15000);
     }, erreur => {
       console.error("Affichage publicités :", erreur);
     });
@@ -3692,6 +3767,7 @@ var storage = firebase.storage();
 var partnerApp = firebase.apps.find(function(app){return app.name === "partnerAuth";}) || firebase.initializeApp(firebaseConfig, "partnerAuth");
 var partnerAuth = partnerApp.auth();
 var partnerDb = partnerApp.firestore();
+var partnerStorage = partnerApp.storage();
 partnerAuth.useDeviceLanguage();
 
 /* Authentification générale obligatoire — e-mail ou téléphone */
@@ -3806,7 +3882,7 @@ auth.onAuthStateChanged(function(user){
 // la session du client principal : le retour Jèko doit reprendre le jeton compagnie.
 partnerAuth.onAuthStateChanged(function(user){
   const paymentService=new URLSearchParams(window.location.search).get("serviceId");
-  if(user&&paymentService==="ramassage")verifierRetourPaiementJeko(user);
+  if(user&&(paymentService==="ramassage"||paymentService==="publicite"))verifierRetourPaiementJeko(user);
 });
 
 
@@ -3824,15 +3900,15 @@ async function envoyerFichierFirebaseStorage(fichier, categorie) {
   if (!fichier) throw new Error("Sélectionne un fichier.");
   const estLogo = categorie === "logo";
   const estImage = fichier.type.startsWith("image/");
-  const typesAutorises = estLogo
+  const typesAutorises = (estLogo || categorie === "publicite")
     ? ["image/jpeg", "image/png", "image/webp"]
     : ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/quicktime"];
   if (!typesAutorises.includes(fichier.type)) {
     throw new Error("Format non accepté. Utilise JPG, PNG, WebP ou une vidéo MP4, WebM ou MOV.");
   }
-  const limite = estLogo ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
+  const limite = (estLogo || categorie === "publicite") ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
   if (fichier.size > limite) {
-    throw new Error("Fichier trop volumineux. Taille maximale : " + (estLogo ? "10 Mo" : "25 Mo") + ".");
+    throw new Error("Fichier trop volumineux. Taille maximale : " + (estLogo || categorie === "publicite" ? "10 Mo" : "25 Mo") + ".");
   }
   let fichierAEnvoyer = fichier;
   if (estImage) {
@@ -4454,6 +4530,7 @@ async function connecterCompteBoutique(){
     contenu+='<div class="notice"><strong>'+(paiementInitial?"Paiement Jèko requis":"Abonnement expiré")+'</strong><p>'+(paiementInitial?"Votre dossier est approuvé. Réglez votre formule pour activer la visibilité.":"Votre boutique n’est plus visible. Réglez une formule pour rétablir sa visibilité.")+'</p><button type="button" class="primary" onclick="afficherFormulaireRenouvellementBoutique(\''+boutique.id+'\')">'+(paiementInitial?"Payer mon abonnement":"Renouveler mon abonnement")+'</button><div id="formRenouvellementBoutique_'+boutique.id+'"></div></div>';
    }
    zone.innerHTML=contenu;
+   ajouterBlocPublicitePartenaire(zone,resultat.user.uid,"demandes_nouveaux_services/"+boutique.id);
   }
   if(actif){chargerMesArticlesBoutique(boutique.id);chargerCommandesBoutique(boutique.id);}
  }catch(e){console.error(e);statut.textContent="Connexion impossible : "+(e.message||"vérifiez vos identifiants.");}
@@ -7141,6 +7218,7 @@ function afficherEspacePartenaire(dossier, uid) {
     <div id="listeCommandesPartenaire"><p>Appuyez sur « Actualiser mes commandes » pour consulter vos missions.</p></div>
 
   `;
+  ajouterBlocPublicitePartenaire(zone, uid);
   zone.scrollIntoView({behavior:"smooth", block:"start"});
   chargerCommandesPartenaire();
 }
@@ -8238,8 +8316,9 @@ async function verifierRetourPaiementJeko(user){
  const boutiqueZone=serviceId==="boutique_renewal"?(document.getElementById("boutiqueCompteConnecte")||document.getElementById("connexionBoutiqueStatut")):null;
  const logementZone=serviceId==="logement_renewal"?(document.getElementById("logementSubscriptionStatus")||document.getElementById("logementRenewal")):null;
  const ramassageZone=serviceId==="ramassage"?(document.getElementById("ramassageJekoPaymentStatus")||document.getElementById("ramassageCompanyStatus")):null;
+ const publiciteZone=serviceId==="publicite"?(document.getElementById("statutPublicitePartenaire")||document.getElementById("blocPublicitePartenaire")):null;
  const partnerServiceZone=null;
- const zone=serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:(serviceId==="ramassage"?ramassageZone:(serviceId==="partenaire_services"?partnerServiceZone:document.getElementById("etatAbonnementAuto"))))));
+ const zone=serviceId==="publicite"?publiciteZone:(serviceId==="objet_retrouve"?document.getElementById("orStatutReclamation"):(serviceId==="compagnie_voyage"?companyZone:(serviceId==="boutique_renewal"?boutiqueZone:(serviceId==="logement_renewal"?logementZone:(serviceId==="ramassage"?ramassageZone:(serviceId==="partenaire_services"?partnerServiceZone:document.getElementById("etatAbonnementAuto")))))));
  if(paymentState==="error"){
   if(serviceId==="partenaire_services"){
    try{if(paymentId){const token=await user.getIdToken(true);await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/status?paymentId="+encodeURIComponent(paymentId),{headers:{Authorization:"Bearer "+token}});}}catch(e){}
@@ -8269,6 +8348,9 @@ async function verifierRetourPaiementJeko(user){
     }else if(serviceId==="logement_renewal"){
      if(zone)zone.textContent="Paiement confirmé par Jèko. Actualisation de votre espace Logement…";
      if(window.logementRefreshSpace)await window.logementRefreshSpace();
+    }else if(serviceId==="publicite"){
+     if(zone)zone.textContent="Paiement confirmé par Jèko. Votre affiche est publiée dans l’Espace publicitaire de l’accueil.";
+     /* L’écoute Firestore actualise automatiquement l’affiche après le webhook. */
     }else if(serviceId==="ramassage"){
      if(zone)zone.textContent="Paiement de 2 000 FCFA confirmé par Jèko. Activation de votre abonnement…";
      if(partnerAuth.currentUser)await afficherEspaceRamassage(partnerAuth.currentUser);
@@ -12386,23 +12468,28 @@ async function chargerOffresEmploiPubliques(){const z=document.getElementById('e
 async function chargerOffresEmploiAdmin(){const z=document.getElementById('emploisListeAdmin');if(!z||!auth.currentUser||auth.currentUser.uid!==ADMIN_UID)return;z.innerHTML='<p class="notice">Chargement...</p>';try{const s=await db.collection('annonces_offres').get(),d=s.docs.filter(x=>x.data().typeAnnonce==='emploi').sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));z.innerHTML=d.length?d.map(x=>{const a=x.data(),pending=a.statut==='en_attente';return '<article class="card" style="padding:12px;margin:9px 0;"><strong>'+echapperEmploi(a.titre)+'</strong><p>'+echapperEmploi(a.entreprise)+' · '+echapperEmploi(a.commune)+'</p><p>'+echapperEmploi(a.telephone)+'</p><p>'+echapperEmploi(a.description)+'</p><p>Statut : '+echapperEmploi(a.statut)+'</p>'+(pending?'<button class="primary" onclick="validerOffreEmploi(\''+x.id+'\')">Valider et publier</button><button onclick="rejeterOffreEmploi(\''+x.id+'\')">Refuser</button>':'')+'<button type="button" style="display:block;margin-top:8px;background:#b42318;color:#fff;" onclick="supprimerOffreEmploiAdmin(\''+x.id+'\')">🗑️ Supprimer l’offre</button></article>';}).join(''):'<p class="notice">Aucune proposition.</p>';}catch(e){console.error(e);z.innerHTML='<p class="notice">Erreur de chargement.</p>';}}
 async function chargerAnnoncesValideesAccueil(){
  const zone=document.getElementById("annoncesValideesAccueil");if(!zone)return;
- zone.innerHTML='<p class="notice">Chargement des annonces validées...</p>';
- try{
-  const snap=await db.collection("demandes_nouveaux_services").where("type","==","annonce").where("statut","==","approuve").limit(100).get();
-  const items=snap.docs.map(doc=>({id:doc.id,data:doc.data()}))
-   .filter(item=>item.data.photoUrl&&String(item.data.telephone||"").trim())
-   .sort((a,b)=>(b.data.createdAt?.toMillis?.()||0)-(a.data.createdAt?.toMillis?.()||0)).slice(0,12);
-  if(!items.length){zone.innerHTML='<p class="notice">Aucune affiche validée avec un contact disponible pour le moment.</p>';return;}
-  zone.innerHTML='<div class="annonces-accueil-defilement" aria-label="Espace publicitaire" tabindex="0" style="display:flex;flex-direction:row;align-items:stretch;gap:14px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:8px 2px 14px;">'+items.map(item=>{
-   const d=item.data;
-   const photo=echapperTextePublicite(d.photoUrl);
-   const contact=String(d.telephone||"").replace(/[^+0-9]/g,"");
-   return '<article class="card" style="box-sizing:border-box;flex:0 0 min(82vw,320px);width:min(82vw,320px);max-width:320px;padding:10px;margin:0;text-align:center;scroll-snap-align:start;">'
-    +'<img src="'+photo+'" alt="Affiche de l’annonce" loading="lazy" style="display:block;width:100%;height:300px;object-fit:contain;border-radius:10px;margin:0 auto 10px;">'
-    +'<a class="primary" style="display:block;width:fit-content;min-width:160px;margin:8px auto 0;padding:12px 24px;text-decoration:none;text-align:center;" href="tel:'+contact+'">📞 Contacter</a>'
-    +'</article>';
-  }).join("")+'</div><p class="notice" style="text-align:center;margin-top:4px;">Faites glisser les annonces horizontalement pour les parcourir</p>';
- }catch(e){console.error("Espace publicitaire accueil :",e);zone.innerHTML='<p class="notice">Impossible de charger les annonces pour le moment.</p>';}
+ if(window.ecoutePublicitesAccueilHome)window.ecoutePublicitesAccueilHome();
+ window.ecoutePublicitesAccueilHome=db.collection("publicites").where("statut","==","publiee").onSnapshot(snapshot=>{
+  window.publicitesAccueilHomeDocs=snapshot.docs;
+  const afficher=()=>{
+   const maintenant=Date.now();
+   const items=(window.publicitesAccueilHomeDocs||[]).map(doc=>({id:doc.id,...doc.data()}))
+    .filter(d=>(!d.dateFin?.toDate||d.dateFin.toDate().getTime()>maintenant)&&(d.mediaUrl||d.imageDataUrl)&&(!d.mediaType||String(d.mediaType).startsWith("image/")))
+    .sort((a,b)=>(a.dateDebut?.toMillis?.()||0)-(b.dateDebut?.toMillis?.()||0));
+   if(!items.length){zone.innerHTML='<p class="notice">Aucune affiche publicitaire active pour le moment.</p>';window.indexPubliciteAccueilHome=0;return;}
+   window.indexPubliciteAccueilHome=(window.indexPubliciteAccueilHome||0)%items.length;
+   const d=items[window.indexPubliciteAccueilHome],titre=echapperTextePublicite(d.titre||"Publicité");
+   const image=echapperTextePublicite(d.imageDataUrl||d.mediaUrl);
+   zone.innerHTML='<div class="annonces-accueil-defilement" aria-label="Affiches publicitaires" style="width:100%;text-align:center;">'
+    +'<article class="card" style="padding:10px;margin:0 auto;max-width:520px;">'
+    +'<img src="'+image+'" alt="Affiche publicitaire '+titre+'" loading="eager" style="display:block;width:100%;max-height:360px;object-fit:contain;border-radius:10px;margin:auto;">'
+    +(d.description?'<p class="notice" style="margin:8px 0 0;">'+echapperTextePublicite(d.description)+'</p>':"")
+    +'</article></div>';
+  };
+  afficher();
+  if(window.timerPublicitesAccueilHome)clearInterval(window.timerPublicitesAccueilHome);
+  window.timerPublicitesAccueilHome=setInterval(()=>{window.indexPubliciteAccueilHome=(window.indexPubliciteAccueilHome||0)+1;afficher();},15000);
+ },erreur=>{console.error("Espace publicitaire accueil :",erreur);zone.innerHTML='<p class="notice">Impossible de charger les affiches publicitaires pour le moment.</p>';});
 }
 async function chargerArticlesBoutiquesAccueil(){
  const zone=document.getElementById("articlesBoutiquesAccueil");if(!zone)return;
@@ -12808,6 +12895,7 @@ async function afficherEspaceCompagnie(id,c){
   window.compagnieRenouvellementCourante={formule:c.formule,periodicite:c.periodicite};
   el.insertAdjacentHTML("afterbegin",'<div class="card" style="padding:12px;margin:10px 0;"><h4>'+(c.statutAbonnement==="À payer"?"Régler l’abonnement":"Renouveler l’abonnement")+'</h4><p>Le règlement s’effectue exclusivement via Jèko.</p><button type="button" class="primary" onclick="ouvrirPaiementRenouvellementCompagnie(\''+id+'\')">Payer avec Jèko</button><div id="zonePaiementRenouvellementCompagnie"></div></div>');
  }
+ ajouterBlocPublicitePartenaire(el,c.uid||partnerAuth.currentUser?.uid,"compagnies/"+id);
  await chargerGaresAnnexesCompagnie(id);await chargerAvisCompagnie(id,true);
 }
 async function enregistrerGarePrincipaleCompagnie(id){

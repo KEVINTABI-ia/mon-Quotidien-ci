@@ -81,7 +81,18 @@ describe("Mon Quotidien CI — règles Firebase Storage",function(){
   await assertSucceeds(getBytes(ref(testEnv.unauthenticatedContext().storage(),path)));
   await assertFails(uploadBytes(ref(testEnv.authenticatedContext(OWNER_UID).storage(),"publicites/annonce-interdite.jpg"),jpeg,metadata));
   await assertFails(uploadBytes(ref(admin,"publicites/fichier-interdit.txt"),new Uint8Array([1,2,3]),{contentType:"text/plain"}));
-  await assertFails(uploadBytes(ref(admin,"publicites/trop-volumineuse.jpg"),new Uint8Array(25*1024*1024+1),metadata));
+  await assertFails(uploadBytes(ref(admin,"publicites/trop-volumineuse.jpg"),new Uint8Array(10*1024*1024+1),metadata));
+ });
+ it("autorise un partenaire à déposer uniquement une affiche image dans son propre dossier et réserve la suppression à l’administrateur",async()=>{
+  const filename="123e4567-e89b-12d3-a456-426614174000.jpg";
+  const ownPath="publicites/partenaires/"+OWNER_UID+"/"+filename;
+  const owner=testEnv.authenticatedContext(OWNER_UID).storage();
+  await assertSucceeds(uploadBytes(ref(owner,ownPath),jpeg,metadata));
+  await assertSucceeds(getBytes(ref(testEnv.unauthenticatedContext().storage(),ownPath)));
+  await assertFails(uploadBytes(ref(owner,"publicites/partenaires/"+OTHER_UID+"/"+filename),jpeg,metadata));
+  await assertFails(uploadBytes(ref(owner,"publicites/partenaires/"+OWNER_UID+"/video.mp4"),new Uint8Array([1,2,3]),{contentType:"video/mp4"}));
+  await assertFails(deleteObject(ref(owner,ownPath)));
+  await assertSucceeds(deleteObject(ref(testEnv.authenticatedContext(ADMIN_UID).storage(),ownPath)));
  });
  it("autorise le propriétaire à déposer les justificatifs du trajet partagé mais réserve leur lecture à l’administration",async()=>{
   const path="trajet_partage_documents/"+OWNER_UID+"/permis.jpg";const owner=testEnv.authenticatedContext(OWNER_UID).storage();
