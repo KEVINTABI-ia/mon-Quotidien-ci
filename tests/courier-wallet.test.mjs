@@ -178,12 +178,17 @@ test("Jeko wallet recharge ledger credits the full confirmed payment and records
   });
 });
 
-\ntest("courier may choose different positive recharge amounts; 10,000 XOF is only the UI suggestion", () => {
-  for (const amount of [500,2500,3500,10000,25000]) {
+
+test("courier may choose any recharge amount from 2,000 XOF; presets are suggestions", () => {
+  for (const amount of [2000,2500,3500,10000,25000]) {
     const result=buildCourierWalletRechargeLedger({
       balanceXof:0,debtXof:0,rechargeXof:amount,totalRechargeXof:0
     });
     assert.equal(result.balanceAfterXof,amount);
     assert.equal(result.totalRechargeAfterXof,amount);
   }
+  assert.equal(isValidCourierWalletRechargeAmount(1999),false);
+  assert.equal(isValidCourierWalletRechargeAmount(2000),true);
+  assert.equal(isValidCourierWalletRechargeAmount(10000000),true);
+  assert.equal(isValidCourierWalletRechargeAmount(10000001),false);
 });
