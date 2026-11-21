@@ -93,6 +93,11 @@ service cloud.firestore {
     function verrouPath(uid) {
       return /databases/$(database)/documents/partenaires/$(uid)/verrous/missionActive;
     }
+    function portefeuilleLivreurAutorise(uid) {
+      return exists(/databases/$(database)/documents/portefeuilles_livreurs/$(uid))
+        && get(/databases/$(database)/documents/portefeuilles_livreurs/$(uid)).data.get("soldeDisponibleXof", 0) > 0
+        && get(/databases/$(database)/documents/portefeuilles_livreurs/$(uid)).data.get("detteCommissionXof", 0) == 0;
+    }
 
     function commandePath(commandeId) {
       return /databases/$(database)/documents/commandes_colis/$(commandeId);
@@ -527,6 +532,7 @@ service cloud.firestore {
           && request.resource.data.affectePar == request.auth.uid
           && partenaire(request.resource.data.partenaireId).enLigne == true
           && abonnementValide(partenaire(request.resource.data.partenaireId))
+          && (resource.data['service'] == "compagnie" || portefeuilleLivreurAutorise(request.resource.data.partenaireId))
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["partenaireId", "partenaireNom", "partenaireType", "dateAffectation", "affectePar", "statut"])
           && existsAfter(verrouPath(request.resource.data.partenaireId))
@@ -545,6 +551,7 @@ service cloud.firestore {
           && existsAfter(verrouPath(request.auth.uid))
           && getAfter(verrouPath(request.auth.uid)).data.commandeId == commandeId
           && partenaireEnLignePour(resource.data['service'])
+          && (resource.data['service'] == "compagnie" || portefeuilleLivreurAutorise(request.auth.uid))
         )
         || (
           estConnecte()
