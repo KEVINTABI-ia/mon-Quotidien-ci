@@ -427,7 +427,7 @@ export function validateJekoPaymentPlan(payment) {
   };
   if(payment.serviceId==="publicite"){
     const plans={decouverte:[2000,3],visibilite:[5000,7],professionnel:[9000,15],premium:[15000,30]},plan=plans[payment.planId];
-    return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1]&&typeof payment.uid==="string"&&typeof payment.imagePath==="string"&&payment.imagePath.startsWith("publicites/partenaires/"+payment.uid+"/")&&/\.(jpg|png|webp)$/i.test(payment.imagePath)&&typeof payment.mediaUrl==="string"&&/^https:\/\//i.test(payment.mediaUrl)&&typeof payment.titre==="string"&&payment.titre.length>=2&&payment.titre.length<=100;
+    return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1]&&typeof payment.uid==="string"&&typeof payment.imagePath==="string"&&payment.imagePath.startsWith("publicites/partenaires/"+payment.uid+"/")&&/\.(jpg|png|webp)$/i.test(payment.imagePath)&&typeof payment.mediaUrl==="string"&&/^https:\/\//i.test(payment.mediaUrl)&&payment.mediaUrl.includes(encodeURIComponent(payment.imagePath))&&typeof payment.titre==="string"&&payment.titre.length>=2&&payment.titre.length<=100;
   }
   if(payment.serviceId==="objet_retrouve") return payment.amountXof===1000;
   if(payment.serviceId==="logement_renewal"||payment.serviceId==="ramassage"||payment.serviceId==="partenaire_services"){
@@ -503,7 +503,7 @@ async function webhook(request,env) {
   if(payment.status==="succeeded") return new Response("OK",{status:200});
   if(payment.serviceId==="publicite"){
     const profileDoc=await getDoc(env,"partenaires/"+payment.uid),profile=docData(profileDoc);
-    if(!profileDoc||profile?.uid!==payment.uid||profile?.statut!=="approuve"||profile?.etatCompte==="suspendu_definitivement"||profile?.etatCompte==="suspendu_temporairement"){
+    if(!profileDoc||profile?.uid!==payment.uid||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif"){
       await firestore(env,paymentPath,{method:"PATCH",body:JSON.stringify(fields({status:"review_required",reviewReason:"publicite_partner_not_eligible",updatedAt:now.toISOString()}))});
       return new Response("OK",{status:200});
     }
