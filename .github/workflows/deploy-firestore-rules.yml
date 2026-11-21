@@ -42,7 +42,7 @@ jobs:
   deploy:
     name: Deploy Firestore rules only
     needs: test
-    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'DEPLOY'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.confirmation == 'DEPLOY')
     runs-on: ubuntu-latest
     environment: production
     steps:
