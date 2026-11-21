@@ -185,7 +185,7 @@ async function createCheckout(request,env) {
     const plan=plans[body.planId],profileDoc=await getDoc(env,"partenaires/"+user.sub),profile=docData(profileDoc);
     const imagePath=body.imagePath,titre=typeof body.titre==="string"?body.titre.trim():"",description=typeof body.description==="string"?body.description.trim():"",mediaUrl=typeof body.mediaUrl==="string"?body.mediaUrl:"";
     if(!plan)return json({error:"invalid_publicite_plan"},400);
-    if(!profileDoc||profile?.uid!==user.sub||profile?.statut!=="approuve"||profile?.etatCompte==="suspendu_definitivement"||profile?.etatCompte==="suspendu_temporairement")return json({error:"partner_not_eligible"},403);
+    if(!profileDoc||profile?.uid!==user.sub||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif")return json({error:"partner_not_eligible"},403);
     if(typeof imagePath!=="string"||!imagePath.startsWith("publicites/partenaires/"+user.sub+"/")||!/\.(jpg|png|webp)$/i.test(imagePath)||typeof mediaUrl!=="string"||!/^https:\/\//i.test(mediaUrl)||!mediaUrl.includes(encodeURIComponent(imagePath))||titre.length<2||titre.length>100||description.length>500)return json({error:"invalid_publicite_data"},400);
     amountXof=plan.amount;
     initial={uid:user.sub,serviceId,planId:body.planId,forfait:plan.label,durationDays:plan.days,imagePath,mediaUrl,titre,description,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),createdAt:now.toISOString(),updatedAt:now.toISOString()};
