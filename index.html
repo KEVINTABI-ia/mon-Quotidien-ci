@@ -4033,14 +4033,29 @@ function afficherChoixCatalogueDomicile(){
  const grille=document.createElement("div");
  grille.style.cssText="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;";
  categories.forEach(c=>{
+  const carte=document.createElement("div");
+  carte.className="card";
+  carte.style.cssText="padding:10px;margin:0;display:flex;flex-direction:column;gap:8px;";
   const bouton=document.createElement("button");
   bouton.type="button";
   bouton.className="family-shortcut";
   bouton.textContent=(icones[c]||"🧰")+" "+c;
   bouton.addEventListener("click",()=>chargerCatalogueDomicile(c));
-  grille.appendChild(bouton);
+  const inscription=document.createElement("button");
+  inscription.type="button";
+  inscription.className="primary";
+  inscription.style.cssText="margin-top:0;padding:10px 8px;font-size:12px;";
+  inscription.textContent="Devenir partenaire";
+  inscription.addEventListener("click",()=>inscrirePartenaireDomicile(c));
+  carte.append(bouton,inscription);
+  grille.appendChild(carte);
  });
  zone.replaceChildren(grille);
+}
+function inscrirePartenaireDomicile(categorie){
+ if(!NOUVEAUX_SERVICES.depannage_domicile.categories.includes(categorie))return;
+ ouvrirEspacePartenaire("inscription");
+ afficherFormulairePartenaire("depannage_domicile",categorie);
 }
 async function chargerCatalogueDomicile(categorie){
  const zone=document.getElementById("nouveauxServicesPublics");if(!zone)return;
@@ -4059,7 +4074,7 @@ async function chargerCatalogueDomicile(categorie){
    return d.visibleManuellement!==false&&correspond&&(d.modePartenaire!==true||abonnementServicePartenaireValide(d));
   }).map(doc=>({id:doc.id,...doc.data()}));
   if(!documents.length){
-   zone.innerHTML='<button type="button" onclick="afficherChoixCatalogueDomicile()">← Retour aux services</button><p class="notice">Aucun professionnel validé dans cette catégorie pour le moment.</p>';
+   zone.innerHTML='<button type="button" onclick="afficherChoixCatalogueDomicile()">← Retour aux services</button><p class="notice">Aucun professionnel validé dans cette catégorie pour le moment.</p><button type="button" class="primary" style="margin-top:10px;" onclick="inscrirePartenaireDomicile('+JSON.stringify(categorie)+')">➕ Devenir partenaire dans cette catégorie</button>';
    return;
   }
   const groupes=new Map();
@@ -4070,7 +4085,7 @@ async function chargerCatalogueDomicile(categorie){
    if(!groupes.get(commune).has(quartier))groupes.get(commune).set(quartier,[]);
    groupes.get(commune).get(quartier).push(d);
   });
-  let html='<button type="button" onclick="afficherChoixCatalogueDomicile()">← Retour aux services</button>';
+  let html='<button type="button" onclick="afficherChoixCatalogueDomicile()">← Retour aux services</button><button type="button" class="primary" style="margin:10px 0 14px;" onclick="inscrirePartenaireDomicile('+JSON.stringify(categorie)+')">➕ Devenir partenaire dans cette catégorie</button>';
   [...groupes.keys()].sort((a,b)=>a.localeCompare(b,"fr")).forEach(commune=>{
    html+='<section class="card" style="padding:12px;margin:12px 0;"><h3>📍 '+echapperTextePublicite(commune)+'</h3>';
    [...groupes.get(commune).keys()].sort((a,b)=>a.localeCompare(b,"fr")).forEach(quartier=>{
@@ -6727,7 +6742,8 @@ function retourChoixPartenaire(){
 
   document.getElementById("devenirPartenaire")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
-function afficherFormulairePartenaire(type){
+function afficherFormulairePartenaire(type,categorieDemandee){
+  var categorieActivite=categorieDemandee||null;
   const correspondancesActivites={
     electricien:{type:"depannage_domicile",categorie:"Électricien"},
     plombier:{type:"depannage_domicile",categorie:"Plombier"},
@@ -6741,7 +6757,7 @@ function afficherFormulairePartenaire(type){
     boutique:{type:"commercant",categorie:"Boutique"}
   };
   const activite=correspondancesActivites[type];
-  if(activite){type=activite.type;var categorieActivite=activite.categorie;}
+  if(activite){type=activite.type;categorieActivite=activite.categorie;}
   const zone=document.getElementById("partenaireFormulaireChoisi");
   if(!zone)return;
   zone.replaceChildren();
