@@ -9,6 +9,8 @@ import {
   courierCommissionTriggerAllowed,
   courierWalletNeedsLowBalanceAlert,
   isValidCourierWalletRechargeAmount,
+  courierProfileCanCompleteMission,
+  buildCourierWalletCommissionLedger,
   COURIER_WALLET_RULES
 } from "../cloudflare/worker.js";
 
@@ -192,4 +194,19 @@ test("courier may choose any recharge amount from 2,000 XOF; presets are suggest
   assert.equal(isValidCourierWalletRechargeAmount(2000),true);
   assert.equal(isValidCourierWalletRechargeAmount(10000000),true);
   assert.equal(isValidCourierWalletRechargeAmount(10000001),false);
+});
+
+
+test("only approved active independent couriers can complete wallet missions",()=>{
+  assert.equal(courierProfileCanCompleteMission({uid:"u1",type:"livreur_independant",statut:"approuve",etatCompte:"actif"},"u1"),true);
+  assert.equal(courierProfileCanCompleteMission({uid:"u1",type:"representant_gare",statut:"approuve"},"u1"),false);
+  assert.equal(courierProfileCanCompleteMission({uid:"u1",type:"livreur_independant",statut:"en_attente"},"u1"),false);
+  assert.equal(courierProfileCanCompleteMission({uid:"u2",type:"livreur_independant",statut:"approuve"},"u1"),false);
+});
+test("server commission ledger calculates boutique and standard delivery commissions",()=>{
+  assert.equal(buildCourierWalletCommissionLedger({balanceXof:1000,deliveryFeeXof:2500,serviceType:"boutique"}).totalWalletDebitXof,250);
+  assert.equal(buildCourierWalletCommissionLedger({balanceXof:1000,deliveryFeeXof:2000,serviceType:"classique"}).totalWalletDebitXof,300);
+  const short=buildCourierWalletCommissionLedger({balanceXof:100,deliveryFeeXof:2000,serviceType:"classique"});
+  assert.equal(short.debitXof,100);
+  assert.equal(short.debtAddedXof,200);
 });
