@@ -904,6 +904,16 @@ export function calculateCourierWalletDebit({serviceType,deliveryFeeXof,serviceF
   });
 }
 
+// This predicate authorizes a commission trigger only; it never performs a wallet debit.
+export function courierCommissionTriggerAllowed({
+  serviceType, fromStatus, toStatus, serverConfirmed, postalDepositConfirmed=false
+}) {
+  if (!["boutique","classique","gare_expedition","gare_recuperation"].includes(serviceType)) return false;
+  if (serverConfirmed !== true || fromStatus !== "arrive_destination" || toStatus !== "livre") return false;
+  if (serviceType === "gare_expedition" && postalDepositConfirmed !== true) return false;
+  return true;
+}
+
 export function courierWalletCanAcceptMission(balanceXof) {
   return Number.isSafeInteger(balanceXof) && balanceXof > 0;
 }
