@@ -2497,7 +2497,7 @@ async function payerPublicitePartenaire(){
   const dataUrl=await compresserImagePublicite(fichier),blob=convertirDataUrlEnBlob(dataUrl);
   if(!blob||!blob.size)throw new Error("Compression de l’affiche impossible.");
   imagePath="publicites/partenaires/"+user.uid+"/"+crypto.randomUUID()+".jpg";
-  const ref=storage.ref().child(imagePath);
+  const ref=partnerStorage.ref().child(imagePath);
   await ref.put(blob,{contentType:"image/jpeg",cacheControl:"public,max-age=31536000"});
   const mediaUrl=await ref.getDownloadURL();
   if(zone)zone.textContent="Affiche envoyée. Préparation du paiement Jèko...";
@@ -3783,6 +3783,7 @@ var storage = firebase.storage();
 var partnerApp = firebase.apps.find(function(app){return app.name === "partnerAuth";}) || firebase.initializeApp(firebaseConfig, "partnerAuth");
 var partnerAuth = partnerApp.auth();
 var partnerDb = partnerApp.firestore();
+var partnerStorage = partnerApp.storage();
 partnerAuth.useDeviceLanguage();
 
 /* Authentification générale obligatoire — e-mail ou téléphone */
