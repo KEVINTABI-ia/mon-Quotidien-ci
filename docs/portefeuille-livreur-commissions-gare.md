@@ -5,8 +5,9 @@
 - Le crédit du portefeuille, la mise à jour du solde et l'écriture du journal de recharge sont groupés dans un commit Firestore avec préconditions et reçu idempotent.
 - Espace livreur : affichage du solde, alerte, formulaire de recharge (10 000 FCFA proposé par défaut, montant modifiable), moyens Wave/Orange Money/MTN Money et historique des opérations.
 - Les écritures directes du client sur le portefeuille et son journal sont interdites par les règles Firestore.
-- **Le débit réel des commissions et la clôture serveur des missions ne sont pas encore activés.** Les calculs purs et la préparation de l'architecture ne doivent pas être confondus avec un portefeuille entièrement opérationnel.
-- La migration des missions vers une clôture Worker et l'application des règles de solde à l'acceptation restent à faire ; le flux existant n'est pas bloqué pendant cette étape.
+- Clôture des livraisons indépendantes : route Worker authentifiée `/api/courier/mission/complete`, transition finale, débit du portefeuille, journal et libération du verrou dans une transaction Firestore.
+- Acceptation des nouvelles missions indépendantes : règles Firestore vérifient un solde strictement positif et aucune dette de commission ; les missions déjà acceptées restent terminables.
+- La clôture des missions de gare reste distincte et n'est pas encore intégrée au portefeuille des livreurs indépendants.
 
 Spécification issue des décisions validées par le responsable du projet. Cette branche ne modifie pas encore les flux de production. Elle sert de référence avant l'implémentation et les tests.
 
@@ -94,16 +95,17 @@ Les frais du service courrier sont variables : le système doit enregistrer le m
 ## Constat technique du dépôt au moment de l'audit
 - Le Worker Cloudflare existant gère déjà l'authentification Firebase, les paiements Jèko, les webhooks signés et les écritures Firestore via compte de service.
 - Le Worker expose actuellement les routes checkout, status, webhook et divers services existants. Le service portefeuille n'est pas encore intégré.
-- Dans `index.html`, l'acceptation et la clôture de missions utilisent des transactions Firestore depuis le navigateur.
-- La clôture standard passe directement de `arrive_destination` à `livre` depuis le navigateur ; elle doit être déplacée côté Worker avant tout débit.
+- Dans `index.html`, l'acceptation utilise toujours une transaction Firestore, mais les règles imposent désormais un portefeuille positif et sans dette pour les livreurs indépendants.
+- La clôture des livraisons indépendantes appelle le Worker ; la clôture directe côté navigateur est refusée par les règles Firestore. Le Worker vérifie l'affectation, le statut, le verrou, le tarif privé et le journal existant, puis met à jour le statut, le solde, la dette, le journal et le verrou dans une transaction Firestore.
+- Le traitement de clôture du représentant de gare reste sur son parcours distinct, sans débit de portefeuille livreur.
 - La clôture d'expédition gare enregistre actuellement des références saisies par le livreur et passe la commande à `livre`, sans preuve de dépôt vérifiée par le serveur.
 - Les règles Firestore autorisent actuellement le partenaire affecté à faire passer une commande de `arrive_destination` à `livre`. Cette voie directe ne peut pas servir de déclencheur financier fiable.
 - Les règles interdisent déjà les écritures clientes dans `payments` et `payment_webhooks`; le Worker utilise le compte de service pour ces écritures.
 
 ## Architecture de sécurité cible
 1. **Recharge Jèko** : route Worker authentifiée qui crée une demande de paiement identifiée par une référence unique et un montant déterminé côté serveur. Le webhook vérifie la signature brute Jèko et crédite le portefeuille dans une transaction idempotente.
-2. **Acceptation mission** : validation côté serveur du statut du livreur, de son abonnement, de l'absence de mission active et de son portefeuille. Le navigateur ne décide jamais si le solde permet une nouvelle mission.
-3. **Clôture mission** : route Worker authentifiée qui vérifie l'identité du livreur, l'affectation et le statut autorisé, calcule la commission à partir du tarif privé confirmé, puis clôture et débite dans une seule transaction atomique/idempotente.
+2. **Acceptation mission** : validation du statut du livreur, de son abonnement, de l'absence de mission active et du portefeuille par les règles Firestore ; le navigateur ne peut pas contourner le contrôle de solde.
+3. **Clôture mission indépendante** : route Worker authentifiée qui vérifie l'identité du livreur, l'affectation et le statut autorisé, calcule la commission à partir du tarif privé confirmé, puis clôture et débite dans une seule transaction atomique/idempotente. Les missions de gare restent hors de ce flux.
 4. **Journal immuable** : une écriture par événement financier avec identifiant idempotent, type, commande/recharge, montant signé, solde avant/après, date et métadonnées nécessaires.
 5. **Interface livreur** : solde, historique, bouton de recharge, alerte à 1 000 FCFA, état de blocage à zéro et détail des commissions.
 6. **Règles Firestore** : interdire toute écriture directe du livreur sur le solde et le journal ; protéger les champs de paiement et les champs financiers des commandes.
