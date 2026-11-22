@@ -13987,6 +13987,51 @@ body.mqci-ai-no-scroll{
     font-size:11px!important;
   }
 }
+  /* iOS: mode clavier, priorité à la conversation et au champ d'envoi. */
+  #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open{
+    position:fixed!important;
+    top:var(--mqci-ai-vv-top,0px)!important;
+    bottom:auto!important;
+    height:var(--mqci-ai-vv-height,100dvh)!important;
+    min-height:0!important;
+    max-height:var(--mqci-ai-vv-height,100dvh)!important;
+    overflow:hidden!important;
+  }
+  #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiSubscription{
+    display:none!important;
+  }
+  #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiHeader{
+    padding-top:6px!important;
+    padding-bottom:6px!important;
+    min-height:48px!important;
+  }
+  #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiMessages{
+    flex:1 1 0!important;
+    min-height:0!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiForm{
+    flex:0 0 auto!important;
+    padding-top:7px!important;
+    padding-bottom:7px!important;
+    min-height:58px!important;
+    background:#fff!important;
+  }
+  #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiInput{
+    min-height:42px!important;
+    max-height:72px!important;
+    padding-top:9px!important;
+    padding-bottom:9px!important;
+  }
+  #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiSend{
+    min-height:42px!important;
+  }
+  @media(max-height:500px){
+    #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiHeader{min-height:42px!important}
+    #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiClose{height:32px!important;min-height:32px!important;width:32px!important;min-width:32px!important;flex-basis:32px!important}
+  }
 </style>
 <button id="mqciAiLauncher" type="button" aria-controls="mqciAiPanel" aria-expanded="false" hidden>✦ MON QUOTIDIEN AI</button>
 <section id="mqciAiPanel" role="dialog" aria-label="Assistant MON QUOTIDIEN AI" aria-modal="false" hidden>
@@ -14139,15 +14184,26 @@ body.mqci-ai-no-scroll{
     window.scrollTo(0,aiPageScrollY);
   }
   function syncAiVisualViewport(){
-    if(!window.visualViewport)return;
     const viewport=window.visualViewport;
-    panel.style.setProperty("--mqci-ai-vv-top",Math.max(0,viewport.offsetTop)+"px");
-    panel.style.setProperty("--mqci-ai-vv-height",Math.max(1,viewport.height)+"px");
+    if(viewport){
+      panel.style.setProperty("--mqci-ai-vv-top",Math.max(0,viewport.offsetTop)+"px");
+      panel.style.setProperty("--mqci-ai-vv-height",Math.max(1,viewport.height)+"px");
+      const keyboardOpen=!panel.hidden&&document.activeElement===input&&
+        (window.innerHeight-viewport.height)>120;
+      panel.classList.toggle("mqci-ai-keyboard-open",keyboardOpen);
+    }else{
+      panel.style.setProperty("--mqci-ai-vv-top","0px");
+      panel.style.setProperty("--mqci-ai-vv-height",Math.max(1,window.innerHeight)+"px");
+      panel.classList.remove("mqci-ai-keyboard-open");
+    }
   }
   if(window.visualViewport){
     window.visualViewport.addEventListener("resize",syncAiVisualViewport);
     window.visualViewport.addEventListener("scroll",syncAiVisualViewport);
   }
+  window.addEventListener("resize",syncAiVisualViewport);
+  input.addEventListener("focus",()=>requestAnimationFrame(syncAiVisualViewport));
+  input.addEventListener("blur",()=>panel.classList.remove("mqci-ai-keyboard-open"));
   function toggle(open){
     panel.hidden=!open;
     panel.classList.toggle("mqci-ai-fullscreen",open);
