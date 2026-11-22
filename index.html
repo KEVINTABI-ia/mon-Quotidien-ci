@@ -13831,10 +13831,29 @@ async function mqciAdminStatutPharmacie(uid,statut){
   #mqciAiSend{border:0;border-radius:12px;background:#087C62;color:#fff;padding:0 15px;font-weight:700;min-width:64px}
   #mqciAiSend:disabled{opacity:.5}
   @media(max-width:520px){#mqciAiLauncher{right:12px;bottom:14px;padding:13px 15px}#mqciAiPanel{right:8px;bottom:72px;width:calc(100vw - 16px);height:min(590px,calc(100dvh - 92px))}}
+  #mqciAiSubscription{padding:11px 13px;background:#fff;border-bottom:1px solid #e5ece6;display:grid;gap:8px}
+  #mqciAiSubscriptionStatus{font-size:12px;line-height:1.4;color:#29483b}
+  #mqciAiSubscriptionActions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  #mqciAiPaymentMethod{min-width:0;flex:1;padding:9px;border:1px solid #d7e2da;border-radius:10px;background:#fff;color:#263a35;font:13px system-ui}
+  #mqciAiSubscribe{border:0;border-radius:10px;padding:10px 13px;background:#f28c28;color:#fff;font-weight:800;cursor:pointer}
+  #mqciAiSubscribe:disabled{opacity:.55;cursor:wait}
+  #mqciAiSubscriptionMessage{font-size:11px;color:#64766b;min-height:14px}
+  #mqciAiSubscriptionMessage[data-error="true"]{color:#b42318}
+  @media(max-width:360px){#mqciAiSubscriptionActions{align-items:stretch}#mqciAiPaymentMethod{flex-basis:100%}#mqciAiSubscribe{width:100%}}
 </style>
 <button id="mqciAiLauncher" type="button" aria-controls="mqciAiPanel" aria-expanded="false" hidden>✦ MON QUOTIDIEN AI</button>
 <section id="mqciAiPanel" role="dialog" aria-label="Assistant MON QUOTIDIEN AI" aria-modal="false" hidden>
   <header id="mqciAiHeader"><div><strong>MON QUOTIDIEN AI</strong><small>Votre assistant du quotidien</small></div><button id="mqciAiClose" type="button" aria-label="Fermer">×</button></header>
+  <section id="mqciAiSubscription" aria-label="Abonnement MON QUOTIDIEN AI">
+    <div id="mqciAiSubscriptionStatus" aria-live="polite">Vérification de votre abonnement…</div>
+    <div id="mqciAiSubscriptionActions">
+      <select id="mqciAiPaymentMethod" aria-label="Moyen de paiement">
+        <option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option>
+      </select>
+      <button id="mqciAiSubscribe" type="button">Passer à Premium</button>
+    </div>
+    <div id="mqciAiSubscriptionMessage" role="status" aria-live="polite"></div>
+  </section>
   <div id="mqciAiMessages" aria-live="polite"><div class="mqci-ai-message mqci-ai-assistant">Bonjour ! Je suis MON QUOTIDIEN AI. Comment puis-je vous aider aujourd'hui ?</div><div class="mqci-ai-note">Je peux consulter le statut d’une commande avec son numéro de suivi et résumer les missions attribuées à votre compte partenaire transport. Je ne confirme ni ne traite les paiements.</div></div>
   <form id="mqciAiForm"><textarea id="mqciAiInput" rows="1" maxlength="2000" placeholder="Écrivez votre message…" aria-label="Votre message" required></textarea><button id="mqciAiSend" type="submit">Envoyer</button></form>
 </section>
@@ -13847,9 +13866,15 @@ async function mqciAdminStatutPharmacie(uid,statut){
   const input=document.getElementById("mqciAiInput");
   const send=document.getElementById("mqciAiSend");
   const messages=document.getElementById("mqciAiMessages");
+  const subscriptionStatus=document.getElementById("mqciAiSubscriptionStatus");
+  const subscriptionMessage=document.getElementById("mqciAiSubscriptionMessage");
+  const subscribeButton=document.getElementById("mqciAiSubscribe");
+  const paymentMethod=document.getElementById("mqciAiPaymentMethod");
   if(!launcher||!panel||!form||!input||!send||!messages)return;
   const endpoint="https://mon-quotidien-jeko.tabikevin57.workers.dev/api/ai/chat";
   const historyEndpoint="https://mon-quotidien-jeko.tabikevin57.workers.dev/api/ai/conversations/";
+  const subscriptionEndpoint="https://mon-quotidien-jeko.tabikevin57.workers.dev/api/ai/subscription";
+  const checkoutEndpoint="https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout";
   let busy=false;
   let conversationId=null;
   let loadedUid=null;
@@ -13870,6 +13895,51 @@ async function mqciAdminStatutPharmacie(uid,statut){
       if(Array.isArray(data.messages)&&auth.currentUser?.uid===user.uid)data.messages.forEach(item=>addMessage(item.content,item.role==="user"?"user":"assistant"));
     }catch{}
   }
+  async function refreshSubscription(user){
+    if(!user)return;
+    subscriptionStatus.textContent="Vérification de votre abonnement…";
+    subscribeButton.disabled=true;
+    try{
+      const token=await user.getIdToken();
+      const response=await fetch(subscriptionEndpoint,{headers:{Authorization:"Bearer "+token}});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.error||"status_unavailable");
+      const sub=data.subscription||{};
+      if(sub.premiumAccess===true&&sub.expiresAt){
+        const expiry=new Date(sub.expiresAt);
+        subscriptionStatus.textContent="✦ Premium actif · jusqu’au "+(Number.isFinite(expiry.getTime())?expiry.toLocaleDateString("fr-FR"):"date à confirmer")+".";
+        subscribeButton.textContent="Renouveler Premium";
+      }else{
+        subscriptionStatus.textContent="Formule gratuite · Premium : 1 000 FCFA/mois (client) ou 3 000 FCFA/mois (partenaire). Le tarif applicable est déterminé par votre profil.";
+        subscribeButton.textContent="Passer à Premium";
+      }
+      subscribeButton.disabled=false;
+    }catch{
+      subscriptionStatus.textContent="Impossible de vérifier votre abonnement pour le moment.";
+      subscriptionMessage.textContent="Réessayez lorsque votre connexion sera rétablie.";
+      subscribeButton.disabled=false;
+    }
+  }
+  subscribeButton.addEventListener("click",async()=>{
+    const user=window.auth&&auth.currentUser;
+    if(!user){subscriptionMessage.textContent="Connectez-vous pour souscrire à Premium.";subscriptionMessage.dataset.error="true";return;}
+    subscribeButton.disabled=true;paymentMethod.disabled=true;
+    subscriptionMessage.dataset.error="false";
+    subscriptionMessage.textContent="Préparation du paiement sécurisé…";
+    try{
+      const token=await user.getIdToken();
+      const response=await fetch(checkoutEndpoint,{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceId:"ai_subscription",paymentMethod:paymentMethod.value})});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.error||"checkout_failed");
+      if(typeof data.checkoutUrl!=="string"||!data.checkoutUrl.startsWith("https://"))throw new Error("invalid_checkout_url");
+      subscriptionMessage.textContent="Redirection vers le paiement sécurisé Jeko…";
+      window.location.assign(data.checkoutUrl);
+    }catch(error){
+      const errors={unauthorized:"Votre session a expiré. Reconnectez-vous.",ai_partner_not_eligible:"Le profil partenaire doit être approuvé avant la souscription.",existing_ai_payment_requires_review:"Un paiement précédent doit être vérifié avant une nouvelle tentative.",ai_partner_profile_unavailable:"Impossible de vérifier votre profil partenaire. Réessayez plus tard.",payment_initialization_failed:"Jeko n’a pas pu initialiser le paiement. Vérifiez votre historique avant de réessayer."};
+      subscriptionMessage.textContent=errors[error.message]||"Le paiement n’a pas pu être préparé. Réessayez plus tard.";
+      subscriptionMessage.dataset.error="true";subscribeButton.disabled=false;paymentMethod.disabled=false;
+    }
+  });
   function addMessage(text,kind){
     const node=document.createElement("div");
     node.className="mqci-ai-message "+(kind==="user"?"mqci-ai-user":"mqci-ai-assistant");
@@ -13886,7 +13956,7 @@ async function mqciAdminStatutPharmacie(uid,statut){
   launcher.addEventListener("click",()=>toggle(panel.hidden));
   close.addEventListener("click",()=>toggle(false));
   if(window.auth&&typeof auth.onAuthStateChanged==="function"){
-    auth.onAuthStateChanged(user=>{launcher.hidden=!user;if(!user){toggle(false);conversationId=null;loadedUid=null;messages.replaceChildren();}else if(loadedUid!==user.uid){conversationId=null;messages.replaceChildren();loadConversation(user);}});
+    auth.onAuthStateChanged(user=>{launcher.hidden=!user;if(!user){toggle(false);conversationId=null;loadedUid=null;messages.replaceChildren();subscriptionStatus.textContent="Connectez-vous pour consulter votre abonnement.";subscribeButton.disabled=true;subscriptionMessage.textContent="";paymentMethod.disabled=false;}else{refreshSubscription(user);if(loadedUid!==user.uid){conversationId=null;messages.replaceChildren();loadConversation(user);}}});
   }
   form.addEventListener("submit",async event=>{
     event.preventDefault();
