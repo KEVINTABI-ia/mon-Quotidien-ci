@@ -218,8 +218,8 @@ export function buildAiOrderContext(order, trackingNumber) {
   const shopStatus = safeAiText(order.statutBoutique, 40);
   return {
     trackingNumber: safeAiText(trackingNumber, 40),
-    status: statusLabels[status] || "Statut enregistré : " + (status || "non renseigné"),
-    shopStatus: shopStatus ? (shopLabels[shopStatus] || "Statut boutique : " + shopStatus) : null,
+    status: statusLabels[status] || "Statut non reconnu, vérification nécessaire auprès du partenaire",
+    shopStatus: shopStatus ? (shopLabels[shopStatus] || "Statut boutique en cours de vérification") : null,
     service: safeAiText(order.service, 40),
     shop: safeAiText(order.boutiqueNom, 100),
     updatedAt: order.updatedAt instanceof Date ? order.updatedAt.toISOString() : null
