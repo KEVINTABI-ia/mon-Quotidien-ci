@@ -22,7 +22,7 @@ section.innerHTML=`<h2>📞 Cabine téléphonique</h2>
 <label>Type de service</label><select id="cabService"><option value="transfert_unites">Transfert d’unité</option><option value="forfait_appels">Forfait appel</option><option value="forfait_internet">Forfait internet</option></select>
 <label>Opérateur</label><div class="cab-choice-row" id="cabOperatorChoices"><button type="button" class="cab-logo-choice selected" data-operator="Orange"><span class="cab-brand orange">orange</span></button><button type="button" class="cab-logo-choice" data-operator="MTN"><span class="cab-brand mtn">MTN</span></button><button type="button" class="cab-logo-choice" data-operator="Moov Africa"><span class="cab-brand moov">moov</span></button></div><select id="cabOperateur" class="cab-hidden-select" aria-hidden="true" tabindex="-1"><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><div id="cabCatalogue"></div>
 <label>Numéro du bénéficiaire</label><input id="cabNumero" type="tel" maxlength="20" placeholder="Numéro à recharger">
-<label>Montant du transfert souhaité auprès de la cabine (FCFA)</label><input id="cabMontant" type="number" min="200" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000">
+<div id="cabAmountWrap"><label>Montant du transfert souhaité auprès de la cabine (FCFA)</label><input id="cabMontant" type="number" min="200" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000"></div>
 <div id="cabCommuneWrap"><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"></div>
 <div id="cabDetailsWrap"><label>Précisions</label><textarea id="cabDetails" maxlength="180" placeholder="Détail du transfert ou du forfait choisi"></textarea></div>
 <label>Moyen de paiement Jèko</label><div class="cab-choice-row cab-payment-choices" id="cabPaymentChoices"><button type="button" class="cab-logo-choice selected" data-payment="wave"><span class="cab-brand wave">WAVE</span></button><button type="button" class="cab-logo-choice" data-payment="orange"><span class="cab-brand orange">orange money</span></button><button type="button" class="cab-logo-choice" data-payment="mtn"><span class="cab-brand mtn">MoMo</span></button><button type="button" class="cab-logo-choice" data-payment="moov"><span class="cab-brand moov">Moov Money</span></button><button type="button" class="cab-logo-choice" data-payment="djamo"><span class="cab-brand djamo">djamo</span></button></div><select id="cabPaymentMethod" class="cab-hidden-select" aria-hidden="true" tabindex="-1"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select>
@@ -56,12 +56,14 @@ const cabForfaits=[
  {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:1500,data:"1,5 Go",minutes:"200 min + 500 SMS",validity:"15 jours",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"}
 ];
 const cabTypeLabels={forfait_internet:"Internet",forfait_appels:"Appels",forfait_mixte:"Mixte"};
+let cabSelectedOffer=null;
 function rendreCatalogueCabine(){
+ cabSelectedOffer=null;
  const root=$("cabCatalogue");if(!root)return;
  const op=$("cabOperateur").value,kind=$("cabService").value;
  const matching=cabForfaits.filter(x=>x.op===op&&x.type===kind&&x.price>=200);
  const card=x=>'<article class="cab-item cab-offer"><div class="cab-request-head"><strong>'+esc(x.name)+'</strong><span class="cab-pill">'+esc(x.validity)+'</span></div><p class="cab-price">'+x.price.toLocaleString("fr-FR")+' FCFA</p><p>'+esc(x.data)+' · '+esc(x.minutes)+'</p><p class="cab-muted">Souscription opérateur : '+esc(x.code)+'</p><button type="button" class="primary" data-cab-offer="'+cabForfaits.indexOf(x)+'">Choisir ce forfait</button><a href="'+esc(x.source)+'" target="_blank" rel="noopener">Détails officiels</a></article>';
- let html='<div class="cab-catalog-head"><h3>Choisir rapidement un forfait</h3><p class="cab-muted">Comparez les offres publiées par les opérateurs, puis sélectionnez celle à demander à votre cabiniste.</p></div>';
+ let html='<div class="cab-catalog-head"><h3>Annuaire des offres '+esc(op)+'</h3><p class="cab-muted">Sélectionnez une offre de cet opérateur pour continuer.</p></div>';
  if(matching.length)html+='<div class="cab-offers">'+matching.map(card).join("")+'</div>';
  else if(op==="MTN"){
   const code=kind==="forfait_internet"?"*105*2#":kind==="forfait_appels"?"*105*1#":"*105#";
@@ -71,14 +73,12 @@ function rendreCatalogueCabine(){
  }else html+='<div class="cab-item">Aucune offre tarifée confirmée pour ce filtre. Vous pouvez tout de même faire une demande personnalisée auprès d’un cabiniste.</div>';
  root.innerHTML=html+'<p class="cab-muted">Offres relevées sur les pages officielles consultées le 22/11/2026. Les promotions, l’éligibilité et les tarifs peuvent évoluer ; vérifiez toujours avant validation.</p>';
  root.querySelectorAll("[data-cab-offer]").forEach(b=>b.onclick=()=>selectionnerForfaitCabine(cabForfaits[Number(b.dataset.cabOffer)]));
- const generic=()=>{ $("cabMontant").value="";$("cabDetails").value="Forfait "+(cabTypeLabels[kind]||"")+" à préciser avec le cabiniste."; $("cabCommuneClient").focus(); document.getElementById("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});};
- $("cabMtnChoose")?.addEventListener("click",generic);$("cabOrangeChoose")?.addEventListener("click",generic);
 }
 function selectionnerForfaitCabine(x){
+ cabSelectedOffer=x;
  $("cabOperateur").value=x.op;$("cabService").value=x.type;$("cabMontant").value=x.price;
  $("cabDetails").value=x.name+" — "+x.data+" — "+x.minutes+" — validité "+x.validity+" (code opérateur "+x.code+").";
- rendreCatalogueCabine();
- actualiserFraisCabine();
+ const root=$("cabCatalogue");root.querySelectorAll("[data-cab-offer]").forEach(b=>{const selected=Number(b.dataset.cabOffer)===cabForfaits.indexOf(x);b.textContent=selected?"Offre sélectionnée":"Choisir cette offre";b.classList.toggle("selected",selected);});
  $("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});
  $("cabNumero").focus({preventScroll:true});
 }
@@ -143,7 +143,7 @@ const css=document.createElement("style");css.textContent=`
 function ouvrirCabinesTelephoniques(){if(typeof ouvrirSectionPleinEcran==="function")ouvrirSectionPleinEcran("cabinesTelephoniques","Cabine téléphonique");else section.style.display="block";chargerHistorique();}
 window.ouvrirCabinesTelephoniques=ouvrirCabinesTelephoniques;
 let cabRequestMode="transfer";
-function ouvrirFormulaireCabine(mode,serviceType){cabRequestMode=mode;$("cabRequestForm").hidden=false;$("cabClientChoices").hidden=true;$("cabSubscribeChoices").hidden=true;$("cabHistoryView").hidden=true;$("cabFormTitle").textContent=mode==="transfer"?"Transfert d’unité":serviceType==="forfait_internet"?"Souscrire un forfait internet":"Souscrire un forfait appel";$("cabService").value=mode==="transfer"?"transfert_unites":serviceType;$("cabService").disabled=mode==="transfer";$("cabCatalogue").hidden=mode==="transfer";$("cabCommuneWrap").hidden=mode==="transfer";$("cabDetailsWrap").hidden=mode==="transfer";rendreCatalogueCabine();$("cabNumero").focus();}
+function ouvrirFormulaireCabine(mode,serviceType){cabRequestMode=mode;cabSelectedOffer=null;$("cabRequestForm").hidden=false;$("cabClientChoices").hidden=true;$("cabSubscribeChoices").hidden=true;$("cabHistoryView").hidden=true;$("cabFormTitle").textContent=mode==="transfer"?"Transfert d’unité":serviceType==="forfait_internet"?"Souscrire un forfait internet":"Souscrire un forfait appel";$("cabService").value=mode==="transfer"?"transfert_unites":serviceType;$("cabService").disabled=mode==="transfer";$("cabCatalogue").hidden=mode==="transfer";$("cabCommuneWrap").hidden=true;$("cabDetailsWrap").hidden=true;$("cabAmountWrap").hidden=mode!=="transfer";$("cabFeePreview").hidden=mode!=="transfer";$("cabMontant").value="";rendreCatalogueCabine();$("cabNumero").focus();}
 function retourMenuCabine(){ $("cabRequestForm").hidden=true;$("cabSubscribeChoices").hidden=true;$("cabHistoryView").hidden=true;$("cabClientChoices").hidden=false;$("cabMessage").textContent="";$("cabEnvoyer").disabled=false;}
 $("cabStartTransfer").onclick=()=>ouvrirFormulaireCabine("transfer","transfert_unites");
 $("cabStartSubscribe").onclick=()=>{$("cabClientChoices").hidden=true;$("cabSubscribeChoices").hidden=false;};
@@ -161,10 +161,10 @@ function actualiserFraisCabine(){const amount=Number($("cabMontant").value),fee=
 $("cabMontant").addEventListener("input",actualiserFraisCabine);
 $("cabService").addEventListener("change",()=>{rendreCatalogueCabine();$("cabCatalogue").hidden=$("cabService").value==="transfert_unites";});
 $("cabEnvoyer").onclick=async()=>{
- const u=auth.currentUser,amount=Number($("cabMontant").value),phone=$("cabNumero").value.trim(),commune=cabRequestMode==="transfer"?"":$("cabCommuneClient").value.trim(),details=cabRequestMode==="transfer"?"":$("cabDetails").value.trim(),button=$("cabEnvoyer"),msg=$("cabMessage");
+ const u=auth.currentUser,amount=cabRequestMode==="transfer"?Number($("cabMontant").value):Number(cabSelectedOffer?.price),phone=$("cabNumero").value.trim(),commune="",details=cabRequestMode==="transfer"?"":(cabSelectedOffer?cabSelectedOffer.name+" — "+cabSelectedOffer.data+" — "+cabSelectedOffer.minutes+" — validité "+cabSelectedOffer.validity+" (code "+cabSelectedOffer.code+").":""),button=$("cabEnvoyer"),msg=$("cabMessage");
  const typeService=cabRequestMode==="transfer"?"transfert_unites":$("cabService").value;
  if(!u){msg.textContent="Connectez-vous à votre compte client pour payer.";return;}
- if(!Number.isSafeInteger(amount)||amount<200||amount>500000||phone.length<8||phone.length>20||(cabRequestMode!=="transfer"&&(commune.length<2||details.length<2))){msg.textContent="Vérifiez le numéro et le montant (200 FCFA minimum).";return;}
+ if(!Number.isSafeInteger(amount)||amount<200||amount>500000||phone.length<8||phone.length>20||(cabRequestMode!=="transfer"&&(!cabSelectedOffer||cabSelectedOffer.op!==$("cabOperateur").value||cabSelectedOffer.type!==typeService))){msg.textContent=cabRequestMode==="transfer"?"Vérifiez le numéro et le montant (200 FCFA minimum).":"Sélectionnez une offre dans l’annuaire de l’opérateur avant de continuer.";return;}
  button.disabled=true;msg.textContent="Préparation sécurisée du paiement Jèko…";
  try{const token=await u.getIdToken();const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceId:"cabine",typeService,operateur:$("cabOperateur").value,numeroBeneficiaire:phone,amountPrestation:amount,...(cabRequestMode!=="transfer"?{commune,details}:{}),paymentMethod:$("cabPaymentMethod").value})});
  const data=await response.json().catch(()=>({}));if(!response.ok||!data.checkoutUrl)throw new Error(data.diagnostic||data.error||"Jèko n’a pas pu préparer le paiement.");
