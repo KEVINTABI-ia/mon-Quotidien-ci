@@ -13849,7 +13849,24 @@ async function mqciAdminStatutPharmacie(uid,statut){
   const messages=document.getElementById("mqciAiMessages");
   if(!launcher||!panel||!form||!input||!send||!messages)return;
   const endpoint="https://mon-quotidien-jeko.tabikevin57.workers.dev/api/ai/chat";
+  const historyEndpoint="https://mon-quotidien-jeko.tabikevin57.workers.dev/api/ai/conversations/";
   let busy=false;
+  let conversationId=null;
+  let loadedUid=null;
+  async function loadConversation(user){
+    if(!user||loadedUid===user.uid)return;
+    loadedUid=user.uid;
+    const storageKey="mqci_ai_conversation_"+user.uid;
+    conversationId=sessionStorage.getItem(storageKey);
+    if(!conversationId){conversationId=crypto.randomUUID();sessionStorage.setItem(storageKey,conversationId);return;}
+    try{
+      const token=await user.getIdToken();
+      const response=await fetch(historyEndpoint+conversationId+"/messages",{headers:{Authorization:"Bearer "+token}});
+      if(!response.ok)return;
+      const data=await response.json();
+      if(Array.isArray(data.messages))data.messages.forEach(item=>addMessage(item.content,item.role==="user"?"user":"assistant"));
+    }catch{}
+  }
   function addMessage(text,kind){
     const node=document.createElement("div");
     node.className="mqci-ai-message "+(kind==="user"?"mqci-ai-user":"mqci-ai-assistant");
@@ -13866,7 +13883,7 @@ async function mqciAdminStatutPharmacie(uid,statut){
   launcher.addEventListener("click",()=>toggle(panel.hidden));
   close.addEventListener("click",()=>toggle(false));
   if(window.auth&&typeof auth.onAuthStateChanged==="function"){
-    auth.onAuthStateChanged(user=>{launcher.hidden=!user;if(!user)toggle(false);});
+    auth.onAuthStateChanged(user=>{launcher.hidden=!user;if(!user){toggle(false);conversationId=null;loadedUid=null;messages.replaceChildren();}else loadConversation(user);});
   }
   form.addEventListener("submit",async event=>{
     event.preventDefault();
@@ -13881,7 +13898,7 @@ async function mqciAdminStatutPharmacie(uid,statut){
     const pending=addMessage("Je prépare une réponse…","assistant");
     try{
       const token=await user.getIdToken();
-      const response=await fetch(endpoint,{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({message})});
+      const response=await fetch(endpoint,{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({message,conversationId:conversationId||(conversationId=crypto.randomUUID())})});
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(data.error||"request_failed");
       pending.textContent=typeof data.answer==="string"&&data.answer?data.answer:"Je n'ai pas pu formuler une réponse. Réessayez.";
