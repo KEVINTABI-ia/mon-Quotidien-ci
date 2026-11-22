@@ -10,6 +10,7 @@ import {
   courierWalletNeedsLowBalanceAlert,
   isValidCourierWalletRechargeAmount,
   courierProfileCanCompleteMission,
+  hashDeliveryConfirmationCode,
   buildCourierWalletCommissionLedger,
   COURIER_WALLET_RULES
 } from "../cloudflare/worker.js";
@@ -209,4 +210,12 @@ test("server commission ledger calculates boutique and standard delivery commiss
   const short=buildCourierWalletCommissionLedger({balanceXof:100,deliveryFeeXof:2000,serviceType:"classique"});
   assert.equal(short.debitXof,100);
   assert.equal(short.debtAddedXof,200);
+});
+
+
+test("delivery confirmation code is six digits and stored as a SHA-256 hash", async () => {
+  const hash=await hashDeliveryConfirmationCode("042731");
+  assert.match(hash,/^[a-f0-9]{64}$/);
+  assert.equal(await hashDeliveryConfirmationCode("42731"),null);
+  assert.equal(await hashDeliveryConfirmationCode("12345x"),null);
 });
