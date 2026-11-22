@@ -1761,6 +1761,42 @@ service cloud.firestore {
       }
     }
 
+    match /candidatures_livreurs/{candidatureId} {
+      // Préinscription publique : seules les données strictement attendues sont acceptées.
+      allow create: if request.resource.data.keys().hasAll([
+          "nom","telephone","commune","quartier","profil","transport","permis","experience",
+          "zones","types","disponibilite","volume","tarif","revenuMinimum",
+          "difficultes","attentes","collaboration","consentement","createdAt","source"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "nom","telephone","commune","quartier","profil","transport","permis","experience",
+          "zones","types","disponibilite","volume","tarif","revenuMinimum",
+          "difficultes","attentes","collaboration","consentement","createdAt","source"
+        ])
+        && request.resource.data.nom is string && request.resource.data.nom.size() >= 2 && request.resource.data.nom.size() <= 100
+        && request.resource.data.telephone is string && request.resource.data.telephone.size() >= 8 && request.resource.data.telephone.size() <= 20
+        && request.resource.data.commune is string && request.resource.data.commune.size() >= 2 && request.resource.data.commune.size() <= 70
+        && request.resource.data.quartier is string && request.resource.data.quartier.size() <= 100
+        && request.resource.data.profil is string && request.resource.data.profil.size() <= 100
+        && request.resource.data.transport is string && request.resource.data.transport.size() <= 80
+        && request.resource.data.permis is string && request.resource.data.permis.size() <= 60
+        && request.resource.data.experience is string && request.resource.data.experience.size() <= 40
+        && request.resource.data.zones is string && request.resource.data.zones.size() >= 2 && request.resource.data.zones.size() <= 500
+        && request.resource.data.types is string && request.resource.data.types.size() <= 100
+        && request.resource.data.disponibilite is string && request.resource.data.disponibilite.size() <= 50
+        && request.resource.data.volume is string && request.resource.data.volume.size() <= 40
+        && (request.resource.data.tarif == null || (request.resource.data.tarif is number && request.resource.data.tarif >= 0 && request.resource.data.tarif <= 500000))
+        && (request.resource.data.revenuMinimum == null || (request.resource.data.revenuMinimum is number && request.resource.data.revenuMinimum >= 0 && request.resource.data.revenuMinimum <= 2000000))
+        && request.resource.data.difficultes is string && request.resource.data.difficultes.size() <= 700
+        && request.resource.data.attentes is string && request.resource.data.attentes.size() <= 700
+        && request.resource.data.collaboration is string && request.resource.data.collaboration.size() <= 80
+        && request.resource.data.consentement == true
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.source == "formulaire_recrutement_site";
+      allow read: if estAdmin();
+      allow update, delete: if estAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
