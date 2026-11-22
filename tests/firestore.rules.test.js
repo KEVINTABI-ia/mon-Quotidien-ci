@@ -1442,6 +1442,11 @@ describe("Mon Transport CI — règles Firestore", function () {
       createdAt: require("firebase/firestore").serverTimestamp(),
       updatedAt: require("firebase/firestore").serverTimestamp()
     });
+    async function seedDemand() {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        await context.firestore().doc("demandes_cabines/national-request").set(requestData());
+      });
+    }
     async function seedCabines() {
       await testEnv.withSecurityRulesDisabled(async context => {
         const db = context.firestore();
@@ -1458,17 +1463,15 @@ describe("Mon Transport CI — règles Firestore", function () {
       });
     }
 
-    it("autorise un client à publier une demande sans choisir de cabine", async () => {
+    it("interdit à un client de publier une demande sans paiement confirmé côté serveur", async () => {
       const {doc,setDoc}=require("firebase/firestore");
       const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      await assertSucceeds(setDoc(doc(db,"demandes_cabines","national-request"),requestData()));
+      await assertFails(setDoc(doc(db,"demandes_cabines","national-request"),requestData()));
     });
 
     it("diffuse la demande ouverte aux cabinistes approuvés de communes différentes", async () => {
-      const {doc,setDoc,collection,query,where,getDocs}=require("firebase/firestore");
-      await seedCabines();
-      const clientDb=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      await assertSucceeds(setDoc(doc(clientDb,"demandes_cabines","national-request"),requestData()));
+      const {collection,query,where,getDocs}=require("firebase/firestore");
+      await seedCabines();await seedDemand();
       for (const uid of [CABINE_UID,CABINE_UID_2]) {
         const partnerDb=testEnv.authenticatedContext(uid,{email:"cabine@example.test"}).firestore();
         const q=query(collection(partnerDb,"demandes_cabines"),where("statut","==","en_attente"),where("cabineUid","==",null));
@@ -1478,20 +1481,15 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
 
     it("interdit à un compte non approuvé de consulter les demandes diffusées", async () => {
-      const {doc,setDoc,collection,query,where,getDocs}=require("firebase/firestore");
-      await seedCabines();
-      const clientDb=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      await assertSucceeds(setDoc(doc(clientDb,"demandes_cabines","national-request"),requestData()));
+      const {collection,query,where,getDocs}=require("firebase/firestore");
+      await seedCabines();await seedDemand();
       const otherDb=testEnv.authenticatedContext(OTHER_UID,{email:"other@example.test"}).firestore();
       await assertFails(getDocs(query(collection(otherDb,"demandes_cabines"),where("statut","==","en_attente"),where("cabineUid","==",null))));
     });
 
     it("attribue une demande au premier cabiniste et bloque les autres", async () => {
-      const {doc,setDoc,updateDoc,serverTimestamp,getDoc}=require("firebase/firestore");
-      await seedCabines();
-      const clientDb=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      const requestRef=doc(clientDb,"demandes_cabines","national-request");
-      await assertSucceeds(setDoc(requestRef,requestData()));
+      const {doc,updateDoc,serverTimestamp,getDoc}=require("firebase/firestore");
+      await seedCabines();await seedDemand();
       const cabinDb=testEnv.authenticatedContext(CABINE_UID,{email:"cabine-a@example.test"}).firestore();
       await assertSucceeds(updateDoc(doc(cabinDb,"demandes_cabines","national-request"),{
         cabineUid:CABINE_UID,cabineNom:"Cabine A",statut:"acceptee",updatedAt:serverTimestamp()
@@ -1504,15 +1502,36 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
 
     it("autorise uniquement le cabiniste attributaire à faire progresser la demande", async () => {
-      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
-      await seedCabines();
-      const clientDb=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
-      await assertSucceeds(setDoc(doc(clientDb,"demandes_cabines","national-request"),requestData()));
+      const {doc,updateDoc,serverTimestamp}=require("firebase/firestore");
+      await seedCabines();await seedDemand();
       const cabinDb=testEnv.authenticatedContext(CABINE_UID,{email:"cabine-a@example.test"}).firestore();
       const ref=doc(cabinDb,"demandes_cabines","national-request");
       await assertSucceeds(updateDoc(ref,{cabineUid:CABINE_UID,cabineNom:"Cabine A",statut:"acceptee",updatedAt:serverTimestamp()}));
       await assertSucceeds(updateDoc(ref,{statut:"en_cours",updatedAt:serverTimestamp()}));
       await assertSucceeds(updateDoc(ref,{statut:"terminee",updatedAt:serverTimestamp()}));
+    });
+
+    it("réserve la création des reversements à l’admin et autorise leur lecture par la cabine attributaire", async () => {
+      const {doc,setDoc,getDoc,updateDoc,deleteDoc,serverTimestamp}=require("firebase/firestore");
+      await seedCabines();
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        await context.firestore().doc("demandes_cabines/completed-payout-test").set({
+          ...requestData(),cabineUid:CABINE_UID,cabineNom:"Cabine A",statut:"terminee",
+          montantAReverser:1000,paiementStatut:"paye"
+        });
+      });
+      const payout={demandeId:"completed-payout-test",cabineUid:CABINE_UID,cabineNom:"Cabine A",
+        montantXof:400,dateReversement:"2026-11-22",reference:"WAVE-TEST-001",
+        moyenPaiement:"Wave",createdAt:serverTimestamp(),createdBy:ADMIN_UID};
+      const admin=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      const payoutRef=doc(admin,"demandes_cabines","completed-payout-test","reversements","wave-test-001");
+      await assertSucceeds(setDoc(payoutRef,payout));
+      const cabin=testEnv.authenticatedContext(CABINE_UID).firestore();
+      await assertSucceeds(getDoc(doc(cabin,"demandes_cabines","completed-payout-test","reversements","wave-test-001")));
+      await assertFails(updateDoc(doc(cabin,"demandes_cabines","completed-payout-test","reversements","wave-test-001"),{montantXof:900}));
+      await assertFails(deleteDoc(doc(admin,"demandes_cabines","completed-payout-test","reversements","wave-test-001")));
+      const client=testEnv.authenticatedContext(CLIENT_UID).firestore();
+      await assertFails(setDoc(doc(client,"demandes_cabines","completed-payout-test","reversements","client-forged"),{...payout,createdBy:CLIENT_UID}));
     });
   });
 

@@ -1654,9 +1654,15 @@ service cloud.firestore {
         && request.resource.data.statut == "en_attente"
         && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
       allow read: if estAdmin() || (estConnecte() && request.auth.uid == cabineUid) || resource.data.statut == "approuve";
-      allow update: if estAdmin() || (estConnecte() && request.auth.uid == cabineUid && resource.data.statut == "en_attente"
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["telephone","horaires","operateurs","updatedAt"])
-        && request.resource.data.updatedAt == request.time);
+      allow update: if estAdmin()
+        || (estConnecte() && request.auth.uid == cabineUid && resource.data.statut == "en_attente"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["telephone","horaires","operateurs","updatedAt"])
+          && request.resource.data.updatedAt == request.time)
+        || (estConnecte() && request.auth.uid == cabineUid && resource.data.statut == "approuve"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["presenceOnline","lastSeenAt","updatedAt"])
+          && request.resource.data.presenceOnline is bool
+          && request.resource.data.lastSeenAt == request.time
+          && request.resource.data.updatedAt == request.time);
       allow delete: if estAdmin();
     }
     match /demandes_cabines/{demandeId} {
@@ -1664,28 +1670,8 @@ service cloud.firestore {
         return exists(/databases/$(database)/documents/cabines_telephoniques/$(uid))
           && get(/databases/$(database)/documents/cabines_telephoniques/$(uid)).data.statut == "approuve";
       }
-      allow create: if estConnecte()
-        && request.resource.data.keys().hasAll(["clientUid","operateur","typeService","numeroBeneficiaire","montantPrestation","commune","details","cabineUid","statut","createdAt","updatedAt"])
-        && request.resource.data.keys().hasOnly(["clientUid","operateur","typeService","numeroBeneficiaire","montantPrestation","commune","details","cabineUid","statut","createdAt","updatedAt"])
-        && request.resource.data.clientUid == request.auth.uid
-        && request.resource.data.operateur in ["Orange","MTN","Moov Africa"]
-        && request.resource.data.typeService in ["transfert_unites","forfait_internet","forfait_appels","forfait_mixte"]
-        && request.resource.data.numeroBeneficiaire is string
-        && request.resource.data.numeroBeneficiaire.size() >= 8
-        && request.resource.data.numeroBeneficiaire.size() <= 20
-        && request.resource.data.montantPrestation is int
-        && request.resource.data.montantPrestation > 0
-        && request.resource.data.montantPrestation <= 500000
-        && request.resource.data.commune is string
-        && request.resource.data.commune.size() >= 2
-        && request.resource.data.commune.size() <= 60
-        && request.resource.data.details is string
-        && request.resource.data.details.size() >= 2
-        && request.resource.data.details.size() <= 180
-        && request.resource.data.cabineUid == null
-        && request.resource.data.statut == "en_attente"
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
+      // Les demandes cabine sont créées exclusivement par le Worker après confirmation Jèko.
+      allow create: if false;
       allow read: if estAdmin()
         || (estConnecte() && resource.data.clientUid == request.auth.uid)
         || (estConnecte() && cabinisteApprouve(request.auth.uid)
@@ -1710,6 +1696,29 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","updatedAt"])
           && request.resource.data.updatedAt == request.time);
       allow delete: if estAdmin();
+      match /reversements/{reversementId} {
+        // Journal immuable : seuls les administrateurs enregistrent un reversement manuel.
+        // La prestation doit être terminée et appartenir à la cabine indiquée.
+        allow read: if estAdmin()
+          || (estConnecte()
+            && get(/databases/$(database)/documents/demandes_cabines/$(demandeId)).data.cabineUid == request.auth.uid);
+        allow create: if estAdmin()
+          && exists(/databases/$(database)/documents/demandes_cabines/$(demandeId))
+          && get(/databases/$(database)/documents/demandes_cabines/$(demandeId)).data.statut == "terminee"
+          && request.resource.data.demandeId == demandeId
+          && request.resource.data.cabineUid == get(/databases/$(database)/documents/demandes_cabines/$(demandeId)).data.cabineUid
+          && request.resource.data.montantXof is int
+          && request.resource.data.montantXof > 0
+          && request.resource.data.dateReversement is string
+          && request.resource.data.reference is string
+          && request.resource.data.reference.size() >= 1
+          && request.resource.data.reference.size() <= 80
+          && request.resource.data.moyenPaiement is string
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.keys().hasOnly(["demandeId","cabineUid","cabineNom","montantXof","dateReversement","reference","moyenPaiement","createdAt","createdBy"]);
+        allow update, delete: if false;
+      }
     }
 
     // Portefeuilles livreurs : lecture propriétaire uniquement ; toutes les écritures passent par le Worker.

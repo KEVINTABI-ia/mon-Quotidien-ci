@@ -38,3 +38,34 @@ test("rejects altered price, duration, owner path, and non-image file", () => {
   assert.equal(validateJekoPaymentPlan({ ...base, imagePath: base.imagePath.replace(".jpg", ".mp4") }), false);
   assert.equal(validateJekoPaymentPlan({ ...base, partnerProfilePath: "partenaires/someone-else" }), false);
 });
+
+
+test("validates phone cabin fees using the approved service-fee brackets", () => {
+  const baseCabine = {
+    provider: "jeko", serviceId: "cabine", currency: "XOF",
+    uid: "client-user-123", typeService: "transfert_unites",
+    operateur: "Orange", numeroBeneficiaire: "0700000000",
+    commune: "Yopougon", details: "Transfert de crédit",
+    amountPrestation: 500, fraisService: 18, amountXof: 518, amountCents: 51800
+  };
+  assert.equal(validateJekoPaymentPlan(baseCabine), true);
+  assert.equal(validateJekoPaymentPlan({ ...baseCabine, amountPrestation: 999, fraisService: 18, amountXof: 1017, amountCents: 101700 }), true);
+  assert.equal(validateJekoPaymentPlan({ ...baseCabine, amountPrestation: 1000, fraisService: 40, amountXof: 1040, amountCents: 104000 }), true);
+  assert.equal(validateJekoPaymentPlan({ ...baseCabine, amountPrestation: 3000, fraisService: 40, amountXof: 3040, amountCents: 304000 }), true);
+  assert.equal(validateJekoPaymentPlan({ ...baseCabine, amountPrestation: 3001, fraisService: 75, amountXof: 3076, amountCents: 307600 }), true);
+});
+
+test("rejects manipulated cabin fees, totals, services, and beneficiary numbers", () => {
+  const baseCabine = {
+    provider: "jeko", serviceId: "cabine", currency: "XOF",
+    uid: "client-user-123", typeService: "transfert_unites",
+    operateur: "Orange", numeroBeneficiaire: "0700000000",
+    commune: "Yopougon", details: "Transfert de crédit",
+    amountPrestation: 500, fraisService: 18, amountXof: 518, amountCents: 51800
+  };
+  assert.equal(validateJekoPaymentPlan({ ...baseCabine, fraisService: 0 }), false);
+  assert.equal(validateJekoPaymentPlan({ ...baseCabine, amountXof: 500, amountCents: 50000 }), false);
+  assert.equal(validateJekoPaymentPlan({ ...baseCabine, typeService: "other" }), false);
+  assert.equal(validateJekoPaymentPlan({ ...baseCabine, numeroBeneficiaire: "x" }), false);
+  assert.equal(validateJekoPaymentPlan({ ...baseCabine, amountPrestation: 199, fraisService: 18, amountXof: 217, amountCents: 21700 }), false);
+});

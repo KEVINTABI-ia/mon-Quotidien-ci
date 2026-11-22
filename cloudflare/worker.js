@@ -973,10 +973,28 @@ async function createCheckout(request,env) {
   const methods=["orange","wave","mtn","moov","djamo"];
   if(!methods.includes(body.paymentMethod)) return json({error:"invalid_payment_method"},400);
   const serviceId=body.serviceId||"automobiliste";
-  if(!["automobiliste","objet_retrouve","petites_annonces","boutique_renewal","partenaire_colis","partenaire_services","compagnie_voyage","logement_renewal","ramassage","publicite","courier_wallet","ai_subscription"].includes(serviceId)) return json({error:"unsupported_service"},400);
+  if(!["automobiliste","objet_retrouve","petites_annonces","boutique_renewal","partenaire_colis","partenaire_services","compagnie_voyage","logement_renewal","ramassage","publicite","courier_wallet","ai_subscription","cabine"].includes(serviceId)) return json({error:"unsupported_service"},400);
   const now=new Date();
   let amountXof, initial;
-  if(serviceId==="courier_wallet") {
+  if(serviceId==="cabine") {
+    const typeService=body.typeService,operateur=body.operateur;
+    const numeroBeneficiaire=typeof body.numeroBeneficiaire==="string"?body.numeroBeneficiaire.trim():"";
+    const commune=typeof body.commune==="string"?body.commune.trim():"";
+    const details=typeof body.details==="string"?body.details.trim():"";
+    const amountPrestation=body.amountPrestation;
+    if(!["transfert_unites","forfait_internet","forfait_appels","forfait_mixte"].includes(typeService)||
+       !["Orange","MTN","Moov Africa"].includes(operateur)||
+       !/^[0-9+ ]{8,20}$/.test(numeroBeneficiaire)||
+       typeof commune!=="string"||commune.length<2||commune.length>60||
+       typeof details!=="string"||details.length<2||details.length>180||
+       !Number.isSafeInteger(amountPrestation)||amountPrestation<200||amountPrestation>500000) return json({error:"invalid_cabine_request"},400);
+    const fraisService=amountPrestation<=999?18:(amountPrestation<=3000?40:75);
+    amountXof=amountPrestation+fraisService;
+    initial={uid:user.sub,serviceId,typeService,operateur,numeroBeneficiaire,commune,details,
+      amountPrestation,fraisService,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",
+      status:"pending",clientReference:"MQCI-"+crypto.randomUUID().replace(/-/g,""),
+      createdAt:now.toISOString(),updatedAt:now.toISOString()};
+  } else if(serviceId==="courier_wallet") {
     const profilePath="partenaires/"+user.sub,profileDoc=await getDoc(env,profilePath),profile=docData(profileDoc);
     if(!profileDoc||profile?.uid!==user.sub||profile?.type!=="livreur_independant"||profile?.statut!=="approuve"||(profile?.etatCompte||"actif")!=="actif")return json({error:"courier_profile_not_eligible"},403);
     amountXof=body.amountXof;
@@ -1253,6 +1271,18 @@ export function validateJekoPaymentPlan(payment) {
     ramassage:{ramassage:[2000,30]},
     automobiliste:{trimestriel:[500, 3]}
   };
+  if(payment.serviceId==="cabine") {
+    const amount=payment.amountPrestation;
+    const fee=Number.isSafeInteger(amount)?(amount<=999?18:(amount<=3000?40:75)):null;
+    return Number.isSafeInteger(amount)&&amount>=200&&amount<=500000&&
+      payment.fraisService===fee&&payment.amountXof===amount+fee&&
+      ["transfert_unites","forfait_internet","forfait_appels","forfait_mixte"].includes(payment.typeService)&&
+      ["Orange","MTN","Moov Africa"].includes(payment.operateur)&&
+      typeof payment.numeroBeneficiaire==="string"&&/^[0-9+ ]{8,20}$/.test(payment.numeroBeneficiaire)&&
+      typeof payment.commune==="string"&&payment.commune.length>=2&&payment.commune.length<=60&&
+      typeof payment.details==="string"&&payment.details.length>=2&&payment.details.length<=180&&
+      typeof payment.uid==="string"&&/^[A-Za-z0-9_-]{1,128}$/.test(payment.uid);
+  }
   if(payment.serviceId==="publicite"){
     const plans={decouverte:[2000,3],visibilite:[5000,7],professionnel:[9000,15],premium:[15000,30]},plan=plans[payment.planId];
     return !!plan&&payment.amountXof===plan[0]&&payment.durationDays===plan[1]&&typeof payment.uid==="string"&&typeof payment.imagePath==="string"&&payment.imagePath.startsWith("publicites/partenaires/"+payment.uid+"/")&&typeof payment.partnerProfilePath==="string"&&(payment.partnerProfilePath==="partenaires/"+payment.uid||/^compagnies\/[A-Za-z0-9_-]{1,128}$/.test(payment.partnerProfilePath)||/^demandes_nouveaux_services\/[A-Za-z0-9_-]{1,128}$/.test(payment.partnerProfilePath))&&/\.(jpg|png|webp)$/i.test(payment.imagePath)&&typeof payment.mediaUrl==="string"&&/^https:\/\//i.test(payment.mediaUrl)&&payment.mediaUrl.includes(encodeURIComponent(payment.imagePath))&&typeof payment.titre==="string"&&payment.titre.length>=2&&payment.titre.length<=100;
@@ -1334,6 +1364,26 @@ async function webhook(request,env) {
     return new Response("OK",{status:200});
   }
   if(payment.status==="succeeded") return new Response("OK",{status:200});
+  if(payment.serviceId==="cabine") {
+    const demandPath="demandes_cabines/"+paymentId;
+    const demandData={
+      clientUid:payment.uid,operateur:payment.operateur,typeService:payment.typeService,
+      numeroBeneficiaire:payment.numeroBeneficiaire,montantPrestation:payment.amountPrestation,
+      fraisService:payment.fraisService,montantTotalPaye:payment.amountXof,
+      montantAReverser:payment.amountPrestation,commune:payment.commune,details:payment.details,
+      paymentId,providerTransactionId:transactionId,cabineUid:null,cabineNom:null,
+      statut:"en_attente",paiementStatut:"paye",confirmedAt:now.toISOString(),
+      createdAt:now.toISOString(),updatedAt:now.toISOString()
+    };
+    try {
+      await commitWrites(env,[
+        updateWrite(paymentPath,{status:"succeeded",providerTransactionId:transactionId,confirmedAt:now.toISOString(),updatedAt:now.toISOString()},paymentDoc.updateTime),
+        createWrite(demandPath,demandData),
+        createWrite(receiptPath,receiptData)
+      ]);
+    } catch(e) { if(!(await getDoc(env,receiptPath))) throw e; }
+    return new Response("OK",{status:200});
+  }
   if(payment.serviceId==="ai_subscription") {
     const subPath=payment.targetPath,subDoc=await getDoc(env,subPath),sub=docData(subDoc);
     if(!subDoc||!sub||sub.uid!==payment.uid||sub.pendingPaymentId!==paymentId){
