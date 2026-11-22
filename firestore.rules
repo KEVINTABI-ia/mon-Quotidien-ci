@@ -1764,7 +1764,7 @@ service cloud.firestore {
     match /candidatures_livreurs/{candidatureId} {
       // Préinscription publique : seules les données strictement attendues sont acceptées.
       allow create: if request.resource.data.keys().hasAll([
-          "nom","telephone","commune","quartier","profil","transport","experience",
+          "nom","telephone","commune","quartier","profil","transport","permis","experience",
           "zones","types","disponibilite","volume","tarif","revenuMinimum",
           "difficultes","attentes","collaboration","consentement","createdAt","source"
         ])
@@ -1779,6 +1779,7 @@ service cloud.firestore {
         && request.resource.data.quartier is string && request.resource.data.quartier.size() <= 100
         && request.resource.data.profil is string && request.resource.data.profil.size() <= 100
         && request.resource.data.transport is string && request.resource.data.transport.size() <= 80
+        && request.resource.data.permis is string && request.resource.data.permis.size() <= 60
         && request.resource.data.experience is string && request.resource.data.experience.size() <= 40
         && request.resource.data.zones is string && request.resource.data.zones.size() >= 2 && request.resource.data.zones.size() <= 500
         && request.resource.data.types is string && request.resource.data.types.size() <= 100
