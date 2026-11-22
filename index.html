@@ -14186,24 +14186,51 @@ body.mqci-ai-no-scroll{
   function syncAiVisualViewport(){
     const viewport=window.visualViewport;
     if(viewport){
-      panel.style.setProperty("--mqci-ai-vv-top",Math.max(0,viewport.offsetTop)+"px");
-      panel.style.setProperty("--mqci-ai-vv-height",Math.max(1,viewport.height)+"px");
+      const viewportHeight=Math.max(1,viewport.height);
+      panel.style.setProperty("--mqci-ai-vv-top",Math.max(0,Math.round(viewport.offsetTop||0))+"px");
+      panel.style.setProperty("--mqci-ai-vv-height",Math.round(viewportHeight)+"px");
+      const screenHeight=(window.screen&&window.screen.height)||window.innerHeight||viewportHeight;
       const keyboardOpen=!panel.hidden&&document.activeElement===input&&
-        (window.innerHeight-viewport.height)>120;
+        ((window.innerHeight-viewportHeight)>100 || viewportHeight<screenHeight*0.78);
       panel.classList.toggle("mqci-ai-keyboard-open",keyboardOpen);
+      if(keyboardOpen){
+        panel.style.setProperty("height",Math.round(viewportHeight)+"px","important");
+        panel.style.setProperty("max-height",Math.round(viewportHeight)+"px","important");
+      }else{
+        panel.style.removeProperty("height");
+        panel.style.removeProperty("max-height");
+      }
     }else{
       panel.style.setProperty("--mqci-ai-vv-top","0px");
       panel.style.setProperty("--mqci-ai-vv-height",Math.max(1,window.innerHeight)+"px");
       panel.classList.remove("mqci-ai-keyboard-open");
     }
   }
-  if(window.visualViewport){
-    window.visualViewport.addEventListener("resize",syncAiVisualViewport);
-    window.visualViewport.addEventListener("scroll",syncAiVisualViewport);
+  let aiViewportFrame=0;
+  function scheduleAiViewportSync(){
+    if(aiViewportFrame)cancelAnimationFrame(aiViewportFrame);
+    aiViewportFrame=requestAnimationFrame(()=>{
+      aiViewportFrame=0;
+      syncAiVisualViewport();
+    });
   }
-  window.addEventListener("resize",syncAiVisualViewport);
-  input.addEventListener("focus",()=>requestAnimationFrame(syncAiVisualViewport));
-  input.addEventListener("blur",()=>panel.classList.remove("mqci-ai-keyboard-open"));
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize",scheduleAiViewportSync,{passive:true});
+    window.visualViewport.addEventListener("scroll",scheduleAiViewportSync,{passive:true});
+  }
+  window.addEventListener("resize",scheduleAiViewportSync,{passive:true});
+  window.addEventListener("orientationchange",scheduleAiViewportSync,{passive:true});
+  input.addEventListener("focus",()=>{
+    scheduleAiViewportSync();
+    setTimeout(scheduleAiViewportSync,120);
+    setTimeout(scheduleAiViewportSync,350);
+  });
+  input.addEventListener("blur",()=>{
+    panel.classList.remove("mqci-ai-keyboard-open");
+    panel.style.removeProperty("height");
+    panel.style.removeProperty("max-height");
+    scheduleAiViewportSync();
+  });
   function toggle(open){
     panel.hidden=!open;
     panel.classList.toggle("mqci-ai-fullscreen",open);
