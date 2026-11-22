@@ -13835,6 +13835,13 @@ async function mqciAdminStatutPharmacie(uid,statut){
   #mqciAiInput{min-width:0;flex:1;resize:none;max-height:100px;border:1px solid #d7e2da;border-radius:12px;padding:11px;font:14px system-ui;outline-color:#087C62}
   #mqciAiSend{border:0;border-radius:12px;background:#087C62;color:#fff;padding:0 15px;font-weight:700;min-width:64px}
   #mqciAiSend:disabled{opacity:.5}
+  /* Fullscreen controls: keep the composer visible above mobile keyboards. */
+  #mqciAiPanel.mqci-ai-fullscreen{top:var(--mqci-ai-vv-top,0px)!important;height:var(--mqci-ai-vv-height,100dvh)!important;box-sizing:border-box!important}
+  #mqciAiPanel.mqci-ai-fullscreen #mqciAiHeader{flex:0 0 auto;box-sizing:border-box}
+  #mqciAiPanel.mqci-ai-fullscreen #mqciAiClose{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;min-width:40px;min-height:40px;padding:0;line-height:1;font-size:25px;box-sizing:border-box;align-self:center}
+  #mqciAiPanel.mqci-ai-fullscreen #mqciAiForm{flex:0 0 auto;align-items:stretch;box-sizing:border-box;width:100%;min-width:0;gap:8px}
+  #mqciAiPanel.mqci-ai-fullscreen #mqciAiInput{min-width:0;min-height:44px;box-sizing:border-box}
+  #mqciAiPanel.mqci-ai-fullscreen #mqciAiSend{flex:0 0 auto;min-width:68px;min-height:44px;padding:0 14px;white-space:nowrap;box-sizing:border-box;align-self:stretch}
   @media(max-width:520px){#mqciAiLauncher{right:12px;bottom:14px;padding:13px 15px}#mqciAiPanel{right:8px;bottom:72px;width:calc(100vw - 16px);height:min(590px,calc(100dvh - 92px))}}
   #mqciAiSubscription{padding:11px 13px;background:#fff;border-bottom:1px solid #e5ece6;display:grid;gap:8px}
   #mqciAiSubscriptionStatus{font-size:12px;line-height:1.4;color:#29483b}
@@ -13954,6 +13961,16 @@ async function mqciAdminStatutPharmacie(uid,statut){
     return node;
   }
   let previousFocus=null;
+  function syncAiVisualViewport(){
+    if(!window.visualViewport)return;
+    const viewport=window.visualViewport;
+    panel.style.setProperty("--mqci-ai-vv-top",Math.max(0,viewport.offsetTop)+"px");
+    panel.style.setProperty("--mqci-ai-vv-height",Math.max(1,viewport.height)+"px");
+  }
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize",syncAiVisualViewport);
+    window.visualViewport.addEventListener("scroll",syncAiVisualViewport);
+  }
   function toggle(open){
     panel.hidden=!open;
     panel.classList.toggle("mqci-ai-fullscreen",open);
@@ -13961,6 +13978,7 @@ async function mqciAdminStatutPharmacie(uid,statut){
     launcher.setAttribute("aria-expanded",String(open));
     document.body.classList.toggle("mqci-ai-no-scroll",open);
     if(open){
+      syncAiVisualViewport();
       previousFocus=document.activeElement;
       close.setAttribute("aria-label","Réduire l’assistant");
       close.title="Réduire l’assistant";
