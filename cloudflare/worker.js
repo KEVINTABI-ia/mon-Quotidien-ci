@@ -1257,6 +1257,11 @@ export async function verifyHmac(raw,signature,secret) {
   const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
   return safeHexEqual(signature,Array.from(new Uint8Array(await crypto.subtle.sign("HMAC",key,raw))).map(v=>v.toString(16).padStart(2,"0")).join(""));
 }
+export async function verifyJekoWebhookSignature(raw,signature,secret) {
+  if(!(raw instanceof ArrayBuffer)&&!ArrayBuffer.isView(raw)) return false;
+  if(typeof signature!=="string"||!/^[a-f0-9]{64}$/i.test(signature)||typeof secret!=="string"||!secret) return false;
+  return verifyHmac(raw,signature,secret);
+}
 function addMonthsClamped(date,months) {
   const d=new Date(date), day=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+months);
   const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(day,last));return d;
@@ -1328,7 +1333,7 @@ export function validateJekoPaymentPlan(payment) {
 async function webhook(request,env) {
   if(request.method!=="POST") return new Response("Method Not Allowed",{status:405});
   const raw=await request.arrayBuffer(), signature=request.headers.get("Jeko-Signature")||"";
-  if(!await verifyHmac(raw,signature,env.JEKO_WEBHOOK_SECRET)) return new Response("Unauthorized",{status:401});
+  if(!await verifyJekoWebhookSignature(raw,signature,env.JEKO_WEBHOOK_SECRET)) return new Response("Unauthorized",{status:401});
   const event=request.headers.get("Jeko-Event")||"";
   if(event!=="TRANSACTION_COMPLETED"&&event!=="transaction.completed") return new Response("OK",{status:200});
   let tx;try{tx=JSON.parse(new TextDecoder().decode(raw));}catch{return new Response("Bad Request",{status:400});}
