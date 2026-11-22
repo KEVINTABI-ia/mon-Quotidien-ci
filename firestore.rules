@@ -1769,7 +1769,7 @@ service cloud.firestore {
           "difficultes","attentes","collaboration","consentement","createdAt","source"
         ])
         && request.resource.data.keys().hasOnly([
-          "nom","telephone","commune","quartier","profil","transport","experience",
+          "nom","telephone","commune","quartier","profil","transport","permis","experience",
           "zones","types","disponibilite","volume","tarif","revenuMinimum",
           "difficultes","attentes","collaboration","consentement","createdAt","source"
         ])
