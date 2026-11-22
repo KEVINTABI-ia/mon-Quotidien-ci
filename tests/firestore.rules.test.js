@@ -1510,6 +1510,29 @@ describe("Mon Transport CI — règles Firestore", function () {
       await assertSucceeds(updateDoc(ref,{statut:"en_cours",updatedAt:serverTimestamp()}));
       await assertSucceeds(updateDoc(ref,{statut:"terminee",updatedAt:serverTimestamp()}));
     });
+
+    it("réserve la création des reversements à l’admin et autorise leur lecture par la cabine attributaire", async () => {
+      const {doc,setDoc,getDoc,updateDoc,deleteDoc,serverTimestamp}=require("firebase/firestore");
+      await seedCabines();
+      await testEnv.withSecurityRulesDisabled(async context=>{
+        await context.firestore().doc("demandes_cabines/completed-payout-test").set({
+          ...requestData(),cabineUid:CABINE_UID,cabineNom:"Cabine A",statut:"terminee",
+          montantAReverser:1000,paiementStatut:"paye"
+        });
+      });
+      const payout={demandeId:"completed-payout-test",cabineUid:CABINE_UID,cabineNom:"Cabine A",
+        montantXof:400,dateReversement:"2026-11-22",reference:"WAVE-TEST-001",
+        moyenPaiement:"Wave",createdAt:serverTimestamp(),createdBy:ADMIN_UID};
+      const admin=testEnv.authenticatedContext(ADMIN_UID).firestore();
+      const payoutRef=doc(admin,"demandes_cabines","completed-payout-test","reversements","wave-test-001");
+      await assertSucceeds(setDoc(payoutRef,payout));
+      const cabin=testEnv.authenticatedContext(CABINE_UID).firestore();
+      await assertSucceeds(getDoc(doc(cabin,"demandes_cabines","completed-payout-test","reversements","wave-test-001")));
+      await assertFails(updateDoc(doc(cabin,"demandes_cabines","completed-payout-test","reversements","wave-test-001"),{montantXof:900}));
+      await assertFails(deleteDoc(doc(admin,"demandes_cabines","completed-payout-test","reversements","wave-test-001")));
+      const client=testEnv.authenticatedContext(CLIENT_UID).firestore();
+      await assertFails(setDoc(doc(client,"demandes_cabines","completed-payout-test","reversements","client-forged"),{...payout,createdBy:CLIENT_UID}));
+    });
   });
 
 });
