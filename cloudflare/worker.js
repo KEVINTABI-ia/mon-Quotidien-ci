@@ -149,6 +149,15 @@ export function parseAiChatPayload(payload) {
 async function aiChat(request, env) {
   const authResult = await requireUser(request, env);
   if (!authResult.user) return json({ error: "unauthorized" }, 401);
+  if (!env.AI_RATE_LIMITER || typeof env.AI_RATE_LIMITER.limit !== "function") {
+    return json({ error: "ai_rate_limiter_unavailable" }, 503);
+  }
+  try {
+    const allowance = await env.AI_RATE_LIMITER.limit({ key: authResult.user.sub });
+    if (!allowance.success) return json({ error: "rate_limited" }, 429);
+  } catch {
+    return json({ error: "ai_rate_limiter_unavailable" }, 503);
+  }
   if (!env.AI || typeof env.AI.run !== "function") {
     return json({ error: "ai_service_unavailable" }, 503);
   }
