@@ -9,8 +9,49 @@ const libelleStatut=s=>({en_attente:"En attente d’un cabiniste",acceptee:"Acce
 let partenaire=null,profilCabine=null;
 const section=document.createElement("section");
 section.id="cabinesTelephoniques";section.className="card";section.style.display="none";
-section.innerHTML='<h2>📞 Cabine téléphonique</h2><div class="cab-actions"><button id="cabTabClient" type="button">Faire une demande</button><button id="cabTabPartner" type="button">Espace cabiniste</button></div><p>Transfert d’unités et souscription de forfaits Internet ou appels. Votre demande est transmise à tous les cabinistes partenaires approuvés.</p><div id="cabClient"><h3>Faire une demande</h3><label>Opérateur</label><select id="cabOperateur"><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><label>Service souhaité</label><select id="cabService"><option value="transfert_unites">Transfert d’unités</option><option value="forfait_internet">Forfait Internet</option><option value="forfait_appels">Forfait appels</option><option value="forfait_mixte">Forfait mixte</option></select><label>Numéro bénéficiaire</label><input id="cabNumero" type="tel" maxlength="20" placeholder="Numéro à recharger"><label>Montant souhaité (FCFA)</label><input id="cabMontant" type="number" min="1" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000"><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"><label>Précisions sur le forfait ou la demande</label><textarea id="cabDetails" maxlength="180" placeholder="Ex. Forfait Internet 2 Go, si applicable"></textarea><button id="cabEnvoyer" class="primary">Envoyer ma demande</button><p id="cabMessage" aria-live="polite"></p><hr><h3>Suivi de mes demandes</h3><div id="cabHistorique">Connectez-vous pour consulter vos demandes.</div><button id="cabRefreshHistory" type="button">Actualiser</button></div><hr><div id="cabPartner" hidden><h3>Espace cabiniste partenaire</h3><div id="cabAuth"></div><div id="cabPanel" hidden></div></div>';
+section.innerHTML='<h2>📞 Cabine téléphonique</h2><div class="cab-actions"><button id="cabTabClient" type="button">Faire une demande</button><button id="cabTabPartner" type="button">Espace cabiniste</button></div><p>Transfert d’unités et souscription de forfaits Internet ou appels. Votre demande est transmise à tous les cabinistes partenaires approuvés.</p><div id="cabClient"><div id="cabCatalogue"></div><h3>Faire une demande</h3><label>Opérateur</label><select id="cabOperateur"><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><label>Service souhaité</label><select id="cabService"><option value="transfert_unites">Transfert d’unités</option><option value="forfait_internet">Forfait Internet</option><option value="forfait_appels">Forfait appels</option><option value="forfait_mixte">Forfait mixte</option></select><label>Numéro bénéficiaire</label><input id="cabNumero" type="tel" maxlength="20" placeholder="Numéro à recharger"><label>Montant souhaité (FCFA)</label><input id="cabMontant" type="number" min="1" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000"><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"><label>Précisions sur le forfait ou la demande</label><textarea id="cabDetails" maxlength="180" placeholder="Ex. Forfait Internet 2 Go, si applicable"></textarea><button id="cabEnvoyer" class="primary">Envoyer ma demande</button><p id="cabMessage" aria-live="polite"></p><hr><h3>Suivi de mes demandes</h3><div id="cabHistorique">Connectez-vous pour consulter vos demandes.</div><button id="cabRefreshHistory" type="button">Actualiser</button></div><hr><div id="cabPartner" hidden><h3>Espace cabiniste partenaire</h3><div id="cabAuth"></div><div id="cabPanel" hidden></div></div>';
 document.body.appendChild(section);
+const cabForfaits=[
+ {op:"Orange",type:"forfait_mixte",name:"Mix KDO",price:500,data:"250 Mo",minutes:"50 min",validity:"3 jours",code:"#111*11#",source:"https://www.orange.ci/fr/pass-kdo.html"},
+ {op:"Orange",type:"forfait_internet",name:"Data KDO",price:500,data:"1 Go",minutes:"—",validity:"3 jours",code:"#111*11#",source:"https://www.orange.ci/fr/pass-kdo.html"},
+ {op:"Orange",type:"forfait_internet",name:"Data KDO",price:3000,data:"4 Go",minutes:"—",validity:"30 jours",code:"#111*11#",source:"https://www.orange.ci/fr/pass-kdo.html"},
+ {op:"Moov Africa",type:"forfait_internet",name:"Moov Folie Jour",price:200,data:"650 Mo",minutes:"—",validity:"1 jour",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_internet",name:"Moov Folie Jour",price:300,data:"900 Mo",minutes:"—",validity:"1 jour",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_internet",name:"Moov Folie",price:500,data:"1,5 Go",minutes:"—",validity:"3 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_internet",name:"Moov Folie",price:1000,data:"4 Go",minutes:"—",validity:"5 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_mixte",name:"Moov Folie Nuit",price:200,data:"2 Go",minutes:"30 min tous réseaux",validity:"22h–7h",code:"*303*2*1*7#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_mixte",name:"Moov Folie Hebdo",price:700,data:"2 Go",minutes:"60 min",validity:"7 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_internet",name:"Moov Folie Hebdo",price:1500,data:"6 Go",minutes:"—",validity:"7 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"}
+];
+const cabTypeLabels={forfait_internet:"Internet",forfait_appels:"Appels",forfait_mixte:"Mixte"};
+function rendreCatalogueCabine(){
+ const root=$("cabCatalogue");if(!root)return;
+ const op=$("cabOperateur").value,kind=$("cabService").value;
+ const matching=cabForfaits.filter(x=>x.op===op&&x.type===kind);
+ const card=x=>'<article class="cab-item cab-offer"><div class="cab-request-head"><strong>'+esc(x.name)+'</strong><span class="cab-pill">'+esc(x.validity)+'</span></div><p class="cab-price">'+x.price.toLocaleString("fr-FR")+' FCFA</p><p>'+esc(x.data)+' · '+esc(x.minutes)+'</p><p class="cab-muted">Souscription opérateur : '+esc(x.code)+'</p><button type="button" class="primary" data-cab-offer="'+cabForfaits.indexOf(x)+'">Choisir ce forfait</button><a href="'+esc(x.source)+'" target="_blank" rel="noopener">Détails officiels</a></article>';
+ let html='<div class="cab-catalog-head"><h3>Choisir rapidement un forfait</h3><p class="cab-muted">Comparez les offres publiées par les opérateurs, puis sélectionnez celle à demander à votre cabiniste.</p></div>';
+ if(matching.length)html+='<div class="cab-offers">'+matching.map(card).join("")+'</div>';
+ else if(op==="MTN"){
+  const code=kind==="forfait_internet"?"*105*2#":kind==="forfait_appels"?"*105*1#":"*105#";
+  html+='<div class="cab-item"><strong>Offres MTN '+esc(cabTypeLabels[kind]||"")+'</strong><p>MTN propose ses packs depuis le menu officiel. Les prix et avantages sont affichés dans le menu selon la ligne et les offres en cours.</p><p class="cab-muted">Code de souscription : '+esc(code)+'</p><a href="https://moninternet.mtn.ci" target="_blank" rel="noopener">Consulter les forfaits Internet MTN</a> · <a href="https://www.mtn.ci/deal/codes-ussd/" target="_blank" rel="noopener">Codes officiels MTN</a><button type="button" class="primary" id="cabMtnChoose">Faire une demande MTN</button></div>';
+ }else if(op==="Orange"&&kind==="forfait_appels"){
+  html+='<div class="cab-item"><strong>Pass voix Orange</strong><p>Les offres voix disponibles sont à consulter dans le menu opérateur, car les détails tarifaires ne sont pas publiés sur la page officielle consultée.</p><p class="cab-muted">Menu Orange : #111# · Pass Mix : #111*11#</p><a href="https://www.orange.ci/fr/max-it/super-app-orange-et-moi-orange-money.html" target="_blank" rel="noopener">Voir les offres sur Max it</a><button type="button" class="primary" id="cabOrangeChoose">Faire une demande Orange</button></div>';
+ }else html+='<div class="cab-item">Aucune offre tarifée confirmée pour ce filtre. Vous pouvez tout de même faire une demande personnalisée auprès d’un cabiniste.</div>';
+ root.innerHTML=html+'<p class="cab-muted">Offres relevées sur les pages officielles consultées le 22/11/2026. Les promotions, l’éligibilité et les tarifs peuvent évoluer ; vérifiez toujours avant validation.</p>';
+ root.querySelectorAll("[data-cab-offer]").forEach(b=>b.onclick=()=>selectionnerForfaitCabine(cabForfaits[Number(b.dataset.cabOffer)]));
+ const generic=()=>{ $("cabMontant").value="";$("cabDetails").value="Forfait "+(cabTypeLabels[kind]||"")+" à préciser avec le cabiniste."; $("cabCommuneClient").focus(); document.getElementById("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});};
+ $("cabMtnChoose")?.addEventListener("click",generic);$("cabOrangeChoose")?.addEventListener("click",generic);
+}
+function selectionnerForfaitCabine(x){
+ $("cabOperateur").value=x.op;$("cabService").value=x.type;$("cabMontant").value=x.price;
+ $("cabDetails").value=x.name+" — "+x.data+" — "+x.minutes+" — validité "+x.validity+" (code opérateur "+x.code+").";
+ rendreCatalogueCabine();
+ $("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});
+ $("cabNumero").focus({preventScroll:true});
+}
+$("cabOperateur").addEventListener("change",rendreCatalogueCabine);
+$("cabService").addEventListener("change",rendreCatalogueCabine);
+rendreCatalogueCabine();
 const css=document.createElement("style");css.textContent=`
 #cabinesTelephoniques{max-width:760px;margin:0 auto}
 #cabinesTelephoniques .cab-item{border:1px solid #e1eae2;border-radius:16px;padding:14px;margin:10px 0;background:#fff;box-shadow:0 4px 14px #173b2b0b}
@@ -32,7 +73,11 @@ const css=document.createElement("style");css.textContent=`
 #cabinesTelephoniques .cab-filter{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
 #cabinesTelephoniques button:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:420px){#cabinesTelephoniques .cab-stats{gap:5px}#cabinesTelephoniques .cab-stat{padding:9px 5px}#cabinesTelephoniques .cab-stat strong{font-size:18px}#cabinesTelephoniques .cab-filter{grid-template-columns:1fr}}
-`;document.head.appendChild(css);
+`;#cabinesTelephoniques .cab-offers{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px}
+#cabinesTelephoniques .cab-offer .cab-price{font-size:21px;font-weight:800;color:#17663d;margin:8px 0}
+#cabinesTelephoniques .cab-offer a,#cabinesTelephoniques .cab-item a{display:inline-block;margin:9px 8px 0 0;color:#17663d;text-decoration:underline;font-size:13px}
+#cabinesTelephoniques .cab-catalog-head{margin:12px 0}
+#cabinesTelephoniques .cab-catalog-head h3{margin-bottom:4px}document.head.appendChild(css);
 function ouvrirCabinesTelephoniques(){if(typeof ouvrirSectionPleinEcran==="function")ouvrirSectionPleinEcran("cabinesTelephoniques","Cabine téléphonique");else section.style.display="block";chargerHistorique();}
 window.ouvrirCabinesTelephoniques=ouvrirCabinesTelephoniques;
 $("cabEnvoyer").onclick=async()=>{
