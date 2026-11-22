@@ -1670,11 +1670,17 @@ service cloud.firestore {
         return exists(/databases/$(database)/documents/cabines_telephoniques/$(uid))
           && get(/databases/$(database)/documents/cabines_telephoniques/$(uid)).data.statut == "approuve";
       }
+      function cabinisteEnLigne(uid) {
+        return cabinisteApprouve(uid)
+          && get(/databases/$(database)/documents/cabines_telephoniques/$(uid)).data.presenceOnline == true
+          && get(/databases/$(database)/documents/cabines_telephoniques/$(uid)).data.lastSeenAt is timestamp
+          && get(/databases/$(database)/documents/cabines_telephoniques/$(uid)).data.lastSeenAt > request.time - duration.value(90, "s");
+      }
       // Les demandes cabine sont créées exclusivement par le Worker après confirmation Jèko.
       allow create: if false;
       allow read: if estAdmin()
         || (estConnecte() && resource.data.clientUid == request.auth.uid)
-        || (estConnecte() && cabinisteApprouve(request.auth.uid)
+        || (estConnecte() && cabinisteEnLigne(request.auth.uid)
           && ((resource.data.statut == "en_attente" && resource.data.cabineUid == null)
             || resource.data.cabineUid == request.auth.uid));
       allow update: if estAdmin()
