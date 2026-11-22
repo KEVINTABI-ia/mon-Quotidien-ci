@@ -53,7 +53,7 @@ const cabTypeLabels={forfait_internet:"Internet",forfait_appels:"Appels",forfait
 function rendreCatalogueCabine(){
  const root=$("cabCatalogue");if(!root)return;
  const op=$("cabOperateur").value,kind=$("cabService").value;
- const matching=cabForfaits.filter(x=>x.op===op&&x.type===kind);
+ const matching=cabForfaits.filter(x=>x.op===op&&x.type===kind&&x.price>=200);
  const card=x=>'<article class="cab-item cab-offer"><div class="cab-request-head"><strong>'+esc(x.name)+'</strong><span class="cab-pill">'+esc(x.validity)+'</span></div><p class="cab-price">'+x.price.toLocaleString("fr-FR")+' FCFA</p><p>'+esc(x.data)+' · '+esc(x.minutes)+'</p><p class="cab-muted">Souscription opérateur : '+esc(x.code)+'</p><button type="button" class="primary" data-cab-offer="'+cabForfaits.indexOf(x)+'">Choisir ce forfait</button><a href="'+esc(x.source)+'" target="_blank" rel="noopener">Détails officiels</a></article>';
  let html='<div class="cab-catalog-head"><h3>Choisir rapidement un forfait</h3><p class="cab-muted">Comparez les offres publiées par les opérateurs, puis sélectionnez celle à demander à votre cabiniste.</p></div>';
  if(matching.length)html+='<div class="cab-offers">'+matching.map(card).join("")+'</div>';
@@ -72,6 +72,7 @@ function selectionnerForfaitCabine(x){
  $("cabOperateur").value=x.op;$("cabService").value=x.type;$("cabMontant").value=x.price;
  $("cabDetails").value=x.name+" — "+x.data+" — "+x.minutes+" — validité "+x.validity+" (code opérateur "+x.code+").";
  rendreCatalogueCabine();
+ actualiserFraisCabine();
  $("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});
  $("cabNumero").focus({preventScroll:true});
 }
