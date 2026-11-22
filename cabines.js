@@ -9,7 +9,7 @@ const libelleStatut=s=>({en_attente:"En attente d’un cabiniste",acceptee:"Acce
 let partenaire=null,profilCabine=null;
 const section=document.createElement("section");
 section.id="cabinesTelephoniques";section.className="card";section.style.display="none";
-section.innerHTML='<h2>📞 Cabine téléphonique</h2><p>Transfert d’unités et souscription de forfaits Internet ou appels. Votre demande est transmise à tous les cabinistes partenaires approuvés.</p><div id="cabClient"><h3>Faire une demande</h3><label>Opérateur</label><select id="cabOperateur"><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><label>Service souhaité</label><select id="cabService"><option value="transfert_unites">Transfert d’unités</option><option value="forfait_internet">Forfait Internet</option><option value="forfait_appels">Forfait appels</option><option value="forfait_mixte">Forfait mixte</option></select><label>Numéro bénéficiaire</label><input id="cabNumero" type="tel" maxlength="20" placeholder="Numéro à recharger"><label>Montant souhaité (FCFA)</label><input id="cabMontant" type="number" min="1" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000"><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"><label>Précisions sur le forfait ou la demande</label><textarea id="cabDetails" maxlength="180" placeholder="Ex. Forfait Internet 2 Go, si applicable"></textarea><button id="cabEnvoyer" class="primary">Envoyer ma demande</button><p id="cabMessage" aria-live="polite"></p><hr><h3>Suivi de mes demandes</h3><div id="cabHistorique">Connectez-vous pour consulter vos demandes.</div><button id="cabRefreshHistory" type="button">Actualiser</button></div><hr><div id="cabPartner"><h3>Espace cabiniste partenaire</h3><div id="cabAuth"></div><div id="cabPanel" hidden></div></div>';
+section.innerHTML='<h2>📞 Cabine téléphonique</h2><div class="cab-actions"><button id="cabTabClient" type="button">Faire une demande</button><button id="cabTabPartner" type="button">Espace cabiniste</button></div><p>Transfert d’unités et souscription de forfaits Internet ou appels. Votre demande est transmise à tous les cabinistes partenaires approuvés.</p><div id="cabClient"><h3>Faire une demande</h3><label>Opérateur</label><select id="cabOperateur"><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><label>Service souhaité</label><select id="cabService"><option value="transfert_unites">Transfert d’unités</option><option value="forfait_internet">Forfait Internet</option><option value="forfait_appels">Forfait appels</option><option value="forfait_mixte">Forfait mixte</option></select><label>Numéro bénéficiaire</label><input id="cabNumero" type="tel" maxlength="20" placeholder="Numéro à recharger"><label>Montant souhaité (FCFA)</label><input id="cabMontant" type="number" min="1" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000"><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"><label>Précisions sur le forfait ou la demande</label><textarea id="cabDetails" maxlength="180" placeholder="Ex. Forfait Internet 2 Go, si applicable"></textarea><button id="cabEnvoyer" class="primary">Envoyer ma demande</button><p id="cabMessage" aria-live="polite"></p><hr><h3>Suivi de mes demandes</h3><div id="cabHistorique">Connectez-vous pour consulter vos demandes.</div><button id="cabRefreshHistory" type="button">Actualiser</button></div><hr><div id="cabPartner" hidden><h3>Espace cabiniste partenaire</h3><div id="cabAuth"></div><div id="cabPanel" hidden></div></div>';
 document.body.appendChild(section);
 const shortcuts=document.querySelector("#homePopular .family-shortcuts");
 if(shortcuts){const b=document.createElement("button");b.type="button";b.className="family-shortcut";b.innerHTML="<span>📞</span>Cabine téléphonique";b.onclick=ouvrirCabinesTelephoniques;shortcuts.appendChild(b);}
@@ -30,6 +30,8 @@ $("cabEnvoyer").onclick=async()=>{
  finally{button.disabled=false;}
 };
 $("cabRefreshHistory").onclick=chargerHistorique;
+$("cabTabClient").onclick=()=>{$("cabClient").hidden=false;$("cabPartner").hidden=true;chargerHistorique();};
+$("cabTabPartner").onclick=()=>{$("cabClient").hidden=true;$("cabPartner").hidden=false;if(!partenaire)authPartenaire();else espaceCabine();};
 async function chargerHistorique(){
  const z=$("cabHistorique"),u=auth.currentUser;if(!z)return;
  if(!u){z.textContent="Connectez-vous pour consulter vos demandes.";return;}
@@ -70,7 +72,7 @@ async function chargerDemandesCabine(){
  z.innerHTML="<p>Actualisation des demandes nationales…</p>";
  try{
   const [open,assigned]=await Promise.all([
-   partnerDb.collection("demandes_cabines").where("statut","==","en_attente").limit(100).get(),
+   partnerDb.collection("demandes_cabines").where("statut","==","en_attente").where("cabineUid","==",null).limit(100).get(),
    partnerDb.collection("demandes_cabines").where("cabineUid","==",partenaire.uid).limit(100).get()
   ]);
   const map=new Map();open.docs.forEach(d=>map.set(d.id,d));assigned.docs.forEach(d=>map.set(d.id,d));
@@ -105,8 +107,6 @@ function panneauAdmin(){
  db.collection("demandes_cabines").limit(200).get().then(q=>{$("cabAdminDemandes").innerHTML=q.empty?"Aucune demande.":q.docs.map(d=>{const x=d.data();return "<article class='cab-item'><strong>"+esc(x.operateur)+" · "+esc(x.typeService)+"</strong><p>"+esc(x.commune)+" · "+esc(x.numeroBeneficiaire)+" · "+money(x.montantPrestation)+"</p><p>"+esc(libelleStatut(x.statut))+" · Cabiniste : "+esc(x.cabineNom||"Non attribuée")+"</p></article>";}).join("");}).catch(e=>$("cabAdminDemandes").textContent="Chargement impossible : "+e.message);
 }
 window.cabAdminCabine=async(id,s)=>{if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID||!["approuve","refuse"].includes(s))return;try{await db.collection("cabines_telephoniques").doc(id).update({statut:s,updatedAt:stamp(),validePar:auth.currentUser.uid});panneauAdmin();}catch(e){alert(e.message);}};
-$("cabTabPublic")?.addEventListener("click",chargerHistorique);
-$("cabTabPartner")?.addEventListener("click",()=>{if(!partenaire)authPartenaire();else espaceCabine();});
 if(typeof RUBRIQUES_ADMIN!=="undefined"&&!RUBRIQUES_ADMIN.some(r=>r.id==="gestionCabinesAdmin"))RUBRIQUES_ADMIN.push({id:"gestionCabinesAdmin",groupe:"Professionnels",icone:"📞",titre:"Cabines téléphoniques",description:"Valider les cabinistes et suivre les demandes."});
 if(typeof ouvrirRubriqueAdmin==="function"){const ancien=window.ouvrirRubriqueAdmin;window.ouvrirRubriqueAdmin=function(id){if(id==="gestionCabinesAdmin"){const menu=document.getElementById("adminMenuRubriques");if(menu)menu.style.display="none";RUBRIQUES_ADMIN.forEach(r=>{const e=document.getElementById(r.id);if(e)e.style.display="none";});panneauAdmin();return;}return ancien.apply(this,arguments);};}
 if(typeof auth!=="undefined"&&auth.onAuthStateChanged)auth.onAuthStateChanged(chargerHistorique);
