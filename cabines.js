@@ -21,7 +21,19 @@ const cabForfaits=[
  {op:"Moov Africa",type:"forfait_internet",name:"Moov Folie",price:1000,data:"4 Go",minutes:"—",validity:"5 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
  {op:"Moov Africa",type:"forfait_mixte",name:"Moov Folie Nuit",price:200,data:"2 Go",minutes:"30 min tous réseaux",validity:"22h–7h",code:"*303*2*1*7#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
  {op:"Moov Africa",type:"forfait_mixte",name:"Moov Folie Hebdo",price:700,data:"2 Go",minutes:"60 min",validity:"7 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
- {op:"Moov Africa",type:"forfait_internet",name:"Moov Folie Hebdo",price:1500,data:"6 Go",minutes:"—",validity:"7 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"}
+ {op:"Moov Africa",type:"forfait_internet",name:"Moov Folie Hebdo",price:1500,data:"6 Go",minutes:"—",validity:"7 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:150,data:"—",minutes:"12 min tous réseaux",validity:"1 jour",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:200,data:"—",minutes:"20 min tous réseaux",validity:"2 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:300,data:"—",minutes:"35 min tous réseaux + 5 favoris",validity:"2 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:500,data:"—",minutes:"70 min tous réseaux + 5 favoris",validity:"5 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:1000,data:"—",minutes:"140 min tous réseaux + 5 favoris",validity:"15 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:1500,data:"—",minutes:"210 min tous réseaux + 5 favoris",validity:"21 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:2500,data:"—",minutes:"350 min tous réseaux + 5 favoris",validity:"30 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:5000,data:"—",minutes:"700 min tous réseaux + 5 favoris",validity:"30 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:150,data:"15 Mo",minutes:"10 min + 30 SMS",validity:"1 jour",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
+ {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:200,data:"25 Mo",minutes:"17 min + 50 SMS",validity:"1 jour",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
+ {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:500,data:"250 Mo",minutes:"50 min + 250 SMS",validity:"5 jours",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
+ {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:1500,data:"1,5 Go",minutes:"200 min + 500 SMS",validity:"15 jours",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"}
 ];
 const cabTypeLabels={forfait_internet:"Internet",forfait_appels:"Appels",forfait_mixte:"Mixte"};
 function rendreCatalogueCabine(){
