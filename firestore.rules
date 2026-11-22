@@ -1660,40 +1660,54 @@ service cloud.firestore {
       allow delete: if estAdmin();
     }
     match /demandes_cabines/{demandeId} {
-      function cabineValidee() {
-        return exists(/databases/$(database)/documents/cabines_telephoniques/$(request.resource.data.cabineUid))
-          && get(/databases/$(database)/documents/cabines_telephoniques/$(request.resource.data.cabineUid)).data.statut == "approuve";
+      function cabinisteApprouve(uid) {
+        return exists(/databases/$(database)/documents/cabines_telephoniques/$(uid))
+          && get(/databases/$(database)/documents/cabines_telephoniques/$(uid)).data.statut == "approuve";
       }
       allow create: if estConnecte()
-        && request.resource.data.keys().hasOnly(["clientUid","cabineUid","cabineNom","cabineCommune","operateur","typeService","numeroBeneficiaire","montantPrestation","fraisService","totalClient","details","telephonePaiement","moyenPaiement","referencePaiement","statut","createdAt","updatedAt"])
-        && request.resource.data.clientUid == request.auth.uid && request.resource.data.cabineUid is string && cabineValidee()
+        && request.resource.data.keys().hasAll(["clientUid","operateur","typeService","numeroBeneficiaire","montantPrestation","commune","details","cabineUid","statut","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["clientUid","operateur","typeService","numeroBeneficiaire","montantPrestation","commune","details","cabineUid","statut","createdAt","updatedAt"])
+        && request.resource.data.clientUid == request.auth.uid
         && request.resource.data.operateur in ["Orange","MTN","Moov Africa"]
-        && request.resource.data.typeService in ["transfert_unites","forfait_internet","forfait_appels","forfait_mixte","forfait_sms"]
-        && request.resource.data.numeroBeneficiaire is string && request.resource.data.numeroBeneficiaire.size() >= 8 && request.resource.data.numeroBeneficiaire.size() <= 20
-        && request.resource.data.montantPrestation is int && request.resource.data.montantPrestation > 0 && request.resource.data.montantPrestation <= 500000
-        && request.resource.data.fraisService == 18 && request.resource.data.totalClient == request.resource.data.montantPrestation + 18
-        && request.resource.data.details is string && request.resource.data.details.size() >= 2 && request.resource.data.details.size() <= 180
-        && request.resource.data.telephonePaiement is string && request.resource.data.telephonePaiement.size() >= 8 && request.resource.data.telephonePaiement.size() <= 20
-        && request.resource.data.moyenPaiement in ["Orange Money","MTN MoMo","Moov Money","Wave"]
-        && request.resource.data.referencePaiement == "" && request.resource.data.statut == "en_attente"
-        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
-      allow read: if estAdmin() || (estConnecte() && resource.data.clientUid == request.auth.uid)
-        || (estConnecte() && resource.data.cabineUid == request.auth.uid
-          && exists(/databases/$(database)/documents/cabines_telephoniques/$(request.auth.uid))
-          && get(/databases/$(database)/documents/cabines_telephoniques/$(request.auth.uid)).data.statut == "approuve");
+        && request.resource.data.typeService in ["transfert_unites","forfait_internet","forfait_appels","forfait_mixte"]
+        && request.resource.data.numeroBeneficiaire is string
+        && request.resource.data.numeroBeneficiaire.size() >= 8
+        && request.resource.data.numeroBeneficiaire.size() <= 20
+        && request.resource.data.montantPrestation is int
+        && request.resource.data.montantPrestation > 0
+        && request.resource.data.montantPrestation <= 500000
+        && request.resource.data.commune is string
+        && request.resource.data.commune.size() >= 2
+        && request.resource.data.commune.size() <= 60
+        && request.resource.data.details is string
+        && request.resource.data.details.size() >= 2
+        && request.resource.data.details.size() <= 180
+        && request.resource.data.cabineUid == null
+        && request.resource.data.statut == "en_attente"
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow read: if estAdmin()
+        || (estConnecte() && resource.data.clientUid == request.auth.uid)
+        || (estConnecte() && cabinisteApprouve(request.auth.uid)
+          && ((resource.data.statut == "en_attente" && resource.data.cabineUid == null)
+            || resource.data.cabineUid == request.auth.uid));
       allow update: if estAdmin()
-        || (estConnecte() && resource.data.clientUid == request.auth.uid && resource.data.statut == "acceptee"
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["referencePaiement","statut","updatedAt"])
-          && request.resource.data.referencePaiement is string && request.resource.data.referencePaiement.size() >= 4 && request.resource.data.referencePaiement.size() <= 100
-          && request.resource.data.statut == "paiement_a_verifier" && request.resource.data.updatedAt == request.time)
-        || (estConnecte() && resource.data.cabineUid == request.auth.uid
-          && exists(/databases/$(database)/documents/cabines_telephoniques/$(request.auth.uid))
-          && get(/databases/$(database)/documents/cabines_telephoniques/$(request.auth.uid)).data.statut == "approuve"
-          && ((resource.data.statut == "en_attente" && request.resource.data.statut in ["acceptee","refusee"])
-            || (resource.data.statut == "fonds_transferes" && request.resource.data.statut == "en_cours")
-            || (resource.data.statut == "en_cours" && request.resource.data.statut == "terminee"
-              && request.resource.data.referenceOperation is string && request.resource.data.referenceOperation.size() >= 3 && request.resource.data.referenceOperation.size() <= 100))
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","referenceOperation","updatedAt"])
+        || (estConnecte()
+          && cabinisteApprouve(request.auth.uid)
+          && resource.data.statut == "en_attente"
+          && resource.data.cabineUid == null
+          && request.resource.data.cabineUid == request.auth.uid
+          && request.resource.data.cabineNom is string
+          && request.resource.data.cabineNom.size() >= 2
+          && request.resource.data.statut == "acceptee"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["cabineUid","cabineNom","statut","updatedAt"])
+          && request.resource.data.updatedAt == request.time)
+        || (estConnecte()
+          && resource.data.cabineUid == request.auth.uid
+          && cabinisteApprouve(request.auth.uid)
+          && ((resource.data.statut == "acceptee" && request.resource.data.statut == "en_cours")
+            || (resource.data.statut == "en_cours" && request.resource.data.statut == "terminee"))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","updatedAt"])
           && request.resource.data.updatedAt == request.time);
       allow delete: if estAdmin();
     }

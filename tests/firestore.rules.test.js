@@ -1425,4 +1425,95 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
   });
 
+
+  describe("Cabines téléphoniques — diffusion nationale et attribution exclusive", () => {
+    const CABINE_UID = "cabine-test-001";
+    const CABINE_UID_2 = "cabine-test-002";
+    const requestData = () => ({
+      clientUid: CLIENT_UID,
+      operateur: "Orange",
+      typeService: "forfait_internet",
+      numeroBeneficiaire: "0700000000",
+      montantPrestation: 1000,
+      commune: "Yopougon",
+      details: "Forfait Internet 2 Go",
+      cabineUid: null,
+      statut: "en_attente",
+      createdAt: require("firebase/firestore").serverTimestamp(),
+      updatedAt: require("firebase/firestore").serverTimestamp()
+    });
+    async function seedCabines() {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const db = context.firestore();
+        await db.doc("cabines_telephoniques/" + CABINE_UID).set({
+          uid:CABINE_UID,nom:"Cabine A",responsable:"Responsable A",email:"cabine-a@example.test",
+          telephone:"0700000001",commune:"Abidjan",adresse:"Yopougon, marché",horaires:"8h-20h",
+          operateurs:["Orange","MTN"],statut:"approuve",createdAt:Timestamp.now(),updatedAt:Timestamp.now()
+        });
+        await db.doc("cabines_telephoniques/" + CABINE_UID_2).set({
+          uid:CABINE_UID_2,nom:"Cabine B",responsable:"Responsable B",email:"cabine-b@example.test",
+          telephone:"0700000002",commune:"Bouaké",adresse:"Centre-ville",horaires:"8h-20h",
+          operateurs:["Orange"],statut:"approuve",createdAt:Timestamp.now(),updatedAt:Timestamp.now()
+        });
+      });
+    }
+
+    it("autorise un client à publier une demande sans choisir de cabine", async () => {
+      const {doc,setDoc}=require("firebase/firestore");
+      const db=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      await assertSucceeds(setDoc(doc(db,"demandes_cabines","national-request"),requestData()));
+    });
+
+    it("diffuse la demande ouverte aux cabinistes approuvés de communes différentes", async () => {
+      const {doc,setDoc,collection,query,where,getDocs}=require("firebase/firestore");
+      await seedCabines();
+      const clientDb=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      await assertSucceeds(setDoc(doc(clientDb,"demandes_cabines","national-request"),requestData()));
+      for (const uid of [CABINE_UID,CABINE_UID_2]) {
+        const partnerDb=testEnv.authenticatedContext(uid,{email:"cabine@example.test"}).firestore();
+        const q=query(collection(partnerDb,"demandes_cabines"),where("statut","==","en_attente"),where("cabineUid","==",null));
+        const result=await assertSucceeds(getDocs(q));
+        if(result.empty)throw new Error("La demande ouverte n’a pas été diffusée à "+uid);
+      }
+    });
+
+    it("interdit à un compte non approuvé de consulter les demandes diffusées", async () => {
+      const {doc,setDoc,collection,query,where,getDocs}=require("firebase/firestore");
+      await seedCabines();
+      const clientDb=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      await assertSucceeds(setDoc(doc(clientDb,"demandes_cabines","national-request"),requestData()));
+      const otherDb=testEnv.authenticatedContext(OTHER_UID,{email:"other@example.test"}).firestore();
+      await assertFails(getDocs(query(collection(otherDb,"demandes_cabines"),where("statut","==","en_attente"),where("cabineUid","==",null))));
+    });
+
+    it("attribue une demande au premier cabiniste et bloque les autres", async () => {
+      const {doc,setDoc,updateDoc,serverTimestamp,getDoc}=require("firebase/firestore");
+      await seedCabines();
+      const clientDb=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      const requestRef=doc(clientDb,"demandes_cabines","national-request");
+      await assertSucceeds(setDoc(requestRef,requestData()));
+      const cabinDb=testEnv.authenticatedContext(CABINE_UID,{email:"cabine-a@example.test"}).firestore();
+      await assertSucceeds(updateDoc(doc(cabinDb,"demandes_cabines","national-request"),{
+        cabineUid:CABINE_UID,cabineNom:"Cabine A",statut:"acceptee",updatedAt:serverTimestamp()
+      }));
+      const otherCabinDb=testEnv.authenticatedContext(CABINE_UID_2,{email:"cabine-b@example.test"}).firestore();
+      await assertFails(updateDoc(doc(otherCabinDb,"demandes_cabines","national-request"),{
+        cabineUid:CABINE_UID_2,cabineNom:"Cabine B",statut:"acceptee",updatedAt:serverTimestamp()
+      }));
+      await assertFails(getDoc(doc(otherCabinDb,"demandes_cabines","national-request")));
+    });
+
+    it("autorise uniquement le cabiniste attributaire à faire progresser la demande", async () => {
+      const {doc,setDoc,updateDoc,serverTimestamp}=require("firebase/firestore");
+      await seedCabines();
+      const clientDb=testEnv.authenticatedContext(CLIENT_UID,{email:"client@example.test"}).firestore();
+      await assertSucceeds(setDoc(doc(clientDb,"demandes_cabines","national-request"),requestData()));
+      const cabinDb=testEnv.authenticatedContext(CABINE_UID,{email:"cabine-a@example.test"}).firestore();
+      const ref=doc(cabinDb,"demandes_cabines","national-request");
+      await assertSucceeds(updateDoc(ref,{cabineUid:CABINE_UID,cabineNom:"Cabine A",statut:"acceptee",updatedAt:serverTimestamp()}));
+      await assertSucceeds(updateDoc(ref,{statut:"en_cours",updatedAt:serverTimestamp()}));
+      await assertSucceeds(updateDoc(ref,{statut:"terminee",updatedAt:serverTimestamp()}));
+    });
+  });
+
 });
