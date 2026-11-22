@@ -157,13 +157,14 @@ async function espaceCabine(){
   const p=await partnerDb.collection("cabines_telephoniques").doc(partenaire.uid).get();
   if(!p.exists){$("cabPanel").textContent="Aucune candidature cabiniste trouvée pour ce compte.";return;}
   profilCabine=p.data();
-  $("cabPanel").innerHTML='<div class="cab-item"><div class="cab-request-head"><div><strong style="font-size:18px">'+esc(profilCabine.nom)+'</strong><p class="cab-muted">'+esc(profilCabine.commune)+' · '+esc(profilCabine.telephone)+'</p></div><span class="cab-pill">'+esc(profilCabine.statut==="approuve"?"Partenaire approuvé":profilCabine.statut==="refuse"?"Candidature refusée":"En attente de validation")+'</span></div><p class="cab-muted">Opérateurs : '+esc((profilCabine.operateurs||[]).join(" · "))+'<br>Horaires : '+esc(profilCabine.horaires||"Non renseignés")+'</p><button id="cabLogout" type="button">Déconnexion</button></div><div id="cabOrders"></div>';
+  $("cabPanel").innerHTML='<div class="cab-item"><div class="cab-request-head"><div><strong style="font-size:18px">'+esc(profilCabine.nom)+'</strong><p class="cab-muted">'+esc(profilCabine.commune)+' · '+esc(profilCabine.telephone)+'</p></div><span class="cab-pill">'+esc(profilCabine.statut==="approuve"?"Partenaire approuvé":profilCabine.statut==="refuse"?"Candidature refusée":"En attente de validation")+'</span></div><p class="cab-muted">Opérateurs : '+esc((profilCabine.operateurs||[]).join(" · "))+'<br>Horaires : '+esc(profilCabine.horaires||"Non renseignés")+'</p><button id="cabLogout" type="button">Déconnexion</button></div><div id="cabOrders"></div><div id="cabPartnerAccounting"></div>';
   $("cabLogout").onclick=async()=>{await arreterPresenceCabine();await partnerAuth.signOut();partenaire=null;profilCabine=null;$("cabPanel").hidden=true;$("cabAuth").hidden=false;};
   if(profilCabine.statut!=="approuve"){$("cabOrders").innerHTML="<p class='notice'>Votre candidature est en cours de validation. Dès son approbation, vous pourrez consulter et accepter les demandes de toute la Côte d’Ivoire.</p>";return;}
   await demarrerPresenceCabine();
   await chargerDemandesCabine();
+  await chargerComptabilitePartenaire();
   if(cabRequestRefreshTimer)clearInterval(cabRequestRefreshTimer);
-  cabRequestRefreshTimer=setInterval(()=>{if(document.visibilityState==="visible")chargerDemandesCabine();},25000);
+  cabRequestRefreshTimer=setInterval(()=>{if(document.visibilityState==="visible"){chargerDemandesCabine();chargerComptabilitePartenaire();}},25000);
  }catch(e){$("cabPanel").textContent="Espace cabiniste indisponible : "+(e.message||"erreur");}
 }
 let cabDocsCache=[],cabVue="ouvertes",cabPresenceTimer=null,cabRequestRefreshTimer=null;
@@ -226,6 +227,25 @@ window.cabChangerStatut=async(id,statut)=>{
  try{await partnerDb.collection("demandes_cabines").doc(id).update({statut,updatedAt:stamp()});cabVue="miennes";await chargerDemandesCabine();}
  catch(e){alert("Mise à jour impossible : "+(e.message||"erreur"));}
 };
+
+async function chargerComptabilitePartenaire(){
+ const root=$("cabPartnerAccounting");if(!root||!partenaire||!profilCabine||profilCabine.statut!=="approuve")return;
+ root.innerHTML="<h3>Mes gains et reversements</h3><p class='cab-muted'>Calcul établi uniquement à partir des prestations terminées et des reversements enregistrés par MON QUOTIDIEN CI.</p><p>Chargement…</p>";
+ try{
+  const q=await partnerDb.collection("demandes_cabines").where("cabineUid","==",partenaire.uid).where("statut","==","terminee").limit(300).get();
+  const rows=await Promise.all(q.docs.map(async doc=>{
+   const snap=await doc.ref.collection("reversements").get(),payouts=snap.docs.map(x=>x.data());
+   const earned=Number(doc.data().montantAReverser??doc.data().montantPrestation??0);
+   const paid=payouts.reduce((sum,p)=>sum+Number(p.montantXof||0),0);
+   return {data:doc.data(),earned,paid,balance:Math.max(0,earned-paid),payouts};
+  }));
+  const earned=rows.reduce((sum,r)=>sum+r.earned,0),paid=rows.reduce((sum,r)=>sum+r.paid,0),balance=rows.reduce((sum,r)=>sum+r.balance,0);
+  root.innerHTML="<h3>Mes gains et reversements</h3><div class='cab-stats'><div class='cab-stat'><strong>"+money(earned)+"</strong><span>Prestations terminées</span></div><div class='cab-stat'><strong>"+money(paid)+"</strong><span>Déjà reversé</span></div><div class='cab-stat'><strong>"+money(balance)+"</strong><span>Reste à recevoir</span></div></div>"+(rows.length?rows.map(r=>{
+   const d=r.data,history=r.payouts.length?r.payouts.map(p=>"<li>"+money(p.montantXof)+" · "+esc(p.dateReversement||"Date inconnue")+" · Réf. "+esc(p.reference)+" · "+esc(p.moyenPaiement||"—")+"</li>").join(""):"<li>Aucun reversement enregistré</li>";
+   return "<article class='cab-item'><strong>"+esc(d.operateur)+" · "+esc(d.typeService)+"</strong><p>Prestation : "+money(r.earned)+" · Reçu : "+money(r.paid)+" · Solde : <strong>"+money(r.balance)+"</strong></p><details><summary>Historique des reversements</summary><ul>"+history+"</ul></details></article>";
+  }).join(""):"<p class='cab-muted'>Aucune prestation terminée pour le moment. Une prestation en attente, acceptée ou en cours n’est pas encore comptabilisée.</p>");
+ }catch(error){console.error(error);root.innerHTML="<h3>Mes gains et reversements</h3><p>Impossible de charger la comptabilité : "+esc(error.message||"erreur")+"</p>";}
+}
 function panneauAdmin(){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){alert("Accès administrateur requis.");return;}
  let z=document.getElementById("cabAdminPanel");
