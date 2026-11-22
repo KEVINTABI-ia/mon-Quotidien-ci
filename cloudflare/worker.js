@@ -987,6 +987,7 @@ async function createCheckout(request,env) {
        !/^[0-9+ ]{8,20}$/.test(numeroBeneficiaire)||
        (commune.length>60)||
        (details.length>180)||
+       (typeService!=="transfert_unites"&&details.length<2)||
        !Number.isSafeInteger(amountPrestation)||amountPrestation<200||amountPrestation>500000) return json({error:"invalid_cabine_request"},400);
     const fraisService=amountPrestation<=999?18:(amountPrestation<=3000?40:75);
     amountXof=amountPrestation+fraisService;
@@ -1284,8 +1285,9 @@ export function validateJekoPaymentPlan(payment) {
       ["transfert_unites","forfait_internet","forfait_appels","forfait_mixte"].includes(payment.typeService)&&
       ["Orange","MTN","Moov Africa"].includes(payment.operateur)&&
       typeof payment.numeroBeneficiaire==="string"&&/^[0-9+ ]{8,20}$/.test(payment.numeroBeneficiaire)&&
-      typeof payment.commune==="string"&&payment.commune.length>=2&&payment.commune.length<=60&&
-      typeof payment.details==="string"&&payment.details.length>=2&&payment.details.length<=180&&
+      typeof payment.commune==="string"&&payment.commune.length<=60&&
+      typeof payment.details==="string"&&payment.details.length<=180&&
+      (payment.typeService==="transfert_unites"||payment.details.length>=2)&&
       typeof payment.uid==="string"&&/^[A-Za-z0-9_-]{1,128}$/.test(payment.uid);
   }
   if(payment.serviceId==="publicite"){

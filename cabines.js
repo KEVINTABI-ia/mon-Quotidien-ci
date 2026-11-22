@@ -24,8 +24,8 @@ section.innerHTML=`<h2>📞 Cabine téléphonique</h2>
 <button type="button" class="cab-logo-choice selected" data-operator="Orange" aria-label="Orange"><svg viewBox="0 0 120 58" role="img" aria-label="Logo Orange"><rect x="3" y="3" width="42" height="52" rx="9" fill="#ff7900"/><path d="M13 18h22M13 27h22M13 36h16" stroke="#fff" stroke-width="4" stroke-linecap="round"/><text x="52" y="36" font-size="19" font-weight="700" fill="#f07800">orange</text></svg></button>
 <button type="button" class="cab-logo-choice" data-operator="MTN" aria-label="MTN"><svg viewBox="0 0 120 58" role="img" aria-label="Logo MTN"><path d="M5 7h110v44H5z" rx="8" fill="#ffcc00"/><text x="60" y="36" text-anchor="middle" font-size="25" font-weight="900" fill="#171717">MTN</text></svg></button>
 <button type="button" class="cab-logo-choice" data-operator="Moov Africa" aria-label="Moov Africa"><svg viewBox="0 0 130 58" role="img" aria-label="Logo Moov Africa"><circle cx="25" cy="29" r="21" fill="#0876c9"/><path d="M15 30l8 8 14-18" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><text x="51" y="25" font-size="16" font-weight="800" fill="#0876c9">moov</text><text x="51" y="41" font-size="9" font-weight="700" fill="#0876c9">AFRICA</text></svg></button></div>
-<select id="cabOperateur" class="cab-hidden-select" aria-hidden="true" tabindex="-1"><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><div id="cabCatalogue"></div>
-<div id="cabNumeroWrap"><label>Numéro du bénéficiaire</label><input id="cabNumero" type="tel" maxlength="20" placeholder="Numéro du bénéficiaire"></div>
+<select id="cabOperateur" class="cab-hidden-select" aria-hidden="true" tabindex="-1"><option>Orange</option><option>MTN</option><option>Moov Africa</option></select>
+<div id="cabNumeroWrap"><label>Numéro du bénéficiaire</label><input id="cabNumero" type="tel" maxlength="20" placeholder="Numéro du bénéficiaire"></div><div id="cabCatalogue"></div>
 <div id="cabAmountWrap"><label>Montant du transfert souhaité auprès de la cabine (FCFA)</label><input id="cabMontant" type="number" min="200" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000"></div>
 <div id="cabCommuneWrap" hidden><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"></div>
 <div id="cabDetailsWrap" hidden><label>Précisions</label><textarea id="cabDetails" maxlength="180" placeholder="Précisions"></textarea></div>
@@ -72,11 +72,11 @@ function rendreCatalogueCabine(){
  const root=$("cabCatalogue");if(!root)return;
  const op=$("cabOperateur").value,kind=$("cabService").value;
  const matching=cabForfaits.filter(x=>x.op===op&&x.type===kind&&x.price>=200);
- const card=x=>'<article class="cab-item cab-offer"><div class="cab-request-head"><strong>'+esc(x.name)+'</strong><span class="cab-pill">'+esc(x.validity)+'</span></div><p class="cab-price">'+x.price.toLocaleString("fr-FR")+' FCFA</p><p>'+esc(x.data)+' · '+esc(x.minutes)+'</p><p class="cab-muted">Souscription opérateur : '+esc(x.code)+'</p><button type="button" class="primary" data-cab-offer="'+cabForfaits.indexOf(x)+'">Choisir ce forfait</button><a href="'+esc(x.source)+'" target="_blank" rel="noopener">Détails officiels</a></article>';
+ const card=x=>'<article class="cab-item cab-offer"><div class="cab-request-head"><strong>'+esc(x.name)+'</strong><span class="cab-pill">'+esc(x.validity)+'</span></div><p class="cab-price">'+x.price.toLocaleString("fr-FR")+' FCFA</p><p>'+esc(x.data)+' · '+esc(x.minutes)+'</p><button type="button" class="primary" data-cab-offer="'+cabForfaits.indexOf(x)+'">Souscrire</button></article>';
  let html='<div class="cab-catalog-head"><h3>Annuaire des offres — '+esc(op)+'</h3><p class="cab-muted">Choisissez une offre dans la liste correspondant à votre forfait.</p></div>';
  if(matching.length)html+='<div class="cab-offers">'+matching.map(card).join("")+'</div>';
  else html+='<div class="cab-item">Aucune offre répertoriée pour cet opérateur et cette catégorie. Choisissez une autre catégorie ou un autre opérateur.</div>';
- root.innerHTML=html+'<p class="cab-muted">Offres relevées sur les pages officielles consultées le 22/11/2026. Les promotions, l’éligibilité et les tarifs peuvent évoluer ; vérifiez toujours avant validation.</p>';
+ root.innerHTML=html+'<p class="cab-muted">Le prix affiché est le prix de la prestation, hors frais de service MON QUOTIDIEN CI. Le paiement est confirmé par Jèko avant transmission à une cabine.</p>';
  root.querySelectorAll("[data-cab-offer]").forEach(b=>b.onclick=()=>selectionnerForfaitCabine(cabForfaits[Number(b.dataset.cabOffer)]));
  const generic=()=>{ $("cabMontant").value="";$("cabDetails").value="Forfait "+(cabTypeLabels[kind]||"")+" à préciser avec le cabiniste."; $("cabCommuneClient").focus(); document.getElementById("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});};
  $("cabMtnChoose")?.addEventListener("click",generic);$("cabOrangeChoose")?.addEventListener("click",generic);
@@ -85,9 +85,9 @@ function selectionnerForfaitCabine(x){
  cabSelectedOffer=x;
  $("cabOperateur").value=x.op;$("cabService").value=x.type;
  $("cabFeePreview").hidden=true;$("cabAmountWrap").hidden=true;
- $("cabCatalogue").querySelectorAll("[data-cab-offer]").forEach(b=>{const selected=Number(b.dataset.cabOffer)===cabForfaits.indexOf(x);b.textContent=selected?"Offre sélectionnée":"Choisir ce forfait";b.classList.toggle("selected",selected);});
- $("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});
- $("cabNumero").focus({preventScroll:true});
+ const phone=$("cabNumero").value.trim();
+ if(phone.length<8||phone.length>20){$("cabMessage").textContent="Saisissez d’abord le numéro du bénéficiaire, puis appuyez sur Souscrire."; $("cabNumero").focus();$("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});return;}
+ $("cabMessage").textContent="Offre sélectionnée. Préparation du paiement…";$("cabEnvoyer").click();
 }
 $("cabOperateur").addEventListener("change",()=>{cabSelectedOffer=null;rendreCatalogueCabine();});
 $("cabService").addEventListener("change",rendreCatalogueCabine);
@@ -177,7 +177,7 @@ $("cabEnvoyer").onclick=async()=>{
  const u=auth.currentUser,amount=cabRequestMode==="transfer"?Number($("cabMontant").value):Number(cabSelectedOffer?.price),phone=$("cabNumero").value.trim(),commune="",details=cabRequestMode==="transfer"?"":(cabSelectedOffer?cabSelectedOffer.name+" — "+cabSelectedOffer.data+" — "+cabSelectedOffer.minutes+" — validité "+cabSelectedOffer.validity+" (code "+cabSelectedOffer.code+").":""),button=$("cabEnvoyer"),msg=$("cabMessage");
  const typeService=cabRequestMode==="transfer"?"transfert_unites":$("cabService").value;
  if(!u){msg.textContent="Connectez-vous à votre compte client pour payer.";return;}
- if(!Number.isSafeInteger(amount)||amount<200||amount>500000||phone.length<8||phone.length>20||(cabRequestMode!=="transfer"&&(commune.length<2||details.length<2))){msg.textContent="Vérifiez le numéro et le montant (200 FCFA minimum).";return;}
+ if(!Number.isSafeInteger(amount)||amount<200||amount>500000||phone.length<8||phone.length>20||(cabRequestMode!=="transfer"&&details.length<2)){msg.textContent="Vérifiez le numéro et le montant (200 FCFA minimum).";return;}
  button.disabled=true;msg.textContent="Préparation sécurisée du paiement Jèko…";
  try{const token=await u.getIdToken();const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceId:"cabine",typeService,operateur:$("cabOperateur").value,numeroBeneficiaire:phone,amountPrestation:amount,...(cabRequestMode!=="transfer"?{commune,details}:{}),paymentMethod:$("cabPaymentMethod").value})});
  const data=await response.json().catch(()=>({}));if(!response.ok||!data.checkoutUrl)throw new Error(data.diagnostic||data.error||"Jèko n’a pas pu préparer le paiement.");
