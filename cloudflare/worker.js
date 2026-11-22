@@ -916,7 +916,7 @@ async function createCheckout(request,env) {
   } else if(serviceId==="ai_subscription"){
     const partnerDoc=await getDoc(env,"partenaires/"+user.sub);
     const partner=docData(partnerDoc);
-    const businesses=await loadAiBusinessProfiles(env,user.sub).catch(()=>[]);
+    let businesses;try{businesses=await loadAiBusinessProfiles(env,user.sub);}catch{return json({error:"ai_partner_profile_unavailable"},503);}
     const hasPartnerProfile=!!partnerDoc,hasBusinessProfile=businesses.length>0,isPartner=hasPartnerProfile||hasBusinessProfile;
     if(hasPartnerProfile&&partner?.statut!=="approuve")return json({error:"ai_partner_not_eligible"},403);
     if(hasBusinessProfile&&!businesses.some(item=>item?.statut==="approuve"))return json({error:"ai_partner_not_eligible"},403);
@@ -1191,7 +1191,7 @@ export function validateJekoPaymentPlan(payment) {
     return isValidCourierWalletRechargeAmount(payment.amountXof)&&
       typeof payment.uid==="string"&&/^[A-Za-z0-9_-]{1,128}$/.test(payment.uid);
   }
-  if(payment.serviceId==="ai_subscription") return payment.durationMonths===1&&((payment.planId==="client_monthly"&&payment.accountType==="client"&&payment.amountXof===1000)||(payment.planId==="partner_monthly"&&payment.accountType==="partner"&&payment.amountXof===3000));
+  if(payment.serviceId==="ai_subscription") return typeof payment.uid==="string"&&/^[A-Za-z0-9_-]{1,128}$/.test(payment.uid)&&payment.targetPath==="abonnements_ai/"+payment.uid&&payment.durationMonths===1&&((payment.planId==="client_monthly"&&payment.accountType==="client"&&payment.amountXof===1000)||(payment.planId==="partner_monthly"&&payment.accountType==="partner"&&payment.amountXof===3000));
   if(payment.serviceId==="objet_retrouve") return payment.amountXof===1000;
   if(payment.serviceId==="logement_renewal"||payment.serviceId==="ramassage"||payment.serviceId==="partenaire_services"){
     const plan=fixed[payment.serviceId]?.[payment.planId];
