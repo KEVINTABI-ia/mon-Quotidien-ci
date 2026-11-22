@@ -102,7 +102,7 @@ function afficherDemandesCabine(){
  z.innerHTML='<div class="cab-stats"><div class="cab-stat"><strong>'+ouvertes+'</strong><span>Demandes disponibles</span></div><div class="cab-stat"><strong>'+encours+'</strong><span>À traiter</span></div><div class="cab-stat"><strong>'+terminees+'</strong><span>Terminées</span></div></div><div class="cab-tabs"><button type="button" data-cab-vue="ouvertes" class="'+(cabVue==="ouvertes"?"active":"")+'">Demandes disponibles</button><button type="button" data-cab-vue="miennes" class="'+(cabVue==="miennes"?"active":"")+'">Mes prestations ('+miennes.length+')</button></div><div class="cab-filter"><select id="cabFiltreOperateur"><option value="">Tous les opérateurs</option><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><input id="cabFiltreCommune" type="search" placeholder="Filtrer par commune"></div><div class="cab-actions"><button id="cabReload" type="button">↻ Actualiser les demandes</button></div><p class="cab-muted">Les demandes disponibles sont diffusées à tous les cabinistes approuvés. La première acceptation attribue la demande.</p>';
  z.querySelectorAll("[data-cab-vue]").forEach(b=>b.onclick=()=>{cabVue=b.dataset.cabVue;afficherDemandesCabine();});
  $("cabFiltreOperateur").value=op;$("cabFiltreCommune").value=zone;
- $("cabFiltreOperateur").onchange=afficherDemandesCabine;$("cabFiltreCommune").oninput=afficherDemandesCabine;$("cabReload").onclick=chargerDemandesCabine;
+ $("cabFiltreOperateur").onchange=afficherDemandesCabine;$("cabFiltreCommune").onchange=afficherDemandesCabine;$("cabReload").onclick=chargerDemandesCabine;
  if(!docs.length){z.insertAdjacentHTML("beforeend",'<div class="cab-item"><strong>Aucune demande dans cette rubrique</strong><p class="cab-muted">'+(cabVue==="ouvertes"?"De nouvelles demandes apparaîtront ici dès qu’un client en publiera une.":"Les prestations que vous acceptez apparaîtront ici.")+'</p></div>');return;}
  docs.forEach(d=>{
   const a=d.data(),mine=a.cabineUid===partenaire.uid,article=document.createElement("article");article.className="cab-item";
@@ -135,12 +135,12 @@ window.cabAccepter=async id=>{
  try{
   const ref=partnerDb.collection("demandes_cabines").doc(id);
   await partnerDb.runTransaction(async tx=>{const snap=await tx.get(ref);if(!snap.exists||snap.data().statut!=="en_attente"||snap.data().cabineUid)throw new Error("Cette demande vient d’être prise en charge par un autre cabiniste.");tx.update(ref,{cabineUid:partenaire.uid,cabineNom:profilCabine.nom,statut:"acceptee",updatedAt:stamp()});});
-  alert("Demande attribuée à votre cabine.");await chargerDemandesCabine();
+  alert("Demande attribuée à votre cabine.");cabVue="miennes";await chargerDemandesCabine();
  }catch(e){alert(e.message||"Impossible d’accepter cette demande.");await chargerDemandesCabine();}
 };
 window.cabChangerStatut=async(id,statut)=>{
  if(!partenaire||!["en_cours","terminee"].includes(statut))return;
- try{await partnerDb.collection("demandes_cabines").doc(id).update({statut,updatedAt:stamp()});await chargerDemandesCabine();}
+ try{await partnerDb.collection("demandes_cabines").doc(id).update({statut,updatedAt:stamp()});cabVue="miennes";await chargerDemandesCabine();}
  catch(e){alert("Mise à jour impossible : "+(e.message||"erreur"));}
 };
 function panneauAdmin(){
