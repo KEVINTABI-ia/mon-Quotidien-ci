@@ -3294,6 +3294,8 @@ function chargerPublicitesAccueil() {
 <button type="button" onclick="ouvrirSectionPleinEcran('pharmacieDomicile','Pharmacie à domicile')" class="tuile-quotidien">🛵 Pharmacie à domicile<small>Envoyez votre ordonnance ou demandez un médicament avec livraison</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('facturesServicesPratiques','Rappels de paiement')" class="tuile-quotidien">🔔 Rappels de paiement<small>Gérez vos échéances personnelles</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('toilettesPubliques','Toilettes publiques')" class="tuile-quotidien">🚻 Toilettes publiques<small>Rechercher les toilettes autour de vous</small></button>
+<button type="button" onclick="ouvrirResultatPleinEcran('Marché de ma commune');ouvrirMarchesCommune()" class="tuile-quotidien">🏪 Marché de ma commune<small>Retrouvez les marchés disponibles dans votre commune</small></button>
+<button type="button" onclick="ouvrirResultatPleinEcran('Supermarchés les plus proches');ouvrirSupermarchesCommune()" class="tuile-quotidien">🛒 Supermarchés les plus proches<small>Localisez les supermarchés autour de vous</small></button>
 <button type="button" onclick="ouvrirSectionPleinEcran('nouveauxServices','Petites annonces de ma commune');choisirNouveauService('annonce');chargerNouveauxServicesPublics('annonce')" class="tuile-quotidien">📢 Petites annonces de ma commune<small>Publier ou consulter les annonces et offres près de chez vous</small></button>
   </div>
   </div>
@@ -10190,15 +10192,15 @@ const MARCHES_COMMUNES = [
 ];
 
 function afficherMarchesCommune(){
+  ouvrirTourBoutiques();
+}
+function afficherServicesQuotidiensCommerce(){
   const resultat=document.getElementById("resultatRechercheGares");
   if(!resultat)return;
   resultat.style.display="block";
-  resultat.innerHTML="<strong>🛍️ Commerce et boutique</strong><p>Choisissez le service que vous souhaitez consulter dans votre commune.</p>"+
-    "<button type='button' class='primary' style='width:100%;margin:8px 0;' onclick='ouvrirMarchesCommune()'>🏪 1. Le marché de ma commune</button>"+
-    "<button type='button' class='tuile-services' style='width:100%;margin:8px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirSupermarchesCommune()'>🧭 2. Supermarchés les plus proches</button>"+
-    "<h3 style='margin:22px 0 8px;'>🛍️ 3. Découvrez les commerces</h3>"+
-    "<button type='button' class='primary' style='width:100%;margin:7px 0;' onclick='ouvrirMenuTourBoutique()'>🛍️ Faire un tour en boutique</button>"+
-    "";
+  resultat.innerHTML="<strong>🌞 Autre service du quotidien</strong><p>Choisissez le service de proximité à consulter.</p>"+
+    "<button type='button' class='primary' style='width:100%;margin:8px 0;' onclick='ouvrirMarchesCommune()'>🏪 Marché de ma commune</button>"+
+    "<button type='button' class='tuile-services' style='width:100%;margin:8px 0;background:#F0F7F1;color:#17663D;' onclick='ouvrirSupermarchesCommune()'>🛒 Supermarchés les plus proches</button>";
   if(vuePleinEcranActive&&vuePleinEcranActive.element===resultat)document.getElementById("vuePleinEcranContenu").scrollTop=0;
   else resultat.scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -10209,7 +10211,7 @@ function ouvrirMarchesCommune(){
   html+="<label for='rechercheCommuneMarche'>Commune :</label><input id='rechercheCommuneMarche' type='search' list='listeCommunesMarches' placeholder='Ex. : Yopougon, Abobo, Cocody...' oninput='filtrerMarchesCommune()' autocomplete='off'>";
   html+="<datalist id='listeCommunesMarches'>";communes.forEach(c=>html+="<option value='"+echapperTexteCompagnie(c)+"'></option>");
   html+="</datalist><div id='listeMarchesCommune' aria-live='polite'><p class='notice'>Saisissez le nom d'une commune pour voir ses marchés.</p></div>";
-  html+="<button type='button' style='width:100%;margin-top:14px;background:#F0F7F1;color:#17663D;' onclick='afficherMarchesCommune()'>← Retour à Commerce et boutique</button>";
+  html+="<button type='button' style='width:100%;margin-top:14px;background:#F0F7F1;color:#17663D;' onclick='afficherServicesQuotidiensCommerce()'>← Retour aux services du quotidien</button>";
   resultat.innerHTML=html;
 }
 function ouvrirSupermarchesCommune(){
@@ -10217,7 +10219,7 @@ function ouvrirSupermarchesCommune(){
   let html="<strong>🧭 Supermarchés les plus proches</strong><p>Autorisez l’accès à votre position GPS pour afficher les supermarchés autour de vous, du plus proche au plus éloigné.</p>";
   html+="<div id='listeSupermarchesCommune' aria-live='polite'><p class='notice'>📍 Recherche de votre position… Votre téléphone peut demander une autorisation.</p></div>";
   html+="<div id='importSupermarchesAdmin' style='display:none;margin-top:18px;padding:12px;border:1px dashed #16834A;border-radius:12px;background:#F0F7F1;'><strong>🔧 Gestion du répertoire</strong><p style='font-size:13px;'>Importer les supermarchés recensés dans OpenStreetMap en fiches individuelles dans Firebase.</p><button type='button' class='primary' style='width:100%;' onclick='importerSupermarchesOSM()'>⬇️ Importer / actualiser la base</button><p id='statutImportSupermarches' class='notice' aria-live='polite'></p></div>";
-  html+="<button type='button' style='width:100%;margin-top:14px;background:#F0F7F1;color:#17663D;' onclick='afficherMarchesCommune()'>← Retour à Commerce et boutique</button>";
+  html+="<button type='button' style='width:100%;margin-top:14px;background:#F0F7F1;color:#17663D;' onclick='afficherServicesQuotidiensCommerce()'>← Retour aux services du quotidien</button>";
   resultat.innerHTML=html;
   const admin=document.getElementById("importSupermarchesAdmin");
   if(admin&&auth.currentUser&&auth.currentUser.uid===ADMIN_UID)admin.style.display="block";
@@ -12568,7 +12570,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       <section class="home-panel" id="homeDemarches">
         <div class="home-section-heading"><div><h2>🛍️ Commerce et emploi</h2><p>Boutiques, annonces, commerces et opportunités professionnelles</p></div></div>
         <div class="family-shortcuts">
-          <button class="family-shortcut" type="button" onclick="ouvrirResultatPleinEcran('Commerce et boutique');afficherMarchesCommune()"><span>🏪</span>Commerce et boutique</button>
+          <button class="family-shortcut" type="button" onclick="ouvrirTourBoutiques()"><span>🏪</span>Commerce et boutique</button>
           <button class="family-shortcut" type="button" onclick="ouvrirSectionPleinEcran('nouveauxServices','Petites annonces de ma commune');choisirNouveauService('annonce');chargerNouveauxServicesPublics('annonce')"><span>📢</span>Petites annonces</button>
           <button class="family-shortcut" type="button" onclick="ouvrirEmploisOpportunites()"><span>💼</span>Emplois et opportunités</button>
           <button class="family-shortcut" type="button" onclick="ouvrirEspacePartenaire('accueil')"><span>🤝</span>Devenir commerçant partenaire</button>
