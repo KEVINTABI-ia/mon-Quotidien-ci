@@ -1368,4 +1368,61 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
   });
 
+  describe("Conversations MON QUOTIDIEN AI — confidentialité", () => {
+    const conversationId = "ai-conversation-test-001";
+    const ownerUid = "ai-owner-test-001";
+
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const db = context.firestore();
+        await db.doc(`ai_conversations/${conversationId}`).set({
+          uid: ownerUid,
+          title: "Conversation de test",
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+        await db.doc(`ai_conversations/${conversationId}/messages/message-001`).set({
+          role: "assistant",
+          content: "Bonjour",
+          createdAt: Timestamp.now()
+        });
+      });
+    });
+
+    it("autorise le propriétaire à lire sa conversation et ses messages", async () => {
+      const {doc, getDoc} = require("firebase/firestore");
+      const db = testEnv.authenticatedContext(ownerUid).firestore();
+      await assertSucceeds(getDoc(doc(db, "ai_conversations", conversationId)));
+      await assertSucceeds(getDoc(doc(db, "ai_conversations", conversationId, "messages", "message-001")));
+    });
+
+    it("interdit à un autre utilisateur de lire la conversation et ses messages", async () => {
+      const {doc, getDoc} = require("firebase/firestore");
+      const db = testEnv.authenticatedContext(OTHER_UID).firestore();
+      await assertFails(getDoc(doc(db, "ai_conversations", conversationId)));
+      await assertFails(getDoc(doc(db, "ai_conversations", conversationId, "messages", "message-001")));
+    });
+
+    it("interdit la lecture sans authentification", async () => {
+      const {doc, getDoc} = require("firebase/firestore");
+      const db = testEnv.unauthenticatedContext().firestore();
+      await assertFails(getDoc(doc(db, "ai_conversations", conversationId)));
+      await assertFails(getDoc(doc(db, "ai_conversations", conversationId, "messages", "message-001")));
+    });
+
+    it("interdit au navigateur de créer, modifier ou supprimer les conversations et messages", async () => {
+      const {doc, setDoc, updateDoc, deleteDoc} = require("firebase/firestore");
+      const db = testEnv.authenticatedContext(ownerUid).firestore();
+      const conversationRef = doc(db, "ai_conversations", conversationId);
+      const messageRef = doc(db, "ai_conversations", conversationId, "messages", "message-002");
+      await assertFails(setDoc(doc(db, "ai_conversations", "client-created"), {
+        uid: ownerUid, title: "Injection", createdAt: Timestamp.now(), updatedAt: Timestamp.now()
+      }));
+      await assertFails(updateDoc(conversationRef, {title: "Modification client"}));
+      await assertFails(deleteDoc(conversationRef));
+      await assertFails(setDoc(messageRef, {role: "assistant", content: "Message falsifié"}));
+      await assertFails(deleteDoc(doc(db, "ai_conversations", conversationId, "messages", "message-001")));
+    });
+  });
+
 });

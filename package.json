@@ -7,7 +7,7 @@
     "test:syntax": "node tests/check-inline-scripts.js",
     "test": "npm run test:syntax && npm run test:worker && npm run test:rules && npm run test:storage",
     "test:storage": "firebase emulators:exec --only storage \"mocha --timeout 15000 tests/storage.rules.test.js\"",
-    "test:worker": "node --test tests/worker-enfants.test.mjs tests/jeko-subscriptions.test.mjs tests/jeko-publicites.test.mjs tests/cloudflare-r2-publicites.test.mjs tests/logement-r2-worker.test.mjs tests/courier-wallet.test.mjs"
+    "test:worker": "node --test tests/worker-enfants.test.mjs tests/jeko-subscriptions.test.mjs tests/jeko-publicites.test.mjs tests/cloudflare-r2-publicites.test.mjs tests/logement-r2-worker.test.mjs tests/courier-wallet.test.mjs tests/mon-quotidien-ai.test.mjs"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "6.0.0",

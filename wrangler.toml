@@ -21,3 +21,14 @@ required = [
   "JEKO_STORE_ID",
   "JEKO_WEBHOOK_SECRET"
 ]
+
+[ai]
+binding = "AI"
+
+[[ratelimits]]
+name = "AI_RATE_LIMITER"
+namespace_id = "292137"
+
+  [ratelimits.simple]
+  limit = 12
+  period = 60
