@@ -14096,6 +14096,48 @@ body.mqci-ai-no-scroll{
     return node;
   }
   let previousFocus=null;
+  let aiPageScrollY=0;
+  let aiBodyStyleSnapshot=null;
+  let aiHtmlOverflowSnapshot=null;
+  function saveInlineStyle(element,properties){
+    const saved={};
+    properties.forEach(name=>saved[name]={value:element.style.getPropertyValue(name),priority:element.style.getPropertyPriority(name)});
+    return saved;
+  }
+  function restoreInlineStyle(element,saved){
+    if(!saved)return;
+    Object.entries(saved).forEach(([name,item])=>{
+      if(item.value)element.style.setProperty(name,item.value,item.priority);
+      else element.style.removeProperty(name);
+    });
+  }
+  function lockAiBackground(){
+    if(aiBodyStyleSnapshot)return;
+    aiPageScrollY=window.scrollY||window.pageYOffset||0;
+    aiBodyStyleSnapshot=saveInlineStyle(document.body,["position","top","left","right","width","overflow","overscroll-behavior"]);
+    aiHtmlOverflowSnapshot=saveInlineStyle(document.documentElement,["overflow","overscroll-behavior"]);
+    document.documentElement.style.setProperty("overflow","hidden","important");
+    document.documentElement.style.setProperty("overscroll-behavior","none","important");
+    document.body.style.setProperty("position","fixed","important");
+    document.body.style.setProperty("top",(-aiPageScrollY)+"px","important");
+    document.body.style.setProperty("left","0","important");
+    document.body.style.setProperty("right","0","important");
+    document.body.style.setProperty("width","100%","important");
+    document.body.style.setProperty("overflow","hidden","important");
+    document.body.style.setProperty("overscroll-behavior","none","important");
+    document.documentElement.classList.add("mqci-ai-no-scroll");
+    document.body.classList.add("mqci-ai-no-scroll");
+  }
+  function unlockAiBackground(){
+    if(!aiBodyStyleSnapshot)return;
+    restoreInlineStyle(document.body,aiBodyStyleSnapshot);
+    restoreInlineStyle(document.documentElement,aiHtmlOverflowSnapshot);
+    aiBodyStyleSnapshot=null;
+    aiHtmlOverflowSnapshot=null;
+    document.documentElement.classList.remove("mqci-ai-no-scroll");
+    document.body.classList.remove("mqci-ai-no-scroll");
+    window.scrollTo(0,aiPageScrollY);
+  }
   function syncAiVisualViewport(){
     if(!window.visualViewport)return;
     const viewport=window.visualViewport;
@@ -14111,7 +14153,7 @@ body.mqci-ai-no-scroll{
     panel.classList.toggle("mqci-ai-fullscreen",open);
     panel.setAttribute("aria-modal",String(open));
     launcher.setAttribute("aria-expanded",String(open));
-    document.body.classList.toggle("mqci-ai-no-scroll",open);
+    if(open)lockAiBackground();else unlockAiBackground();
     if(open){
       syncAiVisualViewport();
       previousFocus=document.activeElement;
