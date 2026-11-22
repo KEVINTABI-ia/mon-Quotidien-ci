@@ -192,7 +192,7 @@ async function loadAiUserContext(env, uid) {
 
 export function extractAiTrackingNumber(message) {
   if (typeof message !== "string") return null;
-  const match = message.toUpperCase().match(/\\b(?:BTQ-[A-Z0-9]{4,20}|TCI-[A-Z0-9]{4,20}-[0-9]{4})\\b/);
+  const match = message.toUpperCase().match(/\b(?:BTQ-[A-Z0-9]{4,20}|TCI-[A-Z0-9]{4,20}-[0-9]{4})\b/);
   return match ? match[0] : null;
 }
 
