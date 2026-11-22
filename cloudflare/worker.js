@@ -147,12 +147,13 @@ export function buildAiUserContext({ userProfile=null, clientProfile=null, partn
   })).filter(item => item.name || item.type);
   const partner = partnerProfile && typeof partnerProfile === "object" ? {
     type: safeAiText(partnerProfile.type, 40),
+    commune: safeAiText(partnerProfile.commune, 60),
     status: safeAiText(partnerProfile.statut, 40),
     online: typeof partnerProfile.enLigne === "boolean" ? partnerProfile.enLigne : null,
     subscriptionStatus: safeAiText(partnerProfile.statutAbonnementPartenaire, 40)
   } : null;
   const name = safeAiText(partnerProfile?.nom, 80) || safeAiText(userProfile?.nom, 80) || safeAiText(clientProfile?.nom, 80);
-  const role = partner ? "partenaire de transport" : businesses.length ? "partenaire commercial" : "client";
+  const role = partner && businesses.length ? "partenaire transport et commercial" : partner ? "partenaire de transport" : businesses.length ? "partenaire commercial" : "client";
   return { role, name, partner, businesses };
 }
 
