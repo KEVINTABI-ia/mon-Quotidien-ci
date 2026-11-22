@@ -12852,22 +12852,36 @@ async function chargerAnnoncesValideesAccueil(){
   const afficher=()=>{
    const maintenant=Date.now();
    const items=(window.publicitesAccueilHomeDocs||[]).map(doc=>({id:doc.id,...doc.data()}))
-    .filter(d=>(!d.dateFin?.toDate||d.dateFin.toDate().getTime()>maintenant)&&(d.mediaUrl||d.imageDataUrl)&&(!d.mediaType||String(d.mediaType).startsWith("image/")))
+    .filter(d=>(!d.dateFin?.toDate||d.dateFin.toDate().getTime()>maintenant)&&(d.mediaUrl||d.imageDataUrl||d.mediaKey)&&(!d.mediaType||String(d.mediaType).startsWith("image/")))
     .sort((a,b)=>(a.dateDebut?.toMillis?.()||0)-(b.dateDebut?.toMillis?.()||0));
    if(!items.length){zone.innerHTML='<p class="notice">Aucune affiche publicitaire active pour le moment.</p>';window.indexPubliciteAccueilHome=0;return;}
    window.indexPubliciteAccueilHome=(window.indexPubliciteAccueilHome||0)%items.length;
    const d=items[window.indexPubliciteAccueilHome],titre=echapperTextePublicite(d.titre||"Publicité");
-   const image=echapperTextePublicite(d.imageDataUrl||d.mediaUrl);
+   const image=echapperTextePublicite(d.mediaUrl||d.imageDataUrl||(d.mediaKey?"https://mon-quotidien-jeko.tabikevin57.workers.dev/api/publicites/image?key="+encodeURIComponent(d.mediaKey):""));
    zone.innerHTML='<div class="annonces-accueil-defilement" aria-label="Affiches publicitaires" style="width:100%;text-align:center;">'
     +'<article class="mqci-affiche-publicitaire" style="padding:0;margin:0;width:100%;max-width:none;border:0;border-radius:0;box-shadow:none;background:transparent;">'
-    +'<img src="'+image+'" alt="Affiche publicitaire '+titre+'" loading="eager" style="display:block;width:100%;max-width:100%;height:auto;max-height:none;object-fit:contain;border-radius:0;margin:0;">'
+    +'<img src="'+image+'" alt="Affiche publicitaire '+titre+'" loading="eager" decoding="async" style="display:block;width:100%;max-width:100%;height:auto;max-height:none;object-fit:contain;border-radius:0;margin:0;">'
     +(d.description?'<p class="notice" style="margin:8px 0 0;">'+echapperTextePublicite(d.description)+'</p>':"")
     +'</article></div>';
+   const visuel=zone.querySelector(".mqci-affiche-publicitaire img");
+   if(visuel)visuel.addEventListener("error",()=>{
+    const cle=String(d.mediaKey||"");
+    const cleValide=/^publicites\\/partenaires\\/[A-Za-z0-9_-]{1,128}\\/[A-Za-z0-9-]{36}\\.(jpg|png|webp)$/.test(cle);
+    if(cleValide&&!visuel.dataset.r2Retry){
+     visuel.dataset.r2Retry="1";
+     visuel.src="https://mon-quotidien-jeko.tabikevin57.workers.dev/api/publicites/image?key="+encodeURIComponent(cle);
+     return;
+    }
+    visuel.alt="Affiche publicitaire temporairement indisponible";
+    visuel.style.display="none";
+    const erreur=document.createElement("p");erreur.className="notice";erreur.textContent="Cette affiche ne peut pas être chargée pour le moment.";
+    visuel.parentNode.insertBefore(erreur,visuel.nextSibling);
+   },{once:true});
   };
   afficher();
   if(window.timerPublicitesAccueilHome)clearInterval(window.timerPublicitesAccueilHome);
   window.timerPublicitesAccueilHome=setInterval(()=>{window.indexPubliciteAccueilHome=(window.indexPubliciteAccueilHome||0)+1;afficher();},15000);
- },erreur=>{console.error("Espace publicitaire accueil :",erreur);zone.innerHTML='<p class="notice">Impossible de charger les affiches publicitaires pour le moment.</p>';});
+ },erreur=>{console.error("Espace publicitaire accueil :",erreur);zone.innerHTML='<p class="notice">Impossible de charger les affiches publicitaires. Vérifiez votre connexion puis réessayez.</p>';});
 }
 async function chargerArticlesBoutiquesAccueil(){
  const zone=document.getElementById("articlesBoutiquesAccueil");if(!zone)return;
