@@ -19,13 +19,23 @@ section.innerHTML=`<h2>📞 Cabine téléphonique</h2>
 </div>
 <div id="cabSubscribeChoices" class="cab-subscribe-choices" hidden><h3>Que souhaitez-vous souscrire ?</h3><div class="cab-subscribe-grid"><button id="cabStartCalls" class="cab-sub-choice" type="button"><span class="cab-sub-symbol">☎</span><strong>Forfait appel</strong></button><button id="cabStartInternet" class="cab-sub-choice" type="button"><span class="cab-sub-symbol">▥</span><strong>Forfait internet</strong></button></div><button id="cabBackToMenu" class="cab-back" type="button">← Retour aux services</button></div>
 <div id="cabRequestForm" class="cab-item" hidden><h3 id="cabFormTitle">Nouvelle opération</h3>
-<label>Type de service</label><select id="cabService"><option value="transfert_unites">Transfert d’unité</option><option value="forfait_appels">Forfait appel</option><option value="forfait_internet">Forfait internet</option></select>
-<label>Opérateur</label><div class="cab-choice-row" id="cabOperatorChoices"><button type="button" class="cab-logo-choice selected" data-operator="Orange"><span class="cab-brand orange">orange</span></button><button type="button" class="cab-logo-choice" data-operator="MTN"><span class="cab-brand mtn">MTN</span></button><button type="button" class="cab-logo-choice" data-operator="Moov Africa"><span class="cab-brand moov">moov</span></button></div><select id="cabOperateur" class="cab-hidden-select" aria-hidden="true" tabindex="-1"><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><div id="cabCatalogue"></div>
-<label>Numéro du bénéficiaire</label><input id="cabNumero" type="tel" maxlength="20" placeholder="Numéro à recharger">
-<label>Montant du transfert souhaité auprès de la cabine (FCFA)</label><input id="cabMontant" type="number" min="200" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000">
-<div id="cabCommuneWrap"><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"></div>
-<div id="cabDetailsWrap"><label>Précisions</label><textarea id="cabDetails" maxlength="180" placeholder="Détail du transfert ou du forfait choisi"></textarea></div>
-<label>Moyen de paiement Jèko</label><div class="cab-choice-row cab-payment-choices" id="cabPaymentChoices"><button type="button" class="cab-logo-choice selected" data-payment="wave"><span class="cab-brand wave">WAVE</span></button><button type="button" class="cab-logo-choice" data-payment="orange"><span class="cab-brand orange">orange money</span></button><button type="button" class="cab-logo-choice" data-payment="mtn"><span class="cab-brand mtn">MoMo</span></button><button type="button" class="cab-logo-choice" data-payment="moov"><span class="cab-brand moov">Moov Money</span></button><button type="button" class="cab-logo-choice" data-payment="djamo"><span class="cab-brand djamo">djamo</span></button></div><select id="cabPaymentMethod" class="cab-hidden-select" aria-hidden="true" tabindex="-1"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select>
+<div id="cabServiceWrap"><label>Type de service</label><select id="cabService"><option value="transfert_unites">Transfert d’unité</option><option value="forfait_appels">Forfait appel</option><option value="forfait_internet">Forfait internet</option></select></div>
+<label>Opérateur</label><div class="cab-choice-row" id="cabOperatorChoices">
+<button type="button" class="cab-logo-choice selected" data-operator="Orange" aria-label="Orange"><svg viewBox="0 0 120 58" role="img" aria-label="Logo Orange"><rect x="3" y="3" width="42" height="52" rx="9" fill="#ff7900"/><path d="M13 18h22M13 27h22M13 36h16" stroke="#fff" stroke-width="4" stroke-linecap="round"/><text x="52" y="36" font-size="19" font-weight="700" fill="#f07800">orange</text></svg></button>
+<button type="button" class="cab-logo-choice" data-operator="MTN" aria-label="MTN"><svg viewBox="0 0 120 58" role="img" aria-label="Logo MTN"><path d="M5 7h110v44H5z" rx="8" fill="#ffcc00"/><text x="60" y="36" text-anchor="middle" font-size="25" font-weight="900" fill="#171717">MTN</text></svg></button>
+<button type="button" class="cab-logo-choice" data-operator="Moov Africa" aria-label="Moov Africa"><svg viewBox="0 0 130 58" role="img" aria-label="Logo Moov Africa"><circle cx="25" cy="29" r="21" fill="#0876c9"/><path d="M15 30l8 8 14-18" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><text x="51" y="25" font-size="16" font-weight="800" fill="#0876c9">moov</text><text x="51" y="41" font-size="9" font-weight="700" fill="#0876c9">AFRICA</text></svg></button></div>
+<select id="cabOperateur" class="cab-hidden-select" aria-hidden="true" tabindex="-1"><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><div id="cabCatalogue"></div>
+<div id="cabNumeroWrap"><label>Numéro du bénéficiaire</label><input id="cabNumero" type="tel" maxlength="20" placeholder="Numéro du bénéficiaire"></div>
+<div id="cabAmountWrap"><label>Montant du transfert souhaité auprès de la cabine (FCFA)</label><input id="cabMontant" type="number" min="200" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000"></div>
+<div id="cabCommuneWrap" hidden><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"></div>
+<div id="cabDetailsWrap" hidden><label>Précisions</label><textarea id="cabDetails" maxlength="180" placeholder="Précisions"></textarea></div>
+<div id="cabPaymentWrap"><label>Moyen de paiement Jèko</label><div class="cab-choice-row cab-payment-choices" id="cabPaymentChoices">
+<button type="button" class="cab-logo-choice selected" data-payment="wave" aria-label="Wave"><svg viewBox="0 0 110 58" role="img" aria-label="Logo Wave"><circle cx="27" cy="29" r="23" fill="#0879e8"/><path d="M12 30q7-15 14 0t14 0" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/><text x="57" y="36" font-size="20" font-weight="800" fill="#0879e8">wave</text></svg></button>
+<button type="button" class="cab-logo-choice" data-payment="orange" aria-label="Orange Money"><svg viewBox="0 0 130 58" role="img" aria-label="Logo Orange Money"><rect x="4" y="6" width="45" height="45" rx="8" fill="#ff7900"/><path d="M14 20h25M14 29h25M14 38h18" stroke="#fff" stroke-width="3" stroke-linecap="round"/><text x="55" y="25" font-size="13" font-weight="800" fill="#f07800">orange</text><text x="55" y="40" font-size="11" font-weight="700" fill="#f07800">money</text></svg></button>
+<button type="button" class="cab-logo-choice" data-payment="mtn" aria-label="MTN MoMo"><svg viewBox="0 0 110 58" role="img" aria-label="Logo MTN MoMo"><path d="M4 8h102v42H4z" fill="#ffcc00"/><text x="55" y="27" text-anchor="middle" font-size="18" font-weight="900" fill="#171717">MTN</text><text x="55" y="42" text-anchor="middle" font-size="12" font-weight="800" fill="#171717">MoMo</text></svg></button>
+<button type="button" class="cab-logo-choice" data-payment="moov" aria-label="Moov Money"><svg viewBox="0 0 120 58" role="img" aria-label="Logo Moov Money"><circle cx="22" cy="29" r="18" fill="#0876c9"/><path d="M13 29l7 7 12-15" fill="none" stroke="#fff" stroke-width="4"/><text x="47" y="25" font-size="15" font-weight="800" fill="#0876c9">Moov</text><text x="47" y="40" font-size="12" font-weight="700" fill="#0876c9">Money</text></svg></button>
+<button type="button" class="cab-logo-choice" data-payment="djamo" aria-label="Djamo"><svg viewBox="0 0 110 58" role="img" aria-label="Logo Djamo"><rect x="4" y="6" width="42" height="45" rx="12" fill="#171717"/><path d="M16 20h18M16 29h18M16 38h12" stroke="#fff" stroke-width="3" stroke-linecap="round"/><text x="53" y="36" font-size="19" font-weight="900" fill="#171717">djamo</text></svg></button></div>
+<select id="cabPaymentMethod" class="cab-hidden-select" aria-hidden="true" tabindex="-1"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select></div>
 <p id="cabFeePreview" class="cab-muted">Frais de service : —</p><div class="cab-actions"><button id="cabEnvoyer" class="primary" type="button">Valider et payer avec Jèko</button><button id="cabCancelForm" type="button">Annuler</button></div><p id="cabMessage" aria-live="polite"></p></div>
 </div>
 <div id="cabHistoryView" hidden><div class="cab-history-heading"><h3>Historique de mes transactions</h3><button id="cabBackFromHistory" class="cab-back" type="button">← Retour</button></div><div id="cabHistorique">Connectez-vous pour consulter vos demandes.</div><button id="cabRefreshHistory" type="button">Actualiser l’historique</button></div>
@@ -56,33 +66,30 @@ const cabForfaits=[
  {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:1500,data:"1,5 Go",minutes:"200 min + 500 SMS",validity:"15 jours",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"}
 ];
 const cabTypeLabels={forfait_internet:"Internet",forfait_appels:"Appels",forfait_mixte:"Mixte"};
+let cabSelectedOffer=null;
 function rendreCatalogueCabine(){
+ cabSelectedOffer=null;
  const root=$("cabCatalogue");if(!root)return;
  const op=$("cabOperateur").value,kind=$("cabService").value;
  const matching=cabForfaits.filter(x=>x.op===op&&x.type===kind&&x.price>=200);
  const card=x=>'<article class="cab-item cab-offer"><div class="cab-request-head"><strong>'+esc(x.name)+'</strong><span class="cab-pill">'+esc(x.validity)+'</span></div><p class="cab-price">'+x.price.toLocaleString("fr-FR")+' FCFA</p><p>'+esc(x.data)+' · '+esc(x.minutes)+'</p><p class="cab-muted">Souscription opérateur : '+esc(x.code)+'</p><button type="button" class="primary" data-cab-offer="'+cabForfaits.indexOf(x)+'">Choisir ce forfait</button><a href="'+esc(x.source)+'" target="_blank" rel="noopener">Détails officiels</a></article>';
- let html='<div class="cab-catalog-head"><h3>Choisir rapidement un forfait</h3><p class="cab-muted">Comparez les offres publiées par les opérateurs, puis sélectionnez celle à demander à votre cabiniste.</p></div>';
+ let html='<div class="cab-catalog-head"><h3>Annuaire des offres — '+esc(op)+'</h3><p class="cab-muted">Choisissez une offre dans la liste correspondant à votre forfait.</p></div>';
  if(matching.length)html+='<div class="cab-offers">'+matching.map(card).join("")+'</div>';
- else if(op==="MTN"){
-  const code=kind==="forfait_internet"?"*105*2#":kind==="forfait_appels"?"*105*1#":"*105#";
-  html+='<div class="cab-item"><strong>Offres MTN '+esc(cabTypeLabels[kind]||"")+'</strong><p>MTN propose ses packs depuis le menu officiel. Les prix et avantages sont affichés dans le menu selon la ligne et les offres en cours.</p><p class="cab-muted">Code de souscription : '+esc(code)+'</p><a href="https://moninternet.mtn.ci" target="_blank" rel="noopener">Consulter les forfaits Internet MTN</a> · <a href="https://www.mtn.ci/deal/codes-ussd/" target="_blank" rel="noopener">Codes officiels MTN</a><button type="button" class="primary" id="cabMtnChoose">Faire une demande MTN</button></div>';
- }else if(op==="Orange"&&kind==="forfait_appels"){
-  html+='<div class="cab-item"><strong>Pass voix Orange</strong><p>Les offres voix disponibles sont à consulter dans le menu opérateur, car les détails tarifaires ne sont pas publiés sur la page officielle consultée.</p><p class="cab-muted">Menu Orange : #111# · Pass Mix : #111*11#</p><a href="https://www.orange.ci/fr/max-it/super-app-orange-et-moi-orange-money.html" target="_blank" rel="noopener">Voir les offres sur Max it</a><button type="button" class="primary" id="cabOrangeChoose">Faire une demande Orange</button></div>';
- }else html+='<div class="cab-item">Aucune offre tarifée confirmée pour ce filtre. Vous pouvez tout de même faire une demande personnalisée auprès d’un cabiniste.</div>';
+ else html+='<div class="cab-item">Aucune offre répertoriée pour cet opérateur et cette catégorie. Choisissez une autre catégorie ou un autre opérateur.</div>';
  root.innerHTML=html+'<p class="cab-muted">Offres relevées sur les pages officielles consultées le 22/11/2026. Les promotions, l’éligibilité et les tarifs peuvent évoluer ; vérifiez toujours avant validation.</p>';
  root.querySelectorAll("[data-cab-offer]").forEach(b=>b.onclick=()=>selectionnerForfaitCabine(cabForfaits[Number(b.dataset.cabOffer)]));
  const generic=()=>{ $("cabMontant").value="";$("cabDetails").value="Forfait "+(cabTypeLabels[kind]||"")+" à préciser avec le cabiniste."; $("cabCommuneClient").focus(); document.getElementById("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});};
  $("cabMtnChoose")?.addEventListener("click",generic);$("cabOrangeChoose")?.addEventListener("click",generic);
 }
 function selectionnerForfaitCabine(x){
- $("cabOperateur").value=x.op;$("cabService").value=x.type;$("cabMontant").value=x.price;
- $("cabDetails").value=x.name+" — "+x.data+" — "+x.minutes+" — validité "+x.validity+" (code opérateur "+x.code+").";
- rendreCatalogueCabine();
- actualiserFraisCabine();
+ cabSelectedOffer=x;
+ $("cabOperateur").value=x.op;$("cabService").value=x.type;
+ $("cabFeePreview").hidden=true;$("cabAmountWrap").hidden=true;
+ $("cabCatalogue").querySelectorAll("[data-cab-offer]").forEach(b=>{const selected=Number(b.dataset.cabOffer)===cabForfaits.indexOf(x);b.textContent=selected?"Offre sélectionnée":"Choisir ce forfait";b.classList.toggle("selected",selected);});
  $("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});
  $("cabNumero").focus({preventScroll:true});
 }
-$("cabOperateur").addEventListener("change",rendreCatalogueCabine);
+$("cabOperateur").addEventListener("change",()=>{cabSelectedOffer=null;rendreCatalogueCabine();});
 $("cabService").addEventListener("change",rendreCatalogueCabine);
 rendreCatalogueCabine();
 const css=document.createElement("style");css.textContent=`
@@ -125,6 +132,12 @@ const css=document.createElement("style");css.textContent=`
 #cabinesTelephoniques .cab-sub-choice{min-height:112px;background:#f3f8fc;border:1px solid #dceaf5;color:#174b68;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
 #cabinesTelephoniques .cab-sub-symbol{font-size:30px;color:#159ac3}
 #cabinesTelephoniques .cab-back{background:#f1f5f2;color:#31513d;border:1px solid #dce8df;margin:12px 0}
+#cabinesTelephoniques .cab-choice-row{display:flex;flex-direction:row;flex-wrap:nowrap;gap:8px;overflow-x:auto;padding:8px 2px 12px}
+#cabinesTelephoniques .cab-logo-choice{flex:1 0 0;min-width:0;min-height:66px;display:flex;align-items:center;justify-content:center;background:#fff;border:2px solid #e2e8ef;border-radius:13px;padding:5px}
+#cabinesTelephoniques .cab-logo-choice svg{display:block;width:100%;max-width:128px;height:48px}
+#cabinesTelephoniques .cab-logo-choice.selected{border-color:#16834a;background:#f0faf3;box-shadow:0 0 0 2px #16834a18}
+#cabinesTelephoniques .cab-hidden-select{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}
+#cabinesTelephoniques [hidden]{display:none!important}
 #cabinesTelephoniques .cab-history-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
 #cabinesTelephoniques .cab-choice-row{display:flex;flex-direction:row;align-items:stretch;gap:9px;overflow-x:auto;padding:7px 2px 12px}
 #cabinesTelephoniques .cab-logo-choice{flex:1 0 0;min-width:72px;min-height:62px;display:flex;align-items:center;justify-content:center;background:#fff;border:2px solid #e4e9ef;border-radius:13px;padding:8px}
@@ -143,7 +156,7 @@ const css=document.createElement("style");css.textContent=`
 function ouvrirCabinesTelephoniques(){if(typeof ouvrirSectionPleinEcran==="function")ouvrirSectionPleinEcran("cabinesTelephoniques","Cabine téléphonique");else section.style.display="block";chargerHistorique();}
 window.ouvrirCabinesTelephoniques=ouvrirCabinesTelephoniques;
 let cabRequestMode="transfer";
-function ouvrirFormulaireCabine(mode,serviceType){cabRequestMode=mode;$("cabRequestForm").hidden=false;$("cabClientChoices").hidden=true;$("cabSubscribeChoices").hidden=true;$("cabHistoryView").hidden=true;$("cabFormTitle").textContent=mode==="transfer"?"Transfert d’unité":serviceType==="forfait_internet"?"Souscrire un forfait internet":"Souscrire un forfait appel";$("cabService").value=mode==="transfer"?"transfert_unites":serviceType;$("cabService").disabled=mode==="transfer";$("cabCatalogue").hidden=mode==="transfer";$("cabCommuneWrap").hidden=mode==="transfer";$("cabDetailsWrap").hidden=mode==="transfer";rendreCatalogueCabine();$("cabNumero").focus();}
+function ouvrirFormulaireCabine(mode,serviceType){cabRequestMode=mode;cabSelectedOffer=null;$("cabRequestForm").hidden=false;$("cabClientChoices").hidden=true;$("cabSubscribeChoices").hidden=true;$("cabHistoryView").hidden=true;$("cabFormTitle").textContent=mode==="transfer"?"Transfert d’unité":serviceType==="forfait_internet"?"Souscrire un forfait internet":"Souscrire un forfait appel";$("cabService").value=mode==="transfer"?"transfert_unites":serviceType;$("cabService").disabled=mode==="transfer";$("cabServiceWrap").hidden=mode!=="transfer";$("cabCatalogue").hidden=mode==="transfer";$("cabAmountWrap").hidden=mode!=="transfer";$("cabFeePreview").hidden=mode!=="transfer";$("cabCommuneWrap").hidden=true;$("cabDetailsWrap").hidden=true;$("cabNumeroWrap").hidden=false;rendreCatalogueCabine();$("cabNumero").focus();}
 function retourMenuCabine(){ $("cabRequestForm").hidden=true;$("cabSubscribeChoices").hidden=true;$("cabHistoryView").hidden=true;$("cabClientChoices").hidden=false;$("cabMessage").textContent="";$("cabEnvoyer").disabled=false;}
 $("cabStartTransfer").onclick=()=>ouvrirFormulaireCabine("transfer","transfert_unites");
 $("cabStartSubscribe").onclick=()=>{$("cabClientChoices").hidden=true;$("cabSubscribeChoices").hidden=false;};
@@ -161,7 +174,7 @@ function actualiserFraisCabine(){const amount=Number($("cabMontant").value),fee=
 $("cabMontant").addEventListener("input",actualiserFraisCabine);
 $("cabService").addEventListener("change",()=>{rendreCatalogueCabine();$("cabCatalogue").hidden=$("cabService").value==="transfert_unites";});
 $("cabEnvoyer").onclick=async()=>{
- const u=auth.currentUser,amount=Number($("cabMontant").value),phone=$("cabNumero").value.trim(),commune=cabRequestMode==="transfer"?"":$("cabCommuneClient").value.trim(),details=cabRequestMode==="transfer"?"":$("cabDetails").value.trim(),button=$("cabEnvoyer"),msg=$("cabMessage");
+ const u=auth.currentUser,amount=cabRequestMode==="transfer"?Number($("cabMontant").value):Number(cabSelectedOffer?.price),phone=$("cabNumero").value.trim(),commune="",details=cabRequestMode==="transfer"?"":(cabSelectedOffer?cabSelectedOffer.name+" — "+cabSelectedOffer.data+" — "+cabSelectedOffer.minutes+" — validité "+cabSelectedOffer.validity+" (code "+cabSelectedOffer.code+").":""),button=$("cabEnvoyer"),msg=$("cabMessage");
  const typeService=cabRequestMode==="transfer"?"transfert_unites":$("cabService").value;
  if(!u){msg.textContent="Connectez-vous à votre compte client pour payer.";return;}
  if(!Number.isSafeInteger(amount)||amount<200||amount>500000||phone.length<8||phone.length>20||(cabRequestMode!=="transfer"&&(commune.length<2||details.length<2))){msg.textContent="Vérifiez le numéro et le montant (200 FCFA minimum).";return;}
