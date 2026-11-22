@@ -11625,8 +11625,6 @@ async function marquerArriveDestination(commandeId) {
 async function terminerMissionPartenaire(commandeId, code) {
   const user=partnerAuth.currentUser;if(!user)return;
   if(!/^\d{6}$/.test(String(code||"")))return alert("Saisissez le code de remise à 6 chiffres communiqué par le client.");
-
-  const user=partnerAuth.currentUser;if(!user)return;
   if(!confirm("Confirmez-vous que le règlement convenu a été effectué et que la course est terminée ?"))return;
   const ref=partnerDb.collection("commandes_colis").doc(commandeId);
   try{
