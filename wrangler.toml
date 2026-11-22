@@ -21,4 +21,6 @@ required = [
   "JEKO_STORE_ID",
   "JEKO_WEBHOOK_SECRET"
 ]
-\n[ai]\nbinding = "AI"\n
+
+[ai]
+binding = "AI"
