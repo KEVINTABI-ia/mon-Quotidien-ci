@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseAiChatPayload, buildAiUserContext, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext, buildAiMerchantPerformanceContext, buildAiMerchantAdviceContext } from "../cloudflare/worker.js";
+import { parseAiChatPayload, buildAiUserContext, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext, buildAiMerchantPerformanceContext, buildAiMerchantAdviceContext, buildAiRecentOrdersContext } from "../cloudflare/worker.js";
 
 const id = "123e4567-e89b-42d3-a456-426614174000";
 
@@ -245,4 +245,18 @@ test("adapte les conseils lorsque l'échantillon ne contient aucune commande", (
   });
   assert.equal(advice.advice[0].topic, "acquisition");
   assert.equal(buildAiMerchantAdviceContext(null), null);
+});
+
+
+test("limite l'historique client aux commandes appartenant à son UID", () => {
+  const context = buildAiRecentOrdersContext([
+    { clientId: "client-1", statut: "en_transit", service: "livraison", boutiqueNom: "Boutique A" },
+    { clientId: "client-1", statut: "livre", service: "boutique", boutiqueNom: "Boutique B" },
+    { clientId: "client-2", statut: "livre", service: "livraison", boutiqueNom: "Privée" }
+  ], "client-1");
+  assert.equal(context.sampleSize, 2);
+  assert.equal(context.orders[0].status, "En cours de livraison");
+  assert.equal(context.orders[1].status, "Livrée");
+  assert.equal(JSON.stringify(context).includes("Privée"), false);
+  assert.equal(buildAiRecentOrdersContext([], ""), null);
 });
