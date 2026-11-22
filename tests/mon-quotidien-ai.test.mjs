@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseAiChatPayload, buildAiUserContext, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext, buildAiMerchantPerformanceContext } from "../cloudflare/worker.js";
+import { parseAiChatPayload, buildAiUserContext, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext, buildAiMerchantPerformanceContext, buildAiMerchantAdviceContext } from "../cloudflare/worker.js";
 
 const id = "123e4567-e89b-42d3-a456-426614174000";
 
@@ -218,4 +218,31 @@ test("ne calcule pas de montant commercial lorsque les détails ne sont pas disp
   assert.equal(context.confirmedProductAmountXof, null);
   assert.equal(context.amountRecords, 0);
   assert.equal(buildAiMerchantPerformanceContext([], [], [], ""), null);
+});
+
+
+test("propose des conseils commerçant fondés sur les indicateurs observés", () => {
+  const advice = buildAiMerchantAdviceContext({
+    sample: { ordersAnalyzed: 4, confirmedOrdersAnalyzed: 1 },
+    products: {
+      awaitingApproval: 2,
+      markedUnavailable: 1,
+      topViewed: [{ name: "Robe", views: 24 }, { name: "Sac", views: 9 }]
+    }
+  });
+  assert.equal(advice.advice.length, 3);
+  assert.equal(advice.advice[0].topic, "validation_catalogue");
+  assert.equal(advice.advice[1].topic, "disponibilite_catalogue");
+  assert.equal(advice.advice[2].topic, "mise_en_avant");
+  assert.match(advice.advice[2].basis, /Robe \(24 vues\)/);
+  assert.match(advice.limitations, /ne modifient aucun article/);
+});
+
+test("adapte les conseils lorsque l'échantillon ne contient aucune commande", () => {
+  const advice = buildAiMerchantAdviceContext({
+    sample: { ordersAnalyzed: 0, confirmedOrdersAnalyzed: 0 },
+    products: { awaitingApproval: 0, markedUnavailable: 0, topViewed: [] }
+  });
+  assert.equal(advice.advice[0].topic, "acquisition");
+  assert.equal(buildAiMerchantAdviceContext(null), null);
 });
