@@ -1712,6 +1712,20 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // Conversations MON QUOTIDIEN AI : lecture propriétaire uniquement.
+    // Les créations et écritures passent par le Worker authentifié (compte de service).
+    // Aucun accès administrateur direct aux contenus de conversation via le client.
+    match /ai_conversations/{conversationId} {
+      allow get, list: if estConnecte() && resource.data.uid == request.auth.uid;
+      allow create, update, delete: if false;
+
+      match /messages/{messageId} {
+        allow get, list: if estConnecte()
+          && get(/databases/$(database)/documents/ai_conversations/$(conversationId)).data.uid == request.auth.uid;
+        allow create, update, delete: if false;
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
