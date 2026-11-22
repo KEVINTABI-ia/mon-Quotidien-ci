@@ -14086,6 +14086,34 @@ body.mqci-ai-no-scroll{
     #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiClose{height:32px!important;min-height:32px!important;width:32px!important;min-width:32px!important;flex-basis:32px!important}
   }
 </style>
+<style id="mqci-ai-ios-no-zoom-fix">
+/* Safari iOS zoome automatiquement les champs dont le texte est inférieur à 16px. */
+#mqciAiPanel.mqci-ai-fullscreen,
+#mqciAiPanel.mqci-ai-fullscreen *{
+  box-sizing:border-box!important;
+}
+#mqciAiPanel.mqci-ai-fullscreen #mqciAiInput{
+  font-size:16px!important;
+  line-height:1.35!important;
+  width:0!important;
+  min-width:0!important;
+  max-width:100%!important;
+  flex:1 1 0!important;
+  -webkit-text-size-adjust:100%!important;
+}
+#mqciAiPanel.mqci-ai-fullscreen #mqciAiForm{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+#mqciAiPanel.mqci-ai-fullscreen #mqciAiSend{
+  flex:0 0 48px!important;
+  width:48px!important;
+  min-width:48px!important;
+  max-width:48px!important;
+}
+</style>
 <button id="mqciAiLauncher" type="button" aria-controls="mqciAiPanel" aria-expanded="false" hidden>✦ MON QUOTIDIEN AI</button>
 <section id="mqciAiPanel" role="dialog" aria-label="Assistant MON QUOTIDIEN AI" aria-modal="false" hidden>
   <header id="mqciAiHeader"><div><strong>MON QUOTIDIEN AI</strong><small>Votre assistant du quotidien</small></div><button id="mqciAiClose" type="button" aria-label="Fermer">×</button></header>
