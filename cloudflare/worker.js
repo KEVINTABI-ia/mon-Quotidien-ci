@@ -916,11 +916,11 @@ async function clientDeliveryCode(request,env) {
     if(existing) {
       const data=docData(existing);
       if(data.usedAt)return json({error:"delivery_already_confirmed"},409);
-      if(data.code&&data.expiresAt instanceof Date&&data.expiresAt.getTime()>now.getTime()&&data.attempts<5)
-        return json({ok:true,code:data.code,expiresAt:data.expiresAt.toISOString()},200);
     }
+    // Le code en clair n'est jamais persisté : seul son hachage est conservé.
+    // Chaque nouvelle consultation par le client émet un nouveau code et invalide le précédent.
     const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%1000000).padStart(6,"0");
-    const confirmation={code,codeHash:await hashDeliveryConfirmationCode(code),attempts:0,expiresAt:new Date(now.getTime()+30*60*1000),createdAt:now,usedAt:null};
+    const confirmation={codeHash:await hashDeliveryConfirmationCode(code),attempts:0,expiresAt:new Date(now.getTime()+30*60*1000),createdAt:now,usedAt:null};
     if(existing)await commitWrites(env,[updateWrite(path,confirmation,existing.updateTime)]);
     else await commitWrites(env,[createWrite(path,confirmation)]);
     return json({ok:true,code,expiresAt:confirmation.expiresAt.toISOString()},200);
