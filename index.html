@@ -13833,7 +13833,7 @@ async function mqciAdminStatutPharmacie(uid,statut){
   .mqci-ai-note{font-size:11px;color:#718079;text-align:center;padding:5px 10px}
   #mqciAiForm{padding:11px;border-top:1px solid #e5ece6;display:flex;gap:8px;background:#fff}
   #mqciAiInput{min-width:0;flex:1;resize:none;max-height:100px;border:1px solid #d7e2da;border-radius:12px;padding:11px;font:14px system-ui;outline-color:#087C62}
-  #mqciAiSend{border:0;border-radius:12px;background:#087C62;color:#fff;padding:0 15px;font-weight:700;min-width:64px}
+  #mqciAiSend{border:0;border-radius:12px;background:#087C62;color:#fff;padding:0;min-width:48px;width:48px;display:grid;place-items:center}#mqciAiSend svg{display:block;width:23px;height:23px}
   #mqciAiSend:disabled{opacity:.5}
   /* Fullscreen controls: keep the composer visible above mobile keyboards. */
   #mqciAiPanel.mqci-ai-fullscreen{top:var(--mqci-ai-vv-top,0px)!important;height:var(--mqci-ai-vv-height,100dvh)!important;box-sizing:border-box!important}
@@ -13841,7 +13841,7 @@ async function mqciAdminStatutPharmacie(uid,statut){
   #mqciAiPanel.mqci-ai-fullscreen #mqciAiClose{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;min-width:40px;min-height:40px;padding:0;line-height:1;font-size:25px;box-sizing:border-box;align-self:center}
   #mqciAiPanel.mqci-ai-fullscreen #mqciAiForm{flex:0 0 auto;align-items:stretch;box-sizing:border-box;width:100%;min-width:0;gap:8px}
   #mqciAiPanel.mqci-ai-fullscreen #mqciAiInput{min-width:0;min-height:44px;box-sizing:border-box}
-  #mqciAiPanel.mqci-ai-fullscreen #mqciAiSend{flex:0 0 auto;min-width:68px;min-height:44px;padding:0 14px;white-space:nowrap;box-sizing:border-box;align-self:stretch}
+  #mqciAiPanel.mqci-ai-fullscreen #mqciAiSend{flex:0 0 48px;width:48px;min-width:48px;max-width:48px;min-height:44px;padding:0;white-space:nowrap;box-sizing:border-box;align-self:stretch}
   @media(max-width:520px){#mqciAiLauncher{right:12px;bottom:14px;padding:13px 15px}#mqciAiPanel{right:8px;bottom:72px;width:calc(100vw - 16px);height:min(590px,calc(100dvh - 92px))}}
   #mqciAiSubscription{padding:11px 13px;background:#fff;border-bottom:1px solid #e5ece6;display:grid;gap:8px}
   #mqciAiSubscriptionStatus{font-size:12px;line-height:1.4;color:#29483b}
@@ -14047,7 +14047,7 @@ body.mqci-ai-no-scroll{
     <div id="mqciAiSubscriptionMessage" role="status" aria-live="polite"></div>
   </section>
   <div id="mqciAiMessages" aria-live="polite"><div class="mqci-ai-message mqci-ai-assistant">Bonjour ! Je suis MON QUOTIDIEN AI. Comment puis-je vous aider aujourd'hui ?</div><div class="mqci-ai-note">Je peux consulter le statut d’une commande avec son numéro de suivi et résumer les missions attribuées à votre compte partenaire transport. Je ne confirme ni ne traite les paiements.</div></div>
-  <form id="mqciAiForm"><textarea id="mqciAiInput" rows="1" maxlength="2000" placeholder="Écrivez votre message…" aria-label="Votre message" required></textarea><button id="mqciAiSend" type="submit">Envoyer</button></form>
+  <form id="mqciAiForm"><textarea id="mqciAiInput" rows="1" maxlength="2000" placeholder="Écrivez votre message…" aria-label="Votre message" required></textarea><button id="mqciAiSend" type="submit" aria-label="Envoyer le message" title="Envoyer"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button></form>
 </section>
 <script id="mqci-ai-widget-script">
 (function(){
