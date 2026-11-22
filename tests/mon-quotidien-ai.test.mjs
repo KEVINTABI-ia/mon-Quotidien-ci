@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseAiChatPayload, buildAiUserContext, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext, buildAiMerchantPerformanceContext, buildAiMerchantAdviceContext, buildAiRecentOrdersContext, buildAiSubscriptionContext } from "../cloudflare/worker.js";
+import { parseAiChatPayload, buildAiUserContext, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext, buildAiMerchantPerformanceContext, buildAiMerchantAdviceContext, buildAiRecentOrdersContext, buildAiSubscriptionContext, validateJekoPaymentPlan } from "../cloudflare/worker.js";
 
 const id = "123e4567-e89b-42d3-a456-426614174000";
 
@@ -297,4 +297,14 @@ test("un Premium expiré ou dont la date est invalide ne donne aucun droit", () 
   }, "client-1", now);
   assert.equal(invalid.status, "unverified");
   assert.equal(invalid.premiumAccess, false);
+});
+
+
+test("valide les deux forfaits mensuels IA uniquement avec leurs tarifs officiels", () => {
+  const base = { provider: "jeko", currency: "XOF", targetPath: "abonnements_ai/client-1", amountCents: 100000, durationMonths: 1 };
+  assert.equal(validateJekoPaymentPlan({ ...base, serviceId: "ai_subscription", uid: "client-1", planId: "client_monthly", accountType: "client", amountXof: 1000, amountCents: 100000 }), true);
+  assert.equal(validateJekoPaymentPlan({ ...base, serviceId: "ai_subscription", uid: "partner-1", targetPath: "abonnements_ai/partner-1", planId: "partner_monthly", accountType: "partner", amountXof: 3000, amountCents: 300000 }), true);
+  assert.equal(validateJekoPaymentPlan({ ...base, serviceId: "ai_subscription", uid: "client-1", planId: "client_monthly", accountType: "client", amountXof: 3000, amountCents: 300000 }), false);
+  assert.equal(validateJekoPaymentPlan({ ...base, serviceId: "ai_subscription", uid: "partner-1", targetPath: "abonnements_ai/partner-1", planId: "partner_monthly", accountType: "client", amountXof: 3000, amountCents: 300000 }), false);
+  assert.equal(validateJekoPaymentPlan({ ...base, serviceId: "ai_subscription", uid: "client-1", targetPath: "abonnements_ai/other-user", planId: "client_monthly", accountType: "client", amountXof: 1000, amountCents: 100000 }), false);
 });
