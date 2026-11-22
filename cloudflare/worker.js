@@ -134,7 +134,7 @@ const AI_MODEL = "@cf/google/gemma-4-26b-a4b-it";
 const AI_MAX_MESSAGE_CHARS = 2000;
 
 function safeAiText(value, max=100) {
-  return typeof value === "string" ? value.replace(/[\\u0000-\\u001f\\u007f]/g, " ").trim().slice(0, max) : "";
+  return typeof value === "string" ? value.split("").filter(char => char.charCodeAt(0) >= 32 && char.charCodeAt(0) !== 127).join("").trim().slice(0, max) : "";
 }
 
 export function buildAiUserContext({ userProfile=null, clientProfile=null, partnerProfile=null, businessProfiles=[] }={}) {
