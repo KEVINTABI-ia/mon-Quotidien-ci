@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseAiChatPayload, buildAiUserContext, extractAiResponseText, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext, buildAiMerchantPerformanceContext, buildAiMerchantAdviceContext, buildAiRecentOrdersContext, buildAiSubscriptionContext, validateJekoPaymentPlan } from "../cloudflare/worker.js";
+import { parseAiChatPayload, buildAiUserContext, extractAiResponseText, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext, buildAiMerchantPerformanceContext, buildAiMerchantAdviceContext, buildAiRecentOrdersContext, buildAiSubscriptionContext, buildAiPremiumBenefitsContext, validateJekoPaymentPlan } from "../cloudflare/worker.js";
 
 const id = "123e4567-e89b-42d3-a456-426614174000";
 
@@ -274,6 +274,24 @@ test("un utilisateur sans abonnement IA dispose du statut gratuit", () => {
   assert.deepEqual(buildAiSubscriptionContext(null, "client-1"), {
     plan: "free", status: "free", premiumAccess: false, expiresAt: null
   });
+});
+
+test("les avantages Premium client sont activés uniquement avec un abonnement vérifié", () => {
+  const free = buildAiPremiumBenefitsContext({ premiumAccess: false }, { role: "client" });
+  assert.deepEqual(free, { enabled: false, responseDepth: "standard", benefits: [] });
+  const premium = buildAiPremiumBenefitsContext({ premiumAccess: true }, { role: "client" });
+  assert.equal(premium.enabled, true);
+  assert.equal(premium.responseDepth, "detailed");
+  assert.match(premium.benefits.join(" "), /conseils d'achat/);
+  assert.match(premium.benefits.join(" "), /historique de commandes/);
+});
+
+test("les avantages Premium partenaire sont adaptés aux données métier", () => {
+  const premium = buildAiPremiumBenefitsContext({ premiumAccess: true }, { role: "partenaire commercial" });
+  assert.equal(premium.enabled, true);
+  assert.match(premium.benefits.join(" "), /analyses commerciales/);
+  assert.match(premium.benefits.join(" "), /recommandations marketing/);
+  assert.match(premium.benefits.join(" "), /missions effectivement accessibles/);
 });
 
 test("un abonnement Premium actif est reconnu uniquement pour le bon UID", () => {
