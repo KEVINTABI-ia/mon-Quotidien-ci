@@ -73,11 +73,11 @@ const css=document.createElement("style");css.textContent=`
 #cabinesTelephoniques .cab-filter{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
 #cabinesTelephoniques button:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:420px){#cabinesTelephoniques .cab-stats{gap:5px}#cabinesTelephoniques .cab-stat{padding:9px 5px}#cabinesTelephoniques .cab-stat strong{font-size:18px}#cabinesTelephoniques .cab-filter{grid-template-columns:1fr}}
-`;#cabinesTelephoniques .cab-offers{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px}
+#cabinesTelephoniques .cab-offers{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px}
 #cabinesTelephoniques .cab-offer .cab-price{font-size:21px;font-weight:800;color:#17663d;margin:8px 0}
 #cabinesTelephoniques .cab-offer a,#cabinesTelephoniques .cab-item a{display:inline-block;margin:9px 8px 0 0;color:#17663d;text-decoration:underline;font-size:13px}
 #cabinesTelephoniques .cab-catalog-head{margin:12px 0}
-#cabinesTelephoniques .cab-catalog-head h3{margin-bottom:4px}document.head.appendChild(css);
+#cabinesTelephoniques .cab-catalog-head h3{margin-bottom:4px}`;document.head.appendChild(css);
 function ouvrirCabinesTelephoniques(){if(typeof ouvrirSectionPleinEcran==="function")ouvrirSectionPleinEcran("cabinesTelephoniques","Cabine téléphonique");else section.style.display="block";chargerHistorique();}
 window.ouvrirCabinesTelephoniques=ouvrirCabinesTelephoniques;
 $("cabEnvoyer").onclick=async()=>{
