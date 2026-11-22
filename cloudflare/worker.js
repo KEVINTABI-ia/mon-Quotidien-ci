@@ -134,33 +134,53 @@ const AI_MODEL = "@cf/google/gemma-4-26b-a4b-it";
 const AI_MAX_MESSAGE_CHARS = 2000;
 
 export function parseAiChatPayload(payload) {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    return { ok: false, error: "invalid_payload" };
-  }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return { ok: false, error: "invalid_payload" };
   const keys = Object.keys(payload);
-  if (keys.some(key => key !== "message")) return { ok: false, error: "unsupported_fields" };
+  if (keys.some(key => !["message", "conversationId"].includes(key))) return { ok: false, error: "unsupported_fields" };
   if (typeof payload.message !== "string") return { ok: false, error: "invalid_message" };
   const message = payload.message.trim();
   if (!message) return { ok: false, error: "empty_message" };
   if (message.length > AI_MAX_MESSAGE_CHARS) return { ok: false, error: "message_too_long" };
-  return { ok: true, message };
+  const conversationId = payload.conversationId;
+  if (typeof conversationId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(conversationId)) {
+    return { ok: false, error: "invalid_conversation_id" };
+  }
+  return { ok: true, message, conversationId };
+}
+
+async function readAiConversation(env, uid, conversationId) {
+  const doc = await getDoc(env, "ai_conversations/" + conversationId);
+  if (!doc) return { doc: null, messages: [] };
+  const conversation = docData(doc);
+  if (conversation?.uid !== uid) return { forbidden: true, messages: [] };
+  const result = await firestore(env, "ai_conversations/" + conversationId + "/messages?pageSize=20&orderBy=createdAt%20desc");
+  const messages = (result?.documents || []).map(item => docData(item))
+    .filter(item => item && ["user", "assistant"].includes(item.role) && typeof item.content === "string")
+    .reverse().map(item => ({ role: item.role, content: item.content }));
+  return { doc, messages };
+}
+
+async function aiConversationHistory(request, env, conversationId) {
+  const auth = await requireUser(request, env);
+  if (!auth.user) return json({ error: "unauthorized" }, 401);
+  try {
+    const conversation = await readAiConversation(env, auth.user.sub, conversationId);
+    if (conversation.forbidden) return json({ error: "not_found" }, 404);
+    return json({ conversationId, messages: conversation.messages });
+  } catch {
+    return json({ error: "ai_history_unavailable" }, 503);
+  }
 }
 
 async function aiChat(request, env) {
   const authResult = await requireUser(request, env);
   if (!authResult.user) return json({ error: "unauthorized" }, 401);
-  if (!env.AI_RATE_LIMITER || typeof env.AI_RATE_LIMITER.limit !== "function") {
-    return json({ error: "ai_rate_limiter_unavailable" }, 503);
-  }
+  if (!env.AI_RATE_LIMITER || typeof env.AI_RATE_LIMITER.limit !== "function") return json({ error: "ai_rate_limiter_unavailable" }, 503);
   try {
     const allowance = await env.AI_RATE_LIMITER.limit({ key: authResult.user.sub });
     if (!allowance.success) return json({ error: "rate_limited" }, 429);
-  } catch {
-    return json({ error: "ai_rate_limiter_unavailable" }, 503);
-  }
-  if (!env.AI || typeof env.AI.run !== "function") {
-    return json({ error: "ai_service_unavailable" }, 503);
-  }
+  } catch { return json({ error: "ai_rate_limiter_unavailable" }, 503); }
+  if (!env.AI || typeof env.AI.run !== "function") return json({ error: "ai_service_unavailable" }, 503);
   const declaredLength = Number(request.headers.get("content-length") || 0);
   if (declaredLength > 8192) return json({ error: "request_too_large" }, 413);
   let payload;
@@ -168,28 +188,33 @@ async function aiChat(request, env) {
     const raw = await request.text();
     if (new TextEncoder().encode(raw).byteLength > 8192) return json({ error: "request_too_large" }, 413);
     payload = JSON.parse(raw);
-  } catch {
-    return json({ error: "invalid_json" }, 400);
-  }
+  } catch { return json({ error: "invalid_json" }, 400); }
   const parsed = parseAiChatPayload(payload);
   if (!parsed.ok) return json({ error: parsed.error }, 400);
   try {
+    const conversation = await readAiConversation(env, authResult.user.sub, parsed.conversationId);
+    if (conversation.forbidden) return json({ error: "not_found" }, 404);
+    const systemMessage = {
+      role: "system",
+      content: "Tu es MON QUOTIDIEN AI, l'assistant de la plateforme ivoirienne MON QUOTIDIEN CI. Réponds en français clair, avec un ton professionnel, chaleureux et précis. Aide sur les services de commerce, transport, livraison et vie quotidienne en Côte d'Ivoire. Tu n'as accès à aucune donnée personnelle, commande, disponibilité, stock, paiement ou portefeuille dans cette version. N'invente jamais ces informations et explique clairement lorsque l'utilisateur doit consulter l'application ou contacter un partenaire. Tu ne peux effectuer aucune action, aucun paiement, aucune réservation et aucune modification de compte. Ne prétends jamais avoir exécuté une opération. Pour les sujets urgents ou sensibles, recommande de contacter le service compétent."
+    };
     const result = await env.AI.run(AI_MODEL, {
-      messages: [
-        {
-          role: "system",
-          content: "Tu es MON QUOTIDIEN AI, l'assistant de la plateforme ivoirienne MON QUOTIDIEN CI. Réponds en français clair, avec un ton professionnel, chaleureux et précis. Aide sur les services de commerce, transport, livraison et vie quotidienne en Côte d'Ivoire. Tu n'as accès à aucune donnée personnelle, commande, disponibilité, stock, paiement ou portefeuille dans cette version. N'invente jamais ces informations et explique clairement lorsque l'utilisateur doit consulter l'application ou contacter un partenaire. Tu ne peux effectuer aucune action, aucun paiement, aucune réservation et aucune modification de compte. Ne prétends jamais avoir exécuté une opération. Pour les sujets urgents ou sensibles, recommande de contacter le service compétent."
-        },
-        { role: "user", content: parsed.message }
-      ],
-      max_tokens: 600,
-      temperature: 0.35
+      messages: [systemMessage, ...conversation.messages.slice(-18), { role: "user", content: parsed.message }],
+      max_tokens: 600, temperature: 0.35
     });
     const answer = typeof result?.response === "string" ? result.response.trim() : "";
     if (!answer) return json({ error: "ai_empty_response" }, 502);
-    return json({ answer, model: AI_MODEL, turnId: crypto.randomUUID() });
+    const now = new Date().toISOString();
+    const userMessageId = crypto.randomUUID(), assistantMessageId = crypto.randomUUID();
+    const conversationPath = "ai_conversations/" + parsed.conversationId;
+    const conversationData = { uid: authResult.user.sub, updatedAt: now, title: parsed.message.slice(0, 80) };
+    const writes = conversation.doc
+      ? [updateWrite(conversationPath, conversationData, conversation.doc.updateTime), createWrite(conversationPath + "/messages/" + userMessageId, { role: "user", content: parsed.message, createdAt: now }), createWrite(conversationPath + "/messages/" + assistantMessageId, { role: "assistant", content: answer, createdAt: now })]
+      : [createWrite(conversationPath, { ...conversationData, createdAt: now }), createWrite(conversationPath + "/messages/" + userMessageId, { role: "user", content: parsed.message, createdAt: now }), createWrite(conversationPath + "/messages/" + assistantMessageId, { role: "assistant", content: answer, createdAt: now })];
+    await commitWrites(env, writes);
+    return json({ answer, model: AI_MODEL, conversationId: parsed.conversationId, turnId: assistantMessageId });
   } catch {
-    return json({ error: "ai_generation_failed" }, 502);
+    return json({ error: "ai_generation_or_history_save_failed" }, 502);
   }
 }
 
@@ -1275,6 +1300,7 @@ export default {
     if(url.pathname==="/health"&&request.method==="GET") response=json({ok:true,service:"mon-quotidien-jeko",mode:"production-locked"});
     else if(url.pathname==="/webhook") response=await webhook(request,env);
     else if(url.pathname==="/api/ai/chat"&&request.method==="POST") response=await aiChat(request,env);
+    else if(/^\/api\/ai\/conversations\/[0-9a-f-]{36}\/messages$/i.test(url.pathname)&&request.method==="GET") response=await aiConversationHistory(request,env,url.pathname.split("/")[4]);
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
