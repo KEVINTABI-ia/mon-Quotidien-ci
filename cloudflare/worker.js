@@ -153,7 +153,7 @@ async function readAiConversation(env, uid, conversationId) {
   if (!doc) return { doc: null, messages: [] };
   const conversation = docData(doc);
   if (conversation?.uid !== uid) return { forbidden: true, messages: [] };
-  const result = await firestore(env, "ai_conversations/" + conversationId + "/messages?pageSize=20&orderBy=createTime%20desc");
+  const result = await firestore(env, "ai_conversations/" + conversationId + "/messages?pageSize=20&orderBy=createdAt%20desc");
   const messages = (result?.documents || []).map(item => docData(item))
     .filter(item => item && ["user", "assistant"].includes(item.role) && typeof item.content === "string")
     .reverse().map(item => ({ role: item.role, content: item.content }));
