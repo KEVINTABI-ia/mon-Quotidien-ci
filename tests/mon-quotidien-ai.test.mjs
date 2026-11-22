@@ -1,8 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseAiChatPayload, buildAiUserContext, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext, buildAiMerchantPerformanceContext, buildAiMerchantAdviceContext, buildAiRecentOrdersContext, buildAiSubscriptionContext, validateJekoPaymentPlan } from "../cloudflare/worker.js";
+import { parseAiChatPayload, buildAiUserContext, extractAiResponseText, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext, buildAiMerchantPerformanceContext, buildAiMerchantAdviceContext, buildAiRecentOrdersContext, buildAiSubscriptionContext, validateJekoPaymentPlan } from "../cloudflare/worker.js";
 
 const id = "123e4567-e89b-42d3-a456-426614174000";
+
+test("extrait le texte de réponse sans confondre le raisonnement interne avec une réponse", () => {
+  assert.equal(extractAiResponseText({ response: "  Bonjour !  ", reasoning_content: "raisonnement privé" }), "Bonjour !");
+  assert.equal(extractAiResponseText({ response: "", choices: [{ message: { content: "Réponse de secours" } }] }), "Réponse de secours");
+  assert.equal(extractAiResponseText({ response: "", choices: [{ message: { content: [{ type: "text", text: "Texte " }, { type: "text", text: "composé" }] } }] }), "Texte composé");
+  assert.equal(extractAiResponseText({ response: "", reasoning_content: "raisonnement privé" }), "");
+});
+
 
 test("accepte et nettoie un message avec un identifiant de conversation UUID", () => {
   assert.deepEqual(parseAiChatPayload({ message: "  Bonjour  ", conversationId: id }), { ok: true, message: "Bonjour", conversationId: id });
