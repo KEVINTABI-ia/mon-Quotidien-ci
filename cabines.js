@@ -168,7 +168,7 @@ async function espaceCabine(){
  }catch(e){$("cabPanel").textContent="Espace cabiniste indisponible : "+(e.message||"erreur");}
 }
 let cabDocsCache=[],cabVue="ouvertes",cabPresenceTimer=null,cabRequestRefreshTimer=null;
-async function actualiserPresenceCabine(){if(!partenaire||!profilCabine||profilCabine.statut!=="approuve")return;try{await partnerDb.collection("cabines_telephoniques").doc(partenaire.uid).update({presenceOnline:document.visibilityState==="visible",lastSeenAt:stamp(),updatedAt:stamp()});}catch(e){console.warn("Présence cabine non actualisée",e);}}
+async function actualiserPresenceCabine(){if(!partenaire||!profilCabine||profilCabine.statut!=="approuve")return false;try{const online=document.visibilityState==="visible";await partnerDb.collection("cabines_telephoniques").doc(partenaire.uid).update({presenceOnline:online,lastSeenAt:stamp(),updatedAt:stamp()});profilCabine.presenceOnline=online;profilCabine.lastSeenAt=new Date();return online;}catch(e){console.warn("Présence cabine non actualisée",e);profilCabine.presenceOnline=false;return false;}}
 async function demarrerPresenceCabine(){await actualiserPresenceCabine();if(cabPresenceTimer)clearInterval(cabPresenceTimer);cabPresenceTimer=setInterval(actualiserPresenceCabine,45000);document.removeEventListener("visibilitychange",actualiserPresenceCabine);document.addEventListener("visibilitychange",actualiserPresenceCabine);}
 async function arreterPresenceCabine(){if(cabPresenceTimer)clearInterval(cabPresenceTimer);cabPresenceTimer=null;if(cabRequestRefreshTimer)clearInterval(cabRequestRefreshTimer);cabRequestRefreshTimer=null;document.removeEventListener("visibilitychange",actualiserPresenceCabine);if(partenaire&&profilCabine?.statut==="approuve"){try{await partnerDb.collection("cabines_telephoniques").doc(partenaire.uid).update({presenceOnline:false,lastSeenAt:stamp(),updatedAt:stamp()});}catch(e){}}}
 function dateCabine(v){try{return v&&v.toDate?v.toDate().toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"Date non disponible";}catch(_){return"Date non disponible";}}
@@ -183,7 +183,7 @@ function afficherDemandesCabine(){
  const miennes=cabDocsCache.filter(d=>d.data().cabineUid===partenaire.uid);
  const encours=miennes.filter(d=>["acceptee","en_cours"].includes(d.data().statut)).length;
  const terminees=miennes.filter(d=>d.data().statut==="terminee").length;
- z.innerHTML='<div class="cab-stats"><div class="cab-stat"><strong>'+ouvertes+'</strong><span>Demandes disponibles</span></div><div class="cab-stat"><strong>'+encours+'</strong><span>À traiter</span></div><div class="cab-stat"><strong>'+terminees+'</strong><span>Terminées</span></div></div><div class="cab-tabs"><button type="button" data-cab-vue="ouvertes" class="'+(cabVue==="ouvertes"?"active":"")+'">Demandes disponibles</button><button type="button" data-cab-vue="miennes" class="'+(cabVue==="miennes"?"active":"")+'">Mes prestations ('+miennes.length+')</button></div><div class="cab-filter"><select id="cabFiltreOperateur"><option value="">Tous les opérateurs</option><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><input id="cabFiltreCommune" type="search" placeholder="Filtrer par commune"></div><div class="cab-actions"><button id="cabReload" type="button">↻ Actualiser les demandes</button></div><p class="cab-muted">Les demandes disponibles sont diffusées à tous les cabinistes approuvés. La première acceptation attribue la demande.</p>';
+ z.innerHTML='<div class="cab-stats"><div class="cab-stat"><strong>'+ouvertes+'</strong><span>Demandes disponibles</span></div><div class="cab-stat"><strong>'+encours+'</strong><span>À traiter</span></div><div class="cab-stat"><strong>'+terminees+'</strong><span>Terminées</span></div></div><div class="cab-tabs"><button type="button" data-cab-vue="ouvertes" class="'+(cabVue==="ouvertes"?"active":"")+'">Demandes disponibles</button><button type="button" data-cab-vue="miennes" class="'+(cabVue==="miennes"?"active":"")+'">Mes prestations ('+miennes.length+')</button></div><div class="cab-filter"><select id="cabFiltreOperateur"><option value="">Tous les opérateurs</option><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><input id="cabFiltreCommune" type="search" placeholder="Filtrer par commune"></div><div class="cab-actions"><button id="cabReload" type="button">↻ Actualiser les demandes</button></div><p class="cab-muted">Les demandes disponibles sont visibles uniquement lorsque votre cabine est en ligne. La première acceptation attribue la demande.</p>';
  z.querySelectorAll("[data-cab-vue]").forEach(b=>b.onclick=()=>{cabVue=b.dataset.cabVue;afficherDemandesCabine();});
  $("cabFiltreOperateur").value=op;$("cabFiltreCommune").value=zone;
  $("cabFiltreOperateur").onchange=afficherDemandesCabine;$("cabFiltreCommune").onchange=afficherDemandesCabine;$("cabReload").onclick=chargerDemandesCabine;
@@ -206,10 +206,10 @@ async function chargerDemandesCabine(){
  const z=$("cabOrders");if(!z||!partenaire||!profilCabine||profilCabine.statut!=="approuve")return;
  z.innerHTML="<p>Actualisation des demandes nationales…</p>";
  try{
-  const [open,assigned]=await Promise.all([
-   partnerDb.collection("demandes_cabines").where("statut","==","en_attente").where("cabineUid","==",null).limit(100).get(),
-   partnerDb.collection("demandes_cabines").where("cabineUid","==",partenaire.uid).limit(100).get()
-  ]);
+  const presenceOk=document.visibilityState==="visible"&&await actualiserPresenceCabine();
+  const assignedPromise=partnerDb.collection("demandes_cabines").where("cabineUid","==",partenaire.uid).limit(100).get();
+  const openPromise=presenceOk?partnerDb.collection("demandes_cabines").where("statut","==","en_attente").where("cabineUid","==",null).limit(100).get():Promise.resolve({docs:[]});
+  const [open,assigned]=await Promise.all([openPromise,assignedPromise]);
   const map=new Map();open.docs.forEach(d=>map.set(d.id,d));assigned.docs.forEach(d=>map.set(d.id,d));
   cabDocsCache=Array.from(map.values()).sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));afficherDemandesCabine();
  }catch(e){console.error(e);z.innerHTML="<p>Impossible de charger les demandes. Vérifiez votre connexion et réessayez.</p><button id='cabReload' type='button'>Réessayer</button>";$("cabReload").onclick=chargerDemandesCabine;}
