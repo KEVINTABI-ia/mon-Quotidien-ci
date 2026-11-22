@@ -893,6 +893,17 @@ export function buildCourierWalletCommissionLedger({balanceXof,debtXof=0,deliver
   const applied=applyCourierWalletCommission({balanceXof,debtXof,commissionXof:commission.totalWalletDebitXof});
   return Object.freeze({...commission,...applied});
 }
+export function deliveryCodeIssuanceState(existing,now=new Date()) {
+  const windowMs=30*60*1000;
+  const started=existing?.issuanceWindowStartedAt instanceof Date?existing.issuanceWindowStartedAt:null;
+  const inWindow=!!started&&started.getTime()<=now.getTime()&&now.getTime()-started.getTime()<windowMs;
+  const attempts=inWindow&&Number.isSafeInteger(existing?.attempts)&&existing.attempts>=0?existing.attempts:0;
+  const issuanceCount=inWindow&&Number.isSafeInteger(existing?.issuanceCount)&&existing.issuanceCount>=0?existing.issuanceCount:0;
+  if(existing?.usedAt)return {ok:false,reason:"already_used"};
+  if(attempts>=5)return {ok:false,reason:"locked"};
+  if(issuanceCount>=3)return {ok:false,reason:"rate_limited"};
+  return {ok:true,attempts,issuanceCount:issuanceCount+1,issuanceWindowStartedAt:inWindow?started:now};
+}
 export async function hashDeliveryConfirmationCode(code) {
   if(typeof code!=="string"||!/^\d{6}$/.test(code))return null;
   const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(code));
@@ -912,15 +923,16 @@ async function clientDeliveryCode(request,env) {
     if(order.statut!=="arrive_destination")return json({error:"delivery_not_arrived"},409);
     if(order.service==="compagnie")return json({error:"otp_not_required_for_gare_expedition"},409);
     const path="commandes_colis/"+commandeId+"/informations_privees/confirmation";
-    const existing=await getDoc(env,path),now=new Date();
-    if(existing) {
-      const data=docData(existing);
-      if(data.usedAt)return json({error:"delivery_already_confirmed"},409);
+    const existing=await getDoc(env,path),now=new Date(),existingData=docData(existing);
+    const issuance=deliveryCodeIssuanceState(existingData,now);
+    if(!issuance.ok) {
+      const errors={already_used:["delivery_already_confirmed",409],locked:["delivery_code_locked",429],rate_limited:["delivery_code_rate_limited",429]};
+      const [error,status]=errors[issuance.reason]||["delivery_code_unavailable",409];
+      return json({error},status);
     }
-    // Le code en clair n'est jamais persisté : seul son hachage est conservé.
-    // Chaque nouvelle consultation par le client émet un nouveau code et invalide le précédent.
+    // Le code en clair n'est jamais persisté. Trois émissions maximum et cinq essais cumulés par fenêtre de 30 minutes.
     const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%1000000).padStart(6,"0");
-    const confirmation={codeHash:await hashDeliveryConfirmationCode(code),attempts:0,expiresAt:new Date(now.getTime()+30*60*1000),createdAt:now,usedAt:null};
+    const confirmation={codeHash:await hashDeliveryConfirmationCode(code),attempts:issuance.attempts,issuanceCount:issuance.issuanceCount,issuanceWindowStartedAt:issuance.issuanceWindowStartedAt,expiresAt:new Date(now.getTime()+30*60*1000),createdAt:now,usedAt:null};
     if(existing)await commitWrites(env,[updateWrite(path,confirmation,existing.updateTime)]);
     else await commitWrites(env,[createWrite(path,confirmation)]);
     return json({ok:true,code,expiresAt:confirmation.expiresAt.toISOString()},200);

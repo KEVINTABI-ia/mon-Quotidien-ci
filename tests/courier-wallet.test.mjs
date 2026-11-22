@@ -11,6 +11,7 @@ import {
   isValidCourierWalletRechargeAmount,
   courierProfileCanCompleteMission,
   hashDeliveryConfirmationCode,
+  deliveryCodeIssuanceState,
   buildCourierWalletCommissionLedger,
   COURIER_WALLET_RULES
 } from "../cloudflare/worker.js";
@@ -218,4 +219,41 @@ test("delivery confirmation code is six digits and stored as a SHA-256 hash", as
   assert.match(hash,/^[a-f0-9]{64}$/);
   assert.equal(await hashDeliveryConfirmationCode("42731"),null);
   assert.equal(await hashDeliveryConfirmationCode("12345x"),null);
+});
+
+
+test("delivery code issuance is limited to three emissions per 30-minute window", () => {
+  const now=new Date("2026-11-22T12:00:00.000Z");
+  const first=deliveryCodeIssuanceState(null,now);
+  assert.equal(first.ok,true);
+  assert.equal(first.issuanceCount,1);
+  const second=deliveryCodeIssuanceState({...first,attempts:1},new Date(now.getTime()+1000));
+  assert.equal(second.ok,true);
+  assert.equal(second.issuanceCount,2);
+  const third=deliveryCodeIssuanceState({...second,attempts:2},new Date(now.getTime()+2000));
+  assert.equal(third.ok,true);
+  assert.equal(third.issuanceCount,3);
+  const fourth=deliveryCodeIssuanceState({...third,attempts:2},new Date(now.getTime()+3000));
+  assert.deepEqual(fourth,{ok:false,reason:"rate_limited"});
+});
+
+test("delivery code attempts remain cumulative across re-issuance", () => {
+  const now=new Date("2026-11-22T12:00:00.000Z");
+  const state=deliveryCodeIssuanceState({issuanceWindowStartedAt:now,issuanceCount:2,attempts:4},new Date(now.getTime()+1000));
+  assert.deepEqual(state,{ok:true,attempts:4,issuanceCount:3,issuanceWindowStartedAt:now});
+  assert.deepEqual(deliveryCodeIssuanceState({...state,attempts:5},new Date(now.getTime()+2000)),{ok:false,reason:"locked"});
+});
+
+test("delivery code issuance window resets after 30 minutes but not before", () => {
+  const now=new Date("2026-11-22T12:00:00.000Z");
+  const existing={issuanceWindowStartedAt:now,issuanceCount:3,attempts:5};
+  assert.deepEqual(deliveryCodeIssuanceState(existing,new Date(now.getTime()+29*60*1000)),{ok:false,reason:"locked"});
+  const reset=deliveryCodeIssuanceState(existing,new Date(now.getTime()+30*60*1000));
+  assert.equal(reset.ok,true);
+  assert.equal(reset.attempts,0);
+  assert.equal(reset.issuanceCount,1);
+});
+
+test("a used delivery confirmation code cannot be re-issued", () => {
+  assert.deepEqual(deliveryCodeIssuanceState({usedAt:new Date()},new Date()),{ok:false,reason:"already_used"});
 });
