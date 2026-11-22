@@ -1030,7 +1030,8 @@ async function jekoNetworkDiagnostic(request,env) {
   const inspect=(value)=>{
     if(typeof value!=="string") return {configured:false,type:typeof value};
     return {configured:value.length>0,length:value.length,trimmedLength:value.trim().length,
-      hasOuterWhitespace:value!==value.trim(),hasCRorLF:/[\r\n]/.test(value),
+      hasOuterWhitespace:value!==value.trim(),hasCRorLF:/[\r
+]/.test(value),
       hasOtherControlChars:/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value),
       hasNonAscii:/[^\x20-\x7E]/.test(value)};
   };
@@ -1265,7 +1266,8 @@ export default {
     let response;
     if(url.pathname==="/health"&&request.method==="GET") response=json({ok:true,service:"mon-quotidien-jeko",mode:"production-locked"});
     else if(url.pathname==="/webhook") response=await webhook(request,env);
-    else if(url.pathname==="/api/ai/chat"&&request.method==="POST") response=await aiChat(request,env);\n    else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
+    else if(url.pathname==="/api/ai/chat"&&request.method==="POST") response=await aiChat(request,env);
+    else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
     else if(url.pathname==="/api/publicites/admin-upload"&&request.method==="POST") response=await publiciteUpload(request,env,true);
