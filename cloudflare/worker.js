@@ -893,6 +893,42 @@ export function buildCourierWalletCommissionLedger({balanceXof,debtXof=0,deliver
   const applied=applyCourierWalletCommission({balanceXof,debtXof,commissionXof:commission.totalWalletDebitXof});
   return Object.freeze({...commission,...applied});
 }
+export async function hashDeliveryConfirmationCode(code) {
+  if(typeof code!=="string"||!/^\d{6}$/.test(code))return null;
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(code));
+  return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("");
+}
+async function clientDeliveryCode(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized",diagnostic:auth.diagnostic},401);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const commandeId=body.commandeId;
+  if(typeof commandeId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(commandeId))return json({error:"invalid_commande_id"},400);
+  try {
+    const orderDoc=await getDoc(env,"commandes_colis/"+commandeId);
+    if(!orderDoc)return json({error:"commande_not_found"},404);
+    const order=docData(orderDoc);
+    if(order.clientId!==auth.user.sub)return json({error:"commande_not_owned"},403);
+    if(order.statut!=="arrive_destination")return json({error:"delivery_not_arrived"},409);
+    if(order.service==="compagnie")return json({error:"otp_not_required_for_gare_expedition"},409);
+    const path="commandes_colis/"+commandeId+"/informations_privees/confirmation";
+    const existing=await getDoc(env,path),now=new Date();
+    if(existing) {
+      const data=docData(existing);
+      if(data.usedAt)return json({error:"delivery_already_confirmed"},409);
+    }
+    // Le code en clair n'est jamais persisté : seul son hachage est conservé.
+    // Chaque nouvelle consultation par le client émet un nouveau code et invalide le précédent.
+    const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%1000000).padStart(6,"0");
+    const confirmation={codeHash:await hashDeliveryConfirmationCode(code),attempts:0,expiresAt:new Date(now.getTime()+30*60*1000),createdAt:now,usedAt:null};
+    if(existing)await commitWrites(env,[updateWrite(path,confirmation,existing.updateTime)]);
+    else await commitWrites(env,[createWrite(path,confirmation)]);
+    return json({ok:true,code,expiresAt:confirmation.expiresAt.toISOString()},200);
+  } catch(error) {
+    console.error("Client delivery code issue failed",{code:error?.message||"unknown"});
+    return json({error:"delivery_code_unavailable"},409);
+  }
+}
 async function completeCourierMission(request,env) {
   const auth=await requireUser(request,env);
   if(!auth.user)return json({error:"unauthorized",diagnostic:auth.diagnostic},401);
@@ -906,14 +942,15 @@ async function completeCourierMission(request,env) {
   let transaction;
   try {
     transaction=await beginFirestoreTransaction(env);
-    const [orderDoc,partnerDoc,priceDoc,detailsDoc,walletDoc,lockDoc,journalDoc]=await Promise.all([
+    const [orderDoc,partnerDoc,priceDoc,detailsDoc,walletDoc,lockDoc,journalDoc,confirmationDoc]=await Promise.all([
       getDocInTransaction(env,commandePath,transaction),
       getDocInTransaction(env,partnerPath,transaction),
       getDocInTransaction(env,commandePath+"/tarification/prix",transaction),
       getDocInTransaction(env,commandePath+"/informations_privees/details",transaction),
       getDocInTransaction(env,walletPath,transaction),
       getDocInTransaction(env,lockPath,transaction),
-      getDocInTransaction(env,journalPath,transaction)
+      getDocInTransaction(env,journalPath,transaction),
+      getDocInTransaction(env,commandePath+"/informations_privees/confirmation",transaction)
     ]);
     if(!orderDoc)return json({error:"commande_not_found"},404);
     const order=docData(orderDoc),profile=docData(partnerDoc),price=docData(priceDoc),details=docData(detailsDoc);
@@ -923,6 +960,18 @@ async function completeCourierMission(request,env) {
     if(!lockDoc||docData(lockDoc)?.commandeId!==commandeId||docData(lockDoc)?.statut!=="active")return json({error:"active_mission_lock_missing"},409);
     if(!price||!details)return json({error:"private_tariff_or_details_missing"},409);
     if(!["livraison","livraison_programmee"].includes(order.service))return json({error:"unsupported_courier_service"},409);
+    const suppliedCode=typeof body.code==="string"?body.code:"";
+    if(!/^\d{6}$/.test(suppliedCode))return json({error:"delivery_code_required"},400);
+    if(!confirmationDoc)return json({error:"delivery_code_not_issued"},409);
+    const confirmation=docData(confirmationDoc);
+    if(confirmation.usedAt)return json({error:"delivery_already_confirmed"},409);
+    if(!(confirmation.expiresAt instanceof Date)||confirmation.expiresAt.getTime()<=now.getTime())return json({error:"delivery_code_expired"},410);
+    if(!Number.isSafeInteger(confirmation.attempts)||confirmation.attempts>=5)return json({error:"delivery_code_locked"},429);
+    const suppliedHash=await hashDeliveryConfirmationCode(suppliedCode);
+    if(suppliedHash!==confirmation.codeHash) {
+      await commitFirestoreTransaction(env,[updateWrite(commandePath+"/informations_privees/confirmation",{attempts:confirmation.attempts+1},confirmationDoc.updateTime)],transaction);
+      return json({error:"delivery_code_invalid",attemptsRemaining:4-confirmation.attempts},400);
+    }
     if(journalDoc)return json({error:"commission_ledger_already_exists"},409);
     const serviceType=order.typeCommande==="boutique"?"boutique":"classique";
     const deliveryFeeXof=serviceType==="boutique"?order.montantLivraisonBoutique:price.montantLivraison;
@@ -949,6 +998,7 @@ async function completeCourierMission(request,env) {
     };
     const writes=[
       updateWrite(commandePath,{statut:"livre",dateLivraison:now,commissionPrelevee:true,commissionJournalId:commissionId},orderDoc.updateTime),
+      updateWrite(commandePath+"/informations_privees/confirmation",{attempts:confirmation.attempts,usedAt:now,code:null,codeHash:null},confirmationDoc.updateTime),
       walletDoc?updateWrite(walletPath,nextWallet,walletDoc.updateTime):createWrite(walletPath,nextWallet),
       createWrite(journalPath,journal),
       deleteWrite(lockPath,lockDoc.updateTime)
@@ -1936,6 +1986,7 @@ export default {
     else if(/^\/api\/ai\/conversations\/[0-9a-f-]{36}\/messages$/i.test(url.pathname)&&request.method==="GET") response=await aiConversationHistory(request,env,url.pathname.split("/")[4]);
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
+    else if(url.pathname==="/api/client/delivery-code"&&request.method==="POST") response=await clientDeliveryCode(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
     else if(url.pathname==="/api/publicites/admin-upload"&&request.method==="POST") response=await publiciteUpload(request,env,true);
     else if(url.pathname==="/api/publicites/image"&&request.method==="GET") response=await publiciteImage(request,env);

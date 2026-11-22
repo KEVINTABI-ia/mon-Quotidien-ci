@@ -710,9 +710,9 @@ service cloud.firestore {
         allow read: if estAdmin()
           || (estConnecte()
             && get(commandePath(commandeId)).data.clientId == request.auth.uid)
-          || (estConnecte()
+          || (docId != "confirmation" && estConnecte()
             && get(commandePath(commandeId)).data.partenaireId == request.auth.uid)
-          || (estConnecte()
+          || (docId != "confirmation" && estConnecte()
             && get(commandePath(commandeId)).data.boutiqueUid == request.auth.uid);
 
         allow update, delete: if estAdmin();

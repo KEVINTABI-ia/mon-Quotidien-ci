@@ -9790,6 +9790,18 @@ function ecouterSuiviLivreurClient(commandeId, info, mapZone) {
   }, erreur => { console.warn("Suivi GPS client :", erreur); info.textContent = "Le suivi GPS est momentanément indisponible."; });
 }
 
+async function chargerCodeConfirmationLivraison(commandeId,zone) {
+  zone.textContent="Préparation du code de remise sécurisé…";
+  try {
+    const user=auth.currentUser;if(!user)throw new Error("connexion_requise");
+    const token=await user.getIdToken();
+    const response=await fetch(WORKER_URL+"/api/client/delivery-code",{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({commandeId})});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok||result.ok!==true)throw new Error(result.error||"code_indisponible");
+    zone.textContent="Code de remise : "+result.code+" — communiquez-le au livreur uniquement après réception du colis.";
+    zone.setAttribute("role","status");
+  }catch(error){zone.textContent=error.message==="delivery_already_confirmed"?"Remise déjà confirmée.":"Code de remise indisponible. Actualisez votre historique.";}
+}
 async function chargerHistoriqueCommandes(){
   const zone = document.getElementById("zoneHistoriqueCommandes");
   const user = auth.currentUser;
@@ -9912,6 +9924,10 @@ async function chargerHistoriqueCommandes(){
         const gare=document.createElement("p"); gare.textContent="Gare de destination : "+refs.gareDestination;
         const code=document.createElement("p"); code.textContent="Code du colis : "+refs.codeColis;
         bloc.append(titreRefs,compagnie,gare,code); carte.appendChild(bloc);
+      }
+      if(commande.statut==="arrive_destination"&&commande.service!=="compagnie"){
+        const blocCode=document.createElement("div");blocCode.className="notice";blocCode.style.fontWeight="bold";carte.appendChild(blocCode);
+        chargerCodeConfirmationLivraison(commande.id,blocCode);
       }
       if (["livreur_affecte","colis_recupere","en_transit","arrive_destination"].includes(commande.statut) && commande.partenaireId) {
         const suivi = document.createElement("div"); suivi.className = "notice";
@@ -11498,7 +11514,8 @@ async function afficherMissionPartenaire(c, partenaire, zone) {
       const form=document.createElement("div"); form.innerHTML='<hr><strong>Références du colis expédié</strong><label>Compagnie d’expédition</label><input id="refCompagnieExpedition" placeholder="Ex. : UTB Yopougon" required><label>Gare de destination</label><input id="refGareDestination" placeholder="Ex. : Gare de Bouaké" required><label>Code du colis délivré par le service courrier</label><input id="refCodeColisExpedition" placeholder="Code du colis" required>';
       const finish=document.createElement("button"); finish.className="primary"; finish.textContent="Enregistrer les références et terminer"; finish.addEventListener("click",()=>terminerExpeditionGare(c.id)); form.appendChild(finish); card.appendChild(form);
     } else {
-      const finish=document.createElement("button"); finish.className="primary"; finish.textContent="Confirmer le règlement et terminer"; finish.addEventListener("click",()=>terminerMissionPartenaire(c.id)); card.appendChild(finish);
+      const inputCode=document.createElement("input");inputCode.type="text";inputCode.inputMode="numeric";inputCode.autocomplete="one-time-code";inputCode.maxLength=6;inputCode.placeholder="Code de remise à 6 chiffres";inputCode.setAttribute("aria-label","Code de remise communiqué par le client");card.appendChild(inputCode);
+      const finish=document.createElement("button"); finish.className="primary"; finish.textContent="Valider le code et terminer"; finish.addEventListener("click",()=>terminerMissionPartenaire(c.id,inputCode.value.trim())); card.appendChild(finish);
       const note=document.createElement("p"); note.textContent="Confirmez uniquement après le règlement convenu avec le client."; card.appendChild(note);
     }
   }
@@ -11605,8 +11622,9 @@ async function marquerArriveDestination(commandeId) {
   }catch(e){alert("Mise à jour impossible : "+e.message);}
 }
 
-async function terminerMissionPartenaire(commandeId) {
+async function terminerMissionPartenaire(commandeId, code) {
   const user=partnerAuth.currentUser;if(!user)return;
+  if(!/^\d{6}$/.test(String(code||"")))return alert("Saisissez le code de remise à 6 chiffres communiqué par le client.");
   if(!confirm("Confirmez-vous que le règlement convenu a été effectué et que la course est terminée ?"))return;
   const ref=partnerDb.collection("commandes_colis").doc(commandeId);
   try{
@@ -11630,7 +11648,7 @@ async function terminerMissionPartenaire(commandeId) {
     const token=await user.getIdToken();
     const response=await fetch(WORKER_URL+"/api/courier/mission/complete",{
       method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
-      body:JSON.stringify({commandeId})
+      body:JSON.stringify({commandeId,code})
     });
     const result=await response.json().catch(()=>({}));
     if(!response.ok||result.ok!==true)throw new Error(result.error||"La clôture sécurisée a échoué.");
