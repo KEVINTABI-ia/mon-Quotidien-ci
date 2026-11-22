@@ -9865,6 +9865,40 @@ async function chargerHistoriqueCommandes(){
       trajet.textContent = (commande.depart || "") + " → " + (commande.destination || "");
 
       carte.append(numero, statut, trajet);
+
+      // Chronologie client : n'afficher que les étapes disposant d'un horodatage Firestore réel.
+      const chronologie = [
+        {date: commande.createdAt, libelle: "Demande enregistrée"},
+        {date: commande.dateAffectation, libelle: "Livreur affecté"},
+        {date: commande.dateRecuperation, libelle: "Colis récupéré"},
+        {date: commande.dateArriveeDestination, libelle: "Arrivé à destination"},
+        {date: commande.dateLivraison, libelle: "Livraison terminée"}
+      ].filter(etape => etape.date && (typeof etape.date.toDate === "function" || etape.date instanceof Date));
+      if (commande.statutBoutiqueModifieLe && (typeof commande.statutBoutiqueModifieLe.toDate === "function" || commande.statutBoutiqueModifieLe instanceof Date)) {
+        const libelleBoutique = {confirmee:"Commande confirmée par la boutique",preparation:"Préparation commencée",prete:"Commande prête",annulee:"Commande annulée par la boutique"};
+        if (libelleBoutique[commande.statutBoutique]) chronologie.push({date:commande.statutBoutiqueModifieLe,libelle:libelleBoutique[commande.statutBoutique]});
+      }
+      chronologie.sort((a,b) => {
+        const temps = d => d.date instanceof Date ? d.date.getTime() : d.date.toDate().getTime();
+        return temps(a)-temps(b);
+      });
+      if (chronologie.length) {
+        const blocChronologie = document.createElement("div");
+        blocChronologie.className = "notice";
+        const titreChronologie = document.createElement("strong");
+        titreChronologie.textContent = "🕒 Étapes de votre livraison";
+        const listeChronologie = document.createElement("ol");
+        listeChronologie.style.cssText = "margin:8px 0 0;padding-left:22px;";
+        chronologie.forEach(etape => {
+          const ligne = document.createElement("li");
+          const dateEtape = etape.date instanceof Date ? etape.date : etape.date.toDate();
+          ligne.textContent = etape.libelle + " — " + dateEtape.toLocaleString("fr-FR", {dateStyle:"short",timeStyle:"short"});
+          ligne.style.marginBottom = "5px";
+          listeChronologie.appendChild(ligne);
+        });
+        blocChronologie.append(titreChronologie, listeChronologie);
+        carte.appendChild(blocChronologie);
+      }
       if(commande.tarification){
         const prix=document.createElement("p");
         prix.textContent="Montant Mon Quotidien CI : "+Number(commande.tarification.montantTotal||0).toLocaleString("fr-FR")+" FCFA";
