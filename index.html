@@ -13886,7 +13886,7 @@ async function mqciAdminStatutPharmacie(uid,statut){
       if(!response.ok)throw new Error(data.error||"request_failed");
       pending.textContent=typeof data.answer==="string"&&data.answer?data.answer:"Je n'ai pas pu formuler une réponse. Réessayez.";
     }catch(error){
-      const messagesByError={unauthorized:"Votre session a expiré. Reconnectez-vous puis réessayez.",ai_service_unavailable:"L'assistant est momentanément indisponible. Réessayez plus tard.",message_too_long:"Votre message dépasse la longueur autorisée.",ai_generation_failed:"Je rencontre une difficulté technique. Réessayez dans quelques instants."};
+      const messagesByError={unauthorized:"Votre session a expiré. Reconnectez-vous puis réessayez.",ai_service_unavailable:"L'assistant est momentanément indisponible. Réessayez plus tard.",ai_rate_limiter_unavailable:"Le service est momentanément indisponible. Réessayez plus tard.",rate_limited:"Vous envoyez des messages trop rapidement. Patientez une minute avant de réessayer.",message_too_long:"Votre message dépasse la longueur autorisée.",ai_generation_failed:"Je rencontre une difficulté technique. Réessayez dans quelques instants."};
       pending.textContent=messagesByError[error.message]||"Connexion impossible avec l'assistant. Vérifiez votre connexion puis réessayez.";
     }finally{
       busy=false;send.disabled=false;send.textContent="Envoyer";input.focus();messages.scrollTop=messages.scrollHeight;
