@@ -67,3 +67,12 @@ test("neutralise les caractères de contrôle et borne les champs de profil", ()
   assert.equal(context.name.includes(String.fromCharCode(1)), false);
   assert.equal(context.name.length <= 80, true);
 });
+
+test("reconnaît les comptes qui cumulent transport et commerce", () => {
+  const context = buildAiUserContext({
+    partnerProfile: { type: "representant_gare", commune: "Abidjan", statut: "approuve" },
+    businessProfiles: [{ type: "commerce", titre: "Boutique A", commune: "Cocody" }]
+  });
+  assert.equal(context.role, "partenaire transport et commercial");
+  assert.equal(context.partner.commune, "Abidjan");
+});
