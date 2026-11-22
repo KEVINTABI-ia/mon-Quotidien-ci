@@ -985,8 +985,8 @@ async function createCheckout(request,env) {
     if(!["transfert_unites","forfait_internet","forfait_appels","forfait_mixte"].includes(typeService)||
        !["Orange","MTN","Moov Africa"].includes(operateur)||
        !/^[0-9+ ]{8,20}$/.test(numeroBeneficiaire)||
-       typeof commune!=="string"||commune.length<2||commune.length>60||
-       typeof details!=="string"||details.length<2||details.length>180||
+       (commune.length>60)||
+       (details.length>180)||
        !Number.isSafeInteger(amountPrestation)||amountPrestation<200||amountPrestation>500000) return json({error:"invalid_cabine_request"},400);
     const fraisService=amountPrestation<=999?18:(amountPrestation<=3000?40:75);
     amountXof=amountPrestation+fraisService;
