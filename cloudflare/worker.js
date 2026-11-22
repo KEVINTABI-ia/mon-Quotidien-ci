@@ -1030,8 +1030,7 @@ async function jekoNetworkDiagnostic(request,env) {
   const inspect=(value)=>{
     if(typeof value!=="string") return {configured:false,type:typeof value};
     return {configured:value.length>0,length:value.length,trimmedLength:value.trim().length,
-      hasOuterWhitespace:value!==value.trim(),hasCRorLF:/[\r
-]/.test(value),
+      hasOuterWhitespace:value!==value.trim(),hasCRorLF:/[\r\n]/.test(value),
       hasOtherControlChars:/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value),
       hasNonAscii:/[^\x20-\x7E]/.test(value)};
   };
