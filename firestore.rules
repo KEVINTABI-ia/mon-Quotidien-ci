@@ -120,6 +120,12 @@ service cloud.firestore {
     }
 
     // Jetons FCM : chaque utilisateur ne peut gérer que ses propres appareils.
+    // Les abonnements IA sont lus uniquement par le Worker avec son compte de service.
+    // Aucun accès direct client ne permet de consulter ou modifier les droits Premium.
+    match /abonnements_ai/{uid} {
+      allow read, write: if false;
+    }
+
     match /appareils_notifications/{tokenId} {
       allow create: if estConnecte()
         && request.resource.data.keys().hasOnly(["uid","token","createdAt","plateforme","userAgent"])
