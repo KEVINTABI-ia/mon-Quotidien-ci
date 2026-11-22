@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseAiChatPayload, buildAiUserContext, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext, buildAiMerchantPerformanceContext, buildAiMerchantAdviceContext, buildAiRecentOrdersContext } from "../cloudflare/worker.js";
+import { parseAiChatPayload, buildAiUserContext, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext, buildAiMerchantPerformanceContext, buildAiMerchantAdviceContext, buildAiRecentOrdersContext, buildAiSubscriptionContext } from "../cloudflare/worker.js";
 
 const id = "123e4567-e89b-42d3-a456-426614174000";
 
@@ -259,4 +259,42 @@ test("limite l'historique client aux commandes appartenant à son UID", () => {
   assert.equal(context.orders[1].status, "Livrée");
   assert.equal(JSON.stringify(context).includes("Privée"), false);
   assert.equal(buildAiRecentOrdersContext([], ""), null);
+});
+
+
+test("un utilisateur sans abonnement IA dispose du statut gratuit", () => {
+  assert.deepEqual(buildAiSubscriptionContext(null, "client-1"), {
+    plan: "free", status: "free", premiumAccess: false, expiresAt: null
+  });
+});
+
+test("un abonnement Premium actif est reconnu uniquement pour le bon UID", () => {
+  const now = new Date("2026-11-22T12:00:00.000Z");
+  const context = buildAiSubscriptionContext({
+    uid: "client-1", planId: "premium", status: "active",
+    expiresAt: new Date("2026-12-22T12:00:00.000Z")
+  }, "client-1", now);
+  assert.deepEqual(context, {
+    plan: "premium", status: "active", premiumAccess: true,
+    expiresAt: "2026-12-22T12:00:00.000Z"
+  });
+  assert.equal(buildAiSubscriptionContext({
+    uid: "client-2", planId: "premium", status: "active",
+    expiresAt: new Date("2026-12-22T12:00:00.000Z")
+  }, "client-1", now).premiumAccess, false);
+});
+
+test("un Premium expiré ou dont la date est invalide ne donne aucun droit", () => {
+  const now = new Date("2026-11-22T12:00:00.000Z");
+  const expired = buildAiSubscriptionContext({
+    uid: "client-1", planId: "premium", status: "active",
+    expiresAt: new Date("2026-11-21T12:00:00.000Z")
+  }, "client-1", now);
+  assert.equal(expired.status, "expired");
+  assert.equal(expired.premiumAccess, false);
+  const invalid = buildAiSubscriptionContext({
+    uid: "client-1", planId: "premium", status: "active", expiresAt: "invalid"
+  }, "client-1", now);
+  assert.equal(invalid.status, "unverified");
+  assert.equal(invalid.premiumAccess, false);
 });
