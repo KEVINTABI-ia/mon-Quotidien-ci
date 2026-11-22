@@ -9,8 +9,75 @@ const libelleStatut=s=>({en_attente:"En attente d’un cabiniste",acceptee:"Acce
 let partenaire=null,profilCabine=null;
 const section=document.createElement("section");
 section.id="cabinesTelephoniques";section.className="card";section.style.display="none";
-section.innerHTML='<h2>📞 Cabine téléphonique</h2><div class="cab-actions"><button id="cabTabClient" type="button">Faire une demande</button><button id="cabTabPartner" type="button">Espace cabiniste</button></div><p>Transfert d’unités et souscription de forfaits Internet ou appels. Votre demande est transmise à tous les cabinistes partenaires approuvés.</p><div id="cabClient"><h3>Faire une demande</h3><label>Opérateur</label><select id="cabOperateur"><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><label>Service souhaité</label><select id="cabService"><option value="transfert_unites">Transfert d’unités</option><option value="forfait_internet">Forfait Internet</option><option value="forfait_appels">Forfait appels</option><option value="forfait_mixte">Forfait mixte</option></select><label>Numéro bénéficiaire</label><input id="cabNumero" type="tel" maxlength="20" placeholder="Numéro à recharger"><label>Montant souhaité (FCFA)</label><input id="cabMontant" type="number" min="1" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000"><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"><label>Précisions sur le forfait ou la demande</label><textarea id="cabDetails" maxlength="180" placeholder="Ex. Forfait Internet 2 Go, si applicable"></textarea><button id="cabEnvoyer" class="primary">Envoyer ma demande</button><p id="cabMessage" aria-live="polite"></p><hr><h3>Suivi de mes demandes</h3><div id="cabHistorique">Connectez-vous pour consulter vos demandes.</div><button id="cabRefreshHistory" type="button">Actualiser</button></div><hr><div id="cabPartner" hidden><h3>Espace cabiniste partenaire</h3><div id="cabAuth"></div><div id="cabPanel" hidden></div></div>';
+section.innerHTML=`<h2>📞 Cabine téléphonique</h2>
+<div class="cab-actions"><button id="cabTabClient" type="button">Espace client</button><button id="cabTabPartner" type="button">Espace cabiniste</button></div>
+<div id="cabClient"><p>Choisissez votre opération. Votre demande sera proposée aux cabinistes partenaires actuellement en ligne dans toute la Côte d’Ivoire.</p>
+<div class="cab-actions" id="cabClientChoices"><button id="cabStartTransfer" class="primary" type="button">Transfert d’unité</button><button id="cabStartSubscribe" class="primary" type="button">Souscrit</button></div>
+<div id="cabRequestForm" class="cab-item" hidden><h3 id="cabFormTitle">Nouvelle opération</h3>
+<label>Type de service</label><select id="cabService"><option value="transfert_unites">Transfert d’unité</option><option value="forfait_appels">Forfait appel</option><option value="forfait_internet">Forfait internet</option></select>
+<label>Opérateur</label><select id="cabOperateur"><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><div id="cabCatalogue"></div>
+<label>Numéro bénéficiaire</label><input id="cabNumero" type="tel" maxlength="20" placeholder="Numéro à recharger">
+<label>Montant de l’opération (FCFA)</label><input id="cabMontant" type="number" min="200" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000">
+<label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon">
+<label>Précisions</label><textarea id="cabDetails" maxlength="180" placeholder="Détail du transfert ou du forfait choisi"></textarea>
+<label>Moyen de paiement Jèko</label><select id="cabPaymentMethod"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select>
+<p id="cabFeePreview" class="cab-muted">Frais de service : —</p><div class="cab-actions"><button id="cabEnvoyer" class="primary" type="button">Valider et payer avec Jèko</button><button id="cabCancelForm" type="button">Annuler</button></div><p id="cabMessage" aria-live="polite"></p></div>
+<hr><h3>Suivi de mes demandes</h3><div id="cabHistorique">Connectez-vous pour consulter vos demandes.</div><button id="cabRefreshHistory" type="button">Actualiser</button></div>
+<hr><div id="cabPartner" hidden><h3>Espace cabiniste partenaire</h3><div id="cabAuth"></div><div id="cabPanel" hidden></div></div>`;
 document.body.appendChild(section);
+const cabForfaits=[
+ {op:"Orange",type:"forfait_mixte",name:"Mix KDO",price:500,data:"250 Mo",minutes:"50 min",validity:"3 jours",code:"#111*11#",source:"https://www.orange.ci/fr/pass-kdo.html"},
+ {op:"Orange",type:"forfait_internet",name:"Data KDO",price:500,data:"1 Go",minutes:"—",validity:"3 jours",code:"#111*11#",source:"https://www.orange.ci/fr/pass-kdo.html"},
+ {op:"Orange",type:"forfait_internet",name:"Data KDO",price:3000,data:"4 Go",minutes:"—",validity:"30 jours",code:"#111*11#",source:"https://www.orange.ci/fr/pass-kdo.html"},
+ {op:"Moov Africa",type:"forfait_internet",name:"Moov Folie Jour",price:200,data:"650 Mo",minutes:"—",validity:"1 jour",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_internet",name:"Moov Folie Jour",price:300,data:"900 Mo",minutes:"—",validity:"1 jour",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_internet",name:"Moov Folie",price:500,data:"1,5 Go",minutes:"—",validity:"3 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_internet",name:"Moov Folie",price:1000,data:"4 Go",minutes:"—",validity:"5 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_mixte",name:"Moov Folie Nuit",price:200,data:"2 Go",minutes:"30 min tous réseaux",validity:"22h–7h",code:"*303*2*1*7#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_mixte",name:"Moov Folie Hebdo",price:700,data:"2 Go",minutes:"60 min",validity:"7 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_internet",name:"Moov Folie Hebdo",price:1500,data:"6 Go",minutes:"—",validity:"7 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/forfait-internet-moov-folie/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:150,data:"—",minutes:"12 min tous réseaux",validity:"1 jour",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:200,data:"—",minutes:"20 min tous réseaux",validity:"2 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:300,data:"—",minutes:"35 min tous réseaux + 5 favoris",validity:"2 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:500,data:"—",minutes:"70 min tous réseaux + 5 favoris",validity:"5 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:1000,data:"—",minutes:"140 min tous réseaux + 5 favoris",validity:"15 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:1500,data:"—",minutes:"210 min tous réseaux + 5 favoris",validity:"21 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:2500,data:"—",minutes:"350 min tous réseaux + 5 favoris",validity:"30 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_appels",name:"Moov Folie Appel",price:5000,data:"—",minutes:"700 min tous réseaux + 5 favoris",validity:"30 jours",code:"*303*2#",source:"https://www.moov-africa.ci/espace-particulier/folie-mix/moov-folie-appel/"},
+ {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:150,data:"15 Mo",minutes:"10 min + 30 SMS",validity:"1 jour",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
+ {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:200,data:"25 Mo",minutes:"17 min + 50 SMS",validity:"1 jour",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
+ {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:500,data:"250 Mo",minutes:"50 min + 250 SMS",validity:"5 jours",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
+ {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:1500,data:"1,5 Go",minutes:"200 min + 500 SMS",validity:"15 jours",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"}
+];
+const cabTypeLabels={forfait_internet:"Internet",forfait_appels:"Appels",forfait_mixte:"Mixte"};
+function rendreCatalogueCabine(){
+ const root=$("cabCatalogue");if(!root)return;
+ const op=$("cabOperateur").value,kind=$("cabService").value;
+ const matching=cabForfaits.filter(x=>x.op===op&&x.type===kind);
+ const card=x=>'<article class="cab-item cab-offer"><div class="cab-request-head"><strong>'+esc(x.name)+'</strong><span class="cab-pill">'+esc(x.validity)+'</span></div><p class="cab-price">'+x.price.toLocaleString("fr-FR")+' FCFA</p><p>'+esc(x.data)+' · '+esc(x.minutes)+'</p><p class="cab-muted">Souscription opérateur : '+esc(x.code)+'</p><button type="button" class="primary" data-cab-offer="'+cabForfaits.indexOf(x)+'">Choisir ce forfait</button><a href="'+esc(x.source)+'" target="_blank" rel="noopener">Détails officiels</a></article>';
+ let html='<div class="cab-catalog-head"><h3>Choisir rapidement un forfait</h3><p class="cab-muted">Comparez les offres publiées par les opérateurs, puis sélectionnez celle à demander à votre cabiniste.</p></div>';
+ if(matching.length)html+='<div class="cab-offers">'+matching.map(card).join("")+'</div>';
+ else if(op==="MTN"){
+  const code=kind==="forfait_internet"?"*105*2#":kind==="forfait_appels"?"*105*1#":"*105#";
+  html+='<div class="cab-item"><strong>Offres MTN '+esc(cabTypeLabels[kind]||"")+'</strong><p>MTN propose ses packs depuis le menu officiel. Les prix et avantages sont affichés dans le menu selon la ligne et les offres en cours.</p><p class="cab-muted">Code de souscription : '+esc(code)+'</p><a href="https://moninternet.mtn.ci" target="_blank" rel="noopener">Consulter les forfaits Internet MTN</a> · <a href="https://www.mtn.ci/deal/codes-ussd/" target="_blank" rel="noopener">Codes officiels MTN</a><button type="button" class="primary" id="cabMtnChoose">Faire une demande MTN</button></div>';
+ }else if(op==="Orange"&&kind==="forfait_appels"){
+  html+='<div class="cab-item"><strong>Pass voix Orange</strong><p>Les offres voix disponibles sont à consulter dans le menu opérateur, car les détails tarifaires ne sont pas publiés sur la page officielle consultée.</p><p class="cab-muted">Menu Orange : #111# · Pass Mix : #111*11#</p><a href="https://www.orange.ci/fr/max-it/super-app-orange-et-moi-orange-money.html" target="_blank" rel="noopener">Voir les offres sur Max it</a><button type="button" class="primary" id="cabOrangeChoose">Faire une demande Orange</button></div>';
+ }else html+='<div class="cab-item">Aucune offre tarifée confirmée pour ce filtre. Vous pouvez tout de même faire une demande personnalisée auprès d’un cabiniste.</div>';
+ root.innerHTML=html+'<p class="cab-muted">Offres relevées sur les pages officielles consultées le 22/11/2026. Les promotions, l’éligibilité et les tarifs peuvent évoluer ; vérifiez toujours avant validation.</p>';
+ root.querySelectorAll("[data-cab-offer]").forEach(b=>b.onclick=()=>selectionnerForfaitCabine(cabForfaits[Number(b.dataset.cabOffer)]));
+ const generic=()=>{ $("cabMontant").value="";$("cabDetails").value="Forfait "+(cabTypeLabels[kind]||"")+" à préciser avec le cabiniste."; $("cabCommuneClient").focus(); document.getElementById("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});};
+ $("cabMtnChoose")?.addEventListener("click",generic);$("cabOrangeChoose")?.addEventListener("click",generic);
+}
+function selectionnerForfaitCabine(x){
+ $("cabOperateur").value=x.op;$("cabService").value=x.type;$("cabMontant").value=x.price;
+ $("cabDetails").value=x.name+" — "+x.data+" — "+x.minutes+" — validité "+x.validity+" (code opérateur "+x.code+").";
+ rendreCatalogueCabine();
+ $("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});
+ $("cabNumero").focus({preventScroll:true});
+}
+$("cabOperateur").addEventListener("change",rendreCatalogueCabine);
+$("cabService").addEventListener("change",rendreCatalogueCabine);
+rendreCatalogueCabine();
 const css=document.createElement("style");css.textContent=`
 #cabinesTelephoniques{max-width:760px;margin:0 auto}
 #cabinesTelephoniques .cab-item{border:1px solid #e1eae2;border-radius:16px;padding:14px;margin:10px 0;background:#fff;box-shadow:0 4px 14px #173b2b0b}
@@ -32,23 +99,32 @@ const css=document.createElement("style");css.textContent=`
 #cabinesTelephoniques .cab-filter{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
 #cabinesTelephoniques button:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:420px){#cabinesTelephoniques .cab-stats{gap:5px}#cabinesTelephoniques .cab-stat{padding:9px 5px}#cabinesTelephoniques .cab-stat strong{font-size:18px}#cabinesTelephoniques .cab-filter{grid-template-columns:1fr}}
-`;document.head.appendChild(css);
+#cabinesTelephoniques .cab-offers{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px}
+#cabinesTelephoniques .cab-offer .cab-price{font-size:21px;font-weight:800;color:#17663d;margin:8px 0}
+#cabinesTelephoniques .cab-offer a,#cabinesTelephoniques .cab-item a{display:inline-block;margin:9px 8px 0 0;color:#17663d;text-decoration:underline;font-size:13px}
+#cabinesTelephoniques .cab-catalog-head{margin:12px 0}
+#cabinesTelephoniques .cab-catalog-head h3{margin-bottom:4px}`;document.head.appendChild(css);
 function ouvrirCabinesTelephoniques(){if(typeof ouvrirSectionPleinEcran==="function")ouvrirSectionPleinEcran("cabinesTelephoniques","Cabine téléphonique");else section.style.display="block";chargerHistorique();}
 window.ouvrirCabinesTelephoniques=ouvrirCabinesTelephoniques;
+let cabRequestMode="transfer";
+function ouvrirFormulaireCabine(mode){cabRequestMode=mode;$("cabRequestForm").hidden=false;$("cabClientChoices").hidden=true;$("cabFormTitle").textContent=mode==="transfer"?"Transfert d’unité":"Souscrire un forfait";$("cabService").value=mode==="transfer"?"transfert_unites":"forfait_appels";$("cabService").disabled=mode==="transfer";$("cabCatalogue").hidden=mode==="transfer";rendreCatalogueCabine();$("cabNumero").focus();}
+$("cabStartTransfer").onclick=()=>ouvrirFormulaireCabine("transfer");$("cabStartSubscribe").onclick=()=>ouvrirFormulaireCabine("subscribe");
+$("cabCancelForm").onclick=()=>{$("cabRequestForm").hidden=true;$("cabClientChoices").hidden=false;$("cabMessage").textContent="";};
+function fraisCabine(montant){return montant<=999?18:(montant<=3000?40:75);}
+function actualiserFraisCabine(){const amount=Number($("cabMontant").value),fee=Number.isSafeInteger(amount)&&amount>=200?fraisCabine(amount):null;$("cabFeePreview").textContent=fee===null?"Frais : montant minimum 200 FCFA.":"Frais : "+money(fee)+" · Total à payer : "+money(amount+fee);}
+$("cabMontant").addEventListener("input",actualiserFraisCabine);
+$("cabService").addEventListener("change",()=>{rendreCatalogueCabine();$("cabCatalogue").hidden=$("cabService").value==="transfert_unites";});
 $("cabEnvoyer").onclick=async()=>{
  const u=auth.currentUser,amount=Number($("cabMontant").value),phone=$("cabNumero").value.trim(),commune=$("cabCommuneClient").value.trim(),details=$("cabDetails").value.trim(),button=$("cabEnvoyer"),msg=$("cabMessage");
- if(!u){msg.textContent="Connectez-vous à votre compte client pour envoyer une demande.";return;}
- if(!Number.isSafeInteger(amount)||amount<1||amount>500000||phone.length<8||phone.length>20||commune.length<2||details.length<2){msg.textContent="Vérifiez le numéro, le montant, la commune et les précisions.";return;}
- button.disabled=true;msg.textContent="Envoi de votre demande à tous les cabinistes partenaires…";
- try{
-  await db.collection("demandes_cabines").add({clientUid:u.uid,operateur:$("cabOperateur").value,typeService:$("cabService").value,numeroBeneficiaire:phone,montantPrestation:amount,commune:commune,details:details,cabineUid:null,statut:"en_attente",createdAt:stamp(),updatedAt:stamp()});
-  msg.textContent="Demande envoyée. Tous les cabinistes partenaires approuvés peuvent maintenant la voir. Vous serez informé lorsqu’un cabiniste l’acceptera.";
-  $("cabNumero").value="";$("cabMontant").value="";$("cabDetails").value="";
-  await chargerHistorique();
- }catch(e){console.error(e);msg.textContent="Envoi impossible : "+(e.message||"réessayez.");}
- finally{button.disabled=false;}
-};
-$("cabRefreshHistory").onclick=chargerHistorique;
+ const typeService=cabRequestMode==="transfer"?"transfert_unites":$("cabService").value;
+ if(!u){msg.textContent="Connectez-vous à votre compte client pour payer.";return;}
+ if(!Number.isSafeInteger(amount)||amount<200||amount>500000||phone.length<8||phone.length>20||commune.length<2||details.length<2){msg.textContent="Vérifiez le numéro, le montant (200 FCFA minimum), la commune et les précisions.";return;}
+ button.disabled=true;msg.textContent="Préparation sécurisée du paiement Jèko…";
+ try{const token=await u.getIdToken();const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/jeko/checkout",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceId:"cabine",typeService,operateur:$("cabOperateur").value,numeroBeneficiaire:phone,amountPrestation:amount,commune,details,paymentMethod:$("cabPaymentMethod").value})});
+ const data=await response.json().catch(()=>({}));if(!response.ok||!data.checkoutUrl)throw new Error(data.diagnostic||data.error||"Jèko n’a pas pu préparer le paiement.");
+ msg.textContent="Redirection vers Jèko. La demande sera transmise aux cabines après confirmation du paiement.";window.location.assign(data.checkoutUrl);
+ }catch(e){console.error("Cabine Jèko:",e);msg.textContent="Paiement impossible : "+(e.message||"erreur");button.disabled=false;}
+};$("cabRefreshHistory").onclick=chargerHistorique;
 $("cabTabClient").onclick=()=>{$("cabClient").hidden=false;$("cabPartner").hidden=true;chargerHistorique();};
 $("cabTabPartner").onclick=()=>{$("cabClient").hidden=true;$("cabPartner").hidden=false;if(!partenaire)authPartenaire();else espaceCabine();};
 async function chargerHistorique(){
@@ -81,12 +157,18 @@ async function espaceCabine(){
   if(!p.exists){$("cabPanel").textContent="Aucune candidature cabiniste trouvée pour ce compte.";return;}
   profilCabine=p.data();
   $("cabPanel").innerHTML='<div class="cab-item"><div class="cab-request-head"><div><strong style="font-size:18px">'+esc(profilCabine.nom)+'</strong><p class="cab-muted">'+esc(profilCabine.commune)+' · '+esc(profilCabine.telephone)+'</p></div><span class="cab-pill">'+esc(profilCabine.statut==="approuve"?"Partenaire approuvé":profilCabine.statut==="refuse"?"Candidature refusée":"En attente de validation")+'</span></div><p class="cab-muted">Opérateurs : '+esc((profilCabine.operateurs||[]).join(" · "))+'<br>Horaires : '+esc(profilCabine.horaires||"Non renseignés")+'</p><button id="cabLogout" type="button">Déconnexion</button></div><div id="cabOrders"></div>';
-  $("cabLogout").onclick=async()=>{await partnerAuth.signOut();partenaire=null;profilCabine=null;$("cabPanel").hidden=true;$("cabAuth").hidden=false;};
+  $("cabLogout").onclick=async()=>{await arreterPresenceCabine();await partnerAuth.signOut();partenaire=null;profilCabine=null;$("cabPanel").hidden=true;$("cabAuth").hidden=false;};
   if(profilCabine.statut!=="approuve"){$("cabOrders").innerHTML="<p class='notice'>Votre candidature est en cours de validation. Dès son approbation, vous pourrez consulter et accepter les demandes de toute la Côte d’Ivoire.</p>";return;}
+  await demarrerPresenceCabine();
   await chargerDemandesCabine();
+  if(cabRequestRefreshTimer)clearInterval(cabRequestRefreshTimer);
+  cabRequestRefreshTimer=setInterval(()=>{if(document.visibilityState==="visible")chargerDemandesCabine();},25000);
  }catch(e){$("cabPanel").textContent="Espace cabiniste indisponible : "+(e.message||"erreur");}
 }
-let cabDocsCache=[],cabVue="ouvertes";
+let cabDocsCache=[],cabVue="ouvertes",cabPresenceTimer=null,cabRequestRefreshTimer=null;
+async function actualiserPresenceCabine(){if(!partenaire||!profilCabine||profilCabine.statut!=="approuve")return;try{await partnerDb.collection("cabines_telephoniques").doc(partenaire.uid).update({presenceOnline:document.visibilityState==="visible",lastSeenAt:stamp(),updatedAt:stamp()});}catch(e){console.warn("Présence cabine non actualisée",e);}}
+async function demarrerPresenceCabine(){await actualiserPresenceCabine();if(cabPresenceTimer)clearInterval(cabPresenceTimer);cabPresenceTimer=setInterval(actualiserPresenceCabine,45000);document.removeEventListener("visibilitychange",actualiserPresenceCabine);document.addEventListener("visibilitychange",actualiserPresenceCabine);}
+async function arreterPresenceCabine(){if(cabPresenceTimer)clearInterval(cabPresenceTimer);cabPresenceTimer=null;if(cabRequestRefreshTimer)clearInterval(cabRequestRefreshTimer);cabRequestRefreshTimer=null;document.removeEventListener("visibilitychange",actualiserPresenceCabine);if(partenaire&&profilCabine?.statut==="approuve"){try{await partnerDb.collection("cabines_telephoniques").doc(partenaire.uid).update({presenceOnline:false,lastSeenAt:stamp(),updatedAt:stamp()});}catch(e){}}}
 function dateCabine(v){try{return v&&v.toDate?v.toDate().toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"Date non disponible";}catch(_){return"Date non disponible";}}
 function afficherDemandesCabine(){
  const z=$("cabOrders");if(!z)return;
