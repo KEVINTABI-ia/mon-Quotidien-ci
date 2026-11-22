@@ -230,10 +230,68 @@ function panneauAdmin(){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){alert("Accès administrateur requis.");return;}
  let z=document.getElementById("cabAdminPanel");
  if(!z){z=document.createElement("section");z.id="cabAdminPanel";z.className="card";document.getElementById("espaceAdmin").appendChild(z);}
- z.style.display="block";z.innerHTML="<h3>Cabines téléphoniques — administration</h3><h4>Candidatures partenaires</h4><div id='cabAdminCabines'>Chargement…</div><h4>Demandes des clients</h4><div id='cabAdminDemandes'>Chargement…</div>";
+ z.style.display="block";z.innerHTML="<h3>Cabines téléphoniques — administration</h3><h4>Candidatures partenaires</h4><div id='cabAdminCabines'>Chargement…</div><h4>Comptabilité et reversements manuels</h4><p class='cab-muted'>Seules les prestations terminées sont comptabilisées. Les reversements sont saisis manuellement après paiement effectif par MON QUOTIDIEN CI.</p><div id='cabAdminComptabilite'>Chargement…</div><h4>Demandes des clients</h4><div id='cabAdminDemandes'>Chargement…</div>";
  db.collection("cabines_telephoniques").limit(200).get().then(q=>{$("cabAdminCabines").innerHTML=q.empty?"Aucune candidature.":q.docs.map(d=>{const x=d.data();return "<article class='cab-item'><strong>"+esc(x.nom)+"</strong> · "+esc(x.commune)+" · "+esc(x.telephone)+"<p>"+esc(x.adresse)+" · "+esc((x.operateurs||[]).join(", "))+"</p><p>Statut : "+esc(x.statut)+"</p>"+(x.statut==="en_attente"?"<button type='button' onclick=\"window.cabAdminCabine('"+d.id+"','approuve')\">Approuver</button><button type='button' onclick=\"window.cabAdminCabine('"+d.id+"','refuse')\">Refuser</button>":"")+"</article>";}).join("");}).catch(e=>$("cabAdminCabines").textContent="Chargement impossible : "+e.message);
  db.collection("demandes_cabines").limit(200).get().then(q=>{$("cabAdminDemandes").innerHTML=q.empty?"Aucune demande.":q.docs.map(d=>{const x=d.data();return "<article class='cab-item'><strong>"+esc(x.operateur)+" · "+esc(x.typeService)+"</strong><p>"+esc(x.commune)+" · "+esc(x.numeroBeneficiaire)+" · "+money(x.montantPrestation)+"</p><p>"+esc(libelleStatut(x.statut))+" · Cabiniste : "+esc(x.cabineNom||"Non attribuée")+"</p></article>";}).join("");}).catch(e=>$("cabAdminDemandes").textContent="Chargement impossible : "+e.message);
+ chargerComptabiliteCabines();
 }
+
+async function chargerComptabiliteCabines(){
+ const root=$("cabAdminComptabilite");if(!root)return;
+ try{
+  const [cabines,demandes]=await Promise.all([
+   db.collection("cabines_telephoniques").limit(300).get(),
+   db.collection("demandes_cabines").where("statut","==","terminee").limit(500).get()
+  ]);
+  const grouped=new Map();
+  demandes.docs.forEach(doc=>{const d=doc.data();if(d.cabineUid){if(!grouped.has(d.cabineUid))grouped.set(d.cabineUid,[]);grouped.get(d.cabineUid).push(doc);}});
+  const sections=await Promise.all(cabines.docs.map(async cabine=>{
+   const profile=cabine.data(),docs=grouped.get(cabine.id)||[];
+   const rows=await Promise.all(docs.map(async doc=>{
+    const snap=await doc.ref.collection("reversements").get();
+    const payouts=snap.docs.map(p=>p.data());
+    const paid=payouts.reduce((sum,p)=>sum+Number(p.montantXof||0),0);
+    const earned=Number(doc.data().montantAReverser??doc.data().montantPrestation??0);
+    return {doc,data:doc.data(),payouts,paid,earned,balance:Math.max(0,earned-paid)};
+   }));
+   const earned=rows.reduce((sum,r)=>sum+r.earned,0),paid=rows.reduce((sum,r)=>sum+r.paid,0),balance=rows.reduce((sum,r)=>sum+r.balance,0);
+   const detail=rows.map(r=>{
+    const id=r.doc.id,d=r.data;
+    const history=r.payouts.length?r.payouts.map(p=>"<li>"+money(p.montantXof)+" · "+esc(p.dateReversement||"Date inconnue")+" · Réf. "+esc(p.reference)+" · "+esc(p.moyenPaiement||"—")+"</li>").join(""):"<li>Aucun reversement enregistré</li>";
+    const form=r.balance>0?"<div class='cab-filter'><input id='cabRevAmount_"+esc(id)+"' type='number' min='1' max='"+r.balance+"' step='1' placeholder='Montant à reverser (max "+r.balance+")'><input id='cabRevDate_"+esc(id)+"' type='date'><input id='cabRevRef_"+esc(id)+"' maxlength='80' placeholder='Référence du paiement'><select id='cabRevMethod_"+esc(id)+"'><option>Wave</option><option>Orange Money</option><option>MTN Money</option><option>Virement bancaire</option><option>Espèces</option><option>Autre</option></select></div><button type='button' class='primary' data-cab-reverse='"+esc(id)+"'>Enregistrer le reversement manuel</button>":"<p class='cab-muted'>Solde de cette prestation réglé.</p>";
+    return "<article class='cab-item'><strong>"+esc(d.operateur)+" · "+esc(d.typeService)+" · "+esc(d.numeroBeneficiaire)+"</strong><p>Prestation : "+money(r.earned)+" · Déjà reversé : "+money(r.paid)+" · Solde : <strong>"+money(r.balance)+"</strong></p><p class='cab-muted'>Demande "+esc(id)+" · Terminée le "+esc(dateCabine(d.updatedAt||d.createdAt))+"</p><details><summary>Historique des reversements ("+r.payouts.length+")</summary><ul>"+history+"</ul></details>"+form+"</article>";
+   }).join("");
+   return "<section class='cab-item'><div class='cab-request-head'><strong>"+esc(profile.nom||"Cabine sans nom")+"</strong><span class='cab-pill'>"+esc(profile.commune||"")+"</span></div><p>"+esc(profile.telephone||"")+" · "+rows.length+" prestation(s) terminée(s)</p><div class='cab-stats'><div class='cab-stat'><strong>"+money(earned)+"</strong><span>Montant gagné</span></div><div class='cab-stat'><strong>"+money(paid)+"</strong><span>Déjà reversé</span></div><div class='cab-stat'><strong>"+money(balance)+"</strong><span>Solde à payer</span></div></div>"+(detail||"<p class='cab-muted'>Aucune prestation terminée et vérifiée.</p>")+"</section>";
+  }));
+  root.innerHTML=sections.join("")||"Aucune cabine partenaire.";
+  root.querySelectorAll("[data-cab-reverse]").forEach(button=>button.onclick=()=>window.cabAdminEnregistrerReversement(button.dataset.cabReverse));
+ }catch(error){console.error(error);root.textContent="Comptabilité indisponible : "+(error.message||"erreur de chargement");}
+}
+window.cabAdminEnregistrerReversement=async demandeId=>{
+ if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){alert("Accès administrateur requis.");return;}
+ const amount=Number($("cabRevAmount_"+demandeId)?.value),date=$("cabRevDate_"+demandeId)?.value,reference=$("cabRevRef_"+demandeId)?.value.trim(),method=$("cabRevMethod_"+demandeId)?.value;
+ if(!Number.isSafeInteger(amount)||amount<=0||!date||! /^\d{4}-\d{2}-\d{2}$/.test(date)||!reference||reference.length>80||!method){alert("Renseignez un montant valide, la date, la référence et le moyen de paiement.");return;}
+ const safeRef=reference.toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9_-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,80);
+ if(!safeRef){alert("La référence doit contenir des caractères exploitables.");return;}
+ const demandRef=db.collection("demandes_cabines").doc(demandeId),entryRef=demandRef.collection("reversements").doc(safeRef);
+ try{
+  await db.runTransaction(async tx=>{
+   const snap=await tx.get(demandRef);
+   if(!snap.exists)throw new Error("Prestation introuvable.");
+   const d=snap.data();
+   if(d.statut!=="terminee"||!d.cabineUid)throw new Error("Seule une prestation terminée et attribuée peut être réglée.");
+   const existing=await tx.get(entryRef);
+   if(existing.exists)throw new Error("Cette référence de reversement existe déjà pour cette prestation.");
+   const reversements=await tx.get(demandRef.collection("reversements"));
+   const paid=reversements.docs.reduce((sum,p)=>sum+Number(p.data().montantXof||0),0);
+   const earned=Number(d.montantAReverser??d.montantPrestation??0),balance=earned-paid;
+   if(!Number.isSafeInteger(earned)||earned<=0||!Number.isSafeInteger(paid)||amount>balance)throw new Error("Montant supérieur au solde restant ("+Math.max(0,balance)+" FCFA).");
+   tx.set(entryRef,{demandeId,cabineUid:d.cabineUid,cabineNom:d.cabineNom||"",montantXof:amount,dateReversement:date,reference,moyenPaiement:method,createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:auth.currentUser.uid});
+  });
+  alert("Reversement manuel enregistré. Aucun transfert d’argent n’a été déclenché par l’application.");
+  await chargerComptabiliteCabines();
+ }catch(error){alert("Reversement non enregistré : "+(error.message||"erreur"));}
+};
 window.cabAdminCabine=async(id,s)=>{if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID||!["approuve","refuse"].includes(s))return;try{await db.collection("cabines_telephoniques").doc(id).update({statut:s,updatedAt:stamp(),validePar:auth.currentUser.uid});panneauAdmin();}catch(e){alert(e.message);}};
 if(typeof RUBRIQUES_ADMIN!=="undefined"&&!RUBRIQUES_ADMIN.some(r=>r.id==="gestionCabinesAdmin"))RUBRIQUES_ADMIN.push({id:"gestionCabinesAdmin",groupe:"Professionnels",icone:"📞",titre:"Cabines téléphoniques",description:"Valider les cabinistes et suivre les demandes."});
 if(typeof ouvrirRubriqueAdmin==="function"){const ancien=window.ouvrirRubriqueAdmin;window.ouvrirRubriqueAdmin=function(id){if(id==="gestionCabinesAdmin"){const menu=document.getElementById("adminMenuRubriques");if(menu)menu.style.display="none";RUBRIQUES_ADMIN.forEach(r=>{const e=document.getElementById(r.id);if(e)e.style.display="none";});panneauAdmin();return;}return ancien.apply(this,arguments);};}
