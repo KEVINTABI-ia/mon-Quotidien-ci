@@ -13813,6 +13813,87 @@ async function mqciAdminStatutPharmacie(uid,statut){
   }
   #mqciPartnerDropdownToggle[aria-expanded="true"]{background:#0D512F!important;color:#fff!important}
 </style>
+
+<style id="mqci-ai-widget-style">
+  #mqciAiLauncher{position:fixed;right:18px;bottom:22px;z-index:14000;border:0;border-radius:999px;background:#087C62;color:#fff;box-shadow:0 8px 24px #102d3540;padding:14px 18px;font:700 15px system-ui;cursor:pointer}
+  #mqciAiLauncher[hidden],#mqciAiPanel[hidden]{display:none!important}
+  #mqciAiPanel{position:fixed;right:18px;bottom:84px;z-index:14001;width:min(390px,calc(100vw - 24px));height:min(570px,calc(100dvh - 115px));background:#fff;border:1px solid #dce7df;border-radius:20px;box-shadow:0 18px 55px #102d3540;display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+  #mqciAiHeader{background:#087C62;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  #mqciAiHeader strong{font-size:15px}#mqciAiHeader small{display:block;font-size:11px;opacity:.86;margin-top:2px}
+  #mqciAiClose{border:0;background:#ffffff22;color:#fff;border-radius:10px;font-size:22px;width:36px;height:36px;cursor:pointer}
+  #mqciAiMessages{flex:1;overflow:auto;padding:14px;background:#f6f8f5;display:flex;flex-direction:column;gap:10px}
+  .mqci-ai-message{max-width:88%;padding:10px 12px;border-radius:14px;font-size:14px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+  .mqci-ai-user{align-self:flex-end;background:#dff2e8;color:#153c2d;border-bottom-right-radius:4px}
+  .mqci-ai-assistant{align-self:flex-start;background:#fff;color:#263a35;border:1px solid #e4ebe5;border-bottom-left-radius:4px}
+  .mqci-ai-note{font-size:11px;color:#718079;text-align:center;padding:5px 10px}
+  #mqciAiForm{padding:11px;border-top:1px solid #e5ece6;display:flex;gap:8px;background:#fff}
+  #mqciAiInput{min-width:0;flex:1;resize:none;max-height:100px;border:1px solid #d7e2da;border-radius:12px;padding:11px;font:14px system-ui;outline-color:#087C62}
+  #mqciAiSend{border:0;border-radius:12px;background:#087C62;color:#fff;padding:0 15px;font-weight:700;min-width:64px}
+  #mqciAiSend:disabled{opacity:.5}
+  @media(max-width:520px){#mqciAiLauncher{right:12px;bottom:14px;padding:13px 15px}#mqciAiPanel{right:8px;bottom:72px;width:calc(100vw - 16px);height:min(590px,calc(100dvh - 92px))}}
+</style>
+<button id="mqciAiLauncher" type="button" aria-controls="mqciAiPanel" aria-expanded="false" hidden>✦ MON QUOTIDIEN AI</button>
+<section id="mqciAiPanel" role="dialog" aria-label="Assistant MON QUOTIDIEN AI" aria-modal="false" hidden>
+  <header id="mqciAiHeader"><div><strong>MON QUOTIDIEN AI</strong><small>Votre assistant du quotidien</small></div><button id="mqciAiClose" type="button" aria-label="Fermer">×</button></header>
+  <div id="mqciAiMessages" aria-live="polite"><div class="mqci-ai-message mqci-ai-assistant">Bonjour ! Je suis MON QUOTIDIEN AI. Comment puis-je vous aider aujourd'hui ?</div><div class="mqci-ai-note">Version initiale : réponses générales, sans accès à vos commandes ni à vos paiements.</div></div>
+  <form id="mqciAiForm"><textarea id="mqciAiInput" rows="1" maxlength="2000" placeholder="Écrivez votre message…" aria-label="Votre message" required></textarea><button id="mqciAiSend" type="submit">Envoyer</button></form>
+</section>
+<script id="mqci-ai-widget-script">
+(function(){
+  const launcher=document.getElementById("mqciAiLauncher");
+  const panel=document.getElementById("mqciAiPanel");
+  const close=document.getElementById("mqciAiClose");
+  const form=document.getElementById("mqciAiForm");
+  const input=document.getElementById("mqciAiInput");
+  const send=document.getElementById("mqciAiSend");
+  const messages=document.getElementById("mqciAiMessages");
+  if(!launcher||!panel||!form||!input||!send||!messages)return;
+  const endpoint="https://mon-quotidien-jeko.tabikevin57.workers.dev/api/ai/chat";
+  let busy=false;
+  function addMessage(text,kind){
+    const node=document.createElement("div");
+    node.className="mqci-ai-message "+(kind==="user"?"mqci-ai-user":"mqci-ai-assistant");
+    node.textContent=text;
+    messages.appendChild(node);
+    messages.scrollTop=messages.scrollHeight;
+    return node;
+  }
+  function toggle(open){
+    panel.hidden=!open;
+    launcher.setAttribute("aria-expanded",String(open));
+    if(open)input.focus();
+  }
+  launcher.addEventListener("click",()=>toggle(panel.hidden));
+  close.addEventListener("click",()=>toggle(false));
+  if(window.auth&&typeof auth.onAuthStateChanged==="function"){
+    auth.onAuthStateChanged(user=>{launcher.hidden=!user;if(!user)toggle(false);});
+  }
+  form.addEventListener("submit",async event=>{
+    event.preventDefault();
+    const message=input.value.trim();
+    if(!message||busy)return;
+    const user=window.auth&&auth.currentUser;
+    if(!user){addMessage("Connectez-vous à votre compte pour utiliser l'assistant.","assistant");return;}
+    if(message.length>2000){addMessage("Votre message est trop long. Limitez-le à 2 000 caractères.","assistant");return;}
+    addMessage(message,"user");
+    input.value="";
+    busy=true;send.disabled=true;send.textContent="…";
+    const pending=addMessage("Je prépare une réponse…","assistant");
+    try{
+      const token=await user.getIdToken();
+      const response=await fetch(endpoint,{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({message})});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.error||"request_failed");
+      pending.textContent=typeof data.answer==="string"&&data.answer?data.answer:"Je n'ai pas pu formuler une réponse. Réessayez.";
+    }catch(error){
+      const messagesByError={unauthorized:"Votre session a expiré. Reconnectez-vous puis réessayez.",ai_service_unavailable:"L'assistant est momentanément indisponible. Réessayez plus tard.",message_too_long:"Votre message dépasse la longueur autorisée.",ai_generation_failed:"Je rencontre une difficulté technique. Réessayez dans quelques instants."};
+      pending.textContent=messagesByError[error.message]||"Connexion impossible avec l'assistant. Vérifiez votre connexion puis réessayez.";
+    }finally{
+      busy=false;send.disabled=false;send.textContent="Envoyer";input.focus();messages.scrollTop=messages.scrollHeight;
+    }
+  });
+})();
+</script>
 </body>
 </html>
 <style id="mqci-pied-page-sous-admin-sans-espace-vide">
