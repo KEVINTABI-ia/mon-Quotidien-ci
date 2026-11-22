@@ -1453,12 +1453,12 @@ describe("Mon Transport CI — règles Firestore", function () {
         await db.doc("cabines_telephoniques/" + CABINE_UID).set({
           uid:CABINE_UID,nom:"Cabine A",responsable:"Responsable A",email:"cabine-a@example.test",
           telephone:"0700000001",commune:"Abidjan",adresse:"Yopougon, marché",horaires:"8h-20h",
-          operateurs:["Orange","MTN"],statut:"approuve",createdAt:Timestamp.now(),updatedAt:Timestamp.now()
+          operateurs:["Orange","MTN"],statut:"approuve",presenceOnline:true,lastSeenAt:Timestamp.now(),createdAt:Timestamp.now(),updatedAt:Timestamp.now()
         });
         await db.doc("cabines_telephoniques/" + CABINE_UID_2).set({
           uid:CABINE_UID_2,nom:"Cabine B",responsable:"Responsable B",email:"cabine-b@example.test",
           telephone:"0700000002",commune:"Bouaké",adresse:"Centre-ville",horaires:"8h-20h",
-          operateurs:["Orange"],statut:"approuve",createdAt:Timestamp.now(),updatedAt:Timestamp.now()
+          operateurs:["Orange"],statut:"approuve",presenceOnline:true,lastSeenAt:Timestamp.now(),createdAt:Timestamp.now(),updatedAt:Timestamp.now()
         });
       });
     }
@@ -1477,6 +1477,22 @@ describe("Mon Transport CI — règles Firestore", function () {
         const q=query(collection(partnerDb,"demandes_cabines"),where("statut","==","en_attente"),where("cabineUid","==",null));
         const result=await assertSucceeds(getDocs(q));
         if(result.empty)throw new Error("La demande ouverte n’a pas été diffusée à "+uid);
+      }
+    });
+
+    it("ne diffuse pas les demandes aux cabines hors ligne ou dont le heartbeat a expiré", async () => {
+      const {collection,query,where,getDocs}=require("firebase/firestore");
+      await seedDemand();
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const db=context.firestore();
+        const base={uid:CABINE_UID,nom:"Cabine A",responsable:"Responsable A",email:"a@example.test",telephone:"0700000001",commune:"Abidjan",adresse:"Yopougon marché",horaires:"8h-20h",operateurs:["Orange"],statut:"approuve",createdAt:Timestamp.now(),updatedAt:Timestamp.now()};
+        await db.doc("cabines_telephoniques/"+CABINE_UID).set({...base,presenceOnline:false,lastSeenAt:Timestamp.now()});
+        await db.doc("cabines_telephoniques/"+CABINE_UID_2).set({...base,uid:CABINE_UID_2,presenceOnline:true,lastSeenAt:Timestamp.fromMillis(Date.now()-120000)});
+      });
+      for (const uid of [CABINE_UID,CABINE_UID_2]) {
+        const partnerDb=testEnv.authenticatedContext(uid,{email:"cabine@example.test"}).firestore();
+        const q=query(collection(partnerDb,"demandes_cabines"),where("statut","==","en_attente"),where("cabineUid","==",null));
+        await assertFails(getDocs(q));
       }
     });
 
