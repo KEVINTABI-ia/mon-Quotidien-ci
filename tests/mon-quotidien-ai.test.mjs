@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseAiChatPayload, buildAiUserContext, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext } from "../cloudflare/worker.js";
+import { parseAiChatPayload, buildAiUserContext, extractAiTrackingNumber, buildAiOrderContext, buildAiMissionContext, buildAiMerchantContext, buildAiMerchantPerformanceContext } from "../cloudflare/worker.js";
 
 const id = "123e4567-e89b-42d3-a456-426614174000";
 
@@ -181,4 +181,41 @@ test("résume uniquement les commandes boutique appartenant au compte authentifi
 test("ne fournit aucun indicateur commercial sans identité de compte valide", () => {
   assert.equal(buildAiMerchantContext([{ boutiqueUid: "shop-1", typeCommande: "boutique" }], ""), null);
   assert.equal(buildAiMerchantContext(null, "shop-1"), null);
+});
+
+
+test("calcule des indicateurs commerciaux échantillonnés sans mélanger les boutiques", () => {
+  const context = buildAiMerchantPerformanceContext([
+    { boutiqueUid: "shop-1", typeCommande: "boutique", statutBoutique: "confirmee" },
+    { boutiqueUid: "shop-1", typeCommande: "boutique", statut: "livre" },
+    { boutiqueUid: "shop-2", typeCommande: "boutique", statutBoutique: "confirmee" }
+  ], [
+    { prixProduit: 5000, quantiteCommande: 2 },
+    { prixProduit: 3000, quantiteCommande: 1 },
+    { prixProduit: 90000, quantiteCommande: 9 }
+  ], [
+    { boutiqueUid: "shop-1", nom: "Robe", vues: 18, statut: "approuve", disponible: true },
+    { boutiqueUid: "shop-1", nom: "Sac", vues: 7, statut: "approuve", disponible: false },
+    { boutiqueUid: "shop-1", nom: "Chaussures", vues: 50, statut: "en_attente", disponible: true },
+    { boutiqueUid: "shop-2", nom: "Produit privé", vues: 999, statut: "approuve", disponible: true }
+  ], "shop-1");
+  assert.equal(context.confirmedProductAmountXof, 8000);
+  assert.equal(context.confirmedProductUnits, 3);
+  assert.equal(context.sample.ordersAnalyzed, 2);
+  assert.equal(context.sample.confirmedOrdersAnalyzed, 2);
+  assert.deepEqual(context.products.topViewed, [{ name: "Robe", views: 18 }, { name: "Sac", views: 7 }]);
+  assert.equal(context.products.published, 2);
+  assert.equal(context.products.awaitingApproval, 1);
+  assert.equal(context.products.markedUnavailable, 1);
+  assert.equal(JSON.stringify(context).includes("Produit privé"), false);
+  assert.equal(context.limitations.includes("ni le chiffre d'affaires global"), true);
+});
+
+test("ne calcule pas de montant commercial lorsque les détails ne sont pas disponibles", () => {
+  const context = buildAiMerchantPerformanceContext([
+    { boutiqueUid: "shop-1", typeCommande: "boutique", statutBoutique: "confirmee" }
+  ], [null], [], "shop-1");
+  assert.equal(context.confirmedProductAmountXof, null);
+  assert.equal(context.amountRecords, 0);
+  assert.equal(buildAiMerchantPerformanceContext([], [], [], ""), null);
 });
