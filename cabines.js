@@ -11,8 +11,13 @@ const section=document.createElement("section");
 section.id="cabinesTelephoniques";section.className="card";section.style.display="none";
 section.innerHTML=`<h2>📞 Cabine téléphonique</h2>
 <div class="cab-actions"><button id="cabTabClient" type="button">Espace client</button><button id="cabTabPartner" type="button">Espace cabiniste</button></div>
-<div id="cabClient"><p>Choisissez votre opération. Votre demande sera proposée aux cabinistes partenaires actuellement en ligne dans toute la Côte d’Ivoire.</p>
-<div class="cab-actions" id="cabClientChoices"><button id="cabStartTransfer" class="primary" type="button">Transfert d’unité</button><button id="cabStartSubscribe" class="primary" type="button">Souscrit</button></div>
+<div id="cabClient"><p>Choisissez un service. Les demandes sont proposées aux cabinistes partenaires actuellement en ligne partout en Côte d’Ivoire.</p>
+<div class="cab-main-menu" id="cabClientChoices">
+<button id="cabStartTransfer" class="cab-menu-card" type="button"><span class="cab-menu-icon cab-transfer-icon"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M12 22h34l-8-8m8 8-8 8" fill="none" stroke="#1478e8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 42H18l8 8m-8-8 8-8" fill="none" stroke="#ef4444" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>Transférer</strong><small>Envoyer des unités</small></button>
+<button id="cabStartSubscribe" class="cab-menu-card" type="button"><span class="cab-menu-icon cab-phone-icon"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="18" y="7" width="28" height="50" rx="6" fill="none" stroke="#12a9d6" stroke-width="5"/><path d="M27 14h10M29 49h6" stroke="#12a9d6" stroke-width="3" stroke-linecap="round"/></svg></span><strong>Souscrire</strong><small>Forfait appel ou internet</small></button>
+<button id="cabStartHistory" class="cab-menu-card" type="button"><span class="cab-menu-icon cab-wallet-icon"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="17" width="46" height="35" rx="7" fill="#ec4899"/><path d="M9 23V16a6 6 0 0 1 6-6h32a6 6 0 0 1 6 6v2" fill="none" stroke="#be185d" stroke-width="4"/><path d="M39 29h16v13H39a6 6 0 0 1 0-13Z" fill="#f9a8d4"/><circle cx="43" cy="35.5" r="2.5" fill="#9d174d"/><circle cx="19" cy="49" r="7" fill="#fbbf24"/></svg></span><strong>Historique</strong><small>Mes transactions</small></button>
+</div>
+<div id="cabSubscribeChoices" class="cab-subscribe-choices" hidden><h3>Que souhaitez-vous souscrire ?</h3><div class="cab-subscribe-grid"><button id="cabStartCalls" class="cab-sub-choice" type="button"><span class="cab-sub-symbol">☎</span><strong>Forfait appel</strong></button><button id="cabStartInternet" class="cab-sub-choice" type="button"><span class="cab-sub-symbol">▥</span><strong>Forfait internet</strong></button></div><button id="cabBackToMenu" class="cab-back" type="button">← Retour aux services</button></div>
 <div id="cabRequestForm" class="cab-item" hidden><h3 id="cabFormTitle">Nouvelle opération</h3>
 <label>Type de service</label><select id="cabService"><option value="transfert_unites">Transfert d’unité</option><option value="forfait_appels">Forfait appel</option><option value="forfait_internet">Forfait internet</option></select>
 <label>Opérateur</label><select id="cabOperateur"><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><div id="cabCatalogue"></div>
@@ -22,7 +27,8 @@ section.innerHTML=`<h2>📞 Cabine téléphonique</h2>
 <label>Précisions</label><textarea id="cabDetails" maxlength="180" placeholder="Détail du transfert ou du forfait choisi"></textarea>
 <label>Moyen de paiement Jèko</label><select id="cabPaymentMethod"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select>
 <p id="cabFeePreview" class="cab-muted">Frais de service : —</p><div class="cab-actions"><button id="cabEnvoyer" class="primary" type="button">Valider et payer avec Jèko</button><button id="cabCancelForm" type="button">Annuler</button></div><p id="cabMessage" aria-live="polite"></p></div>
-<hr><h3>Suivi de mes demandes</h3><div id="cabHistorique">Connectez-vous pour consulter vos demandes.</div><button id="cabRefreshHistory" type="button">Actualiser</button></div>
+</div>
+<div id="cabHistoryView" hidden><div class="cab-history-heading"><h3>Historique de mes transactions</h3><button id="cabBackFromHistory" class="cab-back" type="button">← Retour</button></div><div id="cabHistorique">Connectez-vous pour consulter vos demandes.</div><button id="cabRefreshHistory" type="button">Actualiser l’historique</button></div>
 <hr><div id="cabPartner" hidden><h3>Espace cabiniste partenaire</h3><div id="cabAuth"></div><div id="cabPanel" hidden></div></div>`;
 document.body.appendChild(section);
 const cabForfaits=[
@@ -104,13 +110,37 @@ const css=document.createElement("style");css.textContent=`
 #cabinesTelephoniques .cab-offer .cab-price{font-size:21px;font-weight:800;color:#17663d;margin:8px 0}
 #cabinesTelephoniques .cab-offer a,#cabinesTelephoniques .cab-item a{display:inline-block;margin:9px 8px 0 0;color:#17663d;text-decoration:underline;font-size:13px}
 #cabinesTelephoniques .cab-catalog-head{margin:12px 0}
-#cabinesTelephoniques .cab-catalog-head h3{margin-bottom:4px}`;document.head.appendChild(css);
+#cabinesTelephoniques .cab-catalog-head h3{margin-bottom:4px}
+#cabinesTelephoniques .cab-main-menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:22px 0}
+#cabinesTelephoniques .cab-menu-card{min-width:0;min-height:148px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1px solid #e8e9ef;border-radius:20px;box-shadow:0 5px 16px #18243b12;color:#263238}
+#cabinesTelephoniques .cab-menu-card strong{font-size:15px}
+#cabinesTelephoniques .cab-menu-card small{font-size:11px;color:#74808b;text-align:center}
+#cabinesTelephoniques .cab-menu-icon{width:66px;height:66px;border-radius:50%;display:grid;place-items:center}
+#cabinesTelephoniques .cab-menu-icon svg{width:42px;height:42px}
+#cabinesTelephoniques .cab-transfer-icon{background:#e1efff}
+#cabinesTelephoniques .cab-phone-icon{background:#dff7fc}
+#cabinesTelephoniques .cab-wallet-icon{background:#fce3f1}
+#cabinesTelephoniques .cab-subscribe-choices{padding:12px 0}
+#cabinesTelephoniques .cab-subscribe-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#cabinesTelephoniques .cab-sub-choice{min-height:112px;background:#f3f8fc;border:1px solid #dceaf5;color:#174b68;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+#cabinesTelephoniques .cab-sub-symbol{font-size:30px;color:#159ac3}
+#cabinesTelephoniques .cab-back{background:#f1f5f2;color:#31513d;border:1px solid #dce8df;margin:12px 0}
+#cabinesTelephoniques .cab-history-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+@media(max-width:380px){#cabinesTelephoniques .cab-menu-card{min-height:132px;padding:10px 4px}#cabinesTelephoniques .cab-menu-card strong{font-size:13px}#cabinesTelephoniques .cab-menu-icon{width:56px;height:56px}}
+`;document.head.appendChild(css);
 function ouvrirCabinesTelephoniques(){if(typeof ouvrirSectionPleinEcran==="function")ouvrirSectionPleinEcran("cabinesTelephoniques","Cabine téléphonique");else section.style.display="block";chargerHistorique();}
 window.ouvrirCabinesTelephoniques=ouvrirCabinesTelephoniques;
 let cabRequestMode="transfer";
-function ouvrirFormulaireCabine(mode){cabRequestMode=mode;$("cabRequestForm").hidden=false;$("cabClientChoices").hidden=true;$("cabFormTitle").textContent=mode==="transfer"?"Transfert d’unité":"Souscrire un forfait";$("cabService").value=mode==="transfer"?"transfert_unites":"forfait_appels";$("cabService").disabled=mode==="transfer";$("cabCatalogue").hidden=mode==="transfer";rendreCatalogueCabine();$("cabNumero").focus();}
-$("cabStartTransfer").onclick=()=>ouvrirFormulaireCabine("transfer");$("cabStartSubscribe").onclick=()=>ouvrirFormulaireCabine("subscribe");
-$("cabCancelForm").onclick=()=>{$("cabRequestForm").hidden=true;$("cabClientChoices").hidden=false;$("cabMessage").textContent="";};
+function ouvrirFormulaireCabine(mode,serviceType){cabRequestMode=mode;$("cabRequestForm").hidden=false;$("cabClientChoices").hidden=true;$("cabSubscribeChoices").hidden=true;$("cabHistoryView").hidden=true;$("cabFormTitle").textContent=mode==="transfer"?"Transfert d’unité":serviceType==="forfait_internet"?"Souscrire un forfait internet":"Souscrire un forfait appel";$("cabService").value=mode==="transfer"?"transfert_unites":serviceType;$("cabService").disabled=mode==="transfer";$("cabCatalogue").hidden=mode==="transfer";rendreCatalogueCabine();$("cabNumero").focus();}
+function retourMenuCabine(){ $("cabRequestForm").hidden=true;$("cabSubscribeChoices").hidden=true;$("cabHistoryView").hidden=true;$("cabClientChoices").hidden=false;$("cabMessage").textContent="";$("cabEnvoyer").disabled=false;}
+$("cabStartTransfer").onclick=()=>ouvrirFormulaireCabine("transfer","transfert_unites");
+$("cabStartSubscribe").onclick=()=>{$("cabClientChoices").hidden=true;$("cabSubscribeChoices").hidden=false;};
+$("cabStartCalls").onclick=()=>ouvrirFormulaireCabine("subscribe","forfait_appels");
+$("cabStartInternet").onclick=()=>ouvrirFormulaireCabine("subscribe","forfait_internet");
+$("cabBackToMenu").onclick=retourMenuCabine;
+$("cabStartHistory").onclick=()=>{$("cabClientChoices").hidden=true;$("cabSubscribeChoices").hidden=true;$("cabRequestForm").hidden=true;$("cabHistoryView").hidden=false;chargerHistorique();};
+$("cabBackFromHistory").onclick=retourMenuCabine;
+$("cabCancelForm").onclick=retourMenuCabine;
 function fraisCabine(montant){return montant<=999?18:(montant<=3000?40:75);}
 function actualiserFraisCabine(){const amount=Number($("cabMontant").value),fee=Number.isSafeInteger(amount)&&amount>=200?fraisCabine(amount):null;$("cabFeePreview").textContent=fee===null?"Frais : montant minimum 200 FCFA.":"Frais : "+money(fee)+" · Total à payer : "+money(amount+fee);}
 $("cabMontant").addEventListener("input",actualiserFraisCabine);
@@ -126,7 +156,8 @@ $("cabEnvoyer").onclick=async()=>{
  msg.textContent="Redirection vers Jèko. La demande sera transmise aux cabines après confirmation du paiement.";window.location.assign(data.checkoutUrl);
  }catch(e){console.error("Cabine Jèko:",e);msg.textContent="Paiement impossible : "+(e.message||"erreur");button.disabled=false;}
 };$("cabRefreshHistory").onclick=chargerHistorique;
-$("cabTabClient").onclick=()=>{$("cabClient").hidden=false;$("cabPartner").hidden=true;chargerHistorique();};
+$("cabTabClient").onclick=()=>{$("cabClient").hidden=false;$("cabPartner").hidden=true;retourMenuCabine();};
+
 $("cabTabPartner").onclick=()=>{$("cabClient").hidden=true;$("cabPartner").hidden=false;if(!partenaire)authPartenaire();else espaceCabine();};
 async function chargerHistorique(){
  const z=$("cabHistorique"),u=auth.currentUser;if(!z)return;
