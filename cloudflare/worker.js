@@ -624,6 +624,22 @@ async function aiConversationHistory(request, env, conversationId) {
   }
 }
 
+export function extractAiResponseText(result) {
+  const candidates = [
+    result?.response,
+    result?.choices?.[0]?.message?.content
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+    if (Array.isArray(candidate)) {
+      const text = candidate.filter(item => item && item.type === "text" && typeof item.text === "string")
+        .map(item => item.text).join("").trim();
+      if (text) return text;
+    }
+  }
+  return "";
+}
+
 async function aiChat(request, env) {
   const authResult = await requireUser(request, env);
   if (!authResult.user) return json({ error: "unauthorized" }, 401);
@@ -679,7 +695,7 @@ async function aiChat(request, env) {
       });
       return json({ error: "ai_generation_failed" }, 503);
     }
-    const answer = typeof result?.response === "string" ? result.response.trim() : "";
+    const answer = extractAiResponseText(result);
     if (!answer) return json({ error: "ai_empty_response" }, 502);
     const now = new Date().toISOString();
     const userMessageId = crypto.randomUUID(), assistantMessageId = crypto.randomUUID();
