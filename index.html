@@ -13997,8 +13997,44 @@ body.mqci-ai-no-scroll{
     max-height:var(--mqci-ai-vv-height,100dvh)!important;
     overflow:hidden!important;
   }
+  /* En mode clavier, conserver les trois commandes essentielles visibles. */
   #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiSubscription{
+    display:grid!important;
+    flex:0 0 auto!important;
+    gap:3px!important;
+    padding:4px 9px!important;
+    overflow:visible!important;
+  }
+  #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiSubscriptionStatus,
+  #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiSubscriptionMessage{
     display:none!important;
+  }
+  #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiSubscriptionActions{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    align-items:center!important;
+    gap:7px!important;
+  }
+  #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiPaymentMethod{
+    display:block!important;
+    flex:0 1 42%!important;
+    width:42%!important;
+    min-width:0!important;
+    min-height:34px!important;
+    padding:6px!important;
+    font-size:12px!important;
+  }
+  #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiSubscribe{
+    display:block!important;
+    flex:1 1 0!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    min-height:34px!important;
+    padding:6px 8px!important;
+    font-size:12px!important;
+    line-height:1.15!important;
+    white-space:normal!important;
   }
   #mqciAiPanel.mqci-ai-fullscreen.mqci-ai-keyboard-open #mqciAiHeader{
     padding-top:6px!important;
@@ -14266,7 +14302,7 @@ body.mqci-ai-no-scroll{
     if(message.length>2000){addMessage("Votre message est trop long. Limitez-le à 2 000 caractères.","assistant");return;}
     addMessage(message,"user");
     input.value="";
-    busy=true;send.disabled=true;send.textContent="…";
+    busy=true;send.disabled=true;send.setAttribute("aria-label","Envoi en cours");send.title="Envoi en cours";
     const pending=addMessage("Je prépare une réponse…","assistant");
     try{
       const token=await user.getIdToken();
@@ -14278,7 +14314,7 @@ body.mqci-ai-no-scroll{
       const messagesByError={unauthorized:"Votre session a expiré. Reconnectez-vous puis réessayez.",ai_service_unavailable:"L'assistant est momentanément indisponible. Réessayez plus tard.",ai_rate_limiter_unavailable:"Le service est momentanément indisponible. Réessayez plus tard.",rate_limited:"Vous envoyez des messages trop rapidement. Patientez une minute avant de réessayer.",message_too_long:"Votre message dépasse la longueur autorisée.",ai_generation_failed:"Je rencontre une difficulté technique. Réessayez dans quelques instants."};
       pending.textContent=messagesByError[error.message]||"Connexion impossible avec l'assistant. Vérifiez votre connexion puis réessayez.";
     }finally{
-      busy=false;send.disabled=false;send.textContent="Envoyer";input.focus();messages.scrollTop=messages.scrollHeight;
+      busy=false;send.disabled=false;send.setAttribute("aria-label","Envoyer le message");send.title="Envoyer";input.focus();messages.scrollTop=messages.scrollHeight;
     }
   });
 })();
