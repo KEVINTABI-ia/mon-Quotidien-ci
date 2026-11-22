@@ -668,7 +668,8 @@ async function aiChat(request, env) {
     try {
       result = await env.AI.run(AI_MODEL, {
         messages: [systemMessage, ...conversation.messages.slice(-18), { role: "user", content: parsed.message }],
-        max_tokens: 600, temperature: 0.35
+        max_tokens: 600, temperature: 0.35,
+        chat_template_kwargs: { enable_thinking: false }
       });
     } catch (error) {
       console.error("ai_chat_generation_failed", {
