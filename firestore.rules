@@ -708,7 +708,7 @@ service cloud.firestore {
             && request.resource.data.createdAt == request.time);
 
         allow read: if estAdmin()
-          || (docId != "confirmation" && estConnecte()
+          || (estConnecte()
             && get(commandePath(commandeId)).data.clientId == request.auth.uid)
           || (docId != "confirmation" && estConnecte()
             && get(commandePath(commandeId)).data.partenaireId == request.auth.uid)
