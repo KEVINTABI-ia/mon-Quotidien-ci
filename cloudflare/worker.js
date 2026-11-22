@@ -130,6 +130,60 @@ async function requireUser(request, env) {
   try { return {user:await firebaseUser(token, env.FIREBASE_API_KEY),diagnostic:null}; }
   catch(e) { return {user:null,diagnostic:e.authCode||"FIREBASE_AUTH_ERROR"}; }
 }
+const AI_MODEL = "@cf/google/gemma-4-26b-a4b-it";
+const AI_MAX_MESSAGE_CHARS = 2000;
+
+export function parseAiChatPayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { ok: false, error: "invalid_payload" };
+  }
+  const keys = Object.keys(payload);
+  if (keys.some(key => key !== "message")) return { ok: false, error: "unsupported_fields" };
+  if (typeof payload.message !== "string") return { ok: false, error: "invalid_message" };
+  const message = payload.message.trim();
+  if (!message) return { ok: false, error: "empty_message" };
+  if (message.length > AI_MAX_MESSAGE_CHARS) return { ok: false, error: "message_too_long" };
+  return { ok: true, message };
+}
+
+async function aiChat(request, env) {
+  const authResult = await requireUser(request, env);
+  if (!authResult.user) return json({ error: "unauthorized" }, 401);
+  if (!env.AI || typeof env.AI.run !== "function") {
+    return json({ error: "ai_service_unavailable" }, 503);
+  }
+  const declaredLength = Number(request.headers.get("content-length") || 0);
+  if (declaredLength > 8192) return json({ error: "request_too_large" }, 413);
+  let payload;
+  try {
+    const raw = await request.text();
+    if (new TextEncoder().encode(raw).byteLength > 8192) return json({ error: "request_too_large" }, 413);
+    payload = JSON.parse(raw);
+  } catch {
+    return json({ error: "invalid_json" }, 400);
+  }
+  const parsed = parseAiChatPayload(payload);
+  if (!parsed.ok) return json({ error: parsed.error }, 400);
+  try {
+    const result = await env.AI.run(AI_MODEL, {
+      messages: [
+        {
+          role: "system",
+          content: "Tu es MON QUOTIDIEN AI, l'assistant de la plateforme ivoirienne MON QUOTIDIEN CI. Réponds en français clair, avec un ton professionnel, chaleureux et précis. Aide sur les services de commerce, transport, livraison et vie quotidienne en Côte d'Ivoire. Tu n'as accès à aucune donnée personnelle, commande, disponibilité, stock, paiement ou portefeuille dans cette version. N'invente jamais ces informations et explique clairement lorsque l'utilisateur doit consulter l'application ou contacter un partenaire. Tu ne peux effectuer aucune action, aucun paiement, aucune réservation et aucune modification de compte. Ne prétends jamais avoir exécuté une opération. Pour les sujets urgents ou sensibles, recommande de contacter le service compétent."
+        },
+        { role: "user", content: parsed.message }
+      ],
+      max_tokens: 600,
+      temperature: 0.35
+    });
+    const answer = typeof result?.response === "string" ? result.response.trim() : "";
+    if (!answer) return json({ error: "ai_empty_response" }, 502);
+    return json({ answer, model: AI_MODEL, turnId: crypto.randomUUID() });
+  } catch {
+    return json({ error: "ai_generation_failed" }, 502);
+  }
+}
+
 async function jeko(env,path,init={}) {
   let response;
   try {
@@ -1211,7 +1265,7 @@ export default {
     let response;
     if(url.pathname==="/health"&&request.method==="GET") response=json({ok:true,service:"mon-quotidien-jeko",mode:"production-locked"});
     else if(url.pathname==="/webhook") response=await webhook(request,env);
-    else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
+    else if(url.pathname==="/api/ai/chat"&&request.method==="POST") response=await aiChat(request,env);\n    else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
     else if(url.pathname==="/api/publicites/admin-upload"&&request.method==="POST") response=await publiciteUpload(request,env,true);
