@@ -11,7 +11,28 @@ const section=document.createElement("section");
 section.id="cabinesTelephoniques";section.className="card";section.style.display="none";
 section.innerHTML='<h2>📞 Cabine téléphonique</h2><div class="cab-actions"><button id="cabTabClient" type="button">Faire une demande</button><button id="cabTabPartner" type="button">Espace cabiniste</button></div><p>Transfert d’unités et souscription de forfaits Internet ou appels. Votre demande est transmise à tous les cabinistes partenaires approuvés.</p><div id="cabClient"><h3>Faire une demande</h3><label>Opérateur</label><select id="cabOperateur"><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><label>Service souhaité</label><select id="cabService"><option value="transfert_unites">Transfert d’unités</option><option value="forfait_internet">Forfait Internet</option><option value="forfait_appels">Forfait appels</option><option value="forfait_mixte">Forfait mixte</option></select><label>Numéro bénéficiaire</label><input id="cabNumero" type="tel" maxlength="20" placeholder="Numéro à recharger"><label>Montant souhaité (FCFA)</label><input id="cabMontant" type="number" min="1" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000"><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"><label>Précisions sur le forfait ou la demande</label><textarea id="cabDetails" maxlength="180" placeholder="Ex. Forfait Internet 2 Go, si applicable"></textarea><button id="cabEnvoyer" class="primary">Envoyer ma demande</button><p id="cabMessage" aria-live="polite"></p><hr><h3>Suivi de mes demandes</h3><div id="cabHistorique">Connectez-vous pour consulter vos demandes.</div><button id="cabRefreshHistory" type="button">Actualiser</button></div><hr><div id="cabPartner" hidden><h3>Espace cabiniste partenaire</h3><div id="cabAuth"></div><div id="cabPanel" hidden></div></div>';
 document.body.appendChild(section);
-const css=document.createElement("style");css.textContent="#cabinesTelephoniques .cab-item{border:1px solid #e1eae2;border-radius:14px;padding:12px;margin:10px 0;background:#fff}#cabinesTelephoniques label{display:block;margin-top:10px}#cabinesTelephoniques input,#cabinesTelephoniques select,#cabinesTelephoniques textarea{box-sizing:border-box;width:100%;padding:12px;border:1px solid #dce7de;border-radius:10px}#cabinesTelephoniques .cab-actions{display:flex;gap:8px;flex-wrap:wrap}";document.head.appendChild(css);
+const css=document.createElement("style");css.textContent=`
+#cabinesTelephoniques{max-width:760px;margin:0 auto}
+#cabinesTelephoniques .cab-item{border:1px solid #e1eae2;border-radius:16px;padding:14px;margin:10px 0;background:#fff;box-shadow:0 4px 14px #173b2b0b}
+#cabinesTelephoniques label{display:block;margin-top:10px}
+#cabinesTelephoniques input,#cabinesTelephoniques select,#cabinesTelephoniques textarea{box-sizing:border-box;width:100%;padding:12px;border:1px solid #dce7de;border-radius:10px}
+#cabinesTelephoniques .cab-actions{display:flex;gap:8px;flex-wrap:wrap}
+#cabinesTelephoniques .cab-actions button{background:#edf6ef;color:#17663d;border:1px solid #d8e8dc}
+#cabinesTelephoniques .cab-actions button.primary{background:#16834a;color:#fff}
+#cabinesTelephoniques .cab-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+#cabinesTelephoniques .cab-tabs button{flex:1;min-width:130px;background:#f1f6f2;color:#31513d}
+#cabinesTelephoniques .cab-tabs button.active{background:#17663d;color:#fff}
+#cabinesTelephoniques .cab-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}
+#cabinesTelephoniques .cab-stat{background:#f4f8f4;border:1px solid #e2ece3;border-radius:14px;padding:12px;text-align:center}
+#cabinesTelephoniques .cab-stat strong{display:block;font-size:21px;color:#17663d}
+#cabinesTelephoniques .cab-stat span{font-size:11px;color:#68786e}
+#cabinesTelephoniques .cab-pill{display:inline-block;padding:4px 9px;border-radius:20px;background:#edf6ef;color:#17663d;font-size:12px;font-weight:700}
+#cabinesTelephoniques .cab-muted{color:#68786e;font-size:12px}
+#cabinesTelephoniques .cab-request-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+#cabinesTelephoniques .cab-filter{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+#cabinesTelephoniques button:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:420px){#cabinesTelephoniques .cab-stats{gap:5px}#cabinesTelephoniques .cab-stat{padding:9px 5px}#cabinesTelephoniques .cab-stat strong{font-size:18px}#cabinesTelephoniques .cab-filter{grid-template-columns:1fr}}
+`;document.head.appendChild(css);
 function ouvrirCabinesTelephoniques(){if(typeof ouvrirSectionPleinEcran==="function")ouvrirSectionPleinEcran("cabinesTelephoniques","Cabine téléphonique");else section.style.display="block";chargerHistorique();}
 window.ouvrirCabinesTelephoniques=ouvrirCabinesTelephoniques;
 $("cabEnvoyer").onclick=async()=>{
@@ -59,11 +80,43 @@ async function espaceCabine(){
   const p=await partnerDb.collection("cabines_telephoniques").doc(partenaire.uid).get();
   if(!p.exists){$("cabPanel").textContent="Aucune candidature cabiniste trouvée pour ce compte.";return;}
   profilCabine=p.data();
-  $("cabPanel").innerHTML='<div class="cab-item"><strong>'+esc(profilCabine.nom)+'</strong><p>Statut : '+esc(profilCabine.statut)+'</p><button id="cabLogout" type="button">Déconnexion</button></div><div id="cabOrders"><p>Chargement des demandes…</p></div>';
+  $("cabPanel").innerHTML='<div class="cab-item"><div class="cab-request-head"><div><strong style="font-size:18px">'+esc(profilCabine.nom)+'</strong><p class="cab-muted">'+esc(profilCabine.commune)+' · '+esc(profilCabine.telephone)+'</p></div><span class="cab-pill">'+esc(profilCabine.statut==="approuve"?"Partenaire approuvé":profilCabine.statut==="refuse"?"Candidature refusée":"En attente de validation")+'</span></div><p class="cab-muted">Opérateurs : '+esc((profilCabine.operateurs||[]).join(" · "))+'<br>Horaires : '+esc(profilCabine.horaires||"Non renseignés")+'</p><button id="cabLogout" type="button">Déconnexion</button></div><div id="cabOrders"></div>';
   $("cabLogout").onclick=async()=>{await partnerAuth.signOut();partenaire=null;profilCabine=null;$("cabPanel").hidden=true;$("cabAuth").hidden=false;};
-  if(profilCabine.statut!=="approuve"){$("cabOrders").innerHTML="<p class='notice'>Votre compte est en attente de validation. Vous pourrez recevoir des demandes dès son approbation.</p>";return;}
+  if(profilCabine.statut!=="approuve"){$("cabOrders").innerHTML="<p class='notice'>Votre candidature est en cours de validation. Dès son approbation, vous pourrez consulter et accepter les demandes de toute la Côte d’Ivoire.</p>";return;}
   await chargerDemandesCabine();
  }catch(e){$("cabPanel").textContent="Espace cabiniste indisponible : "+(e.message||"erreur");}
+}
+let cabDocsCache=[],cabVue="ouvertes";
+function dateCabine(v){try{return v&&v.toDate?v.toDate().toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"Date non disponible";}catch(_){return"Date non disponible";}}
+function afficherDemandesCabine(){
+ const z=$("cabOrders");if(!z)return;
+ const op=$("cabFiltreOperateur")?.value||"",zone=($("cabFiltreCommune")?.value||"").trim().toLocaleLowerCase("fr");
+ const docs=cabDocsCache.filter(d=>{
+  const a=d.data(),mine=a.cabineUid===partenaire.uid;
+  return (cabVue==="ouvertes"?!mine&&a.statut==="en_attente":mine)&&(!op||a.operateur===op)&&(!zone||String(a.commune||"").toLocaleLowerCase("fr").includes(zone));
+ });
+ const ouvertes=cabDocsCache.filter(d=>d.data().statut==="en_attente"&&!d.data().cabineUid).length;
+ const miennes=cabDocsCache.filter(d=>d.data().cabineUid===partenaire.uid);
+ const encours=miennes.filter(d=>["acceptee","en_cours"].includes(d.data().statut)).length;
+ const terminees=miennes.filter(d=>d.data().statut==="terminee").length;
+ z.innerHTML='<div class="cab-stats"><div class="cab-stat"><strong>'+ouvertes+'</strong><span>Demandes disponibles</span></div><div class="cab-stat"><strong>'+encours+'</strong><span>À traiter</span></div><div class="cab-stat"><strong>'+terminees+'</strong><span>Terminées</span></div></div><div class="cab-tabs"><button type="button" data-cab-vue="ouvertes" class="'+(cabVue==="ouvertes"?"active":"")+'">Demandes disponibles</button><button type="button" data-cab-vue="miennes" class="'+(cabVue==="miennes"?"active":"")+'">Mes prestations ('+miennes.length+')</button></div><div class="cab-filter"><select id="cabFiltreOperateur"><option value="">Tous les opérateurs</option><option>Orange</option><option>MTN</option><option>Moov Africa</option></select><input id="cabFiltreCommune" type="search" placeholder="Filtrer par commune"></div><div class="cab-actions"><button id="cabReload" type="button">↻ Actualiser les demandes</button></div><p class="cab-muted">Les demandes disponibles sont diffusées à tous les cabinistes approuvés. La première acceptation attribue la demande.</p>';
+ z.querySelectorAll("[data-cab-vue]").forEach(b=>b.onclick=()=>{cabVue=b.dataset.cabVue;afficherDemandesCabine();});
+ $("cabFiltreOperateur").value=op;$("cabFiltreCommune").value=zone;
+ $("cabFiltreOperateur").onchange=afficherDemandesCabine;$("cabFiltreCommune").oninput=afficherDemandesCabine;$("cabReload").onclick=chargerDemandesCabine;
+ if(!docs.length){z.insertAdjacentHTML("beforeend",'<div class="cab-item"><strong>Aucune demande dans cette rubrique</strong><p class="cab-muted">'+(cabVue==="ouvertes"?"De nouvelles demandes apparaîtront ici dès qu’un client en publiera une.":"Les prestations que vous acceptez apparaîtront ici.")+'</p></div>');return;}
+ docs.forEach(d=>{
+  const a=d.data(),mine=a.cabineUid===partenaire.uid,article=document.createElement("article");article.className="cab-item";
+  const titre=document.createElement("div");titre.className="cab-request-head";
+  const left=document.createElement("div");left.innerHTML='<strong>'+esc(a.operateur)+' · '+esc(({transfert_unites:"Transfert d’unités",forfait_internet:"Forfait Internet",forfait_appels:"Forfait appels",forfait_mixte:"Forfait mixte"}[a.typeService]||a.typeService))+'</strong><p class="cab-muted">Demande du '+esc(dateCabine(a.createdAt))+'</p>';
+  const badge=document.createElement("span");badge.className="cab-pill";badge.textContent=libelleStatut(a.statut);titre.append(left,badge);article.append(titre);
+  const info=document.createElement("div");info.innerHTML='<p><strong>Numéro bénéficiaire :</strong> '+esc(a.numeroBeneficiaire)+'</p><p><strong>Montant demandé :</strong> '+money(a.montantPrestation)+'</p><p><strong>Commune :</strong> '+esc(a.commune)+'</p><p><strong>Précisions :</strong> '+esc(a.details)+'</p>'+(mine?'<p class="cab-muted">Cette demande vous est attribuée.</p>':"");article.append(info);
+  const actions=document.createElement("div");actions.className="cab-actions";
+  const addAction=(label,fn,primary=false)=>{const b=document.createElement("button");b.type="button";b.textContent=label;if(primary)b.className="primary";b.onclick=fn;actions.append(b);};
+  if(!mine&&a.statut==="en_attente")addAction("Accepter cette demande",()=>window.cabAccepter(d.id),true);
+  if(mine&&a.statut==="acceptee")addAction("Démarrer la prestation",()=>window.cabChangerStatut(d.id,"en_cours"),true);
+  if(mine&&a.statut==="en_cours")addAction("Confirmer la fin de prestation",()=>{if(confirm("Confirmez-vous que la prestation a bien été réalisée ?"))window.cabChangerStatut(d.id,"terminee");},true);
+  if(actions.children.length)article.append(actions);z.append(article);
+ });
 }
 async function chargerDemandesCabine(){
  const z=$("cabOrders");if(!z||!partenaire||!profilCabine||profilCabine.statut!=="approuve")return;
@@ -74,14 +127,8 @@ async function chargerDemandesCabine(){
    partnerDb.collection("demandes_cabines").where("cabineUid","==",partenaire.uid).limit(100).get()
   ]);
   const map=new Map();open.docs.forEach(d=>map.set(d.id,d));assigned.docs.forEach(d=>map.set(d.id,d));
-  const docs=Array.from(map.values()).sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
-  if(!docs.length){z.innerHTML="<p>Aucune demande disponible pour le moment. Actualisez régulièrement.</p><button id='cabReload'>Actualiser</button>";$("cabReload").onclick=chargerDemandesCabine;return;}
-  z.innerHTML='<h4>Demandes reçues ('+docs.length+')</h4><button id="cabReload" type="button">Actualiser les demandes</button>'+docs.map(d=>{
-   const a=d.data(),mine=a.cabineUid===partenaire.uid,openRequest=a.statut==="en_attente"&&!a.cabineUid;
-   return '<article class="cab-item"><strong>'+esc(a.operateur)+' · '+esc(a.typeService)+'</strong><p>Numéro bénéficiaire : '+esc(a.numeroBeneficiaire)+'</p><p>Montant souhaité : '+money(a.montantPrestation)+'</p><p>Commune : '+esc(a.commune)+' · '+esc(a.details)+'</p><strong>'+esc(libelleStatut(a.statut))+'</strong>'+(mine?'<p>Demande attribuée à votre cabine.</p>':"")+(openRequest?'<div class="cab-actions"><button type="button" onclick="window.cabAccepter(\''+d.id+'\')">Accepter la demande</button></div>':"")+(mine&&a.statut==="acceptee"?'<div class="cab-actions"><button type="button" onclick="window.cabChangerStatut(\''+d.id+'\',\'en_cours\')">Démarrer le traitement</button></div>':"")+(mine&&a.statut==="en_cours"?'<div class="cab-actions"><button type="button" onclick="window.cabChangerStatut(\''+d.id+'\',\'terminee\')">Confirmer la prestation terminée</button></div>':"")+'</article>';
-  }).join("");
-  $("cabReload").onclick=chargerDemandesCabine;
- }catch(e){console.error(e);z.innerHTML="<p>Impossible de charger les demandes. Vérifiez les règles Firestore et les index.</p>";}
+  cabDocsCache=Array.from(map.values()).sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));afficherDemandesCabine();
+ }catch(e){console.error(e);z.innerHTML="<p>Impossible de charger les demandes. Vérifiez votre connexion et réessayez.</p><button id='cabReload' type='button'>Réessayer</button>";$("cabReload").onclick=chargerDemandesCabine;}
 }
 window.cabAccepter=async id=>{
  if(!partenaire||!profilCabine||profilCabine.statut!=="approuve")return;
