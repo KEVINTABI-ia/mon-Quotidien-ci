@@ -13816,6 +13816,23 @@ async function mqciAdminStatutPharmacie(uid,statut){
 
 <style id="mqci-ai-widget-style">
   #mqciAiLauncher{position:fixed;right:18px;bottom:22px;z-index:14000;border:0;border-radius:999px;background:#087C62;color:#fff;box-shadow:0 8px 24px #102d3540;padding:14px 18px;font:700 15px system-ui;cursor:pointer}
+  /* Le raccourci IA est intégré au groupe du menu supérieur, jamais au-dessus de la navigation basse. */
+  #mqciPartnerDropdown{display:flex!important;align-items:center!important;gap:8px!important}
+  #mqciPartnerDropdown #mqciAiLauncher{
+    position:relative!important;inset:auto!important;right:auto!important;bottom:auto!important;
+    z-index:auto!important;display:inline-flex;align-items:center;justify-content:center;
+    min-width:58px;min-height:42px;width:auto;padding:0 12px;border:1px solid #075f4b;
+    border-radius:12px;background:#087C62;color:#fff;box-shadow:0 4px 14px #087c624d;
+    font:800 13px system-ui;letter-spacing:.2px;white-space:nowrap;
+    animation:mqciAiLauncherPulse 2.2s ease-in-out infinite;
+  }
+  @keyframes mqciAiLauncherPulse{
+    0%,100%{transform:translateY(0);box-shadow:0 4px 12px #087c6240}
+    50%{transform:translateY(-2px);box-shadow:0 0 0 5px #087c6220,0 7px 18px #087c6260}
+  }
+  @media(prefers-reduced-motion:reduce){
+    #mqciPartnerDropdown #mqciAiLauncher{animation:none!important}
+  }
   #mqciAiLauncher[hidden],#mqciAiPanel[hidden]{display:none!important}
   #mqciAiPanel{position:fixed;right:18px;bottom:84px;z-index:14001;width:min(390px,calc(100vw - 24px));height:min(570px,calc(100dvh - 115px));background:#fff;border:1px solid #dce7df;border-radius:20px;box-shadow:0 18px 55px #102d3540;display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
   #mqciAiPanel.mqci-ai-fullscreen{inset:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;max-width:none!important;max-height:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;z-index:2147483000!important}
@@ -14099,6 +14116,20 @@ body.mqci-ai-no-scroll{
   const subscribeButton=document.getElementById("mqciAiSubscribe");
   const paymentMethod=document.getElementById("mqciAiPaymentMethod");
   if(!launcher||!panel||!form||!input||!send||!messages)return;
+  function dockAiLauncherBesideMenu(){
+    const menu=document.getElementById("mqciPartnerDropdown");
+    const menuToggle=document.getElementById("mqciPartnerDropdownToggle");
+    if(!menu||!menuToggle||!launcher)return;
+    launcher.textContent="✦ IA";
+    launcher.setAttribute("aria-label","Ouvrir MON QUOTIDIEN AI");
+    launcher.title="Ouvrir MON QUOTIDIEN AI";
+    if(launcher.parentElement!==menu)menu.insertBefore(launcher,menuToggle);
+  }
+  if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",dockAiLauncherBesideMenu,{once:true});
+  }else{
+    dockAiLauncherBesideMenu();
+  }
   const endpoint="https://mon-quotidien-jeko.tabikevin57.workers.dev/api/ai/chat";
   const historyEndpoint="https://mon-quotidien-jeko.tabikevin57.workers.dev/api/ai/conversations/";
   const subscriptionEndpoint="https://mon-quotidien-jeko.tabikevin57.workers.dev/api/ai/subscription";
