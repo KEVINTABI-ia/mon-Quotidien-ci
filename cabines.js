@@ -11,7 +11,7 @@ const section=document.createElement("section");
 section.id="cabinesTelephoniques";section.className="card";section.style.display="none";
 section.innerHTML=`<h2>📞 Cabine téléphonique</h2>
 <div class="cab-actions"><button id="cabTabClient" type="button">Espace client</button><button id="cabTabPartner" type="button">Espace cabiniste</button></div>
-<div id="cabClient"><p>Choisissez un service. Les demandes sont proposées aux cabinistes partenaires actuellement en ligne partout en Côte d’Ivoire.</p>
+<div id="cabClient">
 <div class="cab-main-menu" id="cabClientChoices">
 <button id="cabStartTransfer" class="cab-menu-card" type="button"><span class="cab-menu-icon cab-transfer-icon"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M12 22h34l-8-8m8 8-8 8" fill="none" stroke="#1478e8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 42H18l8 8m-8-8 8-8" fill="none" stroke="#ef4444" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>Transférer</strong><small>Envoyer des unités</small></button>
 <button id="cabStartSubscribe" class="cab-menu-card" type="button"><span class="cab-menu-icon cab-phone-icon"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="18" y="7" width="28" height="50" rx="6" fill="none" stroke="#12a9d6" stroke-width="5"/><path d="M27 14h10M29 49h6" stroke="#12a9d6" stroke-width="3" stroke-linecap="round"/></svg></span><strong>Souscrire</strong><small>Forfait appel ou internet</small></button>
@@ -73,7 +73,7 @@ function rendreCatalogueCabine(){
  const op=$("cabOperateur").value,kind=$("cabService").value;
  const matching=cabForfaits.filter(x=>x.op===op&&x.type===kind&&x.price>=200);
  const card=x=>'<article class="cab-item cab-offer"><div class="cab-request-head"><strong>'+esc(x.name)+'</strong><span class="cab-pill">'+esc(x.validity)+'</span></div><p class="cab-price">'+x.price.toLocaleString("fr-FR")+' FCFA</p><p>'+esc(x.data)+' · '+esc(x.minutes)+'</p><button type="button" class="primary" data-cab-offer="'+cabForfaits.indexOf(x)+'">Souscrire</button></article>';
- let html='<div class="cab-catalog-head"><h3>Annuaire des offres — '+esc(op)+'</h3><p class="cab-muted">Choisissez une offre dans la liste correspondant à votre forfait.</p></div>';
+ let html='<div class="cab-catalog-head"><h3>Annuaire des offres — '+esc(op)+'</h3></div>';
  if(matching.length)html+='<div class="cab-offers">'+matching.map(card).join("")+'</div>';
  else html+='<div class="cab-item">Aucune offre répertoriée pour cet opérateur et cette catégorie. Choisissez une autre catégorie ou un autre opérateur.</div>';
  root.innerHTML=html+'<p class="cab-muted">Le prix affiché est le prix de la prestation, hors frais de service MON QUOTIDIEN CI. Le paiement est confirmé par Jèko avant transmission à une cabine.</p>';
