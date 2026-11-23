@@ -44,4 +44,5 @@ Le code est livré sans déploiement. L'URL du Worker devra ensuite être config
 - `POST /v1/invitations` — propriétaire connecté : `businessId, email, role, activityIds, permissions, expiresInHours?`.
 - `POST /v1/invitations/accept` — collaborateur connecté et e-mail vérifié : `invitationId, token`.
 - `POST /v1/invitations/revoke` — propriétaire connecté : `businessId, invitationId`.
+- `POST /v1/members/update` — propriétaire connecté : `businessId, memberUid, role, status, activityIds, permissions`; toute modification est auditée.
 - `GET /health` — contrôle technique sans données métier.
