@@ -61,33 +61,7 @@
 
   <section id="membersCard" class="card hidden">
     <h2>Collaborateurs et autorisations</h2>
-    <p class="muted">Ajoutez un compte Firebase déjà créé. Le collaborateur se connectera avec son propre compte. Les invitations par e-mail ne sont pas encore activées.</p>
-    <form id="memberForm">
-      <label for="memberUid">Identifiant Firebase (UID) du collaborateur</label>
-      <input id="memberUid" required minlength="1" maxlength="128" autocomplete="off">
-      <label for="memberRole">Rôle</label>
-      <select id="memberRole" required>
-        <option value="general_director">Directeur général</option>
-        <option value="activity_manager">Responsable d'activité</option>
-        <option value="accountant">Comptable</option>
-        <option value="cashier">Caissier</option>
-        <option value="stock_manager">Responsable de stock</option>
-        <option value="employee">Employé</option>
-        <option value="observer">Observateur</option>
-      </select>
-      <label for="memberActivity">Activité autorisée</label>
-      <select id="memberActivity" required><option value="">Chargement des activités…</option></select>
-      <div class="grid">
-        <label><input type="checkbox" id="permView" checked> Consulter</label>
-        <label><input type="checkbox" id="permCreate"> Créer</label>
-        <label><input type="checkbox" id="permEdit"> Modifier</label>
-        <label><input type="checkbox" id="permApprove"> Approuver</label>
-        <label><input type="checkbox" id="permCancel"> Annuler / corriger</label>
-        <label><input type="checkbox" id="permExport"> Exporter</label>
-        <label><input type="checkbox" id="permManage"> Gérer les accès</label>
-      </div>
-      <button id="addMemberButton" type="submit">Ajouter le collaborateur</button>
-    </form>
+    <p class="muted">Les collaborateurs apparaîtront ici après acceptation d'une invitation sécurisée. L'ajout direct par UID est désactivé pour éviter d'accorder l'accès au mauvais compte.</p>
     <div id="memberStatus" class="status hidden" role="status" aria-live="polite"></div>
     <div id="membersList"></div>
   </section>
@@ -200,13 +174,6 @@
         businessRef.collection("members").get(),
         businessRef.collection("activities").get()
       ]);
-      const activitySelect=$("memberActivity");
-      activitySelect.replaceChildren();
-      activitiesSnap.forEach(activity=>{
-        const option=document.createElement("option");
-        option.value=activity.id;option.textContent=activity.data().name;
-        activitySelect.appendChild(option);
-      });
       const list=$("membersList");list.replaceChildren();
       membersSnap.forEach(memberDoc=>{
         const m=memberDoc.data();
@@ -249,34 +216,6 @@
       setStatus("memberStatus","Impossible de charger les collaborateurs.",true);
     }
   }
-
-  $("memberForm").addEventListener("submit",async event=>{
-    event.preventDefault();
-    if(!currentBusinessOwner||!currentBusinessId)return setStatus("memberStatus","Seul le propriétaire peut gérer les accès.",true);
-    const uid=$("memberUid").value.trim(),activityId=$("memberActivity").value;
-    if(!uid||!activityId)return setStatus("memberStatus","Renseignez l'UID et l'activité.",true);
-    const permissions={
-      view:$("permView").checked,create:$("permCreate").checked,
-      edit:$("permEdit").checked,approve:$("permApprove").checked,
-      cancel_correct:$("permCancel").checked,export:$("permExport").checked,
-      manage_access:$("permManage").checked
-    };
-    const button=$("addMemberButton");button.disabled=true;
-    try{
-      const ref=db.collection("businesses").doc(currentBusinessId).collection("members").doc(uid);
-      await ref.set({
-        uid,role:$("memberRole").value,status:"active",
-        activityIds:[activityId],permissions,
-        createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
-      $("memberUid").value="";
-      setStatus("memberStatus","Collaborateur ajouté. Il pourra se connecter avec son propre compte.");
-      await loadMembers();
-    }catch(error){
-      console.error("Mon Business member create error",error);
-      setStatus("memberStatus","Ajout refusé. Vérifiez que l'UID correspond à un compte Firebase et que l'activité est valide.",true);
-    }finally{button.disabled=false;}
-  });
 
   async function loadActivities(){
     if(!currentBusinessId||!currentUser)return;
