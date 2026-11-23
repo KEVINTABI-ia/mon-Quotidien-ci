@@ -63,8 +63,7 @@ const cabForfaits=[
  {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:150,data:"15 Mo",minutes:"10 min + 30 SMS",validity:"1 jour",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
  {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:200,data:"25 Mo",minutes:"17 min + 50 SMS",validity:"1 jour",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
  {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:500,data:"250 Mo",minutes:"50 min + 250 SMS",validity:"5 jours",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
- {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:1500,data:"1,5 Go",minutes:"200 min + 500 SMS",validity:"15 jours",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"}
-
+ {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:1500,data:"1,5 Go",minutes:"200 min + 500 SMS",validity:"15 jours",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
  {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Jour 180",price:180,data:"15 Mo",minutes:"10 min + 15 SMS",validity:"1 jour",code:"#111#",source:"https://www.orange.ci/"},
  {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Jour 240",price:240,data:"50 Mo",minutes:"25 min + 25 SMS",validity:"2 jours (22h–5h)",code:"#111#",source:"https://www.orange.ci/"},
  {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Jour 350",price:350,data:"50 Mo",minutes:"30 min + 30 SMS",validity:"24 heures",code:"#111#",source:"https://www.orange.ci/"},
