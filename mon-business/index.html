@@ -115,7 +115,7 @@
     $("userInfo").classList.toggle("hidden",!user);
     $("userInfo").textContent=user?"Compte Firebase authentifié · "+user.uid:"";
     if(!user){currentBusinessId=null;return;}
-    currentBusinessId=sessionStorage.getItem("mqci_mon_business_id")||null;
+    currentBusinessId=localStorage.getItem("mqci_mon_business_id")||null;
     if(currentBusinessId)loadActivities();
   });
 
@@ -145,7 +145,7 @@
       });
       await batch.commit();
       currentBusinessId=businessRef.id;
-      sessionStorage.setItem("mqci_mon_business_id",currentBusinessId);
+      localStorage.setItem("mqci_mon_business_id",currentBusinessId);
       setStatus("businessStatus","Entreprise créée. Votre compte en est le propriétaire.");
       $("activityCard").classList.remove("hidden");
       await loadActivities();
