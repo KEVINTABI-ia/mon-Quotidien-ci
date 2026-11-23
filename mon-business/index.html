@@ -304,7 +304,13 @@
   async function loadActivities(){
     if(!currentBusinessId||!currentUser)return;
     try{
-      const snap=await db.collection("businesses").doc(currentBusinessId).collection("activities").get();
+      const businessRef=db.collection("businesses").doc(currentBusinessId);
+      const member=await businessRef.collection("members").doc(currentUser.uid).get();
+      if(!member.exists||member.data().role!=="owner"||member.data().status!=="active"){
+        $("activityCard").classList.add("hidden");
+        return;
+      }
+      const snap=await businessRef.collection("activities").get();
       const inviteSelect=$("inviteActivities");
       if(inviteSelect){inviteSelect.replaceChildren();snap.forEach(doc=>{const option=document.createElement("option");option.value=doc.id;option.textContent=doc.data().name;inviteSelect.appendChild(option);});}
       const list=$("activitiesList");list.replaceChildren();
