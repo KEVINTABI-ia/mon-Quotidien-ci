@@ -59,6 +59,39 @@
     <div id="businessStatus" class="status hidden" role="status" aria-live="polite"></div>
   </section>
 
+  <section id="membersCard" class="card hidden">
+    <h2>Collaborateurs et autorisations</h2>
+    <p class="muted">Ajoutez un compte Firebase déjà créé. Le collaborateur se connectera avec son propre compte. Les invitations par e-mail ne sont pas encore activées.</p>
+    <form id="memberForm">
+      <label for="memberUid">Identifiant Firebase (UID) du collaborateur</label>
+      <input id="memberUid" required minlength="1" maxlength="128" autocomplete="off">
+      <label for="memberRole">Rôle</label>
+      <select id="memberRole" required>
+        <option value="general_director">Directeur général</option>
+        <option value="activity_manager">Responsable d'activité</option>
+        <option value="accountant">Comptable</option>
+        <option value="cashier">Caissier</option>
+        <option value="stock_manager">Responsable de stock</option>
+        <option value="employee">Employé</option>
+        <option value="observer">Observateur</option>
+      </select>
+      <label for="memberActivity">Activité autorisée</label>
+      <select id="memberActivity" required><option value="">Chargement des activités…</option></select>
+      <div class="grid">
+        <label><input type="checkbox" id="permView" checked> Consulter</label>
+        <label><input type="checkbox" id="permCreate"> Créer</label>
+        <label><input type="checkbox" id="permEdit"> Modifier</label>
+        <label><input type="checkbox" id="permApprove"> Approuver</label>
+        <label><input type="checkbox" id="permCancel"> Annuler / corriger</label>
+        <label><input type="checkbox" id="permExport"> Exporter</label>
+        <label><input type="checkbox" id="permManage"> Gérer les accès</label>
+      </div>
+      <button id="addMemberButton" type="submit">Ajouter le collaborateur</button>
+    </form>
+    <div id="memberStatus" class="status hidden" role="status" aria-live="polite"></div>
+    <div id="membersList"></div>
+  </section>
+
   <section id="activityCard" class="card hidden">
     <h2>Ajouter un secteur d'activité</h2>
     <p class="muted">Chaque activité aura ses propres données et ses propres droits d'accès. Le tableau de bord global pourra ensuite consolider les résultats.</p>
@@ -95,7 +128,7 @@
   if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const auth=firebase.auth(), db=firebase.firestore();
   const $=id=>document.getElementById(id);
-  let currentUser=null, currentBusinessId=null;
+  let currentUser=null, currentBusinessId=null, currentBusinessOwner=false;
   const setStatus=(id,message,isError=false)=>{
     const el=$(id);el.textContent=message;el.classList.remove("hidden","error");
     if(isError)el.classList.add("error");
@@ -116,7 +149,7 @@
     $("userInfo").textContent=user?"Compte Firebase authentifié · "+user.uid:"";
     if(!user){currentBusinessId=null;return;}
     currentBusinessId=localStorage.getItem("mqci_mon_business_id")||null;
-    if(currentBusinessId)loadActivities();
+    if(currentBusinessId){loadActivities();loadMembers();}
   });
 
   $("businessForm").addEventListener("submit",async event=>{
@@ -144,7 +177,7 @@
         activityIds:[],permissions:{},createdAt:now
       });
       await batch.commit();
-      currentBusinessId=businessRef.id;
+      currentBusinessId=businessRef.id;\n      currentBusinessOwner=true;\n      $("membersCard").classList.remove("hidden");
       localStorage.setItem("mqci_mon_business_id",currentBusinessId);
       setStatus("businessStatus","Entreprise créée. Votre compte en est le propriétaire.");
       $("activityCard").classList.remove("hidden");
@@ -152,6 +185,96 @@
     }catch(error){
       console.error("Mon Business registration error",error);
       setStatus("businessStatus","Impossible de créer l'entreprise. Vérifiez votre connexion et vos autorisations, puis réessayez.",true);
+    }finally{button.disabled=false;}
+  });
+
+  async function loadMembers(){
+    if(!currentBusinessId||!currentUser)return;
+    try{
+      const businessRef=db.collection("businesses").doc(currentBusinessId);
+      const ownerDoc=await businessRef.collection("members").doc(currentUser.uid).get();
+      currentBusinessOwner=ownerDoc.exists&&ownerDoc.data().role==="owner"&&ownerDoc.data().status==="active";
+      $("membersCard").classList.toggle("hidden",!currentBusinessOwner);
+      if(!currentBusinessOwner)return;
+      const [membersSnap,activitiesSnap]=await Promise.all([
+        businessRef.collection("members").get(),
+        businessRef.collection("activities").get()
+      ]);
+      const activitySelect=$("memberActivity");
+      activitySelect.replaceChildren();
+      activitiesSnap.forEach(activity=>{
+        const option=document.createElement("option");
+        option.value=activity.id;option.textContent=activity.data().name;
+        activitySelect.appendChild(option);
+      });
+      const list=$("membersList");list.replaceChildren();
+      membersSnap.forEach(memberDoc=>{
+        const m=memberDoc.data();
+        const item=document.createElement("div");item.className="status";
+        const label=document.createElement("strong");
+        label.textContent=(m.uid||memberDoc.id)+" · "+m.role+" · "+m.status;
+        item.appendChild(label);
+        if(memberDoc.id!==currentUser.uid){
+          const controls=document.createElement("div");controls.className="grid";
+          const role=document.createElement("select");
+          ["general_director","activity_manager","accountant","cashier","stock_manager","employee","observer"].forEach(value=>{
+            const option=document.createElement("option");option.value=value;option.textContent=value;role.appendChild(option);
+          });
+          role.value=m.role;
+          const state=document.createElement("select");
+          [["active","Actif"],["suspended","Suspendu"],["revoked","Révoqué"]].forEach(([value,labelText])=>{
+            const option=document.createElement("option");option.value=value;option.textContent=labelText;state.appendChild(option);
+          });
+          state.value=m.status;
+          const save=document.createElement("button");save.type="button";save.textContent="Enregistrer";
+          save.addEventListener("click",async()=>{
+            save.disabled=true;
+            try{
+              await businessRef.collection("members").doc(memberDoc.id).update({
+                role:role.value,status:state.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+              });
+              setStatus("memberStatus","Droits du collaborateur mis à jour.");
+              await loadMembers();
+            }catch(error){
+              console.error("Mon Business member update error",error);
+              setStatus("memberStatus","Modification refusée. Vérifiez les autorisations.",true);
+            }finally{save.disabled=false;}
+          });
+          controls.append(role,state,save);item.appendChild(controls);
+        }
+        list.appendChild(item);
+      });
+    }catch(error){
+      console.error("Mon Business member read error",error);
+      setStatus("memberStatus","Impossible de charger les collaborateurs.",true);
+    }
+  }
+
+  $("memberForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(!currentBusinessOwner||!currentBusinessId)return setStatus("memberStatus","Seul le propriétaire peut gérer les accès.",true);
+    const uid=$("memberUid").value.trim(),activityId=$("memberActivity").value;
+    if(!uid||!activityId)return setStatus("memberStatus","Renseignez l'UID et l'activité.",true);
+    const permissions={
+      view:$("permView").checked,create:$("permCreate").checked,
+      edit:$("permEdit").checked,approve:$("permApprove").checked,
+      cancel_correct:$("permCancel").checked,export:$("permExport").checked,
+      manage_access:$("permManage").checked
+    };
+    const button=$("addMemberButton");button.disabled=true;
+    try{
+      const ref=db.collection("businesses").doc(currentBusinessId).collection("members").doc(uid);
+      await ref.set({
+        uid,role:$("memberRole").value,status:"active",
+        activityIds:[activityId],permissions,
+        createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      $("memberUid").value="";
+      setStatus("memberStatus","Collaborateur ajouté. Il pourra se connecter avec son propre compte.");
+      await loadMembers();
+    }catch(error){
+      console.error("Mon Business member create error",error);
+      setStatus("memberStatus","Ajout refusé. Vérifiez que l'UID correspond à un compte Firebase et que l'activité est valide.",true);
     }finally{button.disabled=false;}
   });
 
