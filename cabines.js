@@ -129,13 +129,14 @@ const cabForfaits=[
  {op:"MTN",type:"forfait_internet",name:"Internet 150 Mo",price:150,data:"150 Mo",minutes:"—",validity:"1 jour",code:"*105#",source:"https://www.mtn.ci/"},
  {op:"MTN",type:"forfait_internet",name:"Internet 220 Mo",price:200,data:"220 Mo",minutes:"—",validity:"2 jours",code:"*105#",source:"https://www.mtn.ci/"},
  {op:"MTN",type:"forfait_internet",name:"Internet 340 Mo",price:300,data:"340 Mo",minutes:"—",validity:"3 jours",code:"*105#",source:"https://www.mtn.ci/"},
- {op:"MTN",type:"forfait_internet",name:"Internet 450 Mo",price:400,data:"450 Mo",minutes:"—",validity:"3 jours",code:"*105#",source:"https://www.mtn.ci/"},
- {op:"MTN",type:"forfait_internet",name:"Internet 750 Mo",price:500,data:"750 Mo",minutes:"—",validity:"3 jours",code:"*105#",source:"https://www.mtn.ci/"},
- {op:"MTN",type:"forfait_internet",name:"Internet 1,2 Go",price:1000,data:"1,2 Go",minutes:"—",validity:"7 jours",code:"*105#",source:"https://www.mtn.ci/"},
- {op:"MTN",type:"forfait_internet",name:"Internet 2 Go",price:1800,data:"2 Go",minutes:"—",validity:"30 jours",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 1,5 Go",price:500,data:"1,5 Go",minutes:"—",validity:"3 jours",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 1,3 Go",price:1000,data:"1,3 Go",minutes:"—",validity:"7 jours",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 2,2 Go",price:1500,data:"2,2 Go",minutes:"—",validity:"7 jours",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 2,5 Go",price:2000,data:"2,5 Go",minutes:"—",validity:"30 jours",code:"*105#",source:"https://www.mtn.ci/"},
  {op:"MTN",type:"forfait_internet",name:"Internet 3,5 Go",price:2500,data:"3,5 Go",minutes:"—",validity:"30 jours",code:"*105#",source:"https://www.mtn.ci/"},
  {op:"MTN",type:"forfait_internet",name:"Internet 7,2 Go",price:5000,data:"7,2 Go",minutes:"—",validity:"30 jours",code:"*105#",source:"https://www.mtn.ci/"},
- {op:"MTN",type:"forfait_internet",name:"Internet 15 Go",price:10000,data:"15 Go",minutes:"—",validity:"30 jours",code:"*105#",source:"https://www.mtn.ci/"}
+ {op:"MTN",type:"forfait_internet",name:"Internet 15 Go",price:10000,data:"15 Go",minutes:"—",validity:"30 jours",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 30 Go",price:15000,data:"30 Go",minutes:"—",validity:"30 jours",code:"*105#",source:"https://www.mtn.ci/"}
 ];
 
 const cabTypeLabels={forfait_internet:"Internet",forfait_appels:"Appels",forfait_mixte:"Mixte"};
