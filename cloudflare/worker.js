@@ -2025,7 +2025,8 @@ export function normalizeMonBusinessIdentity(name, phone) {
   const normalizedName = typeof name === "string"
     ? name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ")
     : "";
-  const normalizedPhone = typeof phone === "string" ? phone.replace(/[^0-9]/g, "") : "";
+  const digits = typeof phone === "string" ? phone.replace(/[^0-9]/g, "") : "";
+  const normalizedPhone = digits.length === 10 ? "225" + digits : digits;
   if (normalizedName.length < 2 || normalizedName.length > 100 || !/^225[0-9]{10}$/.test(normalizedPhone)) return null;
   return { normalizedName, normalizedPhone };
 }
