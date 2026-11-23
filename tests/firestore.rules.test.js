@@ -1633,7 +1633,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       await assertFails(deleteDoc(doc(db, "businesses", BUSINESS_ID)));
     });
 
-    it("permet au propriétaire de modifier un membre existant mais pas de modifier le propriétaire", async () => {
+    it("refuse toute modification directe des droits d'un collaborateur depuis le navigateur", async () => {
       const { doc, updateDoc, serverTimestamp } = require("firebase/firestore");
       await createBusinessAndOwner();
       await testEnv.withSecurityRulesDisabled(async context => {
@@ -1643,7 +1643,7 @@ describe("Mon Transport CI — règles Firestore", function () {
         });
       });
       const ownerDb=testEnv.authenticatedContext(OWNER_UID).firestore();
-      await assertSucceeds(updateDoc(doc(ownerDb,"businesses",BUSINESS_ID,"members","collaborator-1"),{
+      await assertFails(updateDoc(doc(ownerDb,"businesses",BUSINESS_ID,"members","collaborator-1"),{
         role:"activity_manager",status:"suspended",activityIds:["commerce"],
         permissions:{view:true,approve:false},updatedAt:serverTimestamp()
       }));
