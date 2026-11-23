@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#075B35">
+<title>Mon Business — Mon Quotidien CI</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#17352b;background:#f4f7f4;--green:#087c55;--orange:#ed8b27}
+*{box-sizing:border-box}body{margin:0}header{background:#075b35;color:#fff;padding:24px 18px}header p{margin:6px 0 0;color:#d8eee2}main{max-width:900px;margin:24px auto;padding:0 16px}.card{background:white;border:1px solid #dce8df;border-radius:16px;padding:20px;margin:14px 0;box-shadow:0 4px 16px #1231}.muted{color:#62736a;font-size:.92rem}.status{padding:10px 12px;border-radius:9px;background:#eef5ef;margin:12px 0}.error{background:#fff0ed;color:#8b2415}.success{background:#e9f7ed;color:#145b2b}label{display:block;font-weight:600;margin:12px 0 5px}input,select,button{font:inherit;width:100%;padding:12px;border:1px solid #cbd9ce;border-radius:9px}button{background:var(--green);color:#fff;border:0;font-weight:700;margin-top:14px;cursor:pointer}button.secondary{background:#edf4ef;color:#17432c;border:1px solid #cbd9ce}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.hidden{display:none!important}.activity{padding:12px;border:1px solid #dce8df;border-radius:10px;margin:8px 0}.tag{display:inline-block;background:#fff2e4;color:#85470a;border-radius:30px;padding:3px 9px;font-size:.8rem}footer{padding:24px;text-align:center;color:#62736a;font-size:.85rem}
+</style>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<header><strong>MON QUOTIDIEN CI · MON BUSINESS</strong><p>Le quotidien à portée de main ! — Espace de gestion multi-activités</p></header>
+<main>
+<section class="card">
+<h1>Votre espace professionnel</h1>
+<p class="muted">Connectez-vous avec le compte déjà utilisé sur MON QUOTIDIEN CI. Cette première interface permet l'enregistrement sécurisé de l'entreprise et la gestion de ses activités. Les opérations financières et les autres écritures restent désactivées tant que leurs services serveur ne sont pas intégrés.</p>
+<div id="authState" class="status">Vérification de la session…</div>
+<div id="account" class="hidden"><strong>Compte connecté :</strong> <span id="userEmail"></span><button class="secondary" id="signOut">Se déconnecter</button></div>
+</section>
+<section id="registerPanel" class="card hidden">
+<h2>Enregistrer une entreprise</h2>
+<div class="grid">
+<div><label for="businessName">Nom de l'entreprise</label><input id="businessName" maxlength="140" minlength="2" required></div>
+<div><label for="legalStatus">Situation juridique</label><select id="legalStatus"><option value="unregistered">Non immatriculée</option><option value="registered">Immatriculée</option></select></div>
+</div>
+<div id="registrationNumberWrap" class="hidden"><label for="registrationNumber">Numéro d'immatriculation</label><input id="registrationNumber" maxlength="100"></div>
+<button id="createBusiness">Créer mon espace entreprise</button>
+</section>
+<section id="businessPanel" class="card hidden">
+<h2 id="businessTitle">Mon entreprise</h2>
+<p class="muted" id="businessMeta"></p>
+<div class="status">Accès propriétaire confirmé. Les activités sont isolées dans cet espace.</div>
+<h3>Ajouter une activité</h3>
+<div class="grid">
+<div><label for="activityName">Nom de l'activité</label><input id="activityName" maxlength="100" minlength="2" placeholder="Ex. Commerce"></div>
+<div><label for="activityType">Secteur</label><select id="activityType"><option value="commerce">Commerce</option><option value="transport">Transport</option><option value="livraison">Livraison</option><option value="restauration">Restauration</option><option value="agriculture">Agriculture</option><option value="elevage">Élevage</option><option value="services">Services</option><option value="autre">Autre</option></select></div>
+</div>
+<button id="addActivity">Ajouter cette activité</button>
+<h3>Activités enregistrées</h3><div id="activities"><p class="muted">Chargement…</p></div>
+</section>
+<section class="card">
+<h2>Modules métier</h2>
+<div class="grid">
+<div class="activity"><strong>Finances</strong><p class="muted">Caisses, trésorerie, recettes, dépenses et approbations — intégration serveur à finaliser.</p><span class="tag">En préparation</span></div>
+<div class="activity"><strong>Stocks & achats</strong><p class="muted">Inventaire, mouvements, fournisseurs et commandes — intégration à finaliser.</p><span class="tag">En préparation</span></div>
+<div class="activity"><strong>Ventes & clients</strong><p class="muted">Commandes, factures, crédits et remboursements — intégration à finaliser.</p><span class="tag">En préparation</span></div>
+<div class="activity"><strong>RH & logistique</strong><p class="muted">Collaborateurs, congés, paie et missions — intégration à finaliser.</p><span class="tag">En préparation</span></div>
+</div>
+</section>
+<div id="message" class="status" role="status" aria-live="polite"></div>
+</main>
+<footer>Mon Business · Mon Quotidien CI</footer>
+<script>
+(function(){
+"use strict";
+const firebaseConfig={apiKey:"AIzaSyBJFCyGS-cEaEm0_c_-p0CzunNcME9-u7Q",authDomain:"mon-transport-ci.firebaseapp.com",projectId:"mon-transport-ci",storageBucket:"mon-transport-ci.firebasestorage.app",messagingSenderId:"326599026854",appId:"1:326599026854:web:73a33f95f427854aec6c67"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth(),db=firebase.firestore();
+const $=id=>document.getElementById(id);
+let currentUser=null,currentBusinessId=null;
+function message(text,type){$("message").textContent=text;$("message").className="status "+(type||"");}
+function show(el,yes){$(el).classList.toggle("hidden",!yes);}
+async function loadBusiness(id){
+ const ref=db.collection("businesses").doc(id),snap=await ref.get();
+ if(!snap.exists)throw new Error("Entreprise introuvable ou accès non autorisé.");
+ const data=snap.data();
+ if(data.ownerUid!==currentUser.uid)throw new Error("Cet espace n'est pas associé au compte propriétaire connecté.");
+ currentBusinessId=id;localStorage.setItem("mqci_mon_business_id",id);
+ $("businessTitle").textContent=data.name;$("businessMeta").textContent=(data.legalStatus==="registered"?"Immatriculée":"Non immatriculée")+" · Identifiant : "+id;
+ show("registerPanel",false);show("businessPanel",true);
+ await loadActivities();
+}
+async function loadActivities(){
+ if(!currentBusinessId)return;
+ const snap=await db.collection("businesses").doc(currentBusinessId).collection("activities").orderBy("createdAt","desc").get();
+ $("activities").innerHTML="";
+ if(snap.empty){$("activities").textContent="Aucune activité enregistrée pour le moment.";return;}
+ snap.forEach(doc=>{const d=doc.data(),el=document.createElement("div");el.className="activity";const title=document.createElement("strong");title.textContent=d.name;const meta=document.createElement("p");meta.className="muted";meta.textContent=d.type+" · "+(d.status==="active"?"Active":"Archivée");el.append(title,meta);$("activities").appendChild(el);});
+}
+auth.onAuthStateChanged(async user=>{
+ currentUser=user;
+ if(!user){$("authState").textContent="Aucune session active. Connectez-vous d'abord dans MON QUOTIDIEN CI, puis revenez ici.";show("account",false);show("registerPanel",false);show("businessPanel",false);return;}
+ $("authState").textContent="Session Firebase authentifiée.";show("account",true);$("userEmail").textContent=user.email||user.phoneNumber||user.uid;
+ const saved=localStorage.getItem("mqci_mon_business_id");
+ if(saved){try{await loadBusiness(saved);}catch(e){localStorage.removeItem("mqci_mon_business_id");show("registerPanel",true);message(e.message,"error");}}
+ else show("registerPanel",true);
+});
+$("signOut").addEventListener("click",()=>auth.signOut());
+$("legalStatus").addEventListener("change",()=>show("registrationNumberWrap",$("legalStatus").value==="registered"));
+$("createBusiness").addEventListener("click",async()=>{
+ try{
+  if(!currentUser)throw new Error("Connexion requise.");
+  const name=$("businessName").value.trim(),legalStatus=$("legalStatus").value,registrationNumber=$("registrationNumber").value.trim();
+  if(name.length<2)throw new Error("Le nom doit contenir au moins 2 caractères.");
+  if(legalStatus==="registered"&&!registrationNumber)throw new Error("Le numéro d'immatriculation est obligatoire.");
+  $("createBusiness").disabled=true;
+  const ref=db.collection("businesses").doc(),batch=db.batch(),now=firebase.firestore.FieldValue.serverTimestamp();
+  const business={name,legalStatus,ownerUid:currentUser.uid,status:"active",schemaVersion:1,createdAt:now,updatedAt:now};
+  if(legalStatus==="registered")business.registrationNumber=registrationNumber;
+  batch.set(ref,business);
+  batch.set(ref.collection("members").doc(currentUser.uid),{uid:currentUser.uid,role:"owner",status:"active",activityIds:[],permissions:{},createdAt:now});
+  await batch.commit();await loadBusiness(ref.id);message("Espace entreprise créé avec succès.","success");
+ }catch(e){message(e.message||"Création impossible.","error");}
+ finally{$("createBusiness").disabled=false;}
+});
+$("addActivity").addEventListener("click",async()=>{
+ try{
+  if(!currentBusinessId||!currentUser)throw new Error("Aucune entreprise active.");
+  const name=$("activityName").value.trim(),type=$("activityType").value;
+  if(name.length<2)throw new Error("Le nom de l'activité est trop court.");
+  $("addActivity").disabled=true;
+  const ref=db.collection("businesses").doc(currentBusinessId).collection("activities").doc(),now=firebase.firestore.FieldValue.serverTimestamp();
+  await ref.set({businessId:currentBusinessId,name,type,status:"active",createdBy:currentUser.uid,createdAt:now,updatedAt:now});
+  $("activityName").value="";await loadActivities();message("Activité ajoutée.","success");
+ }catch(e){message(e.message||"Ajout impossible.","error");}
+ finally{$("addActivity").disabled=false;}
+});
+})();
+</script>
+</body>
+</html>
