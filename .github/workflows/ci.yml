@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, feat/jeko-unified-subscriptions, feature/mon-business]
+    branches: [main, feat/jeko-unified-subscriptions, feature/mon-business, feature/mon-business-worker]
 
 permissions:
   contents: read
