@@ -1879,6 +1879,29 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // Données opérationnelles : lecture strictement limitée à l'entreprise,
+      // à l'activité et au droit "view". Toutes les écritures passent par le backend
+      // de confiance tant que les validations et journaux serveur ne sont pas finalisés.
+      function autoriseActivite(activityId, permission) {
+        return proprietaireActif()
+          || (membreActif()
+            && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.activityIds is list
+            && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.activityIds.hasAny([activityId])
+            && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.permissions.get(permission, false) == true);
+      }
+
+      match /activities/{activityId}/{collectionId}/{documentId} {
+        allow read: if collectionId in [
+          "cashRegisters", "transactions", "treasuryTransfers", "approvals",
+          "stockItems", "stockMovements", "purchaseRequests", "purchaseOrders",
+          "suppliers", "assets", "maintenance",
+          "customers", "sales", "orders", "invoices", "creditAccounts", "refunds",
+          "attendance", "leaveRequests", "payrollPreviews",
+          "deliveryMissions", "incidents", "reports"
+        ] && autoriseActivite(activityId, "view");
+        allow create, update, delete: if false;
+      }
+
       match /auditLogs/{eventId} {
         allow read: if proprietaireActif();
         // Écriture réservée à un service de confiance ; pas d'écriture directe par le navigateur.
