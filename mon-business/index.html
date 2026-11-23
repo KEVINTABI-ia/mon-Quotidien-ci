@@ -160,7 +160,30 @@
     if(!user){currentBusinessId=null;return;}
     currentBusinessId=localStorage.getItem("mqci_mon_business_id")||null;
     if(currentBusinessId){loadActivities();loadMembers();}
+    acceptInvitationFromLink();
   });
+
+  async function acceptInvitationFromLink(){
+    const params=new URLSearchParams((location.hash||"").replace(/^#/,""));
+    const invitationId=params.get("invitation"),token=params.get("token");
+    if(!invitationId||!token)return;
+    if(!currentUser){
+      setStatus("authState","Connectez-vous d'abord sur Mon Quotidien CI avec l'adresse e-mail invitée, puis revenez sur ce lien.");
+      return;
+    }
+    try{
+      setStatus("authState","Vérification de votre invitation sécurisée…");
+      const result=await callWorker("/v1/invitations/accept",{invitationId,token});
+      currentBusinessId=result.businessId;
+      localStorage.setItem("mqci_mon_business_id",currentBusinessId);
+      history.replaceState(null,"",location.pathname+location.search);
+      setStatus("authState","Invitation acceptée. Votre accès collaborateur est maintenant actif.");
+      await loadMembers();
+      await loadActivities();
+    }catch(error){
+      setStatus("authState","Invitation non acceptée : "+error.message,true);
+    }
+  }
 
   $("businessForm").addEventListener("submit",async event=>{
     event.preventDefault();
