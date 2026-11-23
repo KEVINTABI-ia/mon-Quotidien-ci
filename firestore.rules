@@ -1820,33 +1820,19 @@ service cloud.firestore {
       match /members/{memberUid} {
         allow read: if request.auth != null
           && (request.auth.uid == memberUid || proprietaireActif());
-        // Initialisation atomique du propriétaire OU ajout contrôlé par le propriétaire.
+        // Seule la création atomique du propriétaire est autorisée depuis le client.
+        // Les collaborateurs seront créés après vérification serveur de leur identité.
         allow create: if request.auth != null
-          && (
-            (request.auth.uid == memberUid
-              && request.resource.data.keys().hasAll(["uid","role","status","activityIds","permissions","createdAt"])
-              && request.resource.data.keys().hasOnly(["uid","role","status","activityIds","permissions","createdAt"])
-              && request.resource.data.uid == request.auth.uid
-              && request.resource.data.role == "owner"
-              && request.resource.data.status == "active"
-              && request.resource.data.activityIds is list
-              && request.resource.data.permissions is map
-              && request.resource.data.createdAt == request.time
-              && getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.ownerUid == request.auth.uid)
-            ||
-            (proprietaireActif()
-              && memberUid != get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerUid
-              && request.resource.data.keys().hasAll(["uid","role","status","activityIds","permissions","createdAt","createdBy"])
-              && request.resource.data.keys().hasOnly(["uid","role","status","activityIds","permissions","createdAt","createdBy"])
-              && request.resource.data.uid == memberUid
-              && request.resource.data.role in ["general_director","activity_manager","accountant","cashier","stock_manager","employee","observer"]
-              && request.resource.data.status == "active"
-              && request.resource.data.activityIds is list
-              && request.resource.data.permissions is map
-              && request.resource.data.permissions.keys().hasOnly(["view","create","edit","approve","cancel_correct","export","manage_access"])
-              && request.resource.data.createdBy == request.auth.uid
-              && request.resource.data.createdAt == request.time)
-          );
+          && request.auth.uid == memberUid
+          && request.resource.data.keys().hasAll(["uid","role","status","activityIds","permissions","createdAt"])
+          && request.resource.data.keys().hasOnly(["uid","role","status","activityIds","permissions","createdAt"])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.role == "owner"
+          && request.resource.data.status == "active"
+          && request.resource.data.activityIds is list
+          && request.resource.data.permissions is map
+          && request.resource.data.createdAt == request.time
+          && getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.ownerUid == request.auth.uid;
 
         allow update: if proprietaireActif()
           && memberUid != get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerUid
