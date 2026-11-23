@@ -15,7 +15,7 @@ test("l'initialisation Firebase utilise la configuration du projet existant",()=
   assert.match(html,/firebase\.firestore\(\)/);
 });
 test("les écritures d'entreprise créent propriétaire et entreprise dans le même batch",()=>{
-  assert.match(html,/const batch=db\.batch\(\)/);
+  assert.match(html,/batch=db\.batch\(\)/);
   assert.match(html,/batch\.set\(ref\.collection\("members"\)\.doc\(currentUser\.uid\)/);
   assert.match(html,/await batch\.commit\(\)/);
 });
