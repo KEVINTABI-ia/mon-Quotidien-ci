@@ -3,6 +3,23 @@ main = "worker.js"
 compatibility_date = "2026-11-23"
 workers_dev = true
 
+# Rate limiting: per IP and per authenticated Firebase UID.
+[[ratelimits]]
+name = "IP_RATE_LIMITER"
+namespace_id = "2026112333901"
+
+  [ratelimits.simple]
+  limit = 60
+  period = 60
+
+[[ratelimits]]
+name = "USER_RATE_LIMITER"
+namespace_id = "2026112333902"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
 [vars]
 APP_ORIGIN = "https://kevintabi-ia.github.io"
 
