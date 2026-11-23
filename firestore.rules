@@ -1857,6 +1857,13 @@ service cloud.firestore {
         allow update: if proprietaireActif()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name","type","status","updatedAt"])
           && request.resource.data.businessId == businessId
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 2
+          && request.resource.data.name.size() <= 100
+          && request.resource.data.type is string
+          && request.resource.data.type.size() >= 1
+          && request.resource.data.type.size() <= 80
+          && request.resource.data.status in ["active","archived"]
           && request.resource.data.updatedAt == request.time;
         allow delete: if false;
       }
