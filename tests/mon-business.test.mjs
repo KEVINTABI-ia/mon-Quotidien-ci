@@ -10,6 +10,6 @@ test("MON BUSINESS exposes only the three approved quarterly plans",()=>{
 });
 test("MON BUSINESS normalizes an Ivorian business identity",()=>{
   assert.deepEqual(normalizeMonBusinessIdentity("Épicerie Chez Awa","+225 07 00 00 00 00"),{normalizedName:"epicerie chez awa",normalizedPhone:"2250700000000"});
+  assert.deepEqual(normalizeMonBusinessIdentity("Boutique","07 00 00 00 00"),{normalizedName:"boutique",normalizedPhone:"2250700000000"});
   assert.equal(normalizeMonBusinessIdentity("A","+225 07 00 00 00 00"),null);
-  assert.equal(normalizeMonBusinessIdentity("Boutique","0700000000"),null);
 });
