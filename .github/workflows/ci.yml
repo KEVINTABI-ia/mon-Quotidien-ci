@@ -2,7 +2,7 @@ name: CI — Mon Quotidien CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feature/mon-business]
   push:
     branches: [main, feat/jeko-unified-subscriptions, feature/mon-business, feature/mon-business-worker]
 
