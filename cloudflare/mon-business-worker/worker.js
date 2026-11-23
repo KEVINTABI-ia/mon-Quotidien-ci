@@ -264,9 +264,15 @@ export default {
       const url=new URL(request.url);
       if (url.pathname==="/health" && request.method==="GET") return json({ok:true,service:"mon-business-worker"},200,cors);
       if (request.method!=="POST") return json({error:"method_not_allowed"},405,cors);
-      const user=await authenticate(request,env);
-      const body=await request.json().catch(()=>null);
+      if (!(request.headers.get("content-type")||"").toLowerCase().includes("application/json")) throw new HttpError(415,"json_required");
+      const declaredLength=Number(request.headers.get("content-length")||0);
+      if (declaredLength>16384) throw new HttpError(413,"request_too_large");
+      const rawBody=await request.text();
+      if (new TextEncoder().encode(rawBody).byteLength>16384) throw new HttpError(413,"request_too_large");
+      let body;
+      try { body=JSON.parse(rawBody); } catch { throw new HttpError(400,"invalid_json_body"); }
       if (!body || typeof body!=="object" || Array.isArray(body)) throw new HttpError(400,"invalid_json_body");
+      const user=await authenticate(request,env);
       let response;
       if (url.pathname==="/v1/invitations") response=await createInvitation(request,env,user,body);
       else if (url.pathname==="/v1/invitations/accept") response=await acceptInvitation(request,env,user,body);
