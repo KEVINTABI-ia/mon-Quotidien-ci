@@ -1786,7 +1786,7 @@ service cloud.firestore {
         return membreActif()
           && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.activityIds is list
           && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.activityIds.hasAny([activityId])
-          && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.permissions.view == true;
+          && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.permissions.get("view", false) == true;
       }
 
       allow read: if membreActif();
