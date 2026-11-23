@@ -62,6 +62,33 @@
   <section id="membersCard" class="card hidden">
     <h2>Collaborateurs et autorisations</h2>
     <p class="muted">Les collaborateurs apparaîtront ici après acceptation d'une invitation sécurisée. L'ajout direct par UID est désactivé pour éviter d'accorder l'accès au mauvais compte.</p>
+    <h3>Inviter un collaborateur</h3>
+    <p class="muted">Créez un lien sécurisé, puis partagez-le manuellement par WhatsApp ou SMS. Aucun abonnement e-mail payant n'est nécessaire.</p>
+    <form id="inviteForm">
+      <label for="inviteEmail">E-mail vérifié du collaborateur</label>
+      <input id="inviteEmail" type="email" maxlength="254" required>
+      <label for="inviteRole">Rôle</label>
+      <select id="inviteRole" required>
+        <option value="general_director">Directeur général</option><option value="activity_manager">Responsable d'activité</option>
+        <option value="accountant">Comptable</option><option value="cashier">Caissier</option>
+        <option value="stock_manager">Gestionnaire de stock</option><option value="employee">Employé</option><option value="observer">Observateur</option>
+      </select>
+      <label for="inviteActivities">Activités autorisées (maintenir Ctrl/Cmd pour plusieurs choix)</label>
+      <select id="inviteActivities" multiple size="4" required></select>
+      <label for="inviteExpiry">Validité du lien</label>
+      <select id="inviteExpiry"><option value="24">24 heures</option><option value="72">3 jours</option><option value="168" selected>7 jours</option><option value="336">14 jours</option></select>
+      <div class="grid">
+        <label><input type="checkbox" id="inviteCreate"> Créer</label><label><input type="checkbox" id="inviteEdit"> Modifier</label>
+        <label><input type="checkbox" id="inviteApprove"> Approuver</label><label><input type="checkbox" id="inviteExport"> Exporter</label>
+        <label><input type="checkbox" id="inviteManage"> Gérer les accès</label>
+      </div>
+      <button id="inviteButton" type="submit">Créer l'invitation</button>
+    </form>
+    <div id="inviteStatus" class="status hidden" role="status" aria-live="polite"></div>
+    <div id="inviteLinkActions" class="hidden">
+      <button type="button" id="copyInviteLink" class="secondary">Copier le lien</button>
+      <button type="button" id="shareInviteLink">Partager sur WhatsApp</button>
+    </div>
     <div id="memberStatus" class="status hidden" role="status" aria-live="polite"></div>
     <div id="membersList"></div>
   </section>
@@ -103,7 +130,7 @@
   const auth=firebase.auth(), db=firebase.firestore();
   const MON_BUSINESS_API=window.MON_BUSINESS_API||"";
   const $=id=>document.getElementById(id);
-  let currentUser=null, currentBusinessId=null, currentBusinessOwner=false;
+  let currentUser=null, currentBusinessId=null, currentBusinessOwner=false, lastInviteUrl="";
   async function callWorker(path,payload){
     if(!MON_BUSINESS_API)throw new Error("worker_not_configured");
     const idToken=await currentUser.getIdToken();
@@ -171,6 +198,33 @@
     }finally{button.disabled=false;}
   });
 
+
+  $("inviteForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(!currentUser||!currentBusinessId||!currentBusinessOwner)return setStatus("inviteStatus","Seul le propriétaire actif peut inviter.",true);
+    const activityIds=Array.from($("inviteActivities").selectedOptions).map(option=>option.value);
+    if(!activityIds.length)return setStatus("inviteStatus","Sélectionnez au moins une activité.",true);
+    const permissions={view:true,create:$("inviteCreate").checked,edit:$("inviteEdit").checked,approve:$("inviteApprove").checked,export:$("inviteExport").checked,manage_access:$("inviteManage").checked};
+    const button=$("inviteButton");button.disabled=true;
+    try{
+      const result=await callWorker("/v1/invitations",{businessId:currentBusinessId,email:$("inviteEmail").value.trim(),role:$("inviteRole").value,activityIds,permissions,expiresInHours:Number($("inviteExpiry").value)});
+      lastInviteUrl=result.inviteUrl;
+      setStatus("inviteStatus","Invitation créée. Expiration : "+new Date(result.expiresAt).toLocaleString("fr-FR")+". Partagez ce lien uniquement avec la personne invitée.");
+      $("inviteLinkActions").classList.remove("hidden");
+    }catch(error){
+      setStatus("inviteStatus",error.message==="worker_not_configured"?"Le Worker sécurisé n'est pas encore déployé/configuré.":"Création impossible : "+error.message,true);
+    }finally{button.disabled=false;}
+  });
+  $("copyInviteLink").addEventListener("click",async()=>{
+    if(!lastInviteUrl)return;
+    try{await navigator.clipboard.writeText(lastInviteUrl);setStatus("inviteStatus","Lien copié. Partagez-le avec le collaborateur invité.");}
+    catch{setStatus("inviteStatus","Copie automatique indisponible. Copiez le lien depuis le navigateur.",true);}
+  });
+  $("shareInviteLink").addEventListener("click",()=>{
+    if(!lastInviteUrl)return;
+    window.open("https://wa.me/?text="+encodeURIComponent("Vous êtes invité à rejoindre mon espace Mon Business : "+lastInviteUrl),"_blank","noopener");
+  });
+
   async function loadMembers(){
     if(!currentBusinessId||!currentUser)return;
     try{
@@ -228,6 +282,8 @@
     if(!currentBusinessId||!currentUser)return;
     try{
       const snap=await db.collection("businesses").doc(currentBusinessId).collection("activities").get();
+      const inviteSelect=$("inviteActivities");
+      if(inviteSelect){inviteSelect.replaceChildren();snap.forEach(doc=>{const option=document.createElement("option");option.value=doc.id;option.textContent=doc.data().name;inviteSelect.appendChild(option);});}
       const list=$("activitiesList");list.replaceChildren();
       snap.forEach(doc=>{
         const item=document.createElement("p");
