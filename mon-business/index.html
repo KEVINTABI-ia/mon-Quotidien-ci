@@ -283,7 +283,7 @@
           save.addEventListener("click",async()=>{
             save.disabled=true;
             try{
-              await callWorker("/v1/members/update",{businessId:currentBusinessId,memberUid:memberDoc.id,role:role.value,status:state.value,activityIds:m.activityIds||[],permissions:m.permissions||{view:true}});
+              await callWorker("/v1/members/update",{businessId:currentBusinessId,memberUid:memberDoc.id,role:role.value,status:state.value,activityIds:m.activityIds||[],permissions:{...(m.permissions||{}),view:true}});
               setStatus("memberStatus","Droits du collaborateur mis à jour.");
               await loadMembers();
             }catch(error){
