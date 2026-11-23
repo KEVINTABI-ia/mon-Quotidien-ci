@@ -5323,6 +5323,7 @@ const RUBRIQUES_ADMIN = [
   {id:"gestionAbonnementsRamassage",groupe:"Professionnels",icone:"🚌",titre:"Compagnies de ramassage",description:"Valider les dossiers et abonnements."},
 
   {id:"gestionLogementAdmin",groupe:"Vie communautaire",icone:"🏠",titre:"Logement",description:"Modérer les annonces et vérifier les abonnements."},
+  {id:"gestionCabinesAdmin",groupe:"Professionnels",icone:"📞",titre:"Cabines téléphoniques",description:"Valider les cabinistes et suivre les demandes."},
   {id:"gestionPartenaires",groupe:"Professionnels",icone:"👥",titre:"Partenaires",description:"Gérer les partenaires de services."},
   {id:"gestionPharmaciesAdmin",groupe:"Professionnels",icone:"💊",titre:"Pharmacies à domicile",description:"Approuver les pharmacies et attribuer les demandes clients."},
   {id:"gestionCommandesPartenaires",groupe:"Professionnels",icone:"📦",titre:"Commandes partenaires",description:"Suivre et attribuer les commandes."},
@@ -5374,6 +5375,11 @@ function ouvrirRubriqueAdmin(id){
   if(menu)menu.style.display="none";
   RUBRIQUES_ADMIN.forEach(r=>{const el=document.getElementById(r.id);if(el)el.style.display=r.id===id?"block":"none";});
   const cible=document.getElementById(id);
+  if(id==="gestionCabinesAdmin"){
+    if(typeof window.cabOuvrirAdmin==="function")window.cabOuvrirAdmin();
+    else console.error("Module de gestion des cabines non chargé.");
+    return;
+  }
   if(!cible)return;
   if(id==="gestionPharmaciesAdmin") mqciChargerGestionPharmaciesAdmin();
   if(id==="gestionValidationAutoEcole") chargerNouveauxServicesAdmin("auto_ecole");
