@@ -13784,24 +13784,29 @@ async function mqciAdminStatutPharmacie(uid,statut){
     const dailyPanel=document.getElementById('dailyServicesPanel');
     const dailyGrid=dailyPanel&&dailyPanel.querySelector('.grille-services-quotidiens');
     if(!launcher||!menu||!dailyPanel||!dailyGrid||launcher.dataset.mqciPersonalized==='1')return;
-    /* Masquer tout le bloc Autre service sur l'accueil. Il reste accessible pendant la personnalisation. */
+
+    /* SERVICE affiche uniquement les familles de services.
+       Les tuiles quotidiennes restent dans « Autre service du quotidien ». */
     menu.hidden=true;
-    /* Le panneau quotidien reste masqué sur l'accueil et accessible pendant la personnalisation. */
     launcher.appendChild(menu);
     launcher.dataset.mqciPersonalized='1';
+
     const families=Array.from(launcher.children).filter(el=>el.classList.contains('family-entry'));
-    const daily=Array.from(dailyGrid.querySelectorAll('.tuile-quotidien'));
-    families.forEach((el,i)=>{el.dataset.mqciAccessId='famille-'+i;el.classList.add('mqci-service-choice');});
-    daily.forEach((el,i)=>{el.dataset.mqciAccessId='quotidien-'+i;el.classList.add('mqci-service-choice');});
-    const all=[...families,...daily];
-    const byId=new Map(all.map(el=>[el.dataset.mqciAccessId,el]));
-    let topIds=[];
-    try{topIds=JSON.parse(localStorage.getItem('mqci_services_rapides_v1')||'[]');}catch(e){}
-    topIds=Array.isArray(topIds)?topIds.filter((id,i,a)=>byId.has(id)&&a.indexOf(id)===i).slice(0,6):[];
-    for(const el of families){if(topIds.length>=6)break;if(!topIds.includes(el.dataset.mqciAccessId))topIds.push(el.dataset.mqciAccessId);}
-    for(const el of all){if(topIds.length>=6)break;if(!topIds.includes(el.dataset.mqciAccessId))topIds.push(el.dataset.mqciAccessId);}
-    topIds.forEach(id=>launcher.appendChild(byId.get(id)));
-    all.filter(el=>!topIds.includes(el.dataset.mqciAccessId)).forEach(el=>dailyGrid.appendChild(el));
+    families.forEach((el,i)=>{
+      el.dataset.mqciAccessId='famille-'+i;
+      el.classList.add('mqci-service-choice');
+    });
+
+    /* Réinitialiser les anciens raccourcis qui plaçaient des services quotidiens
+       dans SERVICE : ils ne doivent plus être déplacés hors de leur rubrique. */
+    try{
+      const saved=JSON.parse(localStorage.getItem('mqci_services_rapides_v1')||'[]');
+      if(Array.isArray(saved)){
+        localStorage.setItem('mqci_services_rapides_v1',JSON.stringify(
+          saved.filter(id=>typeof id==='string'&&id.startsWith('famille-')).slice(0,6)
+        ));
+      }
+    }catch(e){}
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
   else init();
