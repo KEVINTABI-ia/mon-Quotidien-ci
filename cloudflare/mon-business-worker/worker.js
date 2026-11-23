@@ -221,6 +221,34 @@ async function revokeInvitation(request,env,user,body) {
   ]);
   return json({revoked:true});
 }
+
+async function updateMember(request,env,user,body) {
+  const businessId=assertId(body.businessId,"business_id");
+  const memberUid=assertId(body.memberUid,"member_uid");
+  await requireOwner(env,user,businessId);
+  const business=await getDoc(env,"businesses/"+businessId);
+  if (memberUid===business.data.ownerUid) throw new HttpError(403,"owner_member_protected");
+  const path="businesses/"+businessId+"/members/"+memberUid;
+  const member=await getDoc(env,path);
+  if (!member) throw new HttpError(404,"member_not_found");
+  const role=body.role;
+  const status=body.status;
+  if (!ROLES.has(role)) throw new HttpError(400,"invalid_role");
+  if (!["active","suspended","revoked"].includes(status)) throw new HttpError(400,"invalid_member_status");
+  const activityIds=validateActivityIds(body.activityIds);
+  await verifyActivities(env,businessId,activityIds);
+  const permissions=validatePermissions(body.permissions);
+  const now=new Date(),auditId=crypto.randomUUID();
+  await commit(env,[
+    writeDocument(path,{role,status,activityIds,permissions,updatedAt:now},""+member.updateTime,true),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,auditData({
+      businessId,actorUid:user.uid,action:"member.access_updated",entityId:memberUid,now,
+      details:{role,status,activityIds,permissions}
+    }),"create")
+  ]);
+  return json({updated:true,memberUid,role,status});
+}
+
 function corsHeaders(request,env) {
   const origin=request.headers.get("origin");
   if (!origin) return {"vary":"Origin"};
@@ -243,6 +271,7 @@ export default {
       if (url.pathname==="/v1/invitations") response=await createInvitation(request,env,user,body);
       else if (url.pathname==="/v1/invitations/accept") response=await acceptInvitation(request,env,user,body);
       else if (url.pathname==="/v1/invitations/revoke") response=await revokeInvitation(request,env,user,body);
+      else if (url.pathname==="/v1/members/update") response=await updateMember(request,env,user,body);
       else throw new HttpError(404,"route_not_found");
       const headers=new Headers(response.headers);for(const [k,v] of Object.entries(cors))headers.set(k,v);
       return new Response(response.body,{status:response.status,headers});
