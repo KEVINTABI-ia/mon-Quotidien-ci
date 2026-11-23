@@ -11,6 +11,7 @@ test("les permissions acceptent uniquement les clés connues et des booléens",(
   assert.deepEqual(validatePermissions({view:true,edit:false}),{view:true,edit:false});
   assert.throws(()=>validatePermissions({owner:true}),/invalid_permissions/);
   assert.throws(()=>validatePermissions({view:"yes"}),/invalid_permissions/);
+  assert.throws(()=>validatePermissions({view:false}),/invalid_permissions/);
   assert.throws(()=>validatePermissions([]),/invalid_permissions/);
 });
 
