@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink } from "../cloudflare/mon-business-worker/worker.js";
+import { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit } from "../cloudflare/mon-business-worker/worker.js";
 
 test("normalise les e-mails et refuse les formats invalides",()=>{
   assert.equal(cleanEmail("  COLLABORATEUR@EXAMPLE.CI "), "collaborateur@example.ci");
@@ -38,4 +38,17 @@ test("le lien d'invitation garde le jeton dans le fragment URL",()=>{
   const link=inviteLink("invite_123","secret-token");
   assert.match(link,/mon-business\/index\.html#invitation=invite_123&token=secret-token$/);
   assert.equal(new URL(link).search,"");
+});
+
+
+test("la limitation de débit accepte une requête sous le seuil",async()=>{
+  await assert.doesNotReject(()=>enforceRateLimit({limit:async()=>({success:true})},"user-1"));
+});
+
+test("la limitation de débit refuse une requête au-dessus du seuil",async()=>{
+  await assert.rejects(()=>enforceRateLimit({limit:async()=>({success:false})},"user-1"),/rate_limit_exceeded/);
+});
+
+test("la limitation de débit échoue de façon fermée si le binding manque",async()=>{
+  await assert.rejects(()=>enforceRateLimit(undefined,"user-1"),/rate_limiter_unavailable/);
 });
