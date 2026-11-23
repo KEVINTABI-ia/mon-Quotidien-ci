@@ -2032,24 +2032,29 @@ async function monBusinessDashboard(request, env) {
   if (!companyDoc || company?.uid !== authResult.user.sub) return json({ error: "company_not_found" }, 404);
   const token = await serviceToken(env);
   const endpoint = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents:runQuery";
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { authorization: "Bearer " + token, "content-type": "application/json" },
-    body: JSON.stringify({ structuredQuery: {
-      from: [{ collectionId: "mon_business_transactions" }],
-      where: { fieldFilter: { field: { fieldPath: "companyId" }, op: "EQUAL", value: { stringValue: companyId } } },
-      orderBy: [{ field: { fieldPath: "createdAt" }, direction: "DESCENDING" }],
-      limit: 100
-    } })
-  });
-  if (!response.ok) throw new Error("mon_business_transactions_query_" + response.status);
-  const rows = await response.json();
-  const transactions = (Array.isArray(rows) ? rows : [])
-    .filter(row => typeof row?.document?.name === "string" &&
-      row.document.name.includes("/documents/mon_business_transactions/") &&
-      row.document.name.split("/documents/")[1].split("/").length === 2)
-    .map(row => ({ id: row.document.name.split("/").pop(), ...docData(row.document) }))
-    .filter(item => item.uid === authResult.user.sub && item.companyId === companyId);
+  let transactions = [];
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { authorization: "Bearer " + token, "content-type": "application/json" },
+      body: JSON.stringify({ structuredQuery: {
+        from: [{ collectionId: "mon_business_transactions" }],
+        where: { fieldFilter: { field: { fieldPath: "companyId" }, op: "EQUAL", value: { stringValue: companyId } } },
+        limit: 100
+      } })
+    });
+    if (!response.ok) return json({ error: "dashboard_transactions_unavailable", detail: "firestore_query_" + response.status }, 502);
+    const rows = await response.json();
+    transactions = (Array.isArray(rows) ? rows : [])
+      .filter(row => typeof row?.document?.name === "string" &&
+        row.document.name.includes("/documents/mon_business_transactions/") &&
+        row.document.name.split("/documents/")[1].split("/").length === 2)
+      .map(row => ({ id: row.document.name.split("/").pop(), ...docData(row.document) }))
+      .filter(item => item.uid === authResult.user.sub && item.companyId === companyId)
+      .sort((a,b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  } catch (error) {
+    return json({ error: "dashboard_transactions_unavailable", detail: String(error?.message || error).slice(0,160) }, 502);
+  }
   const now = new Date(), monthKey = now.toISOString().slice(0, 7);
   const monthly = company.monthlyTotals?.[monthKey] || { recettesXof: 0, depensesXof: 0 };
   const trialEnd = company.trialEndAt instanceof Date ? company.trialEndAt : new Date(company.trialEndAt);
