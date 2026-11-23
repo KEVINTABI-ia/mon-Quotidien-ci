@@ -18,6 +18,16 @@ button,.btn{border:0;border-radius:11px;padding:13px 16px;font:700 14px inherit;
 .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.tabs button{background:#edf3ef;color:var(--deep)}.tabs button.active{background:var(--deep);color:#fff}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.plan{border:1px solid var(--line);border-radius:15px;padding:15px}.plan.featured{border:2px solid var(--gold)}.plan h3{margin:0;color:var(--deep)}.price{font-size:25px;font-weight:850;color:var(--green);margin:8px 0 0}.plan ul{padding-left:18px;font-size:13px}.tag{font-size:11px;color:#765a1b;font-weight:800}
 .notice{padding:13px;border-radius:12px;background:#edf6f1;color:#285443;font-size:13px;margin-top:12px}.status{font-size:14px;margin-top:12px;white-space:pre-line}.hidden{display:none!important}
+
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:15px 0}
+.metric{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fbfdfb;min-width:0}
+.metric span{display:block;color:var(--muted);font-size:12px}.metric strong{display:block;color:var(--deep);font-size:clamp(17px,4vw,23px);margin-top:5px;overflow-wrap:anywhere}
+.metric.balance{background:#eaf4ef;border-color:#d4e8dd}.dashboard-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.operation{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.operation:last-child{border-bottom:0}.operation strong{display:block;font-size:14px}.operation small{color:var(--muted);font-size:12px}
+.amount-in{color:#087c62;font-weight:800;white-space:nowrap}.amount-out{color:#b54736;font-weight:800;white-space:nowrap}
+@media(max-width:650px){.dashboard-grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
 </style>
 </head>
@@ -42,7 +52,45 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
 </section>
 <section class="panel hidden" id="dashboardPanel">
 <h2 id="dashboardTitle">Mon espace MON BUSINESS</h2><div id="subscriptionStatus" class="notice"></div>
-<p class="muted">Espace de démarrage : les modules de gestion seront activés progressivement. Les offres ci-dessous définissent les droits prévus selon votre formule.</p>
+
+<div id="businessDashboard">
+  <h3 style="margin:18px 0 4px;color:var(--deep)">Vue d’ensemble</h3>
+  <p class="muted" id="dashboardPeriod">Vos indicateurs de gestion</p>
+  <div class="metrics">
+    <div class="metric"><span>Recettes cumulées</span><strong id="totalRevenue">—</strong></div>
+    <div class="metric"><span>Dépenses cumulées</span><strong id="totalExpenses">—</strong></div>
+    <div class="metric balance"><span>Solde disponible calculé</span><strong id="totalBalance">—</strong></div>
+    <div class="metric"><span>Opérations enregistrées</span><strong id="totalOperations">0</strong></div>
+  </div>
+  <div class="panel" style="padding:15px;margin:12px 0;background:#f8fbf9">
+    <strong>Ce mois-ci</strong>
+    <div class="metrics" style="margin-bottom:0">
+      <div class="metric"><span>Recettes</span><strong id="monthRevenue">—</strong></div>
+      <div class="metric"><span>Dépenses</span><strong id="monthExpenses">—</strong></div>
+    </div>
+  </div>
+  <div class="dashboard-grid">
+    <section class="panel" style="padding:16px;margin:0">
+      <h3 style="margin:0;color:var(--deep)">Enregistrer une opération</h3>
+      <p class="muted">Ajoutez une recette ou une dépense pour actualiser vos indicateurs.</p>
+      <label for="operationType">Type d’opération</label>
+      <select id="operationType"><option value="recette">Recette / entrée d’argent</option><option value="depense">Dépense / sortie d’argent</option></select>
+      <label for="operationAmount">Montant (FCFA)</label><input id="operationAmount" type="number" min="1" max="1000000000" step="1" inputmode="numeric" placeholder="Ex. : 5000">
+      <label for="operationLabel">Libellé</label><input id="operationLabel" maxlength="120" placeholder="Ex. : Vente de marchandises">
+      <label for="operationCategory">Catégorie</label>
+      <select id="operationCategory"><option value="Vente">Vente</option><option value="Prestation">Prestation</option><option value="Achat">Achat</option><option value="Loyer">Loyer</option><option value="Transport">Transport</option><option value="Salaire">Salaire</option><option value="Autre">Autre</option></select>
+      <label for="operationNote">Note (facultatif)</label><input id="operationNote" maxlength="240" placeholder="Précision utile">
+      <button class="primary" id="saveOperationButton" type="button" onclick="saveBusinessOperation()">Enregistrer l’opération</button>
+      <div id="operationStatus" class="status" aria-live="polite"></div>
+    </section>
+    <section class="panel" style="padding:16px;margin:0">
+      <h3 style="margin:0;color:var(--deep)">Opérations récentes</h3>
+      <p class="muted">Les 100 dernières opérations enregistrées</p>
+      <div id="operationsList"><p class="muted">Chargement des opérations…</p></div>
+    </section>
+  </div>
+</div>
+
 <div class="grid" id="planGrid">
 <article class="plan"><h3>Standard</h3><div class="price">15 000 FCFA</div><p class="muted">par trimestre · 5 000 FCFA/mois</p><ul><li>Tableau de bord</li><li>Recettes et dépenses</li><li>Ventes, commandes et stock simple</li><li>Historique et rapports de base</li><li>1 activité · 2 utilisateurs</li></ul></article>
 <article class="plan featured"><span class="tag">FORMULE ÉVOLUTIVE</span><h3>Premium</h3><div class="price">30 000 FCFA</div><p class="muted">par trimestre · 10 000 FCFA/mois</p><ul><li>Tous les avantages Standard</li><li>Jusqu’à 3 activités</li><li>Stocks, personnel, achats et clients</li><li>Rapports détaillés et alertes</li><li>Jusqu’à 5 utilisateurs</li></ul></article>
@@ -69,10 +117,59 @@ const API="https://mon-quotidien-jeko.tabikevin57.workers.dev";
 let mode="register",companyId=null,company=null;
 function setMode(next){mode=next;document.getElementById("nameWrap").classList.toggle("hidden",mode!=="register");document.getElementById("tabRegister").classList.toggle("active",mode==="register");document.getElementById("tabLogin").classList.toggle("active",mode==="login");document.getElementById("authStatus").textContent="";}
 function message(id,text,error=false){const e=document.getElementById(id);e.textContent=text;e.style.color=error?"#b42318":"#087c62";}
+
+function formatXof(value){return new Intl.NumberFormat("fr-FR",{maximumFractionDigits:0}).format(Number(value||0))+" FCFA";}
+async function loadBusinessDashboard(){
+  const user=auth.currentUser;if(!user||!companyId)return;
+  const list=document.getElementById("operationsList");if(list)list.innerHTML="<p class='muted'>Chargement…</p>";
+  try{
+    const token=await user.getIdToken();
+    const response=await fetch(API+"/api/mon-business/dashboard?companyId="+encodeURIComponent(companyId),{headers:{Authorization:"Bearer "+token}});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||"Impossible de charger le tableau de bord.");
+    const t=data.totals||{};
+    document.getElementById("totalRevenue").textContent=formatXof(t.recettesXof);
+    document.getElementById("totalExpenses").textContent=formatXof(t.depensesXof);
+    document.getElementById("totalBalance").textContent=formatXof(t.soldeXof);
+    document.getElementById("totalOperations").textContent=formatXof(t.operationsCount).replace(" FCFA","");
+    document.getElementById("monthRevenue").textContent=formatXof(t.recettesMoisXof);
+    document.getElementById("monthExpenses").textContent=formatXof(t.depensesMoisXof);
+    document.getElementById("dashboardPeriod").textContent="Indicateurs actualisés · "+new Date().toLocaleDateString("fr-FR");
+    const operations=Array.isArray(data.transactions)?data.transactions:[];
+    list.innerHTML="";
+    if(!operations.length){list.innerHTML="<p class='muted'>Aucune opération pour le moment. Enregistrez votre première recette ou dépense.</p>";}
+    operations.forEach(op=>{
+      const row=document.createElement("div");row.className="operation";
+      const info=document.createElement("div"),title=document.createElement("strong"),meta=document.createElement("small"),amount=document.createElement("span");
+      title.textContent=op.label||"Opération";meta.textContent=(op.category||"Autre")+" · "+(op.createdAt?new Date(op.createdAt).toLocaleDateString("fr-FR"):"Date inconnue");
+      amount.className=op.type==="recette"?"amount-in":"amount-out";
+      amount.textContent=(op.type==="recette"?"+":"−")+formatXof(op.amountXof);
+      info.append(title,meta);row.append(info,amount);list.append(row);
+    });
+    const canWrite=data.accessActive===true;
+    document.getElementById("saveOperationButton").disabled=!canWrite;
+    document.getElementById("saveOperationButton").style.opacity=canWrite?"1":".5";
+    if(!canWrite)message("operationStatus","Votre accès est expiré : le tableau de bord reste consultable, mais les nouvelles opérations sont bloquées.",true);
+  }catch(e){if(list)list.textContent=e.message;}
+}
+async function saveBusinessOperation(){
+  const button=document.getElementById("saveOperationButton");
+  const body={companyId,type:document.getElementById("operationType").value,amountXof:Number(document.getElementById("operationAmount").value),label:document.getElementById("operationLabel").value,category:document.getElementById("operationCategory").value,note:document.getElementById("operationNote").value};
+  if(!Number.isSafeInteger(body.amountXof)||body.amountXof<1||!body.label.trim()){message("operationStatus","Saisissez un montant entier positif et un libellé.",true);return;}
+  try{
+    button.disabled=true;message("operationStatus","Enregistrement sécurisé…");
+    await api("/api/mon-business/transaction",body);
+    document.getElementById("operationAmount").value="";document.getElementById("operationLabel").value="";document.getElementById("operationNote").value="";
+    message("operationStatus","Opération enregistrée.");
+    await loadBusinessDashboard();
+  }catch(e){message("operationStatus",e.message,true);}
+  finally{button.disabled=false;}
+}
+
 async function api(path,body){const user=auth.currentUser;if(!user)throw new Error("Connectez-vous d’abord.");const token=await user.getIdToken();const response=await fetch(API+path,{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify(body)});const data=await response.json().catch(()=>({}));if(!response.ok){const map={business_trial_already_used:"Cet essai gratuit a déjà été utilisé pour cette entreprise.",mon_business_trial_or_subscription_active:"Votre période d’essai ou votre abonnement est encore actif.",existing_payment_requires_review:"Un paiement précédent doit être vérifié avant une nouvelle tentative.",invalid_business_identity:"Vérifiez le nom et le numéro de téléphone professionnel."};throw new Error(map[data.error]||data.error||"Une erreur est survenue.");}return data;}
 async function authenticate(){const email=document.getElementById("email").value.trim(),password=document.getElementById("password").value,ownerName=document.getElementById("ownerName").value.trim();if(!email||password.length<6){message("authStatus","Saisissez un e-mail valide et un mot de passe d’au moins 6 caractères.",true);return;}try{message("authStatus","Connexion en cours…");if(mode==="register"){if(ownerName.length<2)throw new Error("Saisissez votre nom complet.");const cred=await auth.createUserWithEmailAndPassword(email,password);await cred.user.updateProfile({displayName:ownerName});}else await auth.signInWithEmailAndPassword(email,password);}catch(e){message("authStatus",e.message,true);}}
 async function startTrial(){try{message("companyStatus","Création sécurisée de votre espace…");const data=await api("/api/mon-business/trial",{companyName:document.getElementById("companyName").value,phone:document.getElementById("companyPhone").value});companyId=data.companyId;company=data.company;showDashboard();}catch(e){message("companyStatus",e.message,true);}}
-function showDashboard(){document.getElementById("authPanel").classList.add("hidden");document.getElementById("companyPanel").classList.add("hidden");document.getElementById("dashboardPanel").classList.remove("hidden");document.getElementById("dashboardTitle").textContent=company.companyName;const trialEnd=company.trialEndAt?.seconds?new Date(company.trialEndAt.seconds*1000):new Date(company.trialEndAt);const expiry=company.subscriptionEndAt?.seconds?new Date(company.subscriptionEndAt.seconds*1000):company.subscriptionEndAt?new Date(company.subscriptionEndAt):null;let text="";if(company.status==="trial"&&trialEnd.getTime()>Date.now()){text="Essai gratuit en cours jusqu’au "+trialEnd.toLocaleDateString("fr-FR")+". Aucune facturation pendant cette période.";document.getElementById("paymentPanel").classList.add("hidden");}else if(company.status==="active"&&expiry&&expiry.getTime()>Date.now()){text="Formule "+(company.planLabel||company.planId)+" active jusqu’au "+expiry.toLocaleDateString("fr-FR")+".";document.getElementById("paymentPanel").classList.add("hidden");}else{text="Votre période d’essai ou votre abonnement est terminé. Choisissez une formule pour réactiver votre espace.";document.getElementById("paymentPanel").classList.remove("hidden");}document.getElementById("subscriptionStatus").textContent=text;}
+function showDashboard(){document.getElementById("authPanel").classList.add("hidden");document.getElementById("companyPanel").classList.add("hidden");document.getElementById("dashboardPanel").classList.remove("hidden");document.getElementById("dashboardTitle").textContent=company.companyName;const trialEnd=company.trialEndAt?.seconds?new Date(company.trialEndAt.seconds*1000):new Date(company.trialEndAt);const expiry=company.subscriptionEndAt?.seconds?new Date(company.subscriptionEndAt.seconds*1000):company.subscriptionEndAt?new Date(company.subscriptionEndAt):null;let text="";if(company.status==="trial"&&trialEnd.getTime()>Date.now()){text="Essai gratuit en cours jusqu’au "+trialEnd.toLocaleDateString("fr-FR")+". Aucune facturation pendant cette période.";document.getElementById("paymentPanel").classList.add("hidden");}else if(company.status==="active"&&expiry&&expiry.getTime()>Date.now()){text="Formule "+(company.planLabel||company.planId)+" active jusqu’au "+expiry.toLocaleDateString("fr-FR")+".";document.getElementById("paymentPanel").classList.add("hidden");}else{text="Votre période d’essai ou votre abonnement est terminé. Choisissez une formule pour réactiver votre espace.";document.getElementById("paymentPanel").classList.remove("hidden");}document.getElementById("subscriptionStatus").textContent=text;loadBusinessDashboard();}
 async function paySubscription(){try{message("dashboardStatus","Préparation du paiement Jèko…");const data=await api("/api/jeko/checkout",{serviceId:"mon_business",companyId,planId:document.getElementById("planId").value,paymentMethod:document.getElementById("paymentMethod").value});window.location.href=data.checkoutUrl;}catch(e){message("dashboardStatus",e.message,true);}}
 async function logout(){await auth.signOut();location.reload();}
 auth.onAuthStateChanged(async user=>{if(!user){document.getElementById("authPanel").classList.remove("hidden");document.getElementById("companyPanel").classList.add("hidden");document.getElementById("dashboardPanel").classList.add("hidden");return;}document.getElementById("authPanel").classList.add("hidden");try{const params=new URLSearchParams(location.search),paymentId=params.get("paymentId");if(paymentId){const token=await user.getIdToken(),res=await fetch(API+"/api/jeko/status?paymentId="+encodeURIComponent(paymentId),{headers:{Authorization:"Bearer "+token}});const payment=await res.json();message("authStatus",payment.status==="succeeded"?"Paiement confirmé. Votre abonnement est activé.":"Paiement reçu ou en cours de vérification.");history.replaceState({},"",location.pathname);}const stored=localStorage.getItem("mqciMonBusinessCompanyId");if(stored){companyId=stored;const idToken=await user.getIdToken();const res=await fetch(API+"/api/mon-business/company?companyId="+encodeURIComponent(stored),{headers:{Authorization:"Bearer "+idToken}});if(res.ok){const data=await res.json();company=data.company;showDashboard();if(params.get("paymentId")){message("dashboardStatus",data.company.status==="active"?"Paiement confirmé : votre abonnement est actif.":"Paiement en cours de confirmation.");}return;}}document.getElementById("companyPanel").classList.remove("hidden");}catch(e){message("companyStatus",e.message,true);document.getElementById("companyPanel").classList.remove("hidden");}});

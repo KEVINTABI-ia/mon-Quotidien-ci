@@ -2021,6 +2021,122 @@ export function buildMonBusinessPlan(planId) {
   };
   return plans[planId] || null;
 }
+
+async function monBusinessDashboard(request, env) {
+  const authResult = await requireUser(request, env);
+  if (!authResult.user) return json({ error: "unauthorized", diagnostic: authResult.diagnostic }, 401);
+  const url = new URL(request.url), companyId = url.searchParams.get("companyId") || "";
+  if (!/^[a-f0-9]{64}$/.test(companyId)) return json({ error: "invalid_company_id" }, 400);
+  const companyDoc = await getDoc(env, "mon_business_companies/" + companyId);
+  const company = docData(companyDoc);
+  if (!companyDoc || company?.uid !== authResult.user.sub) return json({ error: "company_not_found" }, 404);
+  const token = await serviceToken(env);
+  const endpoint = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents:runQuery";
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { authorization: "Bearer " + token, "content-type": "application/json" },
+    body: JSON.stringify({ structuredQuery: {
+      from: [{ collectionId: "mon_business_transactions" }],
+      where: { fieldFilter: { field: { fieldPath: "companyId" }, op: "EQUAL", value: { stringValue: companyId } } },
+      orderBy: [{ field: { fieldPath: "createdAt" }, direction: "DESCENDING" }],
+      limit: 100
+    } })
+  });
+  if (!response.ok) throw new Error("mon_business_transactions_query_" + response.status);
+  const rows = await response.json();
+  const transactions = (Array.isArray(rows) ? rows : [])
+    .filter(row => typeof row?.document?.name === "string" &&
+      row.document.name.includes("/documents/mon_business_transactions/") &&
+      row.document.name.split("/documents/")[1].split("/").length === 2)
+    .map(row => ({ id: row.document.name.split("/").pop(), ...docData(row.document) }))
+    .filter(item => item.uid === authResult.user.sub && item.companyId === companyId);
+  const now = new Date(), monthKey = now.toISOString().slice(0, 7);
+  const monthly = company.monthlyTotals?.[monthKey] || { recettesXof: 0, depensesXof: 0 };
+  const trialEnd = company.trialEndAt instanceof Date ? company.trialEndAt : new Date(company.trialEndAt);
+  const subscriptionEnd = company.subscriptionEndAt ? new Date(company.subscriptionEndAt) : null;
+  const accessActive = (company.status === "trial" && trialEnd.getTime() > now.getTime()) ||
+    (company.status === "active" && subscriptionEnd && subscriptionEnd.getTime() > now.getTime());
+  return json({
+    companyId, companyName: company.companyName, status: company.status, accessActive,
+    totals: {
+      recettesXof: Number(company.recettesTotalXof || 0),
+      depensesXof: Number(company.depensesTotalXof || 0),
+      soldeXof: Number(company.recettesTotalXof || 0) - Number(company.depensesTotalXof || 0),
+      recettesMoisXof: Number(monthly.recettesXof || 0),
+      depensesMoisXof: Number(monthly.depensesXof || 0),
+      soldeMoisXof: Number(monthly.recettesXof || 0) - Number(monthly.depensesXof || 0),
+      operationsCount: Number(company.transactionsCount || 0)
+    },
+    transactions
+  });
+}
+export function normalizeMonBusinessTransaction(body) {
+  const type = body?.type;
+  const amountXof = Number(body?.amountXof);
+  const label = typeof body?.label === "string" ? body.label.trim().replace(/\s+/g, " ") : "";
+  const category = typeof body?.category === "string" ? body.category.trim().slice(0, 40) : "";
+  const note = typeof body?.note === "string" ? body.note.trim().slice(0, 240) : "";
+  if (!["recette", "depense"].includes(type) || !Number.isSafeInteger(amountXof) || amountXof < 1 || amountXof > 1000000000 ||
+      label.length < 2 || label.length > 120 || category.length > 40) return null;
+  return { type, amountXof, label, category, note };
+}
+async function createMonBusinessTransaction(request, env) {
+  const authResult = await requireUser(request, env);
+  if (!authResult.user) return json({ error: "unauthorized", diagnostic: authResult.diagnostic }, 401);
+  let body = {};
+  try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
+  const companyId = body.companyId || "";
+  const transaction = normalizeMonBusinessTransaction(body);
+  if (!/^[a-f0-9]{64}$/.test(companyId) || !transaction) return json({ error: "invalid_transaction" }, 400);
+  const transactionId = crypto.randomUUID();
+  const transactionPath = "mon_business_transactions/" + transactionId;
+  const companyPath = "mon_business_companies/" + companyId;
+  const tx = await beginFirestoreTransaction(env);
+  try {
+    const companyDoc = await getDocInTransaction(env, companyPath, tx);
+    const company = docData(companyDoc);
+    if (!companyDoc || company?.uid !== authResult.user.sub) {
+      await commitFirestoreTransaction(env, [], tx);
+      return json({ error: "company_not_found" }, 404);
+    }
+    const now = new Date();
+    const trialEnd = company.trialEndAt instanceof Date ? company.trialEndAt : new Date(company.trialEndAt);
+    const subscriptionEnd = company.subscriptionEndAt ? new Date(company.subscriptionEndAt) : null;
+    const accessActive = (company.status === "trial" && trialEnd.getTime() > now.getTime()) ||
+      (company.status === "active" && subscriptionEnd && subscriptionEnd.getTime() > now.getTime());
+    if (!accessActive) {
+      await commitFirestoreTransaction(env, [], tx);
+      return json({ error: "mon_business_access_expired" }, 403);
+    }
+    const monthKey = now.toISOString().slice(0, 7);
+    const monthlyTotals = { ...(company.monthlyTotals || {}) };
+    const month = { ...(monthlyTotals[monthKey] || { recettesXof: 0, depensesXof: 0 }) };
+    const isRevenue = transaction.type === "recette";
+    const totalField = isRevenue ? "recettesTotalXof" : "depensesTotalXof";
+    const monthField = isRevenue ? "recettesXof" : "depensesXof";
+    month[monthField] = Number(month[monthField] || 0) + transaction.amountXof;
+    monthlyTotals[monthKey] = month;
+    const entry = {
+      ...transaction, uid: authResult.user.sub, companyId, monthKey, createdAt: now
+    };
+    const updatedCompany = {
+      [totalField]: Number(company[totalField] || 0) + transaction.amountXof,
+      transactionsCount: Number(company.transactionsCount || 0) + 1,
+      monthlyTotals, updatedAt: now
+    };
+    await commitFirestoreTransaction(env, [
+      createWrite(transactionPath, entry),
+      updateWrite(companyPath, updatedCompany, companyDoc.updateTime)
+    ], tx);
+    return json({ ok: true, transaction: { id: transactionId, ...entry }, totals: {
+      recettesXof: isRevenue ? Number(company.recettesTotalXof || 0) + transaction.amountXof : Number(company.recettesTotalXof || 0),
+      depensesXof: isRevenue ? Number(company.depensesTotalXof || 0) : Number(company.depensesTotalXof || 0) + transaction.amountXof
+    } }, 201);
+  } catch (error) {
+    throw error;
+  }
+}
+
 export function normalizeMonBusinessIdentity(name, phone) {
   const normalizedName = typeof name === "string"
     ? name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ")
@@ -2124,6 +2240,8 @@ export default {
     else if(url.pathname==="/api/jeko/subscription-plans"&&request.method==="GET") response=await subscriptionPlans(request,env);
     else if(url.pathname==="/api/mon-business/trial"&&request.method==="POST") response=await startMonBusinessTrial(request,env);
     else if(url.pathname==="/api/mon-business/company"&&request.method==="GET") response=await getMonBusinessCompany(request,env);
+    else if(url.pathname==="/api/mon-business/dashboard"&&request.method==="GET") response=await monBusinessDashboard(request,env);
+    else if(url.pathname==="/api/mon-business/transaction"&&request.method==="POST") response=await createMonBusinessTransaction(request,env);
     else if(url.pathname==="/api/jeko/diagnostic"&&request.method==="GET") response=await jekoDiagnostic(request,env);
     else if(url.pathname==="/api/jeko/network-diagnostic"&&request.method==="GET") response=await jekoNetworkDiagnostic(request,env);
     else response=json({error:"not_found"},404);
