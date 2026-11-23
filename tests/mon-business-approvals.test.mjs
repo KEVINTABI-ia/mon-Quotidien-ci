@@ -25,7 +25,7 @@ test("interdit auto-approbation, refus sans motif et décision en double",()=>{
  assert.throws(()=>approvals.decide(req,{actorUid:"cashier",actorRole:"activity_manager",decision:"approve",occurredAt:new Date()}),/auteur/);
  assert.throws(()=>approvals.decide(req,{actorUid:"manager-1",actorRole:"activity_manager",decision:"reject",occurredAt:new Date()}),/motif/);
  const done=approvals.decide(req,{actorUid:"manager-1",actorRole:"activity_manager",decision:"approve",occurredAt:new Date()});
- assert.throws(()=>approvals.decide(done,{actorUid:"manager-1",actorRole:"activity_manager",decision:"approve",occurredAt:new Date()}),/double/);
+ assert.throws(()=>approvals.decide(done,{actorUid:"manager-1",actorRole:"activity_manager",decision:"approve",occurredAt:new Date()}),/non modifiable/);
 });
 test("refuse un approbateur non autorisé et les montants sans règle",()=>{
  const req=approvals.createRequest({workflow,amountMinor:30000,operationType:"expense",authorUid:"cashier",reference:"EXP-5",reason:"Achat"});
