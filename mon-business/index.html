@@ -101,8 +101,17 @@
   };
   if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const auth=firebase.auth(), db=firebase.firestore();
+  const MON_BUSINESS_API=window.MON_BUSINESS_API||"";
   const $=id=>document.getElementById(id);
   let currentUser=null, currentBusinessId=null, currentBusinessOwner=false;
+  async function callWorker(path,payload){
+    if(!MON_BUSINESS_API)throw new Error("worker_not_configured");
+    const idToken=await currentUser.getIdToken();
+    const response=await fetch(MON_BUSINESS_API.replace(/\/$/,"")+path,{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+idToken},body:JSON.stringify(payload)});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(result.error||"worker_request_failed");
+    return result;
+  }
   const setStatus=(id,message,isError=false)=>{
     const el=$(id);el.textContent=message;el.classList.remove("hidden","error");
     if(isError)el.classList.add("error");
@@ -197,9 +206,7 @@
           save.addEventListener("click",async()=>{
             save.disabled=true;
             try{
-              await businessRef.collection("members").doc(memberDoc.id).update({
-                role:role.value,status:state.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-              });
+              await callWorker("/v1/members/update",{businessId:currentBusinessId,memberUid:memberDoc.id,role:role.value,status:state.value,activityIds:m.activityIds||[],permissions:m.permissions||{view:true}});
               setStatus("memberStatus","Droits du collaborateur mis à jour.");
               await loadMembers();
             }catch(error){
