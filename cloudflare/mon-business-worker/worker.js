@@ -54,7 +54,7 @@ function cleanEmail(value) {
 function validatePermissions(value) {
   if (!value || typeof value!=="object" || Array.isArray(value)) throw new HttpError(400,"invalid_permissions");
   const entries=Object.entries(value);
-  if (entries.some(([key,flag])=>!PERMISSIONS.has(key)||typeof flag!=="boolean")) throw new HttpError(400,"invalid_permissions");
+  if (entries.some(([key,flag])=>!PERMISSIONS.has(key)||typeof flag!=="boolean") || value.view!==true) throw new HttpError(400,"invalid_permissions");
   return Object.fromEntries(entries);
 }
 function validateActivityIds(value) {
@@ -167,6 +167,7 @@ async function createInvitation(request,env,user,body) {
   const role=body.role;
   if (!ROLES.has(role)) throw new HttpError(400,"invalid_role");
   const activityIds=validateActivityIds(body.activityIds);
+  if (!activityIds.length) throw new HttpError(400,"activity_required");
   await verifyActivities(env,businessId,activityIds);
   const permissions=validatePermissions(body.permissions||{view:true});
   const expiresInHours=body.expiresInHours===undefined?168:body.expiresInHours;
