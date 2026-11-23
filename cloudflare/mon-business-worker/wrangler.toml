@@ -1,0 +1,11 @@
+name = "mon-business-api"
+main = "worker.js"
+compatibility_date = "2026-11-23"
+workers_dev = true
+
+[vars]
+APP_ORIGIN = "https://kevintabi-ia.github.io"
+
+# Add secrets with Wrangler; never commit service-account credentials:
+# npx wrangler secret put FIREBASE_API_KEY
+# npx wrangler secret put GOOGLE_SERVICE_ACCOUNT_JSON
