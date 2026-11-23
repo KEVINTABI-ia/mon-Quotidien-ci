@@ -17,9 +17,9 @@ section.innerHTML=`<h2>📞 Cabine téléphonique</h2>
 <button id="cabStartSubscribe" class="cab-menu-card" type="button"><span class="cab-menu-icon cab-phone-icon"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="18" y="7" width="28" height="50" rx="6" fill="none" stroke="#12a9d6" stroke-width="5"/><path d="M27 14h10M29 49h6" stroke="#12a9d6" stroke-width="3" stroke-linecap="round"/></svg></span><strong>Souscrire</strong><small>Forfait appel ou internet</small></button>
 <button id="cabStartHistory" class="cab-menu-card" type="button"><span class="cab-menu-icon cab-wallet-icon"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="17" width="46" height="35" rx="7" fill="#ec4899"/><path d="M9 23V16a6 6 0 0 1 6-6h32a6 6 0 0 1 6 6v2" fill="none" stroke="#be185d" stroke-width="4"/><path d="M39 29h16v13H39a6 6 0 0 1 0-13Z" fill="#f9a8d4"/><circle cx="43" cy="35.5" r="2.5" fill="#9d174d"/><circle cx="19" cy="49" r="7" fill="#fbbf24"/></svg></span><strong>Historique</strong><small>Mes transactions</small></button>
 </div>
-<div id="cabSubscribeChoices" class="cab-subscribe-choices" hidden><h3>Que souhaitez-vous souscrire ?</h3><div class="cab-subscribe-grid"><button id="cabStartCalls" class="cab-sub-choice" type="button"><span class="cab-sub-symbol">☎</span><strong>Forfait appel</strong></button><button id="cabStartInternet" class="cab-sub-choice" type="button"><span class="cab-sub-symbol">▥</span><strong>Forfait internet</strong></button></div><button id="cabBackToMenu" class="cab-back" type="button">← Retour aux services</button></div>
+<div id="cabSubscribeChoices" class="cab-subscribe-choices" hidden><h3>Que souhaitez-vous souscrire ?</h3><div class="cab-subscribe-grid"><button id="cabStartCalls" class="cab-sub-choice" type="button"><span class="cab-sub-symbol">☎</span><strong>Forfait appel</strong></button><button id="cabStartInternet" class="cab-sub-choice" type="button"><span class="cab-sub-symbol">▥</span><strong>Forfait internet</strong></button><button id="cabStartMixed" class="cab-sub-choice" type="button"><span class="cab-sub-symbol">▤</span><strong>Forfait mixte</strong><small>Appels + SMS + Internet</small></button></div><button id="cabBackToMenu" class="cab-back" type="button">← Retour aux services</button></div>
 <div id="cabRequestForm" class="cab-item" hidden><h3 id="cabFormTitle">Nouvelle opération</h3>
-<div id="cabServiceWrap"><label>Type de service</label><select id="cabService"><option value="transfert_unites">Transfert d’unité</option><option value="forfait_appels">Forfait appel</option><option value="forfait_internet">Forfait internet</option></select></div>
+<div id="cabServiceWrap"><label>Type de service</label><select id="cabService"><option value="transfert_unites">Transfert d’unité</option><option value="forfait_appels">Forfait appel</option><option value="forfait_internet">Forfait internet</option><option value="forfait_mixte">Forfait mixte</option></select></div>
 <label>Opérateur</label><div class="cab-choice-row" id="cabOperatorChoices">
 <button type="button" class="cab-logo-choice selected" data-operator="Orange" aria-label="Orange"><svg viewBox="0 0 120 58" role="img" aria-label="Logo Orange"><rect x="3" y="3" width="42" height="52" rx="9" fill="#ff7900"/><path d="M13 18h22M13 27h22M13 36h16" stroke="#fff" stroke-width="4" stroke-linecap="round"/><text x="52" y="36" font-size="19" font-weight="700" fill="#f07800">orange</text></svg></button>
 <button type="button" class="cab-logo-choice" data-operator="MTN" aria-label="MTN"><svg viewBox="0 0 120 58" role="img" aria-label="Logo MTN"><path d="M5 7h110v44H5z" rx="8" fill="#ffcc00"/><text x="60" y="36" text-anchor="middle" font-size="25" font-weight="900" fill="#171717">MTN</text></svg></button>
@@ -63,7 +63,41 @@ const cabForfaits=[
  {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:150,data:"15 Mo",minutes:"10 min + 30 SMS",validity:"1 jour",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
  {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:200,data:"25 Mo",minutes:"17 min + 50 SMS",validity:"1 jour",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
  {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:500,data:"250 Mo",minutes:"50 min + 250 SMS",validity:"5 jours",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
- {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:1500,data:"1,5 Go",minutes:"200 min + 500 SMS",validity:"15 jours",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"}
+ {op:"Moov Africa",type:"forfait_mixte",name:"Izy Mix+",price:1500,data:"1,5 Go",minutes:"200 min + 500 SMS",validity:"15 jours",code:"*303*1#",source:"https://www.moov-africa.ci/espace-particulier/forfaits-izy-mix/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Jour 180",price:180,data:"15 Mo",minutes:"10 min + 15 SMS",validity:"1 jour",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Jour 240",price:240,data:"50 Mo",minutes:"25 min + 25 SMS",validity:"2 jours (22h–5h)",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Jour 350",price:350,data:"50 Mo",minutes:"30 min + 30 SMS",validity:"24 heures",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Jour 575",price:575,data:"200 Mo",minutes:"40 min + 50 SMS",validity:"24 heures",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Jour 680",price:680,data:"300 Mo",minutes:"40 min + 50 SMS",validity:"2 jours",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Jour 1 100",price:1100,data:"400 Mo",minutes:"100 min + 100 SMS",validity:"24 heures",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Jour 1 650",price:1650,data:"1 300 Mo",minutes:"40 min + 100 SMS",validity:"24 heures",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Semaine 2 400",price:2400,data:"750 Mo",minutes:"200 min + 50 SMS",validity:"7 jours",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Semaine 3 350",price:3350,data:"2 560 Mo",minutes:"200 min + 200 SMS",validity:"7 jours",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Semaine 3 850",price:3850,data:"3 584 Mo",minutes:"300 min + 350 SMS",validity:"7 jours",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Semaine 5 000",price:5000,data:"4 096 Mo",minutes:"350 min + 500 SMS",validity:"7 jours",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Mois 8 750",price:8750,data:"3 584 Mo",minutes:"300 min + 150 SMS + illimité numéros préférés",validity:"30 jours",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Mois 11 000",price:11000,data:"5 120 Mo",minutes:"350 min + 350 SMS + illimité numéros préférés",validity:"30 jours",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"Orange",type:"forfait_mixte",name:"LOTOPASS MIX Mois 22 000",price:22000,data:"20 480 Mo",minutes:"1 000 min + 1 000 SMS + illimité numéros préférés",validity:"30 jours",code:"#111#",source:"https://www.orange.ci/"},
+ {op:"MTN",type:"forfait_mixte",name:"Free Plus 200",price:200,data:"25 Mo",minutes:"17 min + 25 SMS",validity:"1 jour",code:"*105*1#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_mixte",name:"Free Plus 300",price:300,data:"100 Mo",minutes:"30 min + 100 SMS",validity:"2 jours",code:"*105*1#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_mixte",name:"Free Plus 500",price:500,data:"300 Mo",minutes:"55 min + 100 SMS + 5 numéros complices illimités",validity:"5 jours",code:"*105*1#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_mixte",name:"Free Plus 700",price:700,data:"700 Mo",minutes:"70 min + 100 SMS + 5 numéros complices illimités",validity:"5 jours",code:"*105*1#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_mixte",name:"Free Plus 1 000",price:1000,data:"1 Go",minutes:"100 min + 100 SMS + 5 numéros complices illimités",validity:"10 jours",code:"*105*1#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_mixte",name:"Free Plus 1 500",price:1500,data:"1,5 Go",minutes:"200 min + 150 SMS",validity:"15 jours",code:"*105*1#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_mixte",name:"Free Plus 2 500",price:2500,data:"2,5 Go",minutes:"250 min + 250 SMS",validity:"30 jours",code:"*105*1#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_mixte",name:"Free Plus 5 000",price:5000,data:"5 Go",minutes:"500 min + 500 SMS",validity:"30 jours",code:"*105*1#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_mixte",name:"Free Plus 10 000",price:10000,data:"10 Go",minutes:"830 min + 500 SMS",validity:"30 jours",code:"*105*1#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_mixte",name:"Free Plus 20 000",price:20000,data:"20 Go",minutes:"1 665 min + 1 000 SMS",validity:"30 jours",code:"*105*1#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 150 Mo",price:150,data:"150 Mo",minutes:"—",validity:"1 jour",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 220 Mo",price:200,data:"220 Mo",minutes:"—",validity:"2 jours",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 340 Mo",price:300,data:"340 Mo",minutes:"—",validity:"3 jours",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 450 Mo",price:400,data:"450 Mo",minutes:"—",validity:"3 jours",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 750 Mo",price:500,data:"750 Mo",minutes:"—",validity:"3 jours",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 1,2 Go",price:1000,data:"1,2 Go",minutes:"—",validity:"7 jours",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 2 Go",price:1800,data:"2 Go",minutes:"—",validity:"30 jours",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 3,5 Go",price:2500,data:"3,5 Go",minutes:"—",validity:"30 jours",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 7,2 Go",price:5000,data:"7,2 Go",minutes:"—",validity:"30 jours",code:"*105#",source:"https://www.mtn.ci/"},
+ {op:"MTN",type:"forfait_internet",name:"Internet 15 Go",price:10000,data:"15 Go",minutes:"—",validity:"30 jours",code:"*105#",source:"https://www.mtn.ci/"}
 ];
 const cabTypeLabels={forfait_internet:"Internet",forfait_appels:"Appels",forfait_mixte:"Mixte"};
 let cabSelectedOffer=null;
@@ -71,8 +105,8 @@ function rendreCatalogueCabine(){
  cabSelectedOffer=null;
  const root=$("cabCatalogue");if(!root)return;
  const op=$("cabOperateur").value,kind=$("cabService").value;
- const matching=cabForfaits.filter(x=>x.op===op&&x.type===kind&&x.price>=200);
- const card=x=>'<article class="cab-item cab-offer"><div class="cab-request-head"><strong>'+esc(x.name)+'</strong><span class="cab-pill">'+esc(x.validity)+'</span></div><p class="cab-price">'+x.price.toLocaleString("fr-FR")+' FCFA</p><p>'+esc(x.data)+' · '+esc(x.minutes)+'</p><button type="button" class="primary" data-cab-offer="'+cabForfaits.indexOf(x)+'">Souscrire</button></article>';
+ const matching=cabForfaits.filter(x=>x.op===op&&x.type===kind);
+ const card=x=>'<article class="cab-item cab-offer"><div class="cab-request-head"><strong>'+esc(x.name)+'</strong><span class="cab-pill">'+esc(x.validity)+'</span></div><p class="cab-price">'+x.price.toLocaleString("fr-FR")+' FCFA</p><p><strong>Internet :</strong> '+esc(x.data)+'</p><p><strong>Appels / SMS :</strong> '+esc(x.minutes)+'</p><button type="button" class="primary" data-cab-offer="'+cabForfaits.indexOf(x)+'">Sélectionner ce forfait</button><a href="'+esc(x.source)+'" target="_blank" rel="noopener noreferrer">Voir les informations opérateur</a></article>';
  let html='<div class="cab-catalog-head"><h3>Annuaire des offres — '+esc(op)+'</h3></div>';
  if(matching.length)html+='<div class="cab-offers">'+matching.map(card).join("")+'</div>';
  else html+='<div class="cab-item">Aucune offre répertoriée pour cet opérateur et cette catégorie. Choisissez une autre catégorie ou un autre opérateur.</div>';
@@ -128,9 +162,11 @@ const css=document.createElement("style");css.textContent=`
 #cabinesTelephoniques .cab-phone-icon{background:#dff7fc}
 #cabinesTelephoniques .cab-wallet-icon{background:#fce3f1}
 #cabinesTelephoniques .cab-subscribe-choices{padding:12px 0}
-#cabinesTelephoniques .cab-subscribe-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#cabinesTelephoniques .cab-subscribe-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 #cabinesTelephoniques .cab-sub-choice{min-height:112px;background:#f3f8fc;border:1px solid #dceaf5;color:#174b68;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
 #cabinesTelephoniques .cab-sub-symbol{font-size:30px;color:#159ac3}
+#cabinesTelephoniques .cab-sub-choice small{font-size:11px;text-align:center;color:#68786e}
+@media(max-width:520px){#cabinesTelephoniques .cab-subscribe-grid{grid-template-columns:1fr}}
 #cabinesTelephoniques .cab-back{background:#f1f5f2;color:#31513d;border:1px solid #dce8df;margin:12px 0}
 #cabinesTelephoniques .cab-choice-row{display:flex;flex-direction:row;flex-wrap:nowrap;gap:8px;overflow-x:auto;padding:8px 2px 12px}
 #cabinesTelephoniques .cab-logo-choice{flex:1 0 0;min-width:0;min-height:66px;display:flex;align-items:center;justify-content:center;background:#fff;border:2px solid #e2e8ef;border-radius:13px;padding:5px}
@@ -156,12 +192,13 @@ const css=document.createElement("style");css.textContent=`
 function ouvrirCabinesTelephoniques(){if(typeof ouvrirSectionPleinEcran==="function")ouvrirSectionPleinEcran("cabinesTelephoniques","Cabine téléphonique");else section.style.display="block";chargerHistorique();}
 window.ouvrirCabinesTelephoniques=ouvrirCabinesTelephoniques;
 let cabRequestMode="transfer";
-function ouvrirFormulaireCabine(mode,serviceType){cabRequestMode=mode;cabSelectedOffer=null;$("cabRequestForm").hidden=false;$("cabClientChoices").hidden=true;$("cabSubscribeChoices").hidden=true;$("cabHistoryView").hidden=true;$("cabFormTitle").textContent=mode==="transfer"?"Transfert d’unité":serviceType==="forfait_internet"?"Souscrire un forfait internet":"Souscrire un forfait appel";$("cabService").value=mode==="transfer"?"transfert_unites":serviceType;$("cabService").disabled=mode==="transfer";$("cabServiceWrap").hidden=mode!=="transfer";$("cabCatalogue").hidden=mode==="transfer";$("cabAmountWrap").hidden=mode!=="transfer";$("cabFeePreview").hidden=mode!=="transfer";$("cabCommuneWrap").hidden=true;$("cabDetailsWrap").hidden=true;$("cabNumeroWrap").hidden=false;rendreCatalogueCabine();$("cabNumero").focus();}
+function ouvrirFormulaireCabine(mode,serviceType){cabRequestMode=mode;cabSelectedOffer=null;$("cabRequestForm").hidden=false;$("cabClientChoices").hidden=true;$("cabSubscribeChoices").hidden=true;$("cabHistoryView").hidden=true;$("cabFormTitle").textContent=mode==="transfer"?"Transfert d’unité":serviceType==="forfait_internet"?"Souscrire un forfait internet":serviceType==="forfait_mixte"?"Souscrire un forfait mixte":"Souscrire un forfait appel";$("cabService").value=mode==="transfer"?"transfert_unites":serviceType;$("cabService").disabled=mode==="transfer";$("cabServiceWrap").hidden=mode!=="transfer";$("cabCatalogue").hidden=mode==="transfer";$("cabAmountWrap").hidden=mode!=="transfer";$("cabFeePreview").hidden=mode!=="transfer";$("cabCommuneWrap").hidden=true;$("cabDetailsWrap").hidden=true;$("cabNumeroWrap").hidden=false;rendreCatalogueCabine();$("cabNumero").focus();}
 function retourMenuCabine(){ $("cabRequestForm").hidden=true;$("cabSubscribeChoices").hidden=true;$("cabHistoryView").hidden=true;$("cabClientChoices").hidden=false;$("cabMessage").textContent="";$("cabEnvoyer").disabled=false;}
 $("cabStartTransfer").onclick=()=>ouvrirFormulaireCabine("transfer","transfert_unites");
 $("cabStartSubscribe").onclick=()=>{$("cabClientChoices").hidden=true;$("cabSubscribeChoices").hidden=false;};
 $("cabStartCalls").onclick=()=>ouvrirFormulaireCabine("subscribe","forfait_appels");
 $("cabStartInternet").onclick=()=>ouvrirFormulaireCabine("subscribe","forfait_internet");
+$("cabStartMixed").onclick=()=>ouvrirFormulaireCabine("subscribe","forfait_mixte");
 $("cabBackToMenu").onclick=retourMenuCabine;
 $("cabStartHistory").onclick=()=>{$("cabClientChoices").hidden=true;$("cabSubscribeChoices").hidden=true;$("cabRequestForm").hidden=true;$("cabHistoryView").hidden=false;chargerHistorique();};
 $("cabBackFromHistory").onclick=retourMenuCabine;
