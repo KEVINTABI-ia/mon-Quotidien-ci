@@ -33,7 +33,8 @@ Depuis ce dossier :
 Le code est livré sans déploiement. L'URL du Worker devra ensuite être configurée dans l'application.
 
 ## Limites à traiter avant production
-- Ajouter une règle de limitation de débit Cloudflare (par IP et par compte) sur les routes d'invitation et d'acceptation.
+- Ajouter une règle de limitation de débit Cloudflare (par IP et par compte) sur les routes d'invitation et d'acceptation ; elle est obligatoire avant ouverture publique.
+- Les corps JSON sont limités à 16 Ko ; cela ne remplace pas la limitation de débit.
 - Vérifier le compte de service et les autorisations IAM avec un projet de test avant production.
 - Exécuter les tests Firebase Emulator et tests d'intégration avec deux sessions Firebase.
 - Confirmer le chemin final de la page Mon Business et l'URL du Worker.
