@@ -12447,6 +12447,62 @@ window.mtcAfficherActeJudiciaire = function(type){
       header #homeWelcome .home-search-icon{top:10px!important;color:#16834a!important}
       #homeQuickAccess{display:none!important}
       @media(max-width:380px){header #homeWelcome h1{font-size:19px!important}header #homeWelcome .home-location-input,header #homeWelcome .home-search input{min-height:41px!important}}
+
+      /* Boutons SERVICE et Services populaires : hauteur ajustée au contenu */
+      #homeFamilyLauncher .family-entry{
+        min-height:0!important;
+        height:auto!important;
+        align-self:start!important;
+        padding:11px 10px!important;
+        gap:5px!important;
+        justify-content:center!important;
+      }
+      #homeFamilyLauncher .family-entry .family-entry-icon{
+        flex:0 0 auto!important;
+        font-size:23px!important;
+        line-height:1.1!important;
+      }
+      #homeFamilyLauncher .family-entry strong{
+        flex:0 0 auto!important;
+        margin:0!important;
+      }
+      #homeFamilyLauncher .family-entry small{
+        flex:0 0 auto!important;
+        margin:0!important;
+      }
+      #homePopular .family-shortcuts{
+        display:grid!important;
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
+        align-items:start!important;
+        gap:8px!important;
+      }
+      #homePopular .family-shortcut{
+        display:flex!important;
+        flex-direction:row!important;
+        align-items:center!important;
+        justify-content:flex-start!important;
+        align-self:start!important;
+        width:auto!important;
+        min-width:0!important;
+        min-height:0!important;
+        height:auto!important;
+        aspect-ratio:auto!important;
+        padding:10px 9px!important;
+        gap:7px!important;
+        white-space:normal!important;
+        line-height:1.25!important;
+        text-align:left!important;
+      }
+      #homePopular .family-shortcut>span:first-child{
+        flex:0 0 auto!important;
+        font-size:19px!important;
+        line-height:1!important;
+      }
+      @media(max-width:380px){
+        #homeFamilyLauncher .family-entry{padding:9px 8px!important}
+        #homePopular .family-shortcuts{gap:6px!important}
+        #homePopular .family-shortcut{padding:8px 7px!important;font-size:11px!important}
+      }
     `;
     document.head.appendChild(style);
 
