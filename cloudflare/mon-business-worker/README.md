@@ -32,9 +32,12 @@ Depuis ce dossier :
 
 Le code est livré sans déploiement. L'URL du Worker devra ensuite être configurée dans l'application.
 
-## Limites à traiter avant production
-- Ajouter une règle de limitation de débit Cloudflare (par IP et par compte) sur les routes d'invitation et d'acceptation ; elle est obligatoire avant ouverture publique.
+## Protection contre les abus et limites avant production
+- Deux bindings Cloudflare Rate Limiting sont configurés : 60 requêtes/minute par IP et 30 requêtes/minute par utilisateur Firebase authentifié, sur les routes POST.
+- Les compteurs Cloudflare sont approximatifs et séparés par emplacement réseau ; ils réduisent les abus sans garantir un quota mondial strict.
+- Le Worker échoue en mode fermé (503) si un binding de limitation de débit manque ou ne répond pas.
 - Les corps JSON sont limités à 16 Ko ; cela ne remplace pas la limitation de débit.
+- Pour une protection globale stricte contre les tentatives distribuées, prévoir une coordination durable (par exemple Durable Objects) avant une exposition à grande échelle.
 - Vérifier le compte de service et les autorisations IAM avec un projet de test avant production.
 - Exécuter les tests Firebase Emulator et tests d'intégration avec deux sessions Firebase.
 - Confirmer le chemin final de la page Mon Business et l'URL du Worker.
