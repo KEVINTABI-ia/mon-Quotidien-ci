@@ -1,80 +1,82 @@
 <!doctype html>
 <html lang="fr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#075744">
-<meta name="description" content="Découvrez les abonnements MON BUSINESS : Standard, Premium et Professionnel. Un mois d'essai gratuit, puis paiement trimestriel.">
-<title>MON BUSINESS — Offres et abonnements | Mon Quotidien CI</title>
+<meta name="description" content="MON BUSINESS : pilotez vos ventes, vos dépenses, vos stocks et votre activité avec Mon Quotidien CI.">
+<title>MON BUSINESS — Espace professionnel | Mon Quotidien CI</title>
 <style>
 :root{--green:#087c62;--deep:#102d35;--gold:#d5a84b;--cream:#f5f5f0;--ink:#263a35;--muted:#718079;--line:#e2e9e4}
-*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
-header{background:linear-gradient(135deg,var(--deep),#174b48);color:white;padding:28px 18px 42px;text-align:center}
-.brand{font-size:14px;letter-spacing:.13em;font-weight:800;color:#d5e3de}
-h1{font-size:clamp(30px,7vw,46px);line-height:1.08;margin:22px auto 12px;max-width:720px}
-header p{max-width:620px;margin:auto;color:#e0ece7}
-main{max-width:1000px;margin:-18px auto 0;padding:0 16px 48px}
-.intro,.plan,.notice{background:white;border:1px solid var(--line);border-radius:20px;padding:22px;margin-bottom:16px;box-shadow:0 8px 24px #102d350a}
-.intro{text-align:center}.eyebrow{color:var(--green);font-weight:800;letter-spacing:.08em;font-size:12px;text-transform:uppercase}
-h2{margin:6px 0 8px;color:var(--deep);font-size:25px}.sub{color:var(--muted);margin:0}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
-.plan{margin:0;display:flex;flex-direction:column;position:relative}
-.plan h3{font-size:21px;color:var(--deep);margin:0 0 4px}
-.price{font-size:32px;font-weight:850;color:var(--green);letter-spacing:-1px;margin:12px 0 0}
-.price small{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:0}
-.monthly{font-size:13px;color:var(--muted);margin:0 0 14px}
-ul{padding-left:20px;margin:8px 0 18px}li{margin:7px 0}
-.plan a,.back{display:inline-block;text-decoration:none;text-align:center;border-radius:12px;padding:12px 16px;font-weight:750}
-.plan a{margin-top:auto;background:var(--green);color:white}
-.plan.premium{border:2px solid var(--gold)}
-.tag{display:inline-block;background:#f7efd9;color:#775a1d;border-radius:30px;padding:5px 10px;font-size:11px;font-weight:800;margin-bottom:12px;align-self:flex-start}
-.trial{background:#eaf4ef;border:1px solid #cfe5d8;border-radius:16px;padding:16px;margin:16px 0;text-align:center}
-.trial strong{color:#075744}.notice{font-size:14px;color:var(--muted)}
-.back{background:var(--deep);color:white;margin-top:4px}
-footer{text-align:center;padding:20px;color:var(--muted);font-size:13px}
-@media(max-width:520px){header{padding-bottom:34px}.intro,.plan,.notice{padding:18px}.price{font-size:29px}}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+header{background:linear-gradient(135deg,var(--deep),#174b48);color:white;padding:25px 18px 38px;text-align:center}
+.brand{font-size:12px;letter-spacing:.14em;font-weight:800;color:#d5e3de}h1{font-size:clamp(29px,7vw,42px);margin:14px 0 7px}header p{margin:0;color:#e0ece7}
+main{max-width:980px;margin:-17px auto 0;padding:0 14px 44px}.panel{background:#fff;border:1px solid var(--line);border-radius:19px;padding:20px;margin-bottom:14px;box-shadow:0 6px 20px #102d350a}
+h2{margin:0 0 9px;color:var(--deep);font-size:21px}.muted{color:var(--muted);font-size:13px}
+label{display:block;margin:12px 0 5px;font-weight:700;font-size:13px}input,select{width:100%;padding:13px;border:1px solid var(--line);border-radius:11px;font:inherit;background:#fff}
+button,.btn{border:0;border-radius:11px;padding:13px 16px;font:700 14px inherit;cursor:pointer;text-decoration:none;display:inline-block;text-align:center}
+.primary{background:var(--green);color:#fff;width:100%;margin-top:14px}.secondary{background:#eaf4ef;color:var(--deep);width:100%;margin-top:9px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.tabs button{background:#edf3ef;color:var(--deep)}.tabs button.active{background:var(--deep);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.plan{border:1px solid var(--line);border-radius:15px;padding:15px}.plan.featured{border:2px solid var(--gold)}.plan h3{margin:0;color:var(--deep)}.price{font-size:25px;font-weight:850;color:var(--green);margin:8px 0 0}.plan ul{padding-left:18px;font-size:13px}.tag{font-size:11px;color:#765a1b;font-weight:800}
+.notice{padding:13px;border-radius:12px;background:#edf6f1;color:#285443;font-size:13px;margin-top:12px}.status{font-size:14px;margin-top:12px;white-space:pre-line}.hidden{display:none!important}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
 </style>
 </head>
 <body>
-<header>
-  <div class="brand">MON QUOTIDIEN CI PRÉSENTE</div>
-  <h1>MON BUSINESS</h1>
-  <p>L’espace de gestion conçu pour accompagner les boutiques, commerces et entreprises dans le suivi de leurs activités.</p>
-</header>
+<header><div class="brand">MON QUOTIDIEN CI PRÉSENTE</div><h1>MON BUSINESS</h1><p>Votre espace pour piloter et développer votre activité.</p></header>
 <main>
-  <section class="intro">
-    <div class="eyebrow">Nos abonnements</div>
-    <h2>Choisissez votre formule</h2>
-    <p class="sub">Un mois d’essai gratuit, puis un abonnement facturé tous les trois mois.</p>
-    <div class="trial"><strong>🎁 1 mois d’essai gratuit</strong><br>Une période d’essai par entreprise. Aucun paiement pendant le mois d’essai.</div>
-  </section>
-  <section class="grid" aria-label="Formules MON BUSINESS">
-    <article class="plan">
-      <h3>Standard</h3><p class="sub">Pour démarrer et organiser son commerce.</p>
-      <div class="price">15 000 <small>FCFA / trimestre</small></div><p class="monthly">Soit 5 000 FCFA par mois</p>
-      <ul><li>Tableau de bord général</li><li>Suivi des recettes et dépenses</li><li>Suivi des ventes et commandes</li><li>Gestion de stock simple</li><li>Historique des opérations</li><li>Rapports de base</li><li>1 activité professionnelle</li><li>Jusqu’à 2 utilisateurs</li></ul>
-      <a href="./index.html">Découvrir Mon Quotidien CI</a>
-    </article>
-    <article class="plan premium">
-      <span class="tag">FORMULE ÉVOLUTIVE</span>
-      <h3>Premium</h3><p class="sub">Pour les commerces en croissance.</p>
-      <div class="price">30 000 <small>FCFA / trimestre</small></div><p class="monthly">Soit 10 000 FCFA par mois</p>
-      <ul><li>Tous les avantages Standard</li><li>Jusqu’à 3 activités</li><li>Gestion avancée des stocks</li><li>Gestion du personnel</li><li>Achats et approvisionnements</li><li>Gestion des clients</li><li>Rapports détaillés et graphiques</li><li>Alertes et notifications</li><li>Jusqu’à 5 utilisateurs et rôles</li></ul>
-      <a href="./index.html">Découvrir Mon Quotidien CI</a>
-    </article>
-    <article class="plan">
-      <h3>Professionnel</h3><p class="sub">Pour les entreprises structurées et multi-activités.</p>
-      <div class="price">60 000 <small>FCFA / trimestre</small></div><p class="monthly">Soit 20 000 FCFA par mois</p>
-      <ul><li>Tous les avantages Premium</li><li>Activités multiples</li><li>Utilisateurs multiples</li><li>Gestion avancée des équipes et permissions</li><li>Analyses recettes, dépenses et bénéfices</li><li>Rapports consolidés</li><li>Assistant d’analyse et recommandations</li><li>Sauvegarde continue et sécurité renforcée</li><li>Accompagnement prioritaire</li></ul>
-      <a href="./index.html">Découvrir Mon Quotidien CI</a>
-    </article>
-  </section>
-  <section class="notice">
-    <strong>À savoir avant le lancement des abonnements</strong><br>
-    Les tarifs et la période d’essai correspondent à la grille commerciale retenue. Les fonctionnalités détaillées ci-dessus constituent le périmètre prévu des formules : elles doivent être vérifiées et activées dans l’espace MON BUSINESS avant toute commercialisation. La souscription, le suivi automatique de l’essai et le paiement trimestriel ne sont pas encore activés sur cette page.
-  </section>
-  <a class="back" href="./index.html">← Retour à Mon Quotidien CI</a>
+<section class="panel" id="authPanel">
+<h2>Accéder à mon espace professionnel</h2><p class="muted">Connectez-vous ou créez votre compte pour enregistrer votre entreprise.</p>
+<div class="tabs"><button id="tabRegister" class="active" type="button" onclick="setMode('register')">Créer un compte</button><button id="tabLogin" type="button" onclick="setMode('login')">Se connecter</button></div>
+<div id="nameWrap"><label for="ownerName">Nom du responsable</label><input id="ownerName" autocomplete="name" placeholder="Votre nom complet"></div>
+<label for="email">Adresse e-mail</label><input id="email" type="email" autocomplete="email" placeholder="nom@exemple.com">
+<label for="password">Mot de passe</label><input id="password" type="password" autocomplete="new-password" minlength="6" placeholder="6 caractères minimum">
+<button class="primary" type="button" onclick="authenticate()">Continuer</button>
+<div id="authStatus" class="status" aria-live="polite"></div>
+</section>
+<section class="panel hidden" id="companyPanel">
+<h2>Créer mon espace entreprise</h2><p class="muted">Une seule période d’essai de 30 jours par entreprise, contrôlée par le nom commercial et le téléphone.</p>
+<label for="companyName">Nom de l’entreprise ou du commerce</label><input id="companyName" maxlength="100" placeholder="Ex. : Boutique Chez Awa">
+<label for="companyPhone">Téléphone professionnel</label><input id="companyPhone" type="tel" inputmode="tel" placeholder="07 00 00 00 00">
+<button class="primary" type="button" onclick="startTrial()">Démarrer mon mois d’essai gratuit</button>
+<div id="companyStatus" class="status" aria-live="polite"></div>
+</section>
+<section class="panel hidden" id="dashboardPanel">
+<h2 id="dashboardTitle">Mon espace MON BUSINESS</h2><div id="subscriptionStatus" class="notice"></div>
+<p class="muted">Espace de démarrage : les modules de gestion seront activés progressivement. Les offres ci-dessous définissent les droits prévus selon votre formule.</p>
+<div class="grid" id="planGrid">
+<article class="plan"><h3>Standard</h3><div class="price">15 000 FCFA</div><p class="muted">par trimestre · 5 000 FCFA/mois</p><ul><li>Tableau de bord</li><li>Recettes et dépenses</li><li>Ventes, commandes et stock simple</li><li>Historique et rapports de base</li><li>1 activité · 2 utilisateurs</li></ul></article>
+<article class="plan featured"><span class="tag">FORMULE ÉVOLUTIVE</span><h3>Premium</h3><div class="price">30 000 FCFA</div><p class="muted">par trimestre · 10 000 FCFA/mois</p><ul><li>Tous les avantages Standard</li><li>Jusqu’à 3 activités</li><li>Stocks, personnel, achats et clients</li><li>Rapports détaillés et alertes</li><li>Jusqu’à 5 utilisateurs</li></ul></article>
+<article class="plan"><h3>Professionnel</h3><div class="price">60 000 FCFA</div><p class="muted">par trimestre · 20 000 FCFA/mois</p><ul><li>Tous les avantages Premium</li><li>Activités et utilisateurs multiples</li><li>Permissions avancées</li><li>Analyses consolidées et recommandations</li><li>Accompagnement prioritaire</li></ul></article>
+</div>
+<div id="paymentPanel" class="hidden">
+<label for="planId">Choisir une formule</label><select id="planId"><option value="standard">Standard — 15 000 FCFA / trimestre</option><option value="premium">Premium — 30 000 FCFA / trimestre</option><option value="professionnel">Professionnel — 60 000 FCFA / trimestre</option></select>
+<label for="paymentMethod">Moyen de paiement</label><select id="paymentMethod"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select>
+<button class="primary" type="button" onclick="paySubscription()">Payer et activer mon abonnement</button>
+</div>
+<div id="dashboardStatus" class="status" aria-live="polite"></div>
+<button class="secondary" type="button" onclick="logout()">Se déconnecter</button>
+</section>
+<a class="btn secondary" href="./index.html">← Retour à l’accueil MON QUOTIDIEN CI</a>
 </main>
 <footer>MON BUSINESS · Un service de MON QUOTIDIEN CI</footer>
-</body>
-</html>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig={apiKey:"AIzaSyBJFCyGS-cEaEm0_c_-p0CzunNcME9-u7Q",authDomain:"mon-transport-ci.firebaseapp.com",projectId:"mon-transport-ci",storageBucket:"mon-transport-ci.firebasestorage.app",messagingSenderId:"326599026854",appId:"1:326599026854:web:73a33f95f427854aec6c67"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();auth.useDeviceLanguage();
+const API="https://mon-quotidien-jeko.tabikevin57.workers.dev";
+let mode="register",companyId=null,company=null;
+function setMode(next){mode=next;document.getElementById("nameWrap").classList.toggle("hidden",mode!=="register");document.getElementById("tabRegister").classList.toggle("active",mode==="register");document.getElementById("tabLogin").classList.toggle("active",mode==="login");document.getElementById("authStatus").textContent="";}
+function message(id,text,error=false){const e=document.getElementById(id);e.textContent=text;e.style.color=error?"#b42318":"#087c62";}
+async function api(path,body){const user=auth.currentUser;if(!user)throw new Error("Connectez-vous d’abord.");const token=await user.getIdToken();const response=await fetch(API+path,{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify(body)});const data=await response.json().catch(()=>({}));if(!response.ok){const map={business_trial_already_used:"Cet essai gratuit a déjà été utilisé pour cette entreprise.",mon_business_trial_or_subscription_active:"Votre période d’essai ou votre abonnement est encore actif.",existing_payment_requires_review:"Un paiement précédent doit être vérifié avant une nouvelle tentative.",invalid_business_identity:"Vérifiez le nom et le numéro de téléphone professionnel."};throw new Error(map[data.error]||data.error||"Une erreur est survenue.");}return data;}
+async function authenticate(){const email=document.getElementById("email").value.trim(),password=document.getElementById("password").value,ownerName=document.getElementById("ownerName").value.trim();if(!email||password.length<6){message("authStatus","Saisissez un e-mail valide et un mot de passe d’au moins 6 caractères.",true);return;}try{message("authStatus","Connexion en cours…");if(mode==="register"){if(ownerName.length<2)throw new Error("Saisissez votre nom complet.");const cred=await auth.createUserWithEmailAndPassword(email,password);await cred.user.updateProfile({displayName:ownerName});}else await auth.signInWithEmailAndPassword(email,password);}catch(e){message("authStatus",e.message,true);}}
+async function startTrial(){try{message("companyStatus","Création sécurisée de votre espace…");const data=await api("/api/mon-business/trial",{companyName:document.getElementById("companyName").value,phone:document.getElementById("companyPhone").value});companyId=data.companyId;company=data.company;showDashboard();}catch(e){message("companyStatus",e.message,true);}}
+function showDashboard(){document.getElementById("authPanel").classList.add("hidden");document.getElementById("companyPanel").classList.add("hidden");document.getElementById("dashboardPanel").classList.remove("hidden");document.getElementById("dashboardTitle").textContent=company.companyName;const trialEnd=company.trialEndAt?.seconds?new Date(company.trialEndAt.seconds*1000):new Date(company.trialEndAt);const expiry=company.subscriptionEndAt?.seconds?new Date(company.subscriptionEndAt.seconds*1000):company.subscriptionEndAt?new Date(company.subscriptionEndAt):null;let text="";if(company.status==="trial"&&trialEnd.getTime()>Date.now()){text="Essai gratuit en cours jusqu’au "+trialEnd.toLocaleDateString("fr-FR")+". Aucune facturation pendant cette période.";document.getElementById("paymentPanel").classList.add("hidden");}else if(company.status==="active"&&expiry&&expiry.getTime()>Date.now()){text="Formule "+(company.planLabel||company.planId)+" active jusqu’au "+expiry.toLocaleDateString("fr-FR")+".";document.getElementById("paymentPanel").classList.add("hidden");}else{text="Votre période d’essai ou votre abonnement est terminé. Choisissez une formule pour réactiver votre espace.";document.getElementById("paymentPanel").classList.remove("hidden");}document.getElementById("subscriptionStatus").textContent=text;}
+async function paySubscription(){try{message("dashboardStatus","Préparation du paiement Jèko…");const data=await api("/api/jeko/checkout",{serviceId:"mon_business",companyId,planId:document.getElementById("planId").value,paymentMethod:document.getElementById("paymentMethod").value});window.location.href=data.checkoutUrl;}catch(e){message("dashboardStatus",e.message,true);}}
+async function logout(){await auth.signOut();location.reload();}
+auth.onAuthStateChanged(async user=>{if(!user){document.getElementById("authPanel").classList.remove("hidden");document.getElementById("companyPanel").classList.add("hidden");document.getElementById("dashboardPanel").classList.add("hidden");return;}document.getElementById("authPanel").classList.add("hidden");try{const params=new URLSearchParams(location.search),paymentId=params.get("paymentId");if(paymentId){const token=await user.getIdToken(),res=await fetch(API+"/api/jeko/status?paymentId="+encodeURIComponent(paymentId),{headers:{Authorization:"Bearer "+token}});const payment=await res.json();message("authStatus",payment.status==="succeeded"?"Paiement confirmé. Votre abonnement est activé.":"Paiement reçu ou en cours de vérification.");history.replaceState({},"",location.pathname);}const stored=localStorage.getItem("mqciMonBusinessCompanyId");if(stored){companyId=stored;const idToken=await user.getIdToken();const res=await fetch(API+"/api/mon-business/company?companyId="+encodeURIComponent(stored),{headers:{Authorization:"Bearer "+idToken}});if(res.ok){const data=await res.json();company=data.company;showDashboard();if(params.get("paymentId")){message("dashboardStatus",data.company.status==="active"?"Paiement confirmé : votre abonnement est actif.":"Paiement en cours de confirmation.");}return;}}document.getElementById("companyPanel").classList.remove("hidden");}catch(e){message("companyStatus",e.message,true);document.getElementById("companyPanel").classList.remove("hidden");}});
+const originalStartTrial=startTrial;
+startTrial=async function(){await originalStartTrial();if(companyId)localStorage.setItem("mqciMonBusinessCompanyId",companyId);};
+</script>
+</body></html>
