@@ -1632,6 +1632,40 @@ describe("Mon Transport CI — règles Firestore", function () {
       await createBusinessAndOwner();
       await assertFails(deleteDoc(doc(db, "businesses", BUSINESS_ID)));
     });
+
+    it("permet au propriétaire de modifier un membre existant mais pas de modifier le propriétaire", async () => {
+      const { doc, updateDoc, serverTimestamp } = require("firebase/firestore");
+      await createBusinessAndOwner();
+      await testEnv.withSecurityRulesDisabled(async context => {
+        await context.firestore().doc("businesses/" + BUSINESS_ID + "/members/collaborator-1").set({
+          uid:"collaborator-1",role:"employee",status:"active",
+          activityIds:["commerce"],permissions:{view:true},createdAt:new Date()
+        });
+      });
+      const ownerDb=testEnv.authenticatedContext(OWNER_UID).firestore();
+      await assertSucceeds(updateDoc(doc(ownerDb,"businesses",BUSINESS_ID,"members","collaborator-1"),{
+        role:"activity_manager",status:"suspended",activityIds:["commerce"],
+        permissions:{view:true,approve:false},updatedAt:serverTimestamp()
+      }));
+      await assertFails(updateDoc(doc(ownerDb,"businesses",BUSINESS_ID,"members",OWNER_UID),{
+        role:"employee",updatedAt:serverTimestamp()
+      }));
+    });
+
+    it("refuse à un collaborateur de modifier ses propres droits", async () => {
+      const { doc, updateDoc, serverTimestamp } = require("firebase/firestore");
+      await createBusinessAndOwner();
+      await testEnv.withSecurityRulesDisabled(async context => {
+        await context.firestore().doc("businesses/" + BUSINESS_ID + "/members/collaborator-2").set({
+          uid:"collaborator-2",role:"employee",status:"active",
+          activityIds:["commerce"],permissions:{view:true},createdAt:new Date()
+        });
+      });
+      const memberDb=testEnv.authenticatedContext("collaborator-2").firestore();
+      await assertFails(updateDoc(doc(memberDb,"businesses",BUSINESS_ID,"members","collaborator-2"),{
+        role:"owner",permissions:{manage_access:true},updatedAt:serverTimestamp()
+      }));
+    });
   });
   });
 
