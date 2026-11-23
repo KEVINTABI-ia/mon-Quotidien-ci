@@ -66,6 +66,13 @@ function validateActivityIds(value) {
 class HttpError extends Error {
   constructor(status, code) { super(code); this.status=status; this.code=code; }
 }
+async function enforceRateLimit(binding,key) {
+  if (!binding || typeof binding.limit!=="function") throw new HttpError(503,"rate_limiter_unavailable");
+  let result;
+  try { result=await binding.limit({key}); }
+  catch { throw new HttpError(503,"rate_limiter_unavailable"); }
+  if (result?.success!==true) throw new HttpError(429,"rate_limit_exceeded");
+}
 let oauthCache;
 async function signJwt(payload, privateKeyPem) {
   const header=b64url(new TextEncoder().encode(JSON.stringify({alg:"RS256",typ:"JWT"})));
@@ -265,6 +272,8 @@ export default {
       const url=new URL(request.url);
       if (url.pathname==="/health" && request.method==="GET") return json({ok:true,service:"mon-business-worker"},200,cors);
       if (request.method!=="POST") return json({error:"method_not_allowed"},405,cors);
+      const clientIp=request.headers.get("cf-connecting-ip")||"unknown";
+      await enforceRateLimit(env.IP_RATE_LIMITER,clientIp);
       if (!(request.headers.get("content-type")||"").toLowerCase().includes("application/json")) throw new HttpError(415,"json_required");
       const declaredLength=Number(request.headers.get("content-length")||0);
       if (declaredLength>16384) throw new HttpError(413,"request_too_large");
@@ -274,6 +283,7 @@ export default {
       try { body=JSON.parse(rawBody); } catch { throw new HttpError(400,"invalid_json_body"); }
       if (!body || typeof body!=="object" || Array.isArray(body)) throw new HttpError(400,"invalid_json_body");
       const user=await authenticate(request,env);
+      await enforceRateLimit(env.USER_RATE_LIMITER,user.uid);
       let response;
       if (url.pathname==="/v1/invitations") response=await createInvitation(request,env,user,body);
       else if (url.pathname==="/v1/invitations/accept") response=await acceptInvitation(request,env,user,body);
@@ -291,4 +301,4 @@ export default {
   }
 };
 
-export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink };
+export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit };
