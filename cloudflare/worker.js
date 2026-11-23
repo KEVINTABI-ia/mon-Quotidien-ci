@@ -2033,6 +2033,16 @@ async function monBusinessHash(value) {
   return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))))
     .map(v => v.toString(16).padStart(2, "0")).join("");
 }
+async function getMonBusinessCompany(request, env) {
+  const authResult = await requireUser(request, env);
+  if (!authResult.user) return json({ error: "unauthorized", diagnostic: authResult.diagnostic }, 401);
+  const url = new URL(request.url), companyId = url.searchParams.get("companyId") || "";
+  if (!/^[a-f0-9]{64}$/.test(companyId)) return json({ error: "invalid_company_id" }, 400);
+  const companyDoc = await getDoc(env, "mon_business_companies/" + companyId);
+  const company = docData(companyDoc);
+  if (!companyDoc || company?.uid !== authResult.user.sub) return json({ error: "company_not_found" }, 404);
+  return json({ companyId, company });
+}
 async function startMonBusinessTrial(request, env) {
   const authResult = await requireUser(request, env);
   if (!authResult.user) return json({ error: "unauthorized", diagnostic: authResult.diagnostic }, 401);
@@ -2112,6 +2122,7 @@ export default {
     else if(url.pathname==="/api/jeko/status"&&request.method==="GET") response=await paymentStatus(request,env);
     else if(url.pathname==="/api/jeko/subscription-plans"&&request.method==="GET") response=await subscriptionPlans(request,env);
     else if(url.pathname==="/api/mon-business/trial"&&request.method==="POST") response=await startMonBusinessTrial(request,env);
+    else if(url.pathname==="/api/mon-business/company"&&request.method==="GET") response=await getMonBusinessCompany(request,env);
     else if(url.pathname==="/api/jeko/diagnostic"&&request.method==="GET") response=await jekoDiagnostic(request,env);
     else if(url.pathname==="/api/jeko/network-diagnostic"&&request.method==="GET") response=await jekoNetworkDiagnostic(request,env);
     else response=json({error:"not_found"},404);
