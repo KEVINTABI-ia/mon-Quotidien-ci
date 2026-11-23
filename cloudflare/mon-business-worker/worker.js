@@ -98,8 +98,9 @@ async function getDoc(env,path) {
   const doc=await response.json();
   return {data:decodeDocument(doc),updateTime:doc.updateTime,name:doc.name};
 }
-function writeDocument(path,data,condition) {
+function writeDocument(path,data,condition,partial=false) {
   const write={update:{name:"projects/"+PROJECT_ID+"/databases/(default)/documents/"+path,...firestoreFields(data)}};
+  if (partial) write.updateMask={fieldPaths:Object.keys(data)};
   write.currentDocument=condition==="create"?{exists:false}:{updateTime:condition};
   return write;
 }
@@ -143,6 +144,12 @@ async function verifyActivities(env,businessId,activityIds) {
 async function digest(value) {
   return b64url(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value)));
 }
+function constantTimeEqual(left,right) {
+  if (typeof left!=="string" || typeof right!=="string" || left.length!==right.length) return false;
+  let mismatch=0;
+  for (let i=0;i<left.length;i++) mismatch|=left.charCodeAt(i)^right.charCodeAt(i);
+  return mismatch===0;
+}
 function randomToken() {
   const bytes=crypto.getRandomValues(new Uint8Array(32));
   return b64url(bytes);
@@ -185,7 +192,7 @@ async function acceptInvitation(request,env,user,body) {
   const data=invitation.data, now=new Date();
   if (data.expiresAt && new Date(data.expiresAt)<=now) throw new HttpError(410,"invitation_expired");
   if (data.email!==user.email) throw new HttpError(403,"invitation_email_mismatch");
-  if (await digest(body.token)!==data.tokenHash) throw new HttpError(403,"invalid_invitation_token");
+  if (!constantTimeEqual(await digest(body.token),data.tokenHash)) throw new HttpError(403,"invalid_invitation_token");
   const businessId=assertId(data.businessId,"business_id");
   if (!ROLES.has(data.role)) throw new HttpError(400,"invalid_invitation_role");
   const activityIds=validateActivityIds(data.activityIds);
@@ -196,7 +203,7 @@ async function acceptInvitation(request,env,user,body) {
   const auditId=crypto.randomUUID();
   await commit(env,[
     writeDocument("businesses/"+businessId+"/members/"+user.uid,member,"create"),
-    writeDocument("businessInvitations/"+invitationId,{...data,status:"accepted",acceptedByUid:user.uid,acceptedAt:now},""+invitation.updateTime),
+    writeDocument("businessInvitations/"+invitationId,{status:"accepted",acceptedByUid:user.uid,acceptedAt:now},""+invitation.updateTime,true),
     writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,auditData({businessId,actorUid:user.uid,action:"invitation.accepted",entityId:invitationId,now,details:{role:data.role}}),"create")
   ]);
   return json({accepted:true,businessId,role:data.role});
@@ -209,7 +216,7 @@ async function revokeInvitation(request,env,user,body) {
   if (!invitation || invitation.data.businessId!==businessId || invitation.data.status!=="pending") throw new HttpError(404,"invitation_unavailable");
   const now=new Date(),auditId=crypto.randomUUID();
   await commit(env,[
-    writeDocument("businessInvitations/"+invitationId,{...invitation.data,status:"revoked",revokedAt:now,revokedByUid:user.uid},""+invitation.updateTime),
+    writeDocument("businessInvitations/"+invitationId,{status:"revoked",revokedAt:now,revokedByUid:user.uid},""+invitation.updateTime,true),
     writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,auditData({businessId,actorUid:user.uid,action:"invitation.revoked",entityId:invitationId,now}),"create")
   ]);
   return json({revoked:true});
