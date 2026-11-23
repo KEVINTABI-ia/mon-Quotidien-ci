@@ -7,7 +7,7 @@
     "test:syntax": "node tests/check-inline-scripts.js",
     "test": "npm run test:syntax && npm run test:worker && npm run test:rules && npm run test:storage",
     "test:storage": "firebase emulators:exec --only storage \"mocha --timeout 15000 tests/storage.rules.test.js\"",
-    "test:worker": "node --test tests/worker-enfants.test.mjs tests/jeko-subscriptions.test.mjs tests/jeko-publicites.test.mjs tests/cloudflare-r2-publicites.test.mjs tests/logement-r2-worker.test.mjs tests/courier-wallet.test.mjs tests/mon-quotidien-ai.test.mjs tests/jeko-cabines.test.mjs tests/mon-business-core.test.mjs tests/mon-business-finance.test.mjs tests/mon-business-operations.test.mjs tests/mon-business-sales.test.mjs tests/mon-business-logistics.test.mjs tests/mon-business-hr.test.mjs tests/mon-business-resources.test.mjs tests/mon-business-approvals.test.mjs"
+    "test:worker": "node --test tests/worker-enfants.test.mjs tests/jeko-subscriptions.test.mjs tests/jeko-publicites.test.mjs tests/cloudflare-r2-publicites.test.mjs tests/logement-r2-worker.test.mjs tests/courier-wallet.test.mjs tests/mon-quotidien-ai.test.mjs tests/jeko-cabines.test.mjs tests/mon-business-core.test.mjs tests/mon-business-finance.test.mjs tests/mon-business-operations.test.mjs tests/mon-business-sales.test.mjs tests/mon-business-logistics.test.mjs tests/mon-business-hr.test.mjs tests/mon-business-resources.test.mjs tests/mon-business-approvals.test.mjs tests/mon-business-reports.test.mjs"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "6.0.0",
