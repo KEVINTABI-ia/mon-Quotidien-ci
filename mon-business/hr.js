@@ -41,9 +41,7 @@
   return Object.freeze({grossMinor:gross,advancesMinor,deductionsMinor,netMinor:net,requiresValidation:true,paid:false});
  }
  function canEmployeeReadHRRecord({recordType,actorRole}={}){
-  if(actorRole==="owner"||actorRole==="general_director")return true;
-  if(actorRole==="hr_manager")return true;
-  return false;
+  return actorRole==="owner"||actorRole==="hr_authorized";
  }
  return Object.freeze({LEAVE,validateAttendance,validateLeaveRequest,leaveTransition,calculatePayrollPreview,canEmployeeReadHRRecord});
 });
