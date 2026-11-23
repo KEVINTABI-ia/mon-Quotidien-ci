@@ -27,4 +27,6 @@ test("prépare une paie en FCFA sans effectuer le paiement",()=>{
 test("n'autorise pas l'employé à lire les dossiers RH dans le paramétrage choisi",()=>{
  assert.equal(hr.canEmployeeReadHRRecord({recordType:"payslip",actorRole:"employee"}),false);
  assert.equal(hr.canEmployeeReadHRRecord({recordType:"payslip",actorRole:"owner"}),true);
+ assert.equal(hr.canEmployeeReadHRRecord({recordType:"payslip",actorRole:"hr_authorized"}),true);
+ assert.equal(hr.canEmployeeReadHRRecord({recordType:"payslip",actorRole:"general_director"}),false);
 });
