@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#075B35">
+  <title>Mon Business — Mon Quotidien CI</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#17352c;background:#f3f7f4}
+    *{box-sizing:border-box}body{margin:0}header{background:#075b35;color:white;padding:22px 18px}
+    header a{color:#fff}main{max-width:760px;margin:24px auto;padding:0 16px}
+    .card{background:#fff;border:1px solid #dce8df;border-radius:18px;padding:20px;margin:0 0 16px;box-shadow:0 5px 18px #143b2510}
+    h1{font-size:22px;margin:0 0 5px}h2{font-size:19px;margin:0 0 14px}p{line-height:1.55}
+    label{display:block;font-weight:650;font-size:14px;margin:12px 0 6px}
+    input,select{width:100%;padding:13px;border:1px solid #cbdacf;border-radius:10px;font:inherit;background:#fff}
+    button{border:0;border-radius:11px;padding:13px 16px;background:#087c62;color:white;font-weight:750;font:inherit;cursor:pointer}
+    button:disabled{opacity:.55;cursor:wait}.secondary{background:#edf5ef;color:#15583b}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.muted{color:#60766a;font-size:13px}
+    .status{padding:12px;border-radius:10px;background:#edf5ef;margin-top:12px;white-space:pre-wrap}
+    .error{background:#fff0ed;color:#8e261b}.hidden{display:none!important}
+    .pill{display:inline-block;background:#e6f3e9;color:#145b39;padding:5px 9px;border-radius:30px;font-size:12px;font-weight:700}
+    @media(max-width:560px){.grid{grid-template-columns:1fr}}
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<header>
+  <h1>Mon Business</h1>
+  <div>MON QUOTIDIEN CI · Le quotidien à portée de main !</div>
+  <p><a href="../index.html">← Retour à Mon Quotidien CI</a></p>
+</header>
+<main>
+  <section class="card">
+    <span class="pill">Phase 1 · Fondations</span>
+    <h2 style="margin-top:12px">Votre espace professionnel</h2>
+    <p class="muted">Créez votre entreprise, qu'elle soit immatriculée ou non. Vous pourrez ensuite organiser plusieurs secteurs d'activité dans le même espace.</p>
+    <div id="authState" class="status">Vérification de votre session…</div>
+    <p id="userInfo" class="muted hidden"></p>
+  </section>
+
+  <section id="registrationCard" class="card hidden">
+    <h2>Enregistrer une entreprise</h2>
+    <form id="businessForm">
+      <label for="businessName">Nom de l'entreprise</label>
+      <input id="businessName" maxlength="140" minlength="2" required autocomplete="organization">
+      <label for="legalStatus">Situation administrative</label>
+      <select id="legalStatus" required>
+        <option value="unregistered">Non immatriculée (activité en lancement ou informelle)</option>
+        <option value="registered">Immatriculée</option>
+      </select>
+      <div id="registrationNumberWrap" class="hidden">
+        <label for="registrationNumber">Numéro d'immatriculation</label>
+        <input id="registrationNumber" maxlength="100">
+      </div>
+      <button id="createBusinessButton" type="submit">Créer mon espace entreprise</button>
+    </form>
+    <div id="businessStatus" class="status hidden" role="status" aria-live="polite"></div>
+  </section>
+
+  <section id="activityCard" class="card hidden">
+    <h2>Ajouter un secteur d'activité</h2>
+    <p class="muted">Chaque activité aura ses propres données et ses propres droits d'accès. Le tableau de bord global pourra ensuite consolider les résultats.</p>
+    <form id="activityForm">
+      <label for="activityName">Nom de l'activité</label>
+      <input id="activityName" maxlength="100" minlength="2" required placeholder="Ex. Boutique principale">
+      <label for="activityType">Type d'activité</label>
+      <select id="activityType" required>
+        <option value="">Choisir un secteur</option>
+        <option value="commerce">Commerce / boutique</option>
+        <option value="transport">Transport / mobilité</option>
+        <option value="livraison">Livraison / logistique</option>
+        <option value="restauration">Restauration</option>
+        <option value="agriculture">Agriculture / élevage</option>
+        <option value="services">Prestations de services</option>
+        <option value="autre">Autre activité</option>
+      </select>
+      <button id="createActivityButton" type="submit">Ajouter cette activité</button>
+    </form>
+    <div id="activityStatus" class="status hidden" role="status" aria-live="polite"></div>
+    <div id="activitiesList"></div>
+  </section>
+</main>
+<script>
+(function(){
+  const firebaseConfig = {
+    apiKey:"AIzaSyBJFCyGS-cEaEm0_c_-p0CzunNcME9-u7",
+    authDomain:"mon-transport-ci.firebaseapp.com",
+    projectId:"mon-transport-ci",
+    storageBucket:"mon-transport-ci.firebasestorage.app",
+    messagingSenderId:"326599026854",
+    appId:"1:326599026854:web:73a33f95f427854aec6c67"
+  };
+  if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const auth=firebase.auth(), db=firebase.firestore();
+  const $=id=>document.getElementById(id);
+  let currentUser=null, currentBusinessId=null;
+  const setStatus=(id,message,isError=false)=>{
+    const el=$(id);el.textContent=message;el.classList.remove("hidden","error");
+    if(isError)el.classList.add("error");
+  };
+  $("legalStatus").addEventListener("change",()=>{
+    const registered=$("legalStatus").value==="registered";
+    $("registrationNumberWrap").classList.toggle("hidden",!registered);
+    $("registrationNumber").required=registered;
+  });
+  auth.onAuthStateChanged(user=>{
+    currentUser=user||null;
+    $("registrationCard").classList.toggle("hidden",!user);
+    $("activityCard").classList.toggle("hidden",!user);
+    $("authState").textContent=user
+      ?"Session connectée. Vous pouvez créer votre espace professionnel."
+      :"Connectez-vous d'abord sur Mon Quotidien CI, puis revenez sur cette page.";
+    $("userInfo").classList.toggle("hidden",!user);
+    $("userInfo").textContent=user?"Compte Firebase authentifié · "+user.uid:"";
+    if(!user){currentBusinessId=null;return;}
+    currentBusinessId=sessionStorage.getItem("mqci_mon_business_id")||null;
+    if(currentBusinessId)loadActivities();
+  });
+
+  $("businessForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(!currentUser)return;
+    const name=$("businessName").value.trim();
+    const legalStatus=$("legalStatus").value;
+    const registrationNumber=$("registrationNumber").value.trim();
+    if(name.length<2)return setStatus("businessStatus","Le nom doit contenir au moins 2 caractères.",true);
+    if(legalStatus==="registered"&&!registrationNumber)return setStatus("businessStatus","Le numéro d'immatriculation est obligatoire.",true);
+    const button=$("createBusinessButton");button.disabled=true;
+    try{
+      const businessRef=db.collection("businesses").doc();
+      const memberRef=businessRef.collection("members").doc(currentUser.uid);
+      const now=firebase.firestore.FieldValue.serverTimestamp();
+      const business={
+        name,legalStatus,ownerUid:currentUser.uid,status:"active",
+        schemaVersion:1,createdAt:now,updatedAt:now
+      };
+      if(legalStatus==="registered")business.registrationNumber=registrationNumber;
+      const batch=db.batch();
+      batch.set(businessRef,business);
+      batch.set(memberRef,{
+        uid:currentUser.uid,role:"owner",status:"active",
+        activityIds:[],permissions:{},createdAt:now
+      });
+      await batch.commit();
+      currentBusinessId=businessRef.id;
+      sessionStorage.setItem("mqci_mon_business_id",currentBusinessId);
+      setStatus("businessStatus","Entreprise créée. Votre compte en est le propriétaire.");
+      $("activityCard").classList.remove("hidden");
+      await loadActivities();
+    }catch(error){
+      console.error("Mon Business registration error",error);
+      setStatus("businessStatus","Impossible de créer l'entreprise. Vérifiez votre connexion et vos autorisations, puis réessayez.",true);
+    }finally{button.disabled=false;}
+  });
+
+  async function loadActivities(){
+    if(!currentBusinessId||!currentUser)return;
+    try{
+      const snap=await db.collection("businesses").doc(currentBusinessId).collection("activities").get();
+      const list=$("activitiesList");list.replaceChildren();
+      snap.forEach(doc=>{
+        const item=document.createElement("p");
+        item.className="status";
+        item.textContent=doc.data().name+" · "+doc.data().type;
+        list.appendChild(item);
+      });
+      if(!snap.size){
+        const empty=document.createElement("p");empty.className="muted";
+        empty.textContent="Aucune activité enregistrée pour le moment.";
+        list.appendChild(empty);
+      }
+    }catch(error){
+      console.error("Mon Business activity read error",error);
+      setStatus("activityStatus","L'accès à cet espace n'a pas pu être vérifié. Recréez ou sélectionnez un espace auquel votre compte a accès.",true);
+    }
+  }
+
+  $("activityForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(!currentUser||!currentBusinessId)return setStatus("activityStatus","Créez d'abord votre entreprise.",true);
+    const name=$("activityName").value.trim(),type=$("activityType").value;
+    if(name.length<2||!type)return setStatus("activityStatus","Renseignez le nom et le type de l'activité.",true);
+    const button=$("createActivityButton");button.disabled=true;
+    try{
+      const ref=db.collection("businesses").doc(currentBusinessId).collection("activities").doc();
+      const now=firebase.firestore.FieldValue.serverTimestamp();
+      await ref.set({
+        businessId:currentBusinessId,name,type,status:"active",
+        createdBy:currentUser.uid,createdAt:now,updatedAt:now
+      });
+      $("activityName").value="";$("activityType").value="";
+      setStatus("activityStatus","Activité ajoutée avec succès.");
+      await loadActivities();
+    }catch(error){
+      console.error("Mon Business activity create error",error);
+      setStatus("activityStatus","Impossible d'ajouter cette activité. Vérifiez les droits de votre compte.",true);
+    }finally{button.disabled=false;}
+  });
+})();
+</script>
+</body>
+</html>
