@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildMonBusinessPlan, normalizeMonBusinessIdentity, normalizeMonBusinessPassword, normalizeMonBusinessTransaction, MON_BUSINESS_PASSWORD_ITERATIONS } from "../cloudflare/worker.js";
+import { buildMonBusinessPlan, normalizeMonBusinessIdentity, normalizeMonBusinessPassword, normalizeMonBusinessTransaction, MON_BUSINESS_PASSWORD_ITERATIONS, normalizeMonBusinessRecord } from "../cloudflare/worker.js";
 
 test("MON BUSINESS exposes only the three approved quarterly plans",()=>{
   assert.deepEqual(buildMonBusinessPlan("standard"),{label:"Standard",amountXof:15000,durationMonths:3});
@@ -30,4 +30,15 @@ test("MON BUSINESS valide les opérations de recette et de dépense",()=>{
 test("MON BUSINESS uses a PBKDF2 iteration count supported by Cloudflare Workers",()=>{
   assert.equal(MON_BUSINESS_PASSWORD_ITERATIONS,100000);
   assert.ok(MON_BUSINESS_PASSWORD_ITERATIONS<=100000);
+});
+
+test("MON BUSINESS validates products, customers, sales, purchases and staff records",()=>{
+  assert.deepEqual(normalizeMonBusinessRecord("produit",{name:"Riz",quantity:10,unitPrice:1500,minQuantity:2}),{name:"Riz",quantity:10,unitPrice:1500,minQuantity:2});
+  assert.deepEqual(normalizeMonBusinessRecord("client",{name:"Awa",phone:"0700000000"}),{name:"Awa",phone:"0700000000"});
+  assert.deepEqual(normalizeMonBusinessRecord("vente",{label:"Vente comptoir",amountXof:5000}),{label:"Vente comptoir",amountXof:5000});
+  assert.deepEqual(normalizeMonBusinessRecord("achat",{label:"Approvisionnement",amountXof:2500}),{label:"Approvisionnement",amountXof:2500});
+  assert.deepEqual(normalizeMonBusinessRecord("personnel",{name:"Koffi",role:"Vendeur"}),{name:"Koffi",role:"Vendeur"});
+  assert.equal(normalizeMonBusinessRecord("produit",{name:"Riz",quantity:-1,unitPrice:1500}),null);
+  assert.equal(normalizeMonBusinessRecord("vente",{label:"Vente",amountXof:0}),null);
+  assert.equal(normalizeMonBusinessRecord("unknown",{name:"x"}),null);
 });
