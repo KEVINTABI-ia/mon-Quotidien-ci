@@ -2681,6 +2681,24 @@ async function planGroupedDelivery(request,env) {
 }
 
 
+async function listCourierGroupedTours(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  const uid=auth.user.sub;
+  try {
+    const token=await serviceToken(env),endpoint="https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents:runQuery";
+    const response=await fetch(endpoint,{method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({structuredQuery:{from:[{collectionId:"tournees_livraison"}],where:{fieldFilter:{field:{fieldPath:"courierUid"},op:"EQUAL",value:{stringValue:uid}}},limit:25}})});
+    if(!response.ok)throw new Error("grouped_tour_list_query_failed");
+    const rows=await response.json(),missions=(Array.isArray(rows)?rows:[]).filter(row=>row?.document?.name).map(row=>({id:row.document.name.split("/").pop(),...docData(row.document)})).filter(mission=>mission.courierUid===uid&&["offered","accepted","collecting","delivering","arrive_destination"].includes(mission.status));
+    const enriched=await Promise.all(missions.map(async mission=>{
+      const details=await Promise.all((mission.sousCommandes||[]).map(id=>getDoc(env,"commandes_colis/"+id+"/informations_privees/details")));
+      const pickups=details.map((doc,index)=>{const data=docData(doc)||{};return {id:mission.sousCommandes[index],status:mission.stops?.find(stop=>stop.id===mission.sousCommandes[index])?.status||"pending",latitude:Number(data.latitudeRecuperation),longitude:Number(data.longitudeRecuperation)};});
+      const first=docData(details.find(Boolean))||{};
+      return {id:mission.id,commandeGroupeeId:mission.commandeGroupeeId,status:mission.status,stops:pickups,destination:{latitude:Number(first.latitudeLivraison),longitude:Number(first.longitudeLivraison)},totalPriceXof:mission.totalPriceXof,currency:mission.currency,createdAt:mission.createdAt,acceptedAt:mission.acceptedAt||null};
+    }));
+    return json({ok:true,missions:enriched});
+  }catch(error){console.error("Courier grouped tour list failed",{code:error?.message||"unknown"});return json({error:"grouped_tour_list_unavailable"},503);}
+}
 async function dispatchGroupedDeliveryTour(request,env) {
   const auth=await requireUser(request,env);
   if(!auth.user)return json({error:"unauthorized"},401);
@@ -2897,7 +2915,7 @@ export default {
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
     else if(url.pathname==="/api/delivery/grouped-plan"&&request.method==="POST") response=await planGroupedDelivery(request,env);
-    else if(url.pathname==="/api/delivery/grouped-dispatch"&&request.method==="POST") response=await dispatchGroupedDeliveryTour(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/accept"&&request.method==="POST") response=await acceptGroupedDeliveryTourRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/stop"&&request.method==="POST") response=await updateGroupedTourStopRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/destination-arrived"&&request.method==="POST") response=await markGroupedTourDestinationArrivedRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/complete"&&request.method==="POST") response=await completeGroupedDeliveryTourRequest(request,env);\n    else if(url.pathname==="/api/client/grouped-delivery-code"&&request.method==="POST") response=await clientGroupedDeliveryCode(request,env);\n    else if(url.pathname==="/api/delivery/route-preview"&&request.method==="POST") response=await deliveryRoutePreview(request,env);
+    else if(url.pathname==="/api/courier/grouped-tours"&&request.method==="GET") response=await listCourierGroupedTours(request,env);\n    else if(url.pathname==="/api/delivery/grouped-dispatch"&&request.method==="POST") response=await dispatchGroupedDeliveryTour(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/accept"&&request.method==="POST") response=await acceptGroupedDeliveryTourRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/stop"&&request.method==="POST") response=await updateGroupedTourStopRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/destination-arrived"&&request.method==="POST") response=await markGroupedTourDestinationArrivedRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/complete"&&request.method==="POST") response=await completeGroupedDeliveryTourRequest(request,env);\n    else if(url.pathname==="/api/client/grouped-delivery-code"&&request.method==="POST") response=await clientGroupedDeliveryCode(request,env);\n    else if(url.pathname==="/api/delivery/route-preview"&&request.method==="POST") response=await deliveryRoutePreview(request,env);
     else if(url.pathname==="/api/client/delivery-code"&&request.method==="POST") response=await clientDeliveryCode(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
     else if(url.pathname==="/api/publicites/admin-upload"&&request.method==="POST") response=await publiciteUpload(request,env,true);
