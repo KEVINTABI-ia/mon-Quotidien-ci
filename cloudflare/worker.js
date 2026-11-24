@@ -2309,6 +2309,7 @@ export default {
         "Access-Control-Allow-Headers":"Authorization, Content-Type, X-MON-BUSINESS-PASSWORD","Access-Control-Max-Age":"86400","Vary":"Origin"
       }});
     }
+    try {
     let response;
     if(url.pathname==="/health"&&request.method==="GET") response=json({ok:true,service:"mon-quotidien-jeko",mode:"production-locked"});
     else if(url.pathname==="/webhook") response=await webhook(request,env);
@@ -2341,5 +2342,22 @@ export default {
       response=new Response(response.body,{status:response.status,statusText:response.statusText,headers});
     }
     return response;
+    } catch (error) {
+      // Keep CORS headers on unexpected failures so the browser can expose the
+      // actual HTTP response instead of replacing it with a generic "Load failed".
+      console.error("Worker request failed", {
+        method: request.method,
+        path: url.pathname,
+        error: String(error?.message || error).slice(0, 160)
+      });
+      const failure=json({error:"internal_server_error",diagnostic:"REQUEST_FAILED"},500);
+      if(origin==="https://kevintabi-ia.github.io") {
+        const headers=new Headers(failure.headers);
+        headers.set("Access-Control-Allow-Origin",origin);
+        headers.set("Vary","Origin");
+        return new Response(failure.body,{status:failure.status,statusText:failure.statusText,headers});
+      }
+      return failure;
+    }
   }
 };
