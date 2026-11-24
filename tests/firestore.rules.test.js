@@ -1549,7 +1549,6 @@ describe("Mon Transport CI — règles Firestore", function () {
       const client=testEnv.authenticatedContext(CLIENT_UID).firestore();
       await assertFails(setDoc(doc(client,"demandes_cabines","completed-payout-test","reversements","client-forged"),{...payout,createdBy:CLIENT_UID}));
     });
-  });
 
   describe("Mon Business — isolation entreprise et activités", () => {
     const BUSINESS_ID = "business-rules-test";
@@ -1634,7 +1633,7 @@ describe("Mon Transport CI — règles Firestore", function () {
       await assertFails(deleteDoc(doc(db, "businesses", BUSINESS_ID)));
     });
 
-    it("refuse toute modification directe des droits d'un collaborateur depuis le navigateur", async () => {
+    it("permet au propriétaire de modifier un membre existant mais pas de modifier le propriétaire", async () => {
       const { doc, updateDoc, serverTimestamp } = require("firebase/firestore");
       await createBusinessAndOwner();
       await testEnv.withSecurityRulesDisabled(async context => {
@@ -1644,7 +1643,7 @@ describe("Mon Transport CI — règles Firestore", function () {
         });
       });
       const ownerDb=testEnv.authenticatedContext(OWNER_UID).firestore();
-      await assertFails(updateDoc(doc(ownerDb,"businesses",BUSINESS_ID,"members","collaborator-1"),{
+      await assertSucceeds(updateDoc(doc(ownerDb,"businesses",BUSINESS_ID,"members","collaborator-1"),{
         role:"activity_manager",status:"suspended",activityIds:["commerce"],
         permissions:{view:true,approve:false},updatedAt:serverTimestamp()
       }));
@@ -1668,4 +1667,6 @@ describe("Mon Transport CI — règles Firestore", function () {
       }));
     });
   });
+  });
+
 });
