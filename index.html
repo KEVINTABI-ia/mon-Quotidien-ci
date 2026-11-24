@@ -12003,7 +12003,7 @@ async function planifierTourneeCommandeGroupee(parentId,button){
   });
   const result=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(result.error||"Impossible de calculer la tournée.");
-  alert("Tournée calculée : "+result.plan.totalRoadDistanceKm+" km · "+Math.ceil(result.plan.totalDurationSeconds/60)+" min · "+Number(result.tarification.totalPriceXof).toLocaleString("fr-FR")+" FCFA.");
+  alert("Tournée calculée : "+result.plan.totalRoadDistanceKm+" km · "+Math.ceil(result.plan.totalDurationSeconds/60)+" min · "+Number(result.tarificationEstimee.totalPriceXof).toLocaleString("fr-FR")+" FCFA.");
   await chargerHistoriqueCommandes();
  }catch(error){console.error(error);alert("Planification impossible : "+error.message);}
  finally{if(button&&button.isConnected){button.disabled=false;button.textContent="Calculer la tournée et les frais";}}
@@ -12044,7 +12044,7 @@ async function chargerHistoriqueCommandes() {
       card.insertBefore(aggregate,subtitle);
       if(parent.tournee?.statut==="planifiee"){
         const plan=document.createElement("p");plan.textContent="Tournée : "+parent.tournee.totalRoadDistanceKm+" km · environ "+Math.ceil(parent.tournee.totalDurationSeconds/60)+" min.";card.appendChild(plan);
-        const price=document.createElement("p");price.textContent="Tarif groupé estimé : "+Number(parent.tarificationLivraison?.totalPriceXof||0).toLocaleString("fr-FR")+" FCFA.";card.appendChild(price);
+        const price=document.createElement("p");price.textContent="Tarif groupé estimé : "+Number(parent.tarificationEstimee?.totalPriceXof||0).toLocaleString("fr-FR")+" FCFA · hors approche du livreur.";card.appendChild(price);
       }else if(allReady){
         const planButton=document.createElement("button");planButton.type="button";planButton.textContent="Calculer la tournée et les frais";planButton.onclick=()=>planifierTourneeCommandeGroupee(parentDoc.id,planButton);card.appendChild(planButton);
       }
