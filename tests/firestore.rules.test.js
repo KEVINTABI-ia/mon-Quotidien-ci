@@ -124,6 +124,30 @@ describe("Mon Transport CI — règles Firestore", function () {
     await assertFails(updateDoc(doc(otherDb,"commandes_colis",ORDER_ID),{montantLivraisonBoutique:2000}));
   });
 
+  it("autorise la création et la lecture d'une commande parent multi-boutiques uniquement par son client", async () => {
+    const {doc,setDoc,getDoc,serverTimestamp}=require("firebase/firestore");
+    const db=testEnv.authenticatedContext(CLIENT_UID).firestore();
+    const parent=doc(db,"commandes_groupees","group-order-test-001");
+    await assertSucceeds(setDoc(parent,{
+      clientId:CLIENT_UID,reference:"MQCI-GROUP-001",statut:"en_attente_boutiques",
+      nombreBoutiques:2,nombreArticles:3,sousCommandes:["child-shop-a","child-shop-b"],
+      montantArticles:7500,devise:"XOF",createdAt:serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(parent));
+    const other=testEnv.authenticatedContext(OTHER_UID).firestore();
+    await assertFails(getDoc(doc(other,"commandes_groupees","group-order-test-001")));
+    await assertFails(setDoc(doc(other,"commandes_groupees","group-order-forged"),{
+      clientId:CLIENT_UID,reference:"MQCI-GROUP-002",statut:"en_attente_boutiques",
+      nombreBoutiques:2,nombreArticles:2,sousCommandes:["a","b"],
+      montantArticles:2000,devise:"XOF",createdAt:serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(db,"commandes_groupees","invalid-group"),{
+      clientId:CLIENT_UID,reference:"MQCI-GROUP-003",statut:"en_attente",
+      nombreBoutiques:1,nombreArticles:1,sousCommandes:["child-a"],
+      montantArticles:1000,devise:"XOF",createdAt:serverTimestamp()
+    }));
+  });
+
   it("autorise un utilisateur authentifié à créer et lire uniquement son profil général", async () => {
     const {doc,setDoc,getDoc,serverTimestamp}=require("firebase/firestore");
     const db=testEnv.authenticatedContext(CLIENT_UID,{phone_number:"+2250700000000"}).firestore();
