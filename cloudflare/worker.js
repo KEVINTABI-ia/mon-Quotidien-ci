@@ -884,6 +884,51 @@ async function commitFirestoreTransaction(env,writes,transaction) {
 function deleteWrite(path,updateTime) {
   return {delete:resourceName(path),currentDocument:updateTime?{updateTime}:{exists:true}};
 }
+// Interroge OSRM Table API : les coordonnées OSRM sont toujours longitude,latitude.
+export async function buildDeliveryTourRouteWithOsrm({stops,baseUrl="https://router.project-osrm.org",fetchImpl=fetch}) {
+  if(!Array.isArray(stops)||stops.length<4||stops.length>GROUPED_DELIVERY_PRICING.maxShops+2)
+    throw new Error("invalid_delivery_tour_stops");
+  for(const stop of stops) {
+    if(!stop||typeof stop.id!=="string"||!Number.isFinite(stop.latitude)||stop.latitude < -90||stop.latitude>90||!Number.isFinite(stop.longitude)||stop.longitude < -180||stop.longitude>180)
+      throw new Error("invalid_delivery_tour_coordinates");
+  }
+  let endpoint;
+  try { endpoint=new URL(baseUrl); } catch { throw new Error("invalid_osrm_base_url"); }
+  if(endpoint.protocol!=="https:"||endpoint.username||endpoint.password||endpoint.search||endpoint.hash)
+    throw new Error("invalid_osrm_base_url");
+  const coordinates=stops.map(stop=>`${stop.longitude},${stop.latitude}`).join(";");
+  const url=new URL(`/table/v1/driving/${coordinates}`,endpoint.origin);
+  url.searchParams.set("annotations","distance,duration");
+  let response;
+  try { response=await fetchImpl(url.toString(),{method:"GET",headers:{accept:"application/json"},signal:AbortSignal.timeout(10000)}); }
+  catch { throw new Error("osrm_network_error"); }
+  if(!response.ok)throw new Error("osrm_http_"+response.status);
+  let payload;
+  try { payload=await response.json(); } catch { throw new Error("invalid_osrm_response"); }
+  const n=stops.length,distances=payload?.distances,durations=payload?.durations;
+  if(payload?.code!=="Ok"||!Array.isArray(distances)||!Array.isArray(durations)
+    ||distances.length!==n||durations.length!==n
+    ||distances.some(row=>!Array.isArray(row)||row.length!==n)
+    ||durations.some(row=>!Array.isArray(row)||row.length!==n))
+    throw new Error("invalid_osrm_matrix");
+  const distanceMatrixKm=distances.map(row=>row.map(value=>{
+    if(typeof value!=="number"||!Number.isFinite(value)||value<0)throw new Error("invalid_osrm_distance");
+    return value/1000;
+  }));
+  const durationMatrixSeconds=durations.map(row=>row.map(value=>{
+    if(typeof value!=="number"||!Number.isFinite(value)||value<0)throw new Error("invalid_osrm_duration");
+    return value;
+  }));
+  const route=optimizeDeliveryTourRoute({stops,distanceMatrix:distanceMatrixKm});
+  let totalDurationSeconds=0;
+  for(let i=1;i<route.orderedStopIds.length;i++) {
+    const from=stops.findIndex(stop=>stop.id===route.orderedStopIds[i-1]);
+    const to=stops.findIndex(stop=>stop.id===route.orderedStopIds[i]);
+    totalDurationSeconds+=durationMatrixSeconds[from][to];
+  }
+  return Object.freeze({...route,totalDurationSeconds:Math.round(totalDurationSeconds),provider:"osrm"});
+}
+
 // Planificateur déterministe : la matrice doit provenir d'un calculateur d'itinéraires routiers.
 export function optimizeDeliveryTourRoute({stops,distanceMatrix}) {
   if(!Array.isArray(stops)||stops.length<3||stops.length>GROUPED_DELIVERY_PRICING.maxShops+2)
@@ -2463,6 +2508,23 @@ async function subscriptionPlans(request,env) {
   if(!plans) return json({error:"unsupported_subscription_service"},400);
   return json({serviceId:requested,currency:"XOF",provider:"jeko",plans,checkedAt:now.toISOString()});
 }
+async function deliveryRoutePreview(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  let body;try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  try {
+    const route=await buildDeliveryTourRouteWithOsrm({
+      stops:body?.stops,
+      baseUrl:env.OSRM_BASE_URL||"https://router.project-osrm.org"
+    });
+    return json({route,checkedAt:new Date().toISOString(),providerNotice:"Serveur OSRM public réservé aux essais et à un usage raisonnable."});
+  } catch(error) {
+    const code=String(error?.message||"route_preview_failed");
+    const status=code.startsWith("invalid_")?400:code.startsWith("osrm_http_")?502:code==="osrm_network_error"?502:422;
+    return json({error:code},status);
+  }
+}
+
 export default {
   async fetch(request,env) {
     const url=new URL(request.url), origin=request.headers.get("origin")||"";
@@ -2481,6 +2543,7 @@ export default {
     else if(/^\/api\/ai\/conversations\/[0-9a-f-]{36}\/messages$/i.test(url.pathname)&&request.method==="GET") response=await aiConversationHistory(request,env,url.pathname.split("/")[4]);
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
+    else if(url.pathname==="/api/delivery/route-preview"&&request.method==="POST") response=await deliveryRoutePreview(request,env);
     else if(url.pathname==="/api/client/delivery-code"&&request.method==="POST") response=await clientDeliveryCode(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
     else if(url.pathname==="/api/publicites/admin-upload"&&request.method==="POST") response=await publiciteUpload(request,env,true);
