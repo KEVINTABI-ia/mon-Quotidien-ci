@@ -2301,7 +2301,7 @@ export default {
     if(origin==="https://kevintabi-ia.github.io"&&request.method==="OPTIONS") {
       return new Response(null,{status:204,headers:{
         "Access-Control-Allow-Origin":origin,"Access-Control-Allow-Methods":"GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers":"Authorization, Content-Type","Access-Control-Max-Age":"86400","Vary":"Origin"
+        "Access-Control-Allow-Headers":"Authorization, Content-Type, X-MON-BUSINESS-PASSWORD","Access-Control-Max-Age":"86400","Vary":"Origin"
       }});
     }
     let response;
