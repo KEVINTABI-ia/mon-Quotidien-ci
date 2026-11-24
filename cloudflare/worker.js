@@ -2786,7 +2786,7 @@ async function acceptGroupedDeliveryTourRequest(request,env) {
     if(!courierProfileCanCompleteMission(profile,uid)||!courierGroupedTourSubscriptionActive(profile))return json({error:"courier_profile_not_eligible"},403);
     if(mission.courierUid!==uid)return json({error:"grouped_tour_not_assigned_to_courier"},403);
     if(lockDoc&&lock?.statut==="active")return json({error:"courier_already_has_active_mission"},409);
-    const now=new Date(),accepted=acceptGroupedDeliveryTour({tour:mission,courierUid:uid,activeMission:lockDoc?lock:null,now});
+    const now=new Date(),accepted=acceptGroupedDeliveryTour({tour:mission,courierUid:uid,activeMission:lockDoc?{status:lock?.statut==="active"?"active":"completed",tourId:lock?.tourneeId||null}:null,now});
     const writes=[updateWrite(missionPath,{status:"accepted",acceptedAt:now,updatedAt:now},missionDoc.updateTime),
       updateWrite(parentPath,{statut:"tournee_acceptee",tournee:{...docData(parentDoc).tournee,statut:"acceptee",acceptedAt:now},updatedAt:now},parentDoc.updateTime),
       lockDoc?updateWrite(lockPath,{tourneeId:parentId,statut:"active",createdAt:now},lockDoc.updateTime):createWrite(lockPath,{tourneeId:parentId,statut:"active",createdAt:now})];
