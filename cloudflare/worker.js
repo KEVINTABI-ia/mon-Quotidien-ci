@@ -2783,17 +2783,20 @@ async function updateGroupedTourStopRequest(request,env) {
   const parentId=body.commandeGroupeeId,stopId=body.stopId,nextStatus=body.nextStatus,uid=auth.user.sub;
   if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId)||typeof stopId!=="string"||!["arrived","picked_up"].includes(nextStatus))
     return json({error:"invalid_grouped_tour_stop"},400);
-  const missionPath="tournees_livraison/"+parentId,partnerPath="partenaires/"+uid+"/verrous/missionActive";
+  const missionPath="tournees_livraison/"+parentId,parentPath="commandes_groupees/"+parentId,lockPath="partenaires/"+uid+"/verrous/missionActive";
   try {
     const tx=await beginFirestoreTransaction(env);
-    const [missionDoc,lockDoc]=await Promise.all([getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,partnerPath,tx)]);
-    if(!missionDoc)return json({error:"grouped_tour_not_found"},404);
-    const mission=docData(missionDoc),lock=docData(lockDoc);
+    const [missionDoc,parentDoc,lockDoc]=await Promise.all([getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,lockPath,tx)]);
+    if(!missionDoc||!parentDoc)return json({error:"grouped_tour_not_found"},404);
+    const mission=docData(missionDoc),parent=docData(parentDoc),lock=docData(lockDoc);
     if(mission.courierUid!==uid)return json({error:"grouped_tour_not_assigned_to_courier"},403);
     if(!lockDoc||lock?.tourneeId!==parentId||lock?.statut!=="active")return json({error:"active_mission_lock_missing"},409);
-    const transition=transitionGroupedDeliveryTourStop({tour:mission,stopId,nextStatus});
-    const now=new Date();
-    await commitFirestoreTransaction(env,[updateWrite(missionPath,{stops:transition.tour.stops,status:transition.tour.status,updatedAt:now},missionDoc.updateTime)],tx);
+    const transition=transitionGroupedDeliveryTourStop({tour:mission,stopId,nextStatus}),now=new Date();
+    const parentStatus={accepted:"tournee_acceptee",collecting:"tournee_collecte_en_cours",delivering:"tournee_en_livraison"}[transition.tour.status];
+    await commitFirestoreTransaction(env,[
+      updateWrite(missionPath,{stops:transition.tour.stops,status:transition.tour.status,updatedAt:now},missionDoc.updateTime),
+      updateWrite(parentPath,{statut:parentStatus,tournee:{...parent.tournee,statut:transition.tour.status,stops:transition.tour.stops,updatedAt:now},updatedAt:now},parentDoc.updateTime)
+    ],tx);
     return json({ok:true,mission:{id:parentId,status:transition.tour.status,stops:transition.tour.stops},allPickedUp:transition.allPickedUp});
   }catch(error){const code=String(error?.message||"grouped_tour_stop_update_failed");const status=code.startsWith("delivery_tour_")||code.startsWith("grouped_tour_")?409:409;return json({error:code},status);}
 }
