@@ -182,13 +182,21 @@ function showDashboard(){document.getElementById("authPanel").classList.add("hid
 async function paySubscription(){try{message("dashboardStatus","Préparation du paiement Jèko…");const data=await api("/api/jeko/checkout",{serviceId:"mon_business",companyId,planId:document.getElementById("planId").value,paymentMethod:document.getElementById("paymentMethod").value});window.location.href=data.checkoutUrl;}catch(e){message("dashboardStatus",e.message,true);}}
 async function loadCompanyChoices(){
  const user=auth.currentUser;if(!user)return;
- const token=await user.getIdToken(),res=await fetch(API+"/api/mon-business/companies",{headers:{Authorization:"Bearer "+token}});
- const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||"Impossible de charger vos entreprises.");
- companyChoices=Array.isArray(data.companies)?data.companies:[];
- const select=document.getElementById("existingCompany");select.replaceChildren();
- companyChoices.forEach(item=>{const option=document.createElement("option");option.value=item.companyId;option.textContent=item.companyName+(item.managerName?" — "+item.managerName:"");select.append(option);});
- document.getElementById("companyChooser").classList.toggle("hidden",companyChoices.length===0);
- document.getElementById("createCompanyForm").classList.toggle("hidden",companyChoices.length>0);
+ try{
+  const token=await user.getIdToken(),res=await fetch(API+"/api/mon-business/companies",{headers:{Authorization:"Bearer "+token}});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(data.error||"Chargement impossible (HTTP "+res.status+").");
+  companyChoices=Array.isArray(data.companies)?data.companies:[];
+  const select=document.getElementById("existingCompany");select.replaceChildren();
+  companyChoices.forEach(item=>{const option=document.createElement("option");option.value=item.companyId;option.textContent=item.companyName+(item.managerName?" — "+item.managerName:"");select.append(option);});
+  document.getElementById("companyChooser").classList.toggle("hidden",companyChoices.length===0);
+  document.getElementById("createCompanyForm").classList.toggle("hidden",companyChoices.length>0);
+ }catch(e){
+  companyChoices=[];
+  document.getElementById("companyChooser").classList.add("hidden");
+  document.getElementById("createCompanyForm").classList.remove("hidden");
+  message("companyStatus","La liste des entreprises n’a pas pu être chargée. Vous pouvez tout de même essayer de créer une entreprise. Détail : "+e.message,true);
+ }
 }
 function showCreateCompany(){document.getElementById("createCompanyForm").classList.remove("hidden");}
 async function unlockCompany(){
