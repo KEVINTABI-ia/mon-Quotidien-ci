@@ -1551,4 +1551,121 @@ describe("Mon Transport CI — règles Firestore", function () {
     });
   });
 
+  describe("Mon Business — isolation entreprise et activités", () => {
+    const BUSINESS_ID = "business-rules-test";
+    const OWNER_UID = "business-owner-test";
+    const OTHER_UID = "business-outsider-test";
+
+    async function createBusinessAndOwner() {
+      const { doc, writeBatch, serverTimestamp } = require("firebase/firestore");
+      const db = testEnv.authenticatedContext(OWNER_UID).firestore();
+      const batch = writeBatch(db);
+      batch.set(doc(db, "businesses", BUSINESS_ID), {
+        name: "Entreprise test",
+        legalStatus: "unregistered",
+        ownerUid: OWNER_UID,
+        status: "active",
+        schemaVersion: 1,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      batch.set(doc(db, "businesses", BUSINESS_ID, "members", OWNER_UID), {
+        uid: OWNER_UID,
+        role: "owner",
+        status: "active",
+        activityIds: [],
+        permissions: {},
+        createdAt: serverTimestamp()
+      });
+      await assertSucceeds(batch.commit());
+    }
+
+    it("crée atomiquement une entreprise non immatriculée et son propriétaire", async () => {
+      await createBusinessAndOwner();
+      const { doc, getDoc } = require("firebase/firestore");
+      const db = testEnv.authenticatedContext(OWNER_UID).firestore();
+      await assertSucceeds(getDoc(doc(db, "businesses", BUSINESS_ID)));
+      await assertSucceeds(getDoc(doc(db, "businesses", BUSINESS_ID, "members", OWNER_UID)));
+    });
+
+    it("refuse la création d'un propriétaire sans création simultanée de l'entreprise", async () => {
+      const { doc, setDoc, serverTimestamp } = require("firebase/firestore");
+      const db = testEnv.authenticatedContext(OWNER_UID).firestore();
+      await assertFails(setDoc(doc(db, "businesses", BUSINESS_ID, "members", OWNER_UID), {
+        uid: OWNER_UID, role: "owner", status: "active",
+        activityIds: [], permissions: {}, createdAt: serverTimestamp()
+      }));
+    });
+
+    it("autorise plusieurs activités au propriétaire et refuse l'accès à un autre compte", async () => {
+      await createBusinessAndOwner();
+      const { doc, setDoc, getDoc, serverTimestamp } = require("firebase/firestore");
+      const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+      for (const [id, name, type] of [
+        ["commerce", "Boutique", "commerce"],
+        ["transport", "Transport", "mobilite"]
+      ]) {
+        await assertSucceeds(setDoc(doc(ownerDb, "businesses", BUSINESS_ID, "activities", id), {
+          businessId: BUSINESS_ID, name, type, status: "active",
+          createdBy: OWNER_UID, createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+        }));
+      }
+      await assertSucceeds(getDoc(doc(ownerDb, "businesses", BUSINESS_ID, "activities", "commerce")));
+      const outsiderDb = testEnv.authenticatedContext(OTHER_UID).firestore();
+      await assertFails(getDoc(doc(outsiderDb, "businesses", BUSINESS_ID)));
+      await assertFails(getDoc(doc(outsiderDb, "businesses", BUSINESS_ID, "activities", "commerce")));
+    });
+
+    it("refuse les entreprises immatriculées sans numéro et les suppressions", async () => {
+      const { doc, setDoc, writeBatch, serverTimestamp, deleteDoc } = require("firebase/firestore");
+      const db = testEnv.authenticatedContext(OWNER_UID).firestore();
+      const batch = writeBatch(db);
+      batch.set(doc(db, "businesses", BUSINESS_ID), {
+        name: "Entreprise immatriculée", legalStatus: "registered",
+        ownerUid: OWNER_UID, status: "active", schemaVersion: 1,
+        createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+      });
+      batch.set(doc(db, "businesses", BUSINESS_ID, "members", OWNER_UID), {
+        uid: OWNER_UID, role: "owner", status: "active",
+        activityIds: [], permissions: {}, createdAt: serverTimestamp()
+      });
+      await assertFails(batch.commit());
+      await createBusinessAndOwner();
+      await assertFails(deleteDoc(doc(db, "businesses", BUSINESS_ID)));
+    });
+
+    it("refuse toute modification directe des droits d'un collaborateur depuis le navigateur", async () => {
+      const { doc, updateDoc, serverTimestamp } = require("firebase/firestore");
+      await createBusinessAndOwner();
+      await testEnv.withSecurityRulesDisabled(async context => {
+        await context.firestore().doc("businesses/" + BUSINESS_ID + "/members/collaborator-1").set({
+          uid:"collaborator-1",role:"employee",status:"active",
+          activityIds:["commerce"],permissions:{view:true},createdAt:new Date()
+        });
+      });
+      const ownerDb=testEnv.authenticatedContext(OWNER_UID).firestore();
+      await assertFails(updateDoc(doc(ownerDb,"businesses",BUSINESS_ID,"members","collaborator-1"),{
+        role:"activity_manager",status:"suspended",activityIds:["commerce"],
+        permissions:{view:true,approve:false},updatedAt:serverTimestamp()
+      }));
+      await assertFails(updateDoc(doc(ownerDb,"businesses",BUSINESS_ID,"members",OWNER_UID),{
+        role:"employee",updatedAt:serverTimestamp()
+      }));
+    });
+
+    it("refuse à un collaborateur de modifier ses propres droits", async () => {
+      const { doc, updateDoc, serverTimestamp } = require("firebase/firestore");
+      await createBusinessAndOwner();
+      await testEnv.withSecurityRulesDisabled(async context => {
+        await context.firestore().doc("businesses/" + BUSINESS_ID + "/members/collaborator-2").set({
+          uid:"collaborator-2",role:"employee",status:"active",
+          activityIds:["commerce"],permissions:{view:true},createdAt:new Date()
+        });
+      });
+      const memberDb=testEnv.authenticatedContext("collaborator-2").firestore();
+      await assertFails(updateDoc(doc(memberDb,"businesses",BUSINESS_ID,"members","collaborator-2"),{
+        role:"owner",permissions:{manage_access:true},updatedAt:serverTimestamp()
+      }));
+    });
+  });
 });
