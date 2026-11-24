@@ -8,7 +8,10 @@ import {
   buildGroupedDeliveryPlanWithOsrm,
   applyDeliveryTourStopTransition,
   calculateGroupedTourPayout,
-  buildGroupedTourPayoutLedger
+  buildGroupedTourPayoutLedger,
+  acceptGroupedDeliveryTour,
+  transitionGroupedDeliveryTourStop,
+  completeGroupedDeliveryTour
 } from "../cloudflare/worker.js";
 
 test("grouped tour price follows the validated distance and shop formula",()=>{
