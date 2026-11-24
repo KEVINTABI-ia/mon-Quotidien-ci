@@ -1053,24 +1053,17 @@ export function applyDeliveryTourStopTransition({stops,stopId,nextStatus}) {
     tourStatus:pickedUpCount===updated.length?"delivering":pickedUpCount>0?"collecting":"assigned"
   });
 }
-// Grouped tour remuneration is separate from the courier's prepaid commission wallet.
-// The courier receives 90%; the platform receives the exact remainder (10%, including
-// any indivisible XOF rounding unit) so the two ledger entries always sum to the fare.
-export const GROUPED_TOUR_PAYOUT_RULES = Object.freeze({courierShareBps:9000,platformShareBps:1000});
-export function calculateGroupedTourPayout({totalPriceXof}) {
+// A grouped boutique tour is paid in cash directly by the customer to the courier.
+// The app only debits the courier's prepaid wallet for the platform commission.
+export function calculateGroupedTourCommission({totalPriceXof,balanceXof,debtXof=0}) {
   if(!Number.isSafeInteger(totalPriceXof)||totalPriceXof<=0)
-    throw new Error("invalid_grouped_tour_payout_amount");
-  const courierPayoutXof=Math.floor(totalPriceXof*GROUPED_TOUR_PAYOUT_RULES.courierShareBps/10000);
-  const platformShareXof=totalPriceXof-courierPayoutXof;
-  return Object.freeze({currency:"XOF",totalPriceXof,courierShareBps:9000,platformShareBps:1000,courierPayoutXof,platformShareXof});
-}
-export function buildGroupedTourPayoutLedger({tourId,courierUid,totalPriceXof,existingLedger=null,now=new Date()}) {
-  if(typeof tourId!=="string"||!tourId.trim()||typeof courierUid!=="string"||!courierUid.trim())
-    throw new Error("invalid_grouped_tour_payout_identity");
-  if(existingLedger) throw new Error("grouped_tour_payout_already_recorded");
-  if(!(now instanceof Date)||!Number.isFinite(now.getTime())) throw new Error("invalid_grouped_tour_payout_date");
-  const split=calculateGroupedTourPayout({totalPriceXof});
-  return Object.freeze({id:"tour_"+tourId,type:"grouped_tour_payout",tourId,courierUid,status:"ready_for_settlement",...split,createdAt:now.toISOString()});
+    throw new Error("invalid_grouped_tour_commission_amount");
+  const applied=buildCourierWalletCommissionLedger({
+    balanceXof,debtXof,deliveryFeeXof:totalPriceXof,serviceType:"boutique"
+  });
+  return Object.freeze({currency:"XOF",deliveryFeeXof:totalPriceXof,commissionRate:applied.deliveryCommissionRate,
+    commissionDueXof:applied.totalWalletDebitXof,debitXof:applied.debitXof,debtAddedXof:applied.debtAddedXof,
+    balanceAfterXof:applied.balanceAfterXof,debtAfterXof:applied.debtAfterXof});
 }
 
 export function courierGroupedTourSubscriptionActive(profile,now=new Date()) {
@@ -1118,13 +1111,13 @@ export function markGroupedTourDestinationArrived({tour,courierUid,now=new Date(
   if(!(now instanceof Date)||!Number.isFinite(now.getTime())) throw new Error("invalid_grouped_tour_date");
   return Object.freeze({...tour,status:"arrive_destination",arrivedAt:now.toISOString()});
 }
-export function completeGroupedDeliveryTour({tour,courierUid,confirmationVerified,existingPayoutLedger=null,now=new Date()}) {
+export function completeGroupedDeliveryTour({tour,courierUid,confirmationVerified,now=new Date()}) {
   if(!tour||tour.status!=="arrive_destination"||!Array.isArray(tour.stops)||tour.stops.length<2||tour.stops.some(stop=>stop.status!=="picked_up"))
     throw new Error("grouped_tour_pickups_incomplete");
   if(tour.courierUid!==courierUid) throw new Error("grouped_tour_not_assigned_to_courier");
   if(confirmationVerified!==true) throw new Error("grouped_tour_confirmation_required");
-  const payoutLedger=buildGroupedTourPayoutLedger({tourId:tour.id,courierUid,totalPriceXof:tour.totalPriceXof,existingLedger:existingPayoutLedger,now});
-  return Object.freeze({tour:Object.freeze({...tour,status:"completed",completedAt:now.toISOString(),payoutLedgerId:payoutLedger.id}),payoutLedger,activeMissionLock:null});
+  if(!(now instanceof Date)||!Number.isFinite(now.getTime())) throw new Error("invalid_grouped_tour_date");
+  return Object.freeze({tour:Object.freeze({...tour,status:"completed",completedAt:now.toISOString()}),activeMissionLock:null});
 }
 
 export const GROUPED_DELIVERY_PRICING = Object.freeze({
@@ -2872,19 +2865,23 @@ async function completeGroupedDeliveryTourRequest(request,env) {
   if(!auth.user)return json({error:"unauthorized"},401);
   let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
   const parentId=body.commandeGroupeeId,code=typeof body.code==="string"?body.code:"",uid=auth.user.sub;
-  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId)||!/^\d{6}$/.test(code))return json({error:"invalid_grouped_tour_completion"},400);
-  const parentPath="commandes_groupees/"+parentId,missionPath="tournees_livraison/"+parentId,partnerPath="partenaires/"+uid,lockPath=partnerPath+"/verrous/missionActive";
-  const confirmationPath=parentPath+"/informations_privees/confirmation",ledgerId="tour_"+parentId,ledgerPath="remunerations_tournees/"+ledgerId;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId)||!/^\\d{6}$/.test(code))return json({error:"invalid_grouped_tour_completion"},400);
+  const parentPath="commandes_groupees/"+parentId,missionPath="tournees_livraison/"+parentId,partnerPath="partenaires/"+uid;
+  const walletPath="portefeuilles_livreurs/"+uid,lockPath=partnerPath+"/verrous/missionActive";
+  const confirmationPath=parentPath+"/informations_privees/confirmation";
+  const commissionId="commission_tour_"+parentId,journalPath=walletPath+"/journal/"+commissionId;
   try {
     const tx=await beginFirestoreTransaction(env);
-    const [parentDoc,missionDoc,partnerDoc,lockDoc,confirmationDoc,ledgerDoc]=await Promise.all([
+    const [parentDoc,missionDoc,partnerDoc,lockDoc,confirmationDoc,walletDoc,journalDoc]=await Promise.all([
       getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,partnerPath,tx),
-      getDocInTransaction(env,lockPath,tx),getDocInTransaction(env,confirmationPath,tx),getDocInTransaction(env,ledgerPath,tx)
+      getDocInTransaction(env,lockPath,tx),getDocInTransaction(env,confirmationPath,tx),
+      getDocInTransaction(env,walletPath,tx),getDocInTransaction(env,journalPath,tx)
     ]);
     if(!parentDoc||!missionDoc)return json({error:"grouped_tour_not_found"},404);
     const parent=docData(parentDoc),mission=docData(missionDoc),profile=docData(partnerDoc),lock=docData(lockDoc);
     if(!courierProfileCanCompleteMission(profile,uid)||mission.courierUid!==uid)return json({error:"grouped_tour_not_owned"},403);
-    if(mission.status==="completed"&&ledgerDoc)return json({ok:true,alreadyCompleted:true,payoutLedgerId:ledgerId},200);
+    if(mission.status==="completed"&&journalDoc)return json({ok:true,alreadyCompleted:true,commissionJournalId:commissionId},200);
+    if(mission.status!=="arrive_destination")return json({error:"grouped_tour_not_ready_for_completion"},409);
     if(!lockDoc||lock?.tourneeId!==parentId||lock?.statut!=="active")return json({error:"active_mission_lock_missing"},409);
     if(!confirmationDoc)return json({error:"grouped_delivery_code_not_issued"},409);
     const confirmation=docData(confirmationDoc),now=new Date();
@@ -2896,22 +2893,41 @@ async function completeGroupedDeliveryTourRequest(request,env) {
       await commitFirestoreTransaction(env,[updateWrite(confirmationPath,{attempts:confirmation.attempts+1},confirmationDoc.updateTime)],tx);
       return json({error:"delivery_code_invalid",attemptsRemaining:4-confirmation.attempts},400);
     }
-    if(ledgerDoc)return json({error:"grouped_tour_payout_already_recorded"},409);
+    if(journalDoc)return json({error:"grouped_tour_commission_already_recorded"},409);
+    const wallet=docData(walletDoc)||{},balanceXof=wallet.soldeDisponibleXof??0,debtXof=wallet.detteCommissionXof??0;
+    const totalCommissionXof=wallet.totalCommissionXof??0,totalCommissionEncaisseeXof=wallet.totalCommissionEncaisseeXof??0;
+    if(![balanceXof,debtXof,totalCommissionXof,totalCommissionEncaisseeXof].every(v=>Number.isSafeInteger(v)&&v>=0))
+      return json({error:"courier_wallet_balance_invalid"},409);
+    let commission;
+    try{commission=calculateGroupedTourCommission({totalPriceXof:mission.totalPriceXof,balanceXof,debtXof});}
+    catch{return json({error:"grouped_tour_commission_amount_invalid"},409);}
+    const nextWallet={uid,soldeDisponibleXof:commission.balanceAfterXof,detteCommissionXof:commission.debtAfterXof,
+      totalCommissionXof:totalCommissionXof+commission.commissionDueXof,
+      totalCommissionEncaisseeXof:totalCommissionEncaisseeXof+commission.debitXof,
+      updatedAt:now,createdAt:wallet.createdAt||now};
     const completed=completeGroupedDeliveryTour({tour:mission,courierUid:uid,confirmationVerified:true,now});
+    const journal={type:"commission",commissionId,commandeGroupeeId:parentId,serviceType:"boutique",
+      deliveryFeeXof:commission.deliveryFeeXof,deliveryCommissionRate:commission.commissionRate,
+      commissionDueXof:commission.commissionDueXof,montantDebiteXof:commission.debitXof,
+      detteAjouteeXof:commission.debtAddedXof,balanceBeforeXof:balanceXof,balanceAfterXof:commission.balanceAfterXof,
+      debtBeforeXof:debtXof,debtAfterXof:commission.debtAfterXof,actor:"courier_grouped_tour_worker",createdAt:now};
     const writes=[
-      updateWrite(missionPath,{status:"completed",completedAt:now,payoutLedgerId:ledgerId,updatedAt:now},missionDoc.updateTime),
-      updateWrite(parentPath,{statut:"livree",tournee:{...parent.tournee,statut:"livree",completedAt:now,payoutLedgerId:ledgerId},updatedAt:now},parentDoc.updateTime),
+      updateWrite(missionPath,{status:"completed",completedAt:now,commissionJournalId:commissionId,commissionPrelevee:true,updatedAt:now},missionDoc.updateTime),
+      updateWrite(parentPath,{statut:"livree",tournee:{...parent.tournee,statut:"livree",completedAt:now,commissionJournalId:commissionId},updatedAt:now},parentDoc.updateTime),
       updateWrite(confirmationPath,{attempts:confirmation.attempts,usedAt:now,code:null,codeHash:null},confirmationDoc.updateTime),
-      createWrite(ledgerPath,{...completed.payoutLedger,createdAt:now}),
+      walletDoc?updateWrite(walletPath,nextWallet,walletDoc.updateTime):createWrite(walletPath,nextWallet),
+      createWrite(journalPath,journal),
       deleteWrite(lockPath,lockDoc.updateTime)
     ];
     for(const childId of parent.sousCommandes||[]){
       const childDoc=await getDocInTransaction(env,"commandes_colis/"+childId,tx);
       if(!childDoc)return json({error:"grouped_order_child_missing"},409);
-      writes.push(updateWrite("commandes_colis/"+childId,{statut:"livre",dateLivraison:now},childDoc.updateTime));
+      writes.push(updateWrite("commandes_colis/"+childId,{statut:"livre",dateLivraison:now,commissionPrelevee:true,commissionJournalId:commissionId},childDoc.updateTime));
     }
     await commitFirestoreTransaction(env,writes,tx);
-    return json({ok:true,alreadyCompleted:false,payout:{currency:"XOF",totalPriceXof:completed.payoutLedger.totalPriceXof,courierPayoutXof:completed.payoutLedger.courierPayoutXof,platformShareXof:completed.payoutLedger.platformShareXof},payoutLedgerId:ledgerId});
+    return json({ok:true,alreadyCompleted:false,paymentMode:"cash_paid_directly_to_courier_by_customer",
+      commissionXof:commission.commissionDueXof,debitXof:commission.debitXof,debtAddedXof:commission.debtAddedXof,
+      balanceAfterXof:commission.balanceAfterXof,debtAfterXof:commission.debtAfterXof,commissionJournalId:commissionId});
   }catch(error){const code=String(error?.message||"grouped_tour_completion_failed");return json({error:code==="firestore_transaction_commit_409"?"grouped_tour_completion_conflict":"grouped_tour_completion_failed"},409);}
 }
 async function deliveryRoutePreview(request,env) {
