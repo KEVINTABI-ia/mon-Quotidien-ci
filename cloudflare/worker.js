@@ -2916,7 +2916,14 @@ export default {
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
     else if(url.pathname==="/api/delivery/grouped-plan"&&request.method==="POST") response=await planGroupedDelivery(request,env);
-    else if(url.pathname==="/api/courier/grouped-tours"&&request.method==="GET") response=await listCourierGroupedTours(request,env);\n    else if(url.pathname==="/api/delivery/grouped-dispatch"&&request.method==="POST") response=await dispatchGroupedDeliveryTour(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/accept"&&request.method==="POST") response=await acceptGroupedDeliveryTourRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/stop"&&request.method==="POST") response=await updateGroupedTourStopRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/destination-arrived"&&request.method==="POST") response=await markGroupedTourDestinationArrivedRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/complete"&&request.method==="POST") response=await completeGroupedDeliveryTourRequest(request,env);\n    else if(url.pathname==="/api/client/grouped-delivery-code"&&request.method==="POST") response=await clientGroupedDeliveryCode(request,env);\n    else if(url.pathname==="/api/delivery/route-preview"&&request.method==="POST") response=await deliveryRoutePreview(request,env);
+    else if(url.pathname==="/api/courier/grouped-tours"&&request.method==="GET") response=await listCourierGroupedTours(request,env);
+    else if(url.pathname==="/api/delivery/grouped-dispatch"&&request.method==="POST") response=await dispatchGroupedDeliveryTour(request,env);
+    else if(url.pathname==="/api/courier/grouped-tour/accept"&&request.method==="POST") response=await acceptGroupedDeliveryTourRequest(request,env);
+    else if(url.pathname==="/api/courier/grouped-tour/stop"&&request.method==="POST") response=await updateGroupedTourStopRequest(request,env);
+    else if(url.pathname==="/api/courier/grouped-tour/destination-arrived"&&request.method==="POST") response=await markGroupedTourDestinationArrivedRequest(request,env);
+    else if(url.pathname==="/api/courier/grouped-tour/complete"&&request.method==="POST") response=await completeGroupedDeliveryTourRequest(request,env);
+    else if(url.pathname==="/api/client/grouped-delivery-code"&&request.method==="POST") response=await clientGroupedDeliveryCode(request,env);
+    else if(url.pathname==="/api/delivery/route-preview"&&request.method==="POST") response=await deliveryRoutePreview(request,env);
     else if(url.pathname==="/api/client/delivery-code"&&request.method==="POST") response=await clientDeliveryCode(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
     else if(url.pathname==="/api/publicites/admin-upload"&&request.method==="POST") response=await publiciteUpload(request,env,true);
