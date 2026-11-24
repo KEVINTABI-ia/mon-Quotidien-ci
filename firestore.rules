@@ -1770,6 +1770,149 @@ service cloud.firestore {
       }
     }
 
+// Mon Business — espaces d'entreprise isolés et initialisation atomique.
+    match /businesses/{businessId} {
+      function membreActif() {
+        return request.auth != null
+          && exists(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid))
+          && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.status == "active";
+      }
+      function proprietaireActif() {
+        return membreActif()
+          && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.role == "owner";
+      }
+      function membreActivite(activityId) {
+        return membreActif()
+          && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.activityIds is list
+          && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.activityIds.hasAny([activityId])
+          && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.permissions.get("view", false) == true;
+      }
+
+      allow read: if membreActif();
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll(["name","legalStatus","ownerUid","status","createdAt","updatedAt","schemaVersion"])
+        && request.resource.data.keys().hasOnly(["name","legalStatus","ownerUid","registrationNumber","status","createdAt","updatedAt","schemaVersion"])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 140
+        && request.resource.data.legalStatus in ["registered","unregistered"]
+        && (request.resource.data.legalStatus != "registered"
+          || (request.resource.data.registrationNumber is string
+            && request.resource.data.registrationNumber.size() >= 1
+            && request.resource.data.registrationNumber.size() <= 100))
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == "active"
+        && request.resource.data.schemaVersion == 1
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && getAfter(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.role == "owner"
+        && getAfter(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.status == "active";
+
+      allow update: if proprietaireActif()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name","updatedAt"])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 140
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+
+      match /members/{memberUid} {
+        allow read: if request.auth != null
+          && (request.auth.uid == memberUid || proprietaireActif());
+        // Seule la création atomique du propriétaire est autorisée depuis le client.
+        // Les collaborateurs seront créés après vérification serveur de leur identité.
+        allow create: if request.auth != null
+          && request.auth.uid == memberUid
+          && request.resource.data.keys().hasAll(["uid","role","status","activityIds","permissions","createdAt"])
+          && request.resource.data.keys().hasOnly(["uid","role","status","activityIds","permissions","createdAt"])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.role == "owner"
+          && request.resource.data.status == "active"
+          && request.resource.data.activityIds is list
+          && request.resource.data.permissions is map
+          && request.resource.data.createdAt == request.time
+          && getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.ownerUid == request.auth.uid;
+
+        allow update: if proprietaireActif()
+          && memberUid != get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerUid
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.role in ["general_director","activity_manager","accountant","cashier","stock_manager","employee","observer"]
+          && request.resource.data.status in ["active","suspended","revoked"]
+          && request.resource.data.activityIds is list
+          && request.resource.data.permissions is map
+          && request.resource.data.permissions.keys().hasOnly(["view","create","edit","approve","cancel_correct","export","manage_access"])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["role","status","activityIds","permissions","updatedAt"])
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+      }
+
+      match /activities/{activityId} {
+        allow read: if proprietaireActif() || membreActivite(activityId);
+        allow create: if request.auth != null
+          && request.resource.data.keys().hasAll(["businessId","name","type","status","createdBy","createdAt","updatedAt"])
+          && request.resource.data.keys().hasOnly(["businessId","name","type","status","createdBy","createdAt","updatedAt"])
+          && request.resource.data.businessId == businessId
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 2
+          && request.resource.data.name.size() <= 100
+          && request.resource.data.type is string
+          && request.resource.data.type.size() >= 1
+          && request.resource.data.type.size() <= 80
+          && request.resource.data.status == "active"
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time
+          && getAfter(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.role == "owner"
+          && getAfter(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.status == "active";
+        allow update: if proprietaireActif()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name","type","status","updatedAt"])
+          && request.resource.data.businessId == businessId
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 2
+          && request.resource.data.name.size() <= 100
+          && request.resource.data.type is string
+          && request.resource.data.type.size() >= 1
+          && request.resource.data.type.size() <= 80
+          && request.resource.data.status in ["active","archived"]
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+      }
+
+      // Données opérationnelles : lecture strictement limitée à l'entreprise,
+      // à l'activité et au droit "view". Toutes les écritures passent par le backend
+      // de confiance tant que les validations et journaux serveur ne sont pas finalisés.
+      function autoriseActivite(activityId, permission) {
+        return proprietaireActif()
+          || (membreActif()
+            && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.activityIds is list
+            && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.activityIds.hasAny([activityId])
+            && get(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)).data.permissions.get(permission, false) == true);
+      }
+
+      match /activities/{activityId}/{collectionId}/{documentId} {
+        allow read: if collectionId in [
+          "cashRegisters", "transactions", "treasuryTransfers", "approvals",
+          "stockItems", "stockMovements", "purchaseRequests", "purchaseOrders",
+          "suppliers", "assets", "maintenance",
+          "customers", "sales", "orders", "invoices", "creditAccounts", "refunds",
+          "attendance", "leaveRequests", "payrollPreviews",
+          "deliveryMissions", "incidents", "reports"
+        ] && autoriseActivite(activityId, "view");
+        allow create, update, delete: if false;
+      }
+
+      match /auditLogs/{eventId} {
+        allow read: if proprietaireActif();
+        // Écriture réservée à un service de confiance ; pas d'écriture directe par le navigateur.
+        allow create, update, delete: if false;
+      }
+    }
+
+    match /businessInvitations/{invitationId} {
+      // Les invitations restent fermées jusqu'à la mise en place d'un jeton sécurisé et expirant.
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
