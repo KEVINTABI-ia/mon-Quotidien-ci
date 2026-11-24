@@ -2673,6 +2673,163 @@ async function planGroupedDelivery(request,env) {
   }
 }
 
+
+async function dispatchGroupedDeliveryTour(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  if(auth.user.sub!==PUBLICITE_ADMIN_UID)return json({error:"admin_required"},403);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body.commandeGroupeeId,courierUid=body.courierUid;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId)||typeof courierUid!=="string"||courierUid.length<5||courierUid.length>128)
+    return json({error:"invalid_grouped_tour_assignment"},400);
+  const parentPath="commandes_groupees/"+parentId,missionPath="tournees_livraison/"+parentId,partnerPath="partenaires/"+courierUid;
+  let tx;
+  try {
+    tx=await beginFirestoreTransaction(env);
+    const [parentDoc,partnerDoc,missionDoc]=await Promise.all([
+      getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,partnerPath,tx),getDocInTransaction(env,missionPath,tx)
+    ]);
+    if(!parentDoc)return json({error:"grouped_order_not_found"},404);
+    if(missionDoc)return json({error:"grouped_tour_already_dispatched"},409);
+    const parent=docData(parentDoc),profile=docData(partnerDoc);
+    if(parent.statut!=="tournee_planifiee"||parent.tournee?.statut!=="planifiee"||!Array.isArray(parent.sousCommandes)||parent.sousCommandes.length<2||parent.sousCommandes.length>4)
+      return json({error:"grouped_tour_not_ready_for_dispatch"},409);
+    if(!courierProfileCanCompleteMission(profile,courierUid))return json({error:"courier_profile_not_eligible"},403);
+    const price=parent.tarificationEstimee;
+    if(!price||!Number.isSafeInteger(price.totalPriceXof)||price.totalPriceXof<1)return json({error:"grouped_tour_price_missing"},409);
+    const now=new Date(),stops=parent.tournee.orderedShopIds.map(id=>({id,status:"pending"}));
+    const mission={id:parentId,commandeGroupeeId:parentId,clientId:parent.clientId,courierUid,status:"offered",stops,
+      destinationStopId:parent.tournee.destinationStopId,totalPriceXof:price.totalPriceXof,currency:"XOF",
+      sousCommandes:parent.sousCommandes,createdAt:now,updatedAt:now};
+    await commitFirestoreTransaction(env,[
+      createWrite(missionPath,mission),
+      updateWrite(parentPath,{statut:"tournee_attribuee",tournee:{...parent.tournee,statut:"attribuee",courierUid,assignedAt:now},updatedAt:now},parentDoc.updateTime)
+    ],tx);
+    return json({ok:true,mission:{id:parentId,courierUid,status:"offered",stops,totalPriceXof:price.totalPriceXof}},201);
+  } catch(error) {
+    const code=String(error?.message||"grouped_tour_dispatch_failed");
+    return json({error:code==="firestore_transaction_commit_409"?"grouped_tour_dispatch_conflict":"grouped_tour_dispatch_failed"},409);
+  }
+}
+async function acceptGroupedDeliveryTourRequest(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  const uid=auth.user.sub;
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body.commandeGroupeeId;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId))return json({error:"invalid_grouped_order_id"},400);
+  const missionPath="tournees_livraison/"+parentId,partnerPath="partenaires/"+uid,lockPath=partnerPath+"/verrous/missionActive",parentPath="commandes_groupees/"+parentId;
+  try {
+    const tx=await beginFirestoreTransaction(env);
+    const [missionDoc,partnerDoc,lockDoc,parentDoc]=await Promise.all([
+      getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,partnerPath,tx),getDocInTransaction(env,lockPath,tx),getDocInTransaction(env,parentPath,tx)
+    ]);
+    if(!missionDoc||!parentDoc)return json({error:"grouped_tour_not_found"},404);
+    const mission=docData(missionDoc),profile=docData(partnerDoc),lock=docData(lockDoc);
+    if(!courierProfileCanCompleteMission(profile,uid))return json({error:"courier_profile_not_eligible"},403);
+    if(mission.courierUid!==uid)return json({error:"grouped_tour_not_assigned_to_courier"},403);
+    if(lockDoc&&lock?.statut==="active")return json({error:"courier_already_has_active_mission"},409);
+    const now=new Date(),accepted=acceptGroupedDeliveryTour({tour:mission,courierUid:uid,activeMission:lockDoc?lock:null,now});
+    const writes=[updateWrite(missionPath,{status:"accepted",acceptedAt:now,updatedAt:now},missionDoc.updateTime),
+      updateWrite(parentPath,{statut:"tournee_acceptee",tournee:{...docData(parentDoc).tournee,statut:"acceptee",acceptedAt:now},updatedAt:now},parentDoc.updateTime),
+      lockDoc?updateWrite(lockPath,{tourneeId:parentId,statut:"active",createdAt:now},lockDoc.updateTime):createWrite(lockPath,{tourneeId:parentId,statut:"active",createdAt:now})];
+    await commitFirestoreTransaction(env,writes,tx);
+    return json({ok:true,mission:accepted.tour,activeMissionLock:accepted.activeMissionLock});
+  }catch(error){const code=String(error?.message||"grouped_tour_accept_failed");return json({error:code==="firestore_transaction_commit_409"?"grouped_tour_accept_conflict":code},409);}
+}
+async function updateGroupedTourStopRequest(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body.commandeGroupeeId,stopId=body.stopId,nextStatus=body.nextStatus,uid=auth.user.sub;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId)||typeof stopId!=="string"||!["arrived","picked_up"].includes(nextStatus))
+    return json({error:"invalid_grouped_tour_stop"},400);
+  const missionPath="tournees_livraison/"+parentId,partnerPath="partenaires/"+uid+"/verrous/missionActive";
+  try {
+    const tx=await beginFirestoreTransaction(env);
+    const [missionDoc,lockDoc]=await Promise.all([getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,partnerPath,tx)]);
+    if(!missionDoc)return json({error:"grouped_tour_not_found"},404);
+    const mission=docData(missionDoc),lock=docData(lockDoc);
+    if(mission.courierUid!==uid)return json({error:"grouped_tour_not_assigned_to_courier"},403);
+    if(!lockDoc||lock?.tourneeId!==parentId||lock?.statut!=="active")return json({error:"active_mission_lock_missing"},409);
+    const transition=transitionGroupedDeliveryTourStop({tour:mission,stopId,nextStatus});
+    const now=new Date();
+    await commitFirestoreTransaction(env,[updateWrite(missionPath,{stops:transition.tour.stops,status:transition.tour.status,updatedAt:now},missionDoc.updateTime)],tx);
+    return json({ok:true,mission:{id:parentId,status:transition.tour.status,stops:transition.tour.stops},allPickedUp:transition.allPickedUp});
+  }catch(error){const code=String(error?.message||"grouped_tour_stop_update_failed");const status=code.startsWith("delivery_tour_")||code.startsWith("grouped_tour_")?409:409;return json({error:code},status);}
+}
+async function clientGroupedDeliveryCode(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body.commandeGroupeeId;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId))return json({error:"invalid_grouped_order_id"},400);
+  const parentPath="commandes_groupees/"+parentId,missionPath="tournees_livraison/"+parentId,confirmationPath=parentPath+"/informations_privees/confirmation";
+  try {
+    const tx=await beginFirestoreTransaction(env);
+    const [parentDoc,missionDoc,confirmationDoc]=await Promise.all([
+      getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,confirmationPath,tx)
+    ]);
+    if(!parentDoc||!missionDoc)return json({error:"grouped_tour_not_found"},404);
+    const parent=docData(parentDoc),mission=docData(mission);
+    if(parent.clientId!==auth.user.sub)return json({error:"grouped_order_not_owned"},403);
+    if(mission.status!=="delivering")return json({error:"grouped_tour_not_at_destination"},409);
+    const now=new Date(),existing=docData(confirmationDoc),issuance=deliveryCodeIssuanceState(existing,now);
+    if(!issuance.ok){const errors={already_used:["delivery_already_confirmed",409],locked:["delivery_code_locked",429],rate_limited:["delivery_code_rate_limited",429]};const [error,status]=errors[issuance.reason]||["delivery_code_unavailable",409];return json({error},status);}
+    const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%1000000).padStart(6,"0");
+    const confirmation={codeHash:await hashDeliveryConfirmationCode(code),attempts:issuance.attempts,issuanceCount:issuance.issuanceCount,
+      issuanceWindowStartedAt:issuance.issuanceWindowStartedAt,expiresAt:new Date(now.getTime()+30*60*1000),createdAt:now,usedAt:null};
+    await commitFirestoreTransaction(env,[confirmationDoc?updateWrite(confirmationPath,confirmation,confirmationDoc.updateTime):createWrite(confirmationPath,confirmation)],tx);
+    return json({ok:true,code,expiresAt:confirmation.expiresAt.toISOString()});
+  }catch(error){console.error("Grouped delivery code issue failed",{code:error?.message||"unknown"});return json({error:"grouped_delivery_code_unavailable"},409);}
+}
+async function completeGroupedDeliveryTourRequest(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body.commandeGroupeeId,code=typeof body.code==="string"?body.code:"",uid=auth.user.sub;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId)||!/^\d{6}$/.test(code))return json({error:"invalid_grouped_tour_completion"},400);
+  const parentPath="commandes_groupees/"+parentId,missionPath="tournees_livraison/"+parentId,partnerPath="partenaires/"+uid,lockPath=partnerPath+"/verrous/missionActive";
+  const confirmationPath=parentPath+"/informations_privees/confirmation",ledgerId="tour_"+parentId,ledgerPath="remunerations_tournees/"+ledgerId;
+  try {
+    const tx=await beginFirestoreTransaction(env);
+    const [parentDoc,missionDoc,partnerDoc,lockDoc,confirmationDoc,ledgerDoc]=await Promise.all([
+      getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,partnerPath,tx),
+      getDocInTransaction(env,lockPath,tx),getDocInTransaction(env,confirmationPath,tx),getDocInTransaction(env,ledgerPath,tx)
+    ]);
+    if(!parentDoc||!missionDoc)return json({error:"grouped_tour_not_found"},404);
+    const parent=docData(parentDoc),mission=docData(missionDoc),profile=docData(partnerDoc),lock=docData(lockDoc);
+    if(!courierProfileCanCompleteMission(profile,uid)||mission.courierUid!==uid)return json({error:"grouped_tour_not_owned"},403);
+    if(mission.status==="completed"&&ledgerDoc)return json({ok:true,alreadyCompleted:true,payoutLedgerId:ledgerId},200);
+    if(!lockDoc||lock?.tourneeId!==parentId||lock?.statut!=="active")return json({error:"active_mission_lock_missing"},409);
+    if(!confirmationDoc)return json({error:"grouped_delivery_code_not_issued"},409);
+    const confirmation=docData(confirmationDoc),now=new Date();
+    if(confirmation.usedAt)return json({error:"delivery_already_confirmed"},409);
+    if(!(confirmation.expiresAt instanceof Date)||confirmation.expiresAt.getTime()<=now.getTime())return json({error:"delivery_code_expired"},410);
+    if(!Number.isSafeInteger(confirmation.attempts)||confirmation.attempts>=5)return json({error:"delivery_code_locked"},429);
+    const hash=await hashDeliveryConfirmationCode(code);
+    if(hash!==confirmation.codeHash){
+      await commitFirestoreTransaction(env,[updateWrite(confirmationPath,{attempts:confirmation.attempts+1},confirmationDoc.updateTime)],tx);
+      return json({error:"delivery_code_invalid",attemptsRemaining:4-confirmation.attempts},400);
+    }
+    if(ledgerDoc)return json({error:"grouped_tour_payout_already_recorded"},409);
+    const completed=completeGroupedDeliveryTour({tour:mission,courierUid:uid,confirmationVerified:true,now});
+    const writes=[
+      updateWrite(missionPath,{status:"completed",completedAt:now,payoutLedgerId:ledgerId,updatedAt:now},missionDoc.updateTime),
+      updateWrite(parentPath,{statut:"livree",tournee:{...parent.tournee,statut:"livree",completedAt:now,payoutLedgerId:ledgerId},updatedAt:now},parentDoc.updateTime),
+      updateWrite(confirmationPath,{attempts:confirmation.attempts,usedAt:now,code:null,codeHash:null},confirmationDoc.updateTime),
+      createWrite(ledgerPath,{...completed.payoutLedger,createdAt:now}),
+      deleteWrite(lockPath,lockDoc.updateTime)
+    ];
+    for(const childId of parent.sousCommandes||[]){
+      const childDoc=await getDocInTransaction(env,"commandes_colis/"+childId,tx);
+      if(!childDoc)return json({error:"grouped_order_child_missing"},409);
+      writes.push(updateWrite("commandes_colis/"+childId,{statut:"livre",dateLivraison:now},childDoc.updateTime));
+    }
+    await commitFirestoreTransaction(env,writes,tx);
+    return json({ok:true,alreadyCompleted:false,payout:{currency:"XOF",totalPriceXof:completed.payoutLedger.totalPriceXof,courierPayoutXof:completed.payoutLedger.courierPayoutXof,platformShareXof:completed.payoutLedger.platformShareXof},payoutLedgerId:ledgerId});
+  }catch(error){const code=String(error?.message||"grouped_tour_completion_failed");return json({error:code==="firestore_transaction_commit_409"?"grouped_tour_completion_conflict":"grouped_tour_completion_failed"},409);}
+}
 async function deliveryRoutePreview(request,env) {
   const auth=await requireUser(request,env);
   if(!auth.user)return json({error:"unauthorized"},401);
@@ -2709,7 +2866,7 @@ export default {
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
     else if(url.pathname==="/api/delivery/grouped-plan"&&request.method==="POST") response=await planGroupedDelivery(request,env);
-    else if(url.pathname==="/api/delivery/route-preview"&&request.method==="POST") response=await deliveryRoutePreview(request,env);
+    else if(url.pathname==="/api/delivery/grouped-dispatch"&&request.method==="POST") response=await dispatchGroupedDeliveryTour(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/accept"&&request.method==="POST") response=await acceptGroupedDeliveryTourRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/stop"&&request.method==="POST") response=await updateGroupedTourStopRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/complete"&&request.method==="POST") response=await completeGroupedDeliveryTourRequest(request,env);\n    else if(url.pathname==="/api/client/grouped-delivery-code"&&request.method==="POST") response=await clientGroupedDeliveryCode(request,env);\n    else if(url.pathname==="/api/delivery/route-preview"&&request.method==="POST") response=await deliveryRoutePreview(request,env);
     else if(url.pathname==="/api/client/delivery-code"&&request.method==="POST") response=await clientDeliveryCode(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
     else if(url.pathname==="/api/publicites/admin-upload"&&request.method==="POST") response=await publiciteUpload(request,env,true);
