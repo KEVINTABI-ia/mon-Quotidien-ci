@@ -12065,6 +12065,22 @@ async function planifierTourneeCommandeGroupee(parentId,button){
  finally{if(button&&button.isConnected){button.disabled=false;button.textContent="Calculer la tournée et les frais";}}
 }
 
+async function obtenirCodeLivraisonTourneeGroupee(parentId,button){
+ const user=auth.currentUser;if(!user)return alert("Connectez-vous comme client.");
+ if(button){button.disabled=true;button.textContent="Génération du code...";}
+ try{
+  const token=await user.getIdToken(),response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/client/grouped-delivery-code",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({commandeGroupeeId:parentId})});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||"Impossible de générer le code.");
+  const zone=button?.parentElement;
+  const code=document.createElement("p");code.style.cssText="padding:12px;border-radius:10px;background:#e8f5ec;font-size:20px;font-weight:800;letter-spacing:4px;text-align:center;";
+  code.textContent="Code de remise : "+result.code+(result.expiresAt?" · expire à "+new Date(result.expiresAt).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"");
+  if(zone){const previous=zone.querySelector("[data-mqci-grouped-delivery-code]");if(previous)previous.remove();code.dataset.mqciGroupedDeliveryCode="true";zone.insertBefore(code,button);}
+  alert("Communiquez ce code au livreur uniquement lorsque vous recevez l'ensemble de vos commandes.");
+ }catch(error){alert("Code indisponible : "+error.message);}
+ finally{if(button&&button.isConnected){button.disabled=false;button.textContent="Générer le code de remise";}}
+}
+
 async function chargerHistoriqueCommandes() {
   const zone=document.getElementById("zoneHistoriqueCommandes"),user=auth.currentUser;
   if(!zone)return;
@@ -12077,7 +12093,7 @@ async function chargerHistoriqueCommandes() {
     ]);
     if(snap.empty&&groupSnap.empty){zone.innerHTML="<p>Aucune commande enregistrée pour le moment.</p>";return;}
     zone.innerHTML="<h3>📋 Mes commandes</h3>";
-    const label=function(status){return ({commande_boutique:"Envoyée aux boutiques",confirmee:"Confirmée par la boutique",preparation:"En préparation",prete:"Prête à récupérer",en_attente:"En attente",livreur_affecte:"Livreur affecté",colis_recupere:"Articles récupérés",en_transit:"En cours de livraison",livre:"Livrée",annule:"Annulée",tournee_planifiee:"Tournée planifiée"})[status]||status||"Non renseigné";};
+    const label=function(status){return ({commande_boutique:"Envoyée aux boutiques",confirmee:"Confirmée par la boutique",preparation:"En préparation",prete:"Prête à récupérer",en_attente:"En attente",livreur_affecte:"Livreur affecté",colis_recupere:"Articles récupérés",en_transit:"En cours de livraison",livre:"Livrée",annule:"Annulée",tournee_planifiee:"Tournée planifiée",tournee_attribuee:"Livreur désigné",tournee_acceptee:"Tournée acceptée",tournee_arrivee_destination:"Livreur arrivé · code de remise disponible",livree:"Livrée"})[status]||status||"Non renseigné";};
     const parents=groupSnap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
     for(const parentDoc of parents){
       const parent=parentDoc.data(),card=document.createElement("section");card.className="card";card.style.cssText="padding:14px;margin:12px 0;border:1px solid #dcebdd;";
@@ -12098,11 +12114,16 @@ async function chargerHistoriqueCommandes() {
       const allReady=etatsBoutiques.length===parent.nombreBoutiques&&etatsBoutiques.every(x=>x==="prete");
       aggregate.textContent=allReady?"Toutes les boutiques ont confirmé que les articles sont prêts.":etatsBoutiques.some(x=>x==="annulee")?"Une ou plusieurs sous-commandes sont annulées.":etatsBoutiques.some(x=>x==="preparation")?"Certaines boutiques préparent encore les articles.":"En attente de confirmation des boutiques.";
       card.insertBefore(aggregate,subtitle);
-      if(parent.tournee?.statut==="planifiee"){
-        const plan=document.createElement("p");plan.textContent="Tournée : "+parent.tournee.totalRoadDistanceKm+" km · environ "+Math.ceil(parent.tournee.totalDurationSeconds/60)+" min.";card.appendChild(plan);
-        const price=document.createElement("p");price.textContent="Tarif groupé estimé : "+Number(parent.tarificationEstimee?.totalPriceXof||0).toLocaleString("fr-FR")+" FCFA · hors approche du livreur.";card.appendChild(price);
+      if(parent.tournee?.statut==="planifiee"||["attribuee","acceptee","arrivee_destination","livree"].includes(parent.tournee?.statut)){
+        const plan=document.createElement("p");plan.textContent="Tournée : "+Number(parent.tournee.totalRoadDistanceKm||0)+" km · environ "+Math.ceil(Number(parent.tournee.totalDurationSeconds||0)/60)+" min.";card.appendChild(plan);
+        const price=document.createElement("p");price.textContent="Tarif groupé : "+Number(parent.tarificationEstimee?.totalPriceXof||0).toLocaleString("fr-FR")+" FCFA.";card.appendChild(price);
+        if(parent.tournee?.courierUid){const courier=document.createElement("p");courier.textContent="Un livreur a été désigné pour cette tournée.";card.appendChild(courier);}
       }else if(allReady){
         const planButton=document.createElement("button");planButton.type="button";planButton.textContent="Calculer la tournée et les frais";planButton.onclick=()=>planifierTourneeCommandeGroupee(parentDoc.id,planButton);card.appendChild(planButton);
+      }
+      if(parent.tournee?.statut==="arrivee_destination"||parent.statut==="tournee_arrivee_destination"){
+        const codeButton=document.createElement("button");codeButton.className="primary";codeButton.type="button";codeButton.textContent="Générer le code de remise";codeButton.onclick=()=>obtenirCodeLivraisonTourneeGroupee(parentDoc.id,codeButton);card.appendChild(codeButton);
+        const note=document.createElement("p");note.textContent="Donnez ce code au livreur après réception de toutes les commandes.";card.appendChild(note);
       }
       zone.appendChild(card);
     }
