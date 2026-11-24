@@ -929,6 +929,61 @@ export async function buildDeliveryTourRouteWithOsrm({stops,baseUrl="https://rou
   return Object.freeze({...route,totalDurationSeconds:Math.round(totalDurationSeconds),provider:"osrm"});
 }
 
+export async function buildGroupedDeliveryPlanWithOsrm({shops,destination,baseUrl="https://router.project-osrm.org",fetchImpl=fetch}) {
+  if(!Array.isArray(shops)||shops.length<2||shops.length>4||!destination||typeof destination.id!=="string")
+    throw new Error("invalid_grouped_delivery_stops");
+  const stops=[...shops,destination],ids=new Set();
+  for(const stop of stops){
+    if(!stop||typeof stop.id!=="string"||!stop.id.trim()||ids.has(stop.id)
+      ||!Number.isFinite(stop.latitude)||stop.latitude < -90||stop.latitude>90
+      ||!Number.isFinite(stop.longitude)||stop.longitude < -180||stop.longitude>180)
+      throw new Error("invalid_grouped_delivery_coordinates");
+    ids.add(stop.id);
+  }
+  let endpoint;
+  try{endpoint=new URL(baseUrl);}catch{throw new Error("invalid_osrm_base_url");}
+  if(endpoint.protocol!=="https:"||endpoint.username||endpoint.password||endpoint.search||endpoint.hash)
+    throw new Error("invalid_osrm_base_url");
+  const coordinates=stops.map(stop=>String(stop.longitude)+","+String(stop.latitude)).join(";");
+  const url=new URL("/table/v1/driving/"+coordinates,endpoint.origin);
+  url.searchParams.set("annotations","distance,duration");
+  let response;
+  try{response=await fetchImpl(url.toString(),{method:"GET",headers:{accept:"application/json"},signal:AbortSignal.timeout(10000)});}
+  catch{throw new Error("osrm_network_error");}
+  if(!response.ok)throw new Error("osrm_http_"+response.status);
+  let payload;try{payload=await response.json();}catch{throw new Error("invalid_osrm_response");}
+  const n=stops.length,distances=payload?.distances,durations=payload?.durations;
+  if(payload?.code!=="Ok"||!Array.isArray(distances)||!Array.isArray(durations)
+    ||distances.length!==n||durations.length!==n
+    ||distances.some(row=>!Array.isArray(row)||row.length!==n)
+    ||durations.some(row=>!Array.isArray(row)||row.length!==n))
+    throw new Error("invalid_osrm_matrix");
+  for(const matrix of [distances,durations])for(const row of matrix)for(const value of row)
+    if(typeof value!=="number"||!Number.isFinite(value)||value<0)throw new Error("invalid_osrm_matrix_value");
+  let best=null;
+  const visit=(order,remaining)=>{
+    if(!remaining.length){
+      const indexes=[...order,n-1];let metres=0,seconds=0;
+      for(let i=1;i<indexes.length;i++){metres+=distances[indexes[i-1]][indexes[i]];seconds+=durations[indexes[i-1]][indexes[i]];}
+      if(!best||metres<best.metres)best={order:order.slice(),metres,seconds};
+      return;
+    }
+    for(let i=0;i<remaining.length;i++)visit([...order,remaining[i]],[...remaining.slice(0,i),...remaining.slice(i+1)]);
+  };
+  visit([],shops.map((_,i)=>i));
+  if(!best||best.metres<=0)throw new Error("delivery_tour_route_unavailable");
+  const totalRoadDistanceKm=Number((best.metres/1000).toFixed(3));
+  if(totalRoadDistanceKm>GROUPED_DELIVERY_PRICING.maxRoadDistanceKm)throw new Error("invalid_delivery_tour_total_distance");
+  return Object.freeze({
+    orderedShopIds:Object.freeze(best.order.map(index=>shops[index].id)),
+    destinationStopId:destination.id,
+    totalRoadDistanceKm,
+    totalDurationSeconds:Math.round(best.seconds),
+    provider:"osrm",
+    distanceScope:"between_first_pickup_and_destination_excludes_courier_approach"
+  });
+}
+
 // Planificateur déterministe : la matrice doit provenir d'un calculateur d'itinéraires routiers.
 export function optimizeDeliveryTourRoute({stops,distanceMatrix}) {
   if(!Array.isArray(stops)||stops.length<3||stops.length>GROUPED_DELIVERY_PRICING.maxShops+2)
@@ -998,6 +1053,73 @@ export function applyDeliveryTourStopTransition({stops,stopId,nextStatus}) {
     tourStatus:pickedUpCount===updated.length?"delivering":pickedUpCount>0?"collecting":"assigned"
   });
 }
+// A grouped boutique tour is paid in cash directly by the customer to the courier.
+// The app only debits the courier's prepaid wallet for the platform commission.
+export function calculateGroupedTourCommission({totalPriceXof,balanceXof,debtXof=0}) {
+  if(!Number.isSafeInteger(totalPriceXof)||totalPriceXof<=0)
+    throw new Error("invalid_grouped_tour_commission_amount");
+  const applied=buildCourierWalletCommissionLedger({
+    balanceXof,debtXof,deliveryFeeXof:totalPriceXof,serviceType:"boutique"
+  });
+  return Object.freeze({currency:"XOF",deliveryFeeXof:totalPriceXof,commissionRate:applied.deliveryCommissionRate,
+    commissionDueXof:applied.totalWalletDebitXof,debitXof:applied.debitXof,debtAddedXof:applied.debtAddedXof,
+    balanceAfterXof:applied.balanceAfterXof,debtAfterXof:applied.debtAfterXof});
+}
+
+export function courierGroupedTourSubscriptionActive(profile,now=new Date()) {
+  if(!profile||!(now instanceof Date)||!Number.isFinite(now.getTime()))return false;
+  const asDate=value=>value instanceof Date?value:value?new Date(value):null;
+  const trialEnd=asDate(profile.dateFinEssai),paidEnd=asDate(profile.dateExpirationAbonnement);
+  return (profile.statutAbonnementPartenaire==="Essai"&&!!trialEnd&&Number.isFinite(trialEnd.getTime())&&trialEnd.getTime()>now.getTime())
+    ||(profile.statutAbonnementPartenaire==="Actif"&&!!paidEnd&&Number.isFinite(paidEnd.getTime())&&paidEnd.getTime()>now.getTime());
+}
+
+export function buildGroupedTourStops({orderedShopIds,children}) {
+  if(!Array.isArray(orderedShopIds)||orderedShopIds.length<2||orderedShopIds.length>4||!Array.isArray(children)||children.length!==orderedShopIds.length)
+    throw new Error("grouped_tour_pickup_order_invalid");
+  const stops=orderedShopIds.map(boutiqueId=>{
+    const child=children.find(item=>item.boutiqueId===boutiqueId);
+    return child&&typeof child.id==="string"&&child.id.trim()
+      ?{id:child.id,boutiqueId,boutiqueNom:child.boutiqueNom||"Boutique",status:"pending"}:null;
+  });
+  if(stops.some(stop=>!stop)||new Set(stops.map(stop=>stop.id)).size!==stops.length)
+    throw new Error("grouped_tour_pickup_order_invalid");
+  return Object.freeze(stops.map(stop=>Object.freeze(stop)));
+}
+
+// Pure lifecycle guards for a single courier-owned grouped tour. Firestore
+// transactions must persist these results atomically before exposing them to clients.
+export function acceptGroupedDeliveryTour({tour,courierUid,activeMission=null,now=new Date()}) {
+  if(!tour||typeof tour.id!=="string"||!tour.id.trim()||typeof courierUid!=="string"||!courierUid.trim())
+    throw new Error("invalid_grouped_tour_assignment");
+  if(tour.courierUid!==courierUid) throw new Error("grouped_tour_not_assigned_to_courier");
+  if(tour.status!=="offered") throw new Error("grouped_tour_not_available");
+  if(activeMission&&activeMission.status!=="completed"&&activeMission.status!=="cancelled")
+    throw new Error("courier_already_has_active_mission");
+  if(!(now instanceof Date)||!Number.isFinite(now.getTime())) throw new Error("invalid_grouped_tour_date");
+  return Object.freeze({tour:Object.freeze({...tour,status:"accepted",acceptedAt:now.toISOString()}),activeMissionLock:Object.freeze({tourId:tour.id,status:"active",createdAt:now.toISOString()})});
+}
+export function transitionGroupedDeliveryTourStop({tour,stopId,nextStatus}) {
+  if(!tour||!["accepted","collecting"].includes(tour.status)) throw new Error("grouped_tour_not_collecting");
+  const transition=applyDeliveryTourStopTransition({stops:tour.stops,stopId,nextStatus});
+  return Object.freeze({tour:Object.freeze({...tour,stops:transition.stops,status:transition.tourStatus==="delivering"?"delivering":transition.pickedUpCount>0?"collecting":"accepted"}),...transition});
+}
+export function markGroupedTourDestinationArrived({tour,courierUid,now=new Date()}) {
+  if(!tour||tour.status!=="delivering"||!Array.isArray(tour.stops)||tour.stops.length<2||tour.stops.some(stop=>stop.status!=="picked_up"))
+    throw new Error("grouped_tour_pickups_incomplete");
+  if(tour.courierUid!==courierUid) throw new Error("grouped_tour_not_assigned_to_courier");
+  if(!(now instanceof Date)||!Number.isFinite(now.getTime())) throw new Error("invalid_grouped_tour_date");
+  return Object.freeze({...tour,status:"arrive_destination",arrivedAt:now.toISOString()});
+}
+export function completeGroupedDeliveryTour({tour,courierUid,confirmationVerified,now=new Date()}) {
+  if(!tour||tour.status!=="arrive_destination"||!Array.isArray(tour.stops)||tour.stops.length<2||tour.stops.some(stop=>stop.status!=="picked_up"))
+    throw new Error("grouped_tour_pickups_incomplete");
+  if(tour.courierUid!==courierUid) throw new Error("grouped_tour_not_assigned_to_courier");
+  if(confirmationVerified!==true) throw new Error("grouped_tour_confirmation_required");
+  if(!(now instanceof Date)||!Number.isFinite(now.getTime())) throw new Error("invalid_grouped_tour_date");
+  return Object.freeze({tour:Object.freeze({...tour,status:"completed",completedAt:now.toISOString()}),activeMissionLock:null});
+}
+
 export const GROUPED_DELIVERY_PRICING = Object.freeze({
   fixedStartFeeXof:500,
   pricePerKmXof:150,
@@ -2508,6 +2630,306 @@ async function subscriptionPlans(request,env) {
   if(!plans) return json({error:"unsupported_subscription_service"},400);
   return json({serviceId:requested,currency:"XOF",provider:"jeko",plans,checkedAt:now.toISOString()});
 }
+async function planGroupedDelivery(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  let body;try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body?.commandeGroupeeId;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId))return json({error:"invalid_grouped_order_id"},400);
+  let transaction;
+  try{
+    transaction=await beginFirestoreTransaction(env);
+    const parentPath="commandes_groupees/"+parentId;
+    const parentDoc=await getDocInTransaction(env,parentPath,transaction);
+    if(!parentDoc)return json({error:"grouped_order_not_found"},404);
+    const parent=docData(parentDoc);
+    if(parent.clientId!==auth.user.sub)return json({error:"forbidden"},403);
+    if(parent.tournee?.statut==="planifiee")return json({ok:true,alreadyPlanned:true,plan:parent.tournee,tarificationEstimee:parent.tarificationEstimee||null},200);
+    if(parent.statut!=="en_attente_boutiques"||!Array.isArray(parent.sousCommandes)||parent.sousCommandes.length<2||parent.sousCommandes.length>4)
+      return json({error:"grouped_order_not_plannable"},409);
+    const childDocs=await Promise.all(parent.sousCommandes.map(id=>getDocInTransaction(env,"commandes_colis/"+id,transaction)));
+    if(childDocs.some(doc=>!doc))return json({error:"grouped_order_child_missing"},409);
+    const children=childDocs.map(docData);
+    if(children.some(child=>child.clientId!==auth.user.sub||child.commandeGroupeeId!==parentId||child.typeCommande!=="boutique"))
+      return json({error:"grouped_order_child_mismatch"},409);
+    if(children.some(child=>child.statutBoutique!=="prete"))
+      return json({error:"shops_not_all_ready"},409);
+    const detailsDocs=await Promise.all(parent.sousCommandes.map(id=>getDocInTransaction(env,"commandes_colis/"+id+"/informations_privees/details",transaction)));
+    if(detailsDocs.some(doc=>!doc))return json({error:"grouped_order_private_details_missing"},409);
+    const details=detailsDocs.map(docData);
+    const shops=children.map((child,index)=>({
+      id:child.boutiqueId,
+      latitude:Number(details[index].latitudeRecuperation),
+      longitude:Number(details[index].longitudeRecuperation)
+    }));
+    if(shops.some(shop=>typeof shop.id!=="string"||!shop.id.trim())||new Set(shops.map(shop=>shop.id)).size!==shops.length)
+      return json({error:"grouped_order_shop_identity_invalid"},409);
+    const destination={id:"destination",latitude:Number(details[0].latitudeLivraison),longitude:Number(details[0].longitudeLivraison)};
+    if(details.some(item=>Number(item.latitudeLivraison)!==destination.latitude||Number(item.longitudeLivraison)!==destination.longitude))
+      return json({error:"grouped_order_destinations_mismatch"},409);
+    const plan=await buildGroupedDeliveryPlanWithOsrm({
+      shops,destination,baseUrl:env.OSRM_BASE_URL||"https://router.project-osrm.org"
+    });
+    const tarification=calculateGroupedDeliveryPrice({roadDistanceKm:plan.totalRoadDistanceKm,shopCount:shops.length});
+    const snapshot={
+      statut:"planifiee",
+      orderedShopIds:plan.orderedShopIds,
+      destinationStopId:plan.destinationStopId,
+      totalRoadDistanceKm:plan.totalRoadDistanceKm,
+      totalDurationSeconds:plan.totalDurationSeconds,
+      provider:plan.provider,
+      distanceScope:plan.distanceScope,
+      plannedAt:new Date().toISOString()
+    };
+    await commitFirestoreTransaction(env,[updateWrite(parentPath,{
+      statut:"tournee_planifiee",
+      tournee:snapshot,
+      tarificationEstimee:tarification,
+      updatedAt:new Date()
+    },parentDoc.updateTime)],transaction);
+    return json({ok:true,plan:snapshot,tarificationEstimee:tarification,providerNotice:"Plan calculé par OSRM. L'approche du livreur jusqu'à la première boutique sera prise en compte lors de l'affectation."},200);
+  }catch(error){
+    console.error("Grouped delivery planning failed",{code:error?.message||"unknown"});
+    const code=String(error?.message||"grouped_delivery_plan_failed");
+    const status=code.startsWith("invalid_")?400:code.startsWith("osrm_")?502:code==="firestore_transaction_commit_409"?409:503;
+    return json({error:code},status);
+  }
+}
+
+
+async function listCourierGroupedTours(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  const uid=auth.user.sub;
+  try {
+    const token=await serviceToken(env),endpoint="https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents:runQuery";
+    const response=await fetch(endpoint,{method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({structuredQuery:{from:[{collectionId:"tournees_livraison"}],where:{fieldFilter:{field:{fieldPath:"courierUid"},op:"EQUAL",value:{stringValue:uid}}},limit:25}})});
+    if(!response.ok)throw new Error("grouped_tour_list_query_failed");
+    const rows=await response.json(),missions=(Array.isArray(rows)?rows:[]).filter(row=>row?.document?.name).map(row=>({id:row.document.name.split("/").pop(),...docData(row.document)})).filter(mission=>mission.courierUid===uid&&["offered","accepted","collecting","delivering","arrive_destination"].includes(mission.status));
+    const enriched=await Promise.all(missions.map(async mission=>{
+      const routeStopIds=(mission.stops||[]).map(stop=>stop.id);
+      const details=await Promise.all(routeStopIds.map(id=>getDoc(env,"commandes_colis/"+id+"/informations_privees/details")));
+      const pickups=details.map((doc,index)=>{const data=docData(doc)||{};return {id:routeStopIds[index],boutiqueNom:mission.stops[index]?.boutiqueNom||"Boutique",status:mission.stops[index]?.status||"pending",latitude:Number(data.latitudeRecuperation),longitude:Number(data.longitudeRecuperation)};});
+      const first=docData(details.find(Boolean))||{};
+      return {id:mission.id,commandeGroupeeId:mission.commandeGroupeeId,status:mission.status,stops:pickups,destination:{latitude:Number(first.latitudeLivraison),longitude:Number(first.longitudeLivraison)},totalPriceXof:mission.totalPriceXof,currency:mission.currency,createdAt:mission.createdAt,acceptedAt:mission.acceptedAt||null};
+    }));
+    return json({ok:true,missions:enriched});
+  }catch(error){console.error("Courier grouped tour list failed",{code:error?.message||"unknown"});return json({error:"grouped_tour_list_unavailable"},503);}
+}
+async function dispatchGroupedDeliveryTour(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  if(auth.user.sub!==PUBLICITE_ADMIN_UID)return json({error:"admin_required"},403);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body.commandeGroupeeId,courierUid=body.courierUid;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId)||typeof courierUid!=="string"||courierUid.length<5||courierUid.length>128)
+    return json({error:"invalid_grouped_tour_assignment"},400);
+  const parentPath="commandes_groupees/"+parentId,missionPath="tournees_livraison/"+parentId,partnerPath="partenaires/"+courierUid,lockPath=partnerPath+"/verrous/missionActive";
+  let tx;
+  try {
+    tx=await beginFirestoreTransaction(env);
+    const [parentDoc,partnerDoc,missionDoc,lockDoc]=await Promise.all([
+      getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,partnerPath,tx),getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,lockPath,tx)
+    ]);
+    if(!parentDoc)return json({error:"grouped_order_not_found"},404);
+    if(missionDoc)return json({error:"grouped_tour_already_dispatched"},409);
+    const lock=docData(lockDoc);
+    if(lockDoc&&lock?.statut==="active")return json({error:"courier_already_has_active_mission"},409);
+    const parent=docData(parentDoc),profile=docData(partnerDoc);
+    if(parent.statut!=="tournee_planifiee"||parent.tournee?.statut!=="planifiee"||!Array.isArray(parent.sousCommandes)||parent.sousCommandes.length<2||parent.sousCommandes.length>4)
+      return json({error:"grouped_tour_not_ready_for_dispatch"},409);
+    const childDocs=await Promise.all(parent.sousCommandes.map(id=>getDocInTransaction(env,"commandes_colis/"+id,tx)));
+    if(childDocs.some(doc=>!doc))return json({error:"grouped_order_child_missing"},409);
+    const children=childDocs.map((doc,index)=>({...docData(doc),id:parent.sousCommandes[index]}));
+    if(children.some(child=>child.clientId!==parent.clientId||child.commandeGroupeeId!==parentId||child.statutBoutique!=="prete"||typeof child.boutiqueId!=="string"))
+      return json({error:"grouped_order_child_not_ready"},409);
+    let stops;
+    try{stops=buildGroupedTourStops({orderedShopIds:parent.tournee.orderedShopIds,children});}
+    catch{return json({error:"grouped_tour_pickup_order_invalid"},409);}
+    if(!courierProfileCanCompleteMission(profile,courierUid)||!courierGroupedTourSubscriptionActive(profile)||profile.enLigne!==true)return json({error:"courier_profile_not_eligible_or_offline"},403);
+    const price=parent.tarificationEstimee;
+    if(!price||!Number.isSafeInteger(price.totalPriceXof)||price.totalPriceXof<1)return json({error:"grouped_tour_price_missing"},409);
+    const now=new Date();
+    const mission={id:parentId,commandeGroupeeId:parentId,clientId:parent.clientId,courierUid,status:"offered",stops,
+      destinationStopId:parent.tournee.destinationStopId,totalPriceXof:price.totalPriceXof,currency:"XOF",
+      sousCommandes:parent.sousCommandes,createdAt:now,updatedAt:now};
+    await commitFirestoreTransaction(env,[
+      createWrite(missionPath,mission),
+      updateWrite(parentPath,{statut:"tournee_attribuee",tournee:{...parent.tournee,statut:"attribuee",courierUid,assignedAt:now},updatedAt:now},parentDoc.updateTime)
+    ],tx);
+    return json({ok:true,mission:{id:parentId,courierUid,status:"offered",stops,totalPriceXof:price.totalPriceXof}},201);
+  } catch(error) {
+    const code=String(error?.message||"grouped_tour_dispatch_failed");
+    return json({error:code==="firestore_transaction_commit_409"?"grouped_tour_dispatch_conflict":"grouped_tour_dispatch_failed"},409);
+  }
+}
+async function acceptGroupedDeliveryTourRequest(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  const uid=auth.user.sub;
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body.commandeGroupeeId;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId))return json({error:"invalid_grouped_order_id"},400);
+  const missionPath="tournees_livraison/"+parentId,partnerPath="partenaires/"+uid,lockPath=partnerPath+"/verrous/missionActive",parentPath="commandes_groupees/"+parentId;
+  try {
+    const tx=await beginFirestoreTransaction(env);
+    const [missionDoc,partnerDoc,lockDoc,parentDoc]=await Promise.all([
+      getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,partnerPath,tx),getDocInTransaction(env,lockPath,tx),getDocInTransaction(env,parentPath,tx)
+    ]);
+    if(!missionDoc||!parentDoc)return json({error:"grouped_tour_not_found"},404);
+    const mission=docData(missionDoc),profile=docData(partnerDoc),lock=docData(lockDoc);
+    if(!courierProfileCanCompleteMission(profile,uid)||!courierGroupedTourSubscriptionActive(profile)||profile.enLigne!==true)return json({error:"courier_profile_not_eligible_or_offline"},403);
+    if(mission.courierUid!==uid)return json({error:"grouped_tour_not_assigned_to_courier"},403);
+    if(lockDoc&&lock?.statut==="active")return json({error:"courier_already_has_active_mission"},409);
+    const now=new Date(),accepted=acceptGroupedDeliveryTour({tour:mission,courierUid:uid,activeMission:lockDoc?{status:lock?.statut==="active"?"active":"completed",tourId:lock?.tourneeId||null}:null,now});
+    const writes=[updateWrite(missionPath,{status:"accepted",acceptedAt:now,updatedAt:now},missionDoc.updateTime),
+      updateWrite(parentPath,{statut:"tournee_acceptee",tournee:{...docData(parentDoc).tournee,statut:"acceptee",acceptedAt:now},updatedAt:now},parentDoc.updateTime),
+      lockDoc?updateWrite(lockPath,{tourneeId:parentId,statut:"active",createdAt:now},lockDoc.updateTime):createWrite(lockPath,{tourneeId:parentId,statut:"active",createdAt:now})];
+    await commitFirestoreTransaction(env,writes,tx);
+    return json({ok:true,mission:accepted.tour,activeMissionLock:accepted.activeMissionLock});
+  }catch(error){const code=String(error?.message||"grouped_tour_accept_failed");return json({error:code==="firestore_transaction_commit_409"?"grouped_tour_accept_conflict":code},409);}
+}
+async function updateGroupedTourStopRequest(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body.commandeGroupeeId,stopId=body.stopId,nextStatus=body.nextStatus,uid=auth.user.sub;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId)||typeof stopId!=="string"||!["arrived","picked_up"].includes(nextStatus))
+    return json({error:"invalid_grouped_tour_stop"},400);
+  const missionPath="tournees_livraison/"+parentId,parentPath="commandes_groupees/"+parentId,lockPath="partenaires/"+uid+"/verrous/missionActive";
+  try {
+    const tx=await beginFirestoreTransaction(env);
+    const [missionDoc,parentDoc,lockDoc]=await Promise.all([getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,lockPath,tx)]);
+    if(!missionDoc||!parentDoc)return json({error:"grouped_tour_not_found"},404);
+    const mission=docData(missionDoc),parent=docData(parentDoc),lock=docData(lockDoc);
+    if(mission.courierUid!==uid)return json({error:"grouped_tour_not_assigned_to_courier"},403);
+    if(!lockDoc||lock?.tourneeId!==parentId||lock?.statut!=="active")return json({error:"active_mission_lock_missing"},409);
+    const transition=transitionGroupedDeliveryTourStop({tour:mission,stopId,nextStatus}),now=new Date();
+    const parentStatus={accepted:"tournee_acceptee",collecting:"tournee_collecte_en_cours",delivering:"tournee_en_livraison"}[transition.tour.status];
+    await commitFirestoreTransaction(env,[
+      updateWrite(missionPath,{stops:transition.tour.stops,status:transition.tour.status,updatedAt:now},missionDoc.updateTime),
+      updateWrite(parentPath,{statut:parentStatus,tournee:{...parent.tournee,statut:transition.tour.status,stops:transition.tour.stops,updatedAt:now},updatedAt:now},parentDoc.updateTime)
+    ],tx);
+    return json({ok:true,mission:{id:parentId,status:transition.tour.status,stops:transition.tour.stops},allPickedUp:transition.allPickedUp});
+  }catch(error){const code=String(error?.message||"grouped_tour_stop_update_failed");const status=code.startsWith("delivery_tour_")||code.startsWith("grouped_tour_")?409:409;return json({error:code},status);}
+}
+async function markGroupedTourDestinationArrivedRequest(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body.commandeGroupeeId,uid=auth.user.sub;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId))return json({error:"invalid_grouped_order_id"},400);
+  const missionPath="tournees_livraison/"+parentId,parentPath="commandes_groupees/"+parentId,lockPath="partenaires/"+uid+"/verrous/missionActive";
+  try {
+    const tx=await beginFirestoreTransaction(env);
+    const [missionDoc,parentDoc,lockDoc]=await Promise.all([getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,lockPath,tx)]);
+    if(!missionDoc||!parentDoc)return json({error:"grouped_tour_not_found"},404);
+    const mission=docData(missionDoc),parent=docData(parentDoc),lock=docData(lockDoc);
+    if(mission.courierUid!==uid)return json({error:"grouped_tour_not_assigned_to_courier"},403);
+    if(!lockDoc||lock?.tourneeId!==parentId||lock?.statut!=="active")return json({error:"active_mission_lock_missing"},409);
+    const now=new Date(),arrived=markGroupedTourDestinationArrived({tour:mission,courierUid:uid,now});
+    await commitFirestoreTransaction(env,[
+      updateWrite(missionPath,{status:arrived.status,arrivedAt:now,updatedAt:now},missionDoc.updateTime),
+      updateWrite(parentPath,{statut:"tournee_arrivee_destination",tournee:{...parent.tournee,statut:"arrivee_destination",arrivedAt:now},updatedAt:now},parentDoc.updateTime)
+    ],tx);
+    return json({ok:true,mission:{id:parentId,status:arrived.status,arrivedAt:arrived.arrivedAt}});
+  }catch(error){return json({error:String(error?.message||"grouped_tour_arrival_failed")},409);}
+}
+async function clientGroupedDeliveryCode(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body.commandeGroupeeId;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId))return json({error:"invalid_grouped_order_id"},400);
+  const parentPath="commandes_groupees/"+parentId,missionPath="tournees_livraison/"+parentId,confirmationPath=parentPath+"/informations_privees/confirmation";
+  try {
+    const tx=await beginFirestoreTransaction(env);
+    const [parentDoc,missionDoc,confirmationDoc]=await Promise.all([
+      getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,confirmationPath,tx)
+    ]);
+    if(!parentDoc||!missionDoc)return json({error:"grouped_tour_not_found"},404);
+    const parent=docData(parentDoc),mission=docData(missionDoc);
+    if(parent.clientId!==auth.user.sub)return json({error:"grouped_order_not_owned"},403);
+    if(mission.status!=="arrive_destination")return json({error:"grouped_tour_not_at_destination"},409);
+    const now=new Date(),existing=docData(confirmationDoc),issuance=deliveryCodeIssuanceState(existing,now);
+    if(!issuance.ok){const errors={already_used:["delivery_already_confirmed",409],locked:["delivery_code_locked",429],rate_limited:["delivery_code_rate_limited",429]};const [error,status]=errors[issuance.reason]||["delivery_code_unavailable",409];return json({error},status);}
+    const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%1000000).padStart(6,"0");
+    const confirmation={codeHash:await hashDeliveryConfirmationCode(code),attempts:issuance.attempts,issuanceCount:issuance.issuanceCount,
+      issuanceWindowStartedAt:issuance.issuanceWindowStartedAt,expiresAt:new Date(now.getTime()+30*60*1000),createdAt:now,usedAt:null};
+    await commitFirestoreTransaction(env,[confirmationDoc?updateWrite(confirmationPath,confirmation,confirmationDoc.updateTime):createWrite(confirmationPath,confirmation)],tx);
+    return json({ok:true,code,expiresAt:confirmation.expiresAt.toISOString()});
+  }catch(error){console.error("Grouped delivery code issue failed",{code:error?.message||"unknown"});return json({error:"grouped_delivery_code_unavailable"},409);}
+}
+async function completeGroupedDeliveryTourRequest(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body.commandeGroupeeId,code=typeof body.code==="string"?body.code:"",uid=auth.user.sub;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId)||!/^\\d{6}$/.test(code))return json({error:"invalid_grouped_tour_completion"},400);
+  const parentPath="commandes_groupees/"+parentId,missionPath="tournees_livraison/"+parentId,partnerPath="partenaires/"+uid;
+  const walletPath="portefeuilles_livreurs/"+uid,lockPath=partnerPath+"/verrous/missionActive";
+  const confirmationPath=parentPath+"/informations_privees/confirmation";
+  const commissionId="commission_tour_"+parentId,journalPath=walletPath+"/journal/"+commissionId;
+  try {
+    const tx=await beginFirestoreTransaction(env);
+    const [parentDoc,missionDoc,partnerDoc,lockDoc,confirmationDoc,walletDoc,journalDoc]=await Promise.all([
+      getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,partnerPath,tx),
+      getDocInTransaction(env,lockPath,tx),getDocInTransaction(env,confirmationPath,tx),
+      getDocInTransaction(env,walletPath,tx),getDocInTransaction(env,journalPath,tx)
+    ]);
+    if(!parentDoc||!missionDoc)return json({error:"grouped_tour_not_found"},404);
+    const parent=docData(parentDoc),mission=docData(missionDoc),profile=docData(partnerDoc),lock=docData(lockDoc);
+    if(!courierProfileCanCompleteMission(profile,uid)||mission.courierUid!==uid)return json({error:"grouped_tour_not_owned"},403);
+    if(mission.status==="completed"&&journalDoc)return json({ok:true,alreadyCompleted:true,commissionJournalId:commissionId},200);
+    if(mission.status!=="arrive_destination")return json({error:"grouped_tour_not_ready_for_completion"},409);
+    if(!lockDoc||lock?.tourneeId!==parentId||lock?.statut!=="active")return json({error:"active_mission_lock_missing"},409);
+    if(!confirmationDoc)return json({error:"grouped_delivery_code_not_issued"},409);
+    const confirmation=docData(confirmationDoc),now=new Date();
+    if(confirmation.usedAt)return json({error:"delivery_already_confirmed"},409);
+    if(!(confirmation.expiresAt instanceof Date)||confirmation.expiresAt.getTime()<=now.getTime())return json({error:"delivery_code_expired"},410);
+    if(!Number.isSafeInteger(confirmation.attempts)||confirmation.attempts>=5)return json({error:"delivery_code_locked"},429);
+    const hash=await hashDeliveryConfirmationCode(code);
+    if(hash!==confirmation.codeHash){
+      await commitFirestoreTransaction(env,[updateWrite(confirmationPath,{attempts:confirmation.attempts+1},confirmationDoc.updateTime)],tx);
+      return json({error:"delivery_code_invalid",attemptsRemaining:4-confirmation.attempts},400);
+    }
+    if(journalDoc)return json({error:"grouped_tour_commission_already_recorded"},409);
+    const wallet=docData(walletDoc)||{},balanceXof=wallet.soldeDisponibleXof??0,debtXof=wallet.detteCommissionXof??0;
+    const totalCommissionXof=wallet.totalCommissionXof??0,totalCommissionEncaisseeXof=wallet.totalCommissionEncaisseeXof??0;
+    if(![balanceXof,debtXof,totalCommissionXof,totalCommissionEncaisseeXof].every(v=>Number.isSafeInteger(v)&&v>=0))
+      return json({error:"courier_wallet_balance_invalid"},409);
+    let commission;
+    try{commission=calculateGroupedTourCommission({totalPriceXof:mission.totalPriceXof,balanceXof,debtXof});}
+    catch{return json({error:"grouped_tour_commission_amount_invalid"},409);}
+    const nextWallet={uid,soldeDisponibleXof:commission.balanceAfterXof,detteCommissionXof:commission.debtAfterXof,
+      totalCommissionXof:totalCommissionXof+commission.commissionDueXof,
+      totalCommissionEncaisseeXof:totalCommissionEncaisseeXof+commission.debitXof,
+      updatedAt:now,createdAt:wallet.createdAt||now};
+    const completed=completeGroupedDeliveryTour({tour:mission,courierUid:uid,confirmationVerified:true,now});
+    const journal={type:"commission",commissionId,commandeGroupeeId:parentId,serviceType:"boutique",
+      deliveryFeeXof:commission.deliveryFeeXof,deliveryCommissionRate:commission.commissionRate,
+      commissionDueXof:commission.commissionDueXof,montantDebiteXof:commission.debitXof,
+      detteAjouteeXof:commission.debtAddedXof,balanceBeforeXof:balanceXof,balanceAfterXof:commission.balanceAfterXof,
+      debtBeforeXof:debtXof,debtAfterXof:commission.debtAfterXof,actor:"courier_grouped_tour_worker",createdAt:now};
+    const writes=[
+      updateWrite(missionPath,{status:"completed",completedAt:now,commissionJournalId:commissionId,commissionPrelevee:true,updatedAt:now},missionDoc.updateTime),
+      updateWrite(parentPath,{statut:"livree",tournee:{...parent.tournee,statut:"livree",completedAt:now,commissionJournalId:commissionId},updatedAt:now},parentDoc.updateTime),
+      updateWrite(confirmationPath,{attempts:confirmation.attempts,usedAt:now,code:null,codeHash:null},confirmationDoc.updateTime),
+      walletDoc?updateWrite(walletPath,nextWallet,walletDoc.updateTime):createWrite(walletPath,nextWallet),
+      createWrite(journalPath,journal),
+      deleteWrite(lockPath,lockDoc.updateTime)
+    ];
+    for(const childId of parent.sousCommandes||[]){
+      const childDoc=await getDocInTransaction(env,"commandes_colis/"+childId,tx);
+      if(!childDoc)return json({error:"grouped_order_child_missing"},409);
+      writes.push(updateWrite("commandes_colis/"+childId,{statut:"livre",dateLivraison:now,commissionPrelevee:true,commissionJournalId:commissionId},childDoc.updateTime));
+    }
+    await commitFirestoreTransaction(env,writes,tx);
+    return json({ok:true,alreadyCompleted:false,paymentMode:"cash_paid_directly_to_courier_by_customer",
+      commissionXof:commission.commissionDueXof,debitXof:commission.debitXof,debtAddedXof:commission.debtAddedXof,
+      balanceAfterXof:commission.balanceAfterXof,debtAfterXof:commission.debtAfterXof,commissionJournalId:commissionId});
+  }catch(error){const code=String(error?.message||"grouped_tour_completion_failed");return json({error:code==="firestore_transaction_commit_409"?"grouped_tour_completion_conflict":"grouped_tour_completion_failed"},409);}
+}
 async function deliveryRoutePreview(request,env) {
   const auth=await requireUser(request,env);
   if(!auth.user)return json({error:"unauthorized"},401);
@@ -2543,6 +2965,14 @@ export default {
     else if(/^\/api\/ai\/conversations\/[0-9a-f-]{36}\/messages$/i.test(url.pathname)&&request.method==="GET") response=await aiConversationHistory(request,env,url.pathname.split("/")[4]);
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
+    else if(url.pathname==="/api/delivery/grouped-plan"&&request.method==="POST") response=await planGroupedDelivery(request,env);
+    else if(url.pathname==="/api/courier/grouped-tours"&&request.method==="GET") response=await listCourierGroupedTours(request,env);
+    else if(url.pathname==="/api/delivery/grouped-dispatch"&&request.method==="POST") response=await dispatchGroupedDeliveryTour(request,env);
+    else if(url.pathname==="/api/courier/grouped-tour/accept"&&request.method==="POST") response=await acceptGroupedDeliveryTourRequest(request,env);
+    else if(url.pathname==="/api/courier/grouped-tour/stop"&&request.method==="POST") response=await updateGroupedTourStopRequest(request,env);
+    else if(url.pathname==="/api/courier/grouped-tour/destination-arrived"&&request.method==="POST") response=await markGroupedTourDestinationArrivedRequest(request,env);
+    else if(url.pathname==="/api/courier/grouped-tour/complete"&&request.method==="POST") response=await completeGroupedDeliveryTourRequest(request,env);
+    else if(url.pathname==="/api/client/grouped-delivery-code"&&request.method==="POST") response=await clientGroupedDeliveryCode(request,env);
     else if(url.pathname==="/api/delivery/route-preview"&&request.method==="POST") response=await deliveryRoutePreview(request,env);
     else if(url.pathname==="/api/client/delivery-code"&&request.method==="POST") response=await clientDeliveryCode(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);

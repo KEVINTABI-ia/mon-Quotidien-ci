@@ -5,7 +5,15 @@ import {
   GROUPED_DELIVERY_PRICING,
   optimizeDeliveryTourRoute,
   buildDeliveryTourRouteWithOsrm,
-  applyDeliveryTourStopTransition
+  buildGroupedDeliveryPlanWithOsrm,
+  applyDeliveryTourStopTransition,
+  calculateGroupedTourCommission,
+  buildGroupedTourStops,
+  courierGroupedTourSubscriptionActive,
+  acceptGroupedDeliveryTour,
+  transitionGroupedDeliveryTourStop,
+  markGroupedTourDestinationArrived,
+  completeGroupedDeliveryTour
 } from "../cloudflare/worker.js";
 
 test("grouped tour price follows the validated distance and shop formula",()=>{
@@ -129,4 +137,138 @@ test("OSRM adapter rejects incomplete or invalid routing responses",async()=>{
  await assert.rejects(()=>buildDeliveryTourRouteWithOsrm({
   stops:osrmStops,fetchImpl:async()=>({ok:false,status:429})
  }),/osrm_http_429/);
+});
+
+test("grouped delivery planner orders all confirmed shop pickups before the shared destination",async()=>{
+ const shops=[
+  {id:"shop-a",latitude:5.35,longitude:-4.02},
+  {id:"shop-b",latitude:5.36,longitude:-4.01},
+  {id:"shop-c",latitude:5.37,longitude:-4.00}
+ ];
+ const destination={id:"destination",latitude:5.38,longitude:-3.99};
+ const distances=[
+  [0,4000,1000,7000],
+  [4000,0,2000,6000],
+  [1000,2000,0,5000],
+  [7000,6000,5000,0]
+ ];
+ const durations=distances.map(row=>row.map(value=>value/8));
+ const result=await buildGroupedDeliveryPlanWithOsrm({
+  shops,destination,
+  fetchImpl:async()=>({ok:true,json:async()=>({code:"Ok",distances,durations})})
+ });
+ assert.deepEqual(result.orderedShopIds,["shop-a","shop-c","shop-b"]);
+ assert.equal(result.destinationStopId,"destination");
+ assert.equal(result.totalRoadDistanceKm,9);
+ assert.equal(result.totalDurationSeconds,1125);
+ assert.equal(result.provider,"osrm");
+ assert.match(result.distanceScope,/excludes_courier_approach/);
+});
+
+test("grouped delivery planner rejects invalid pickup count, coordinates and OSRM responses",async()=>{
+ const shops=[{id:"a",latitude:5.35,longitude:-4.02},{id:"b",latitude:5.36,longitude:-4.01}];
+ const destination={id:"destination",latitude:5.37,longitude:-4.00};
+ await assert.rejects(()=>buildGroupedDeliveryPlanWithOsrm({
+  shops:shops.slice(0,1),destination,fetchImpl:async()=>({ok:true,json:async()=>({})})
+ }),/invalid_grouped_delivery_stops/);
+ await assert.rejects(()=>buildGroupedDeliveryPlanWithOsrm({
+  shops:shops.map((shop,index)=>index===0?{...shop,latitude:100}:shop),destination,
+  fetchImpl:async()=>({ok:true,json:async()=>({})})
+ }),/invalid_grouped_delivery_coordinates/);
+ await assert.rejects(()=>buildGroupedDeliveryPlanWithOsrm({
+  shops,destination,fetchImpl:async()=>({ok:true,json:async()=>({code:"NoRoute"})})
+ }),/invalid_osrm_matrix/);
+});
+
+
+test("grouped tour commission debits only the prepaid courier wallet; customer payment remains cash",()=>{
+ const commission=calculateGroupedTourCommission({totalPriceXof:5000,balanceXof:2000,debtXof:0});
+ assert.equal(commission.deliveryFeeXof,5000);
+ assert.equal(commission.commissionRate,0.10);
+ assert.equal(commission.commissionDueXof,500);
+ assert.equal(commission.debitXof,500);
+ assert.equal(commission.balanceAfterXof,1500);
+ assert.equal(commission.debtAddedXof,0);
+ assert.equal(commission.currency,"XOF");
+});
+
+test("grouped tour commission records unpaid commission debt when prepaid balance is insufficient",()=>{
+ const commission=calculateGroupedTourCommission({totalPriceXof:5000,balanceXof:200,debtXof:0});
+ assert.equal(commission.commissionDueXof,500);
+ assert.equal(commission.debitXof,200);
+ assert.equal(commission.balanceAfterXof,0);
+ assert.equal(commission.debtAddedXof,300);
+ assert.equal(commission.debtAfterXof,300);
+});
+
+test("grouped tour commission rejects invalid delivery fees and wallet amounts",()=>{
+ for(const totalPriceXof of [0,-1,1.5,NaN,Infinity,"2000",null])
+  assert.throws(()=>calculateGroupedTourCommission({totalPriceXof,balanceXof:1000}),/invalid_grouped_tour_commission_amount/);
+ for(const balanceXof of [-1,1.5,NaN,"1000",null])
+  assert.throws(()=>calculateGroupedTourCommission({totalPriceXof:5000,balanceXof}),/invalid_courier_wallet_ledger_amount/);
+});
+
+test("grouped tour dispatch requires an approved active courier subscription",()=>{
+ const now=new Date("2026-11-24T12:00:00.000Z");
+ assert.equal(courierGroupedTourSubscriptionActive({statutAbonnementPartenaire:"Essai",dateFinEssai:new Date("2026-11-25T00:00:00.000Z")},now),true);
+ assert.equal(courierGroupedTourSubscriptionActive({statutAbonnementPartenaire:"Actif",dateExpirationAbonnement:new Date("2026-12-01T00:00:00.000Z")},now),true);
+ assert.equal(courierGroupedTourSubscriptionActive({statutAbonnementPartenaire:"Essai",dateFinEssai:new Date("2026-11-23T00:00:00.000Z")},now),false);
+ assert.equal(courierGroupedTourSubscriptionActive({statutAbonnementPartenaire:"Actif",dateExpirationAbonnement:"invalid"},now),false);
+ assert.equal(courierGroupedTourSubscriptionActive({statutAbonnementPartenaire:"inactif"},now),false);
+});
+
+test("grouped tour maps optimized shop order to the correct child order IDs",()=>{
+ const children=[
+  {id:"order-a",boutiqueId:"shop-a",boutiqueNom:"Boutique A"},
+  {id:"order-b",boutiqueId:"shop-b",boutiqueNom:"Boutique B"},
+  {id:"order-c",boutiqueId:"shop-c",boutiqueNom:"Boutique C"}
+ ];
+ const stops=buildGroupedTourStops({orderedShopIds:["shop-c","shop-a","shop-b"],children});
+ assert.deepEqual(stops.map(stop=>stop.id),["order-c","order-a","order-b"]);
+ assert.deepEqual(stops.map(stop=>stop.boutiqueNom),["Boutique C","Boutique A","Boutique B"]);
+ assert.ok(stops.every(stop=>stop.status==="pending"));
+ assert.throws(()=>buildGroupedTourStops({orderedShopIds:["shop-x","shop-a","shop-b"],children}),/grouped_tour_pickup_order_invalid/);
+ assert.throws(()=>buildGroupedTourStops({orderedShopIds:["shop-a","shop-a","shop-b"],children}),/grouped_tour_pickup_order_invalid/);
+});
+
+test("grouped tour dispatch rejects a courier who already has an active individual mission",()=>{
+ const now=new Date("2026-11-24T12:00:00.000Z");
+ const tour={id:"tour-9",courierUid:"courier-1",status:"offered",stops:[{id:"shop-a",status:"pending"},{id:"shop-b",status:"pending"}]};
+ const activeMission={tourId:"individual-order-7",status:"active"};
+ assert.throws(()=>acceptGroupedDeliveryTour({tour,courierUid:"courier-1",activeMission,now}),/courier_already_has_active_mission/);
+});
+
+test("grouped tour acceptance creates a unique active mission lock and rejects concurrent missions",()=>{
+ const now=new Date("2026-11-24T12:00:00.000Z");
+ const tour={id:"tour-1",courierUid:"courier-1",status:"offered",stops:[{id:"shop-a",status:"pending"},{id:"shop-b",status:"pending"}],totalPriceXof:2100};
+ const accepted=acceptGroupedDeliveryTour({tour,courierUid:"courier-1",now});
+ assert.equal(accepted.tour.status,"accepted");
+ assert.deepEqual(accepted.activeMissionLock,{tourId:"tour-1",status:"active",createdAt:now.toISOString()});
+ assert.throws(()=>acceptGroupedDeliveryTour({tour,courierUid:"courier-1",activeMission:accepted.activeMissionLock,now}),/courier_already_has_active_mission/);
+ assert.throws(()=>acceptGroupedDeliveryTour({tour,courierUid:"other-courier",now}),/not_assigned_to_courier/);
+});
+
+test("grouped tour stops advance sequentially and only enter delivery after every pickup",()=>{
+ let tour={id:"tour-2",courierUid:"courier-1",status:"accepted",stops:[{id:"shop-a",status:"pending"},{id:"shop-b",status:"pending"}]};
+ assert.throws(()=>transitionGroupedDeliveryTourStop({tour,stopId:"shop-b",nextStatus:"arrived"}),/previous_stop_incomplete/);
+ tour=transitionGroupedDeliveryTourStop({tour,stopId:"shop-a",nextStatus:"arrived"}).tour;
+ tour=transitionGroupedDeliveryTourStop({tour,stopId:"shop-a",nextStatus:"picked_up"}).tour;
+ tour=transitionGroupedDeliveryTourStop({tour,stopId:"shop-b",nextStatus:"arrived"}).tour;
+ tour=transitionGroupedDeliveryTourStop({tour,stopId:"shop-b",nextStatus:"picked_up"}).tour;
+ assert.equal(tour.status,"delivering");
+});
+
+test("grouped tour closes only after verified customer confirmation without an in-app courier payout",()=>{
+ const now=new Date("2026-11-24T12:00:00.000Z");
+ const delivering={id:"tour-3",courierUid:"courier-1",status:"delivering",totalPriceXof:5000,stops:[{id:"shop-a",status:"picked_up"},{id:"shop-b",status:"picked_up"}]};
+ assert.throws(()=>completeGroupedDeliveryTour({tour:delivering,courierUid:"courier-1",confirmationVerified:true,now}),/pickups_incomplete/);
+ assert.throws(()=>markGroupedTourDestinationArrived({tour:{...delivering,stops:[{id:"shop-a",status:"pending"},{id:"shop-b",status:"picked_up"}]},courierUid:"courier-1",now}),/pickups_incomplete/);
+ const tour=markGroupedTourDestinationArrived({tour:delivering,courierUid:"courier-1",now});
+ assert.equal(tour.status,"arrive_destination");
+ assert.throws(()=>completeGroupedDeliveryTour({tour,courierUid:"courier-1",confirmationVerified:false,now}),/confirmation_required/);
+ const result=completeGroupedDeliveryTour({tour,courierUid:"courier-1",confirmationVerified:true,now});
+ assert.equal(result.tour.status,"completed");
+ assert.equal(result.activeMissionLock,null);
+ assert.equal(result.payoutLedger,undefined);
+ assert.equal(result.tour.status,"completed");
 });

@@ -4831,10 +4831,13 @@ async function chargerCommandesBoutique(boutiqueId){
    card.append(h,details,adresse,commentaire,prix,status,statutBoutique);
    if(c.statut!=="livre"&&c.statut!=="annulee"){
     const actions=document.createElement("div");actions.style.cssText="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;";
-    const etapes=[["confirmee","✅ Confirmer"],["preparation","🧺 En préparation"],["prete","📦 Prête"]];
-    etapes.forEach(([valeur,libelle])=>{const btn=document.createElement("button");btn.type="button";btn.textContent=libelle;btn.onclick=()=>mettreAJourStatutCommandeBoutique(doc.id,valeur);actions.appendChild(btn);});
-    if(c.statut==="commande_boutique"){
+    const prochaineEtape={recue:"confirmee",confirmee:"preparation",preparation:"prete"}[c.statutBoutique||"recue"];
+    const libellesEtapes={confirmee:"✅ Confirmer",preparation:"🧺 En préparation",prete:"📦 Prête"};
+    if(prochaineEtape){const btn=document.createElement("button");btn.type="button";btn.textContent=libellesEtapes[prochaineEtape];btn.onclick=()=>mettreAJourStatutCommandeBoutique(doc.id,prochaineEtape);actions.appendChild(btn);}
+    if(c.statut==="commande_boutique"&&!c.commandeGroupeeId){
      const btn=document.createElement("button");btn.type="button";btn.className="primary";btn.textContent="🚚 Organiser la livraison";btn.onclick=()=>declencherLivraisonBoutique(doc.id);actions.appendChild(btn);
+    }else if(c.commandeGroupeeId){
+     const note=document.createElement("p");note.className="notice";note.textContent="Commande multi-boutiques : la tournée groupée sera organisée après confirmation de disponibilité de toutes les boutiques.";actions.appendChild(note);
     }
     card.appendChild(actions);
    }
@@ -4853,7 +4856,9 @@ async function mettreAJourStatutCommandeBoutique(commandeId,nouveauStatut){
   const ref=partnerDb.collection("commandes_colis").doc(commandeId),snap=await ref.get();
   if(!snap.exists)throw new Error("Commande introuvable.");
   const c=snap.data();if(c.boutiqueUid!==user.uid||c.typeCommande!=="boutique")throw new Error("Vous n'êtes pas autorisé à modifier cette commande.");
-  if(["livre","annulee"].includes(c.statut))throw new Error("Cette commande est déjà clôturée.");
+  if(["livre","annulee"].includes(c.statut)||c.statutBoutique==="annulee")throw new Error("Cette commande est déjà clôturée.");
+  const ordre={recue:0,confirmee:1,preparation:2,prete:3},actuel=ordre[c.statutBoutique||"recue"],suivant=ordre[nouveauStatut];
+  if(suivant!==actuel+1)throw new Error("Respectez l'ordre des étapes : confirmer, préparer, puis déclarer prête.");
   await ref.update({statutBoutique:nouveauStatut,statutBoutiqueModifieLe:firebase.firestore.FieldValue.serverTimestamp(),statutBoutiqueModifiePar:user.uid});
   chargerCommandesBoutique(c.boutiqueId);
  }catch(e){console.error(e);alert("Mise à jour impossible : "+e.message);}
@@ -4868,7 +4873,7 @@ async function declencherLivraisonBoutique(commandeId){
  try{
   const ref=dbBoutique.collection("commandes_colis").doc(commandeId),snap=await ref.get();
   if(!snap.exists)throw new Error("Commande introuvable.");
-  const c=snap.data();if(c.boutiqueUid!==user.uid||c.statut!=="commande_boutique"||c.publicVersion===true)throw new Error("Cette commande ne peut plus être envoyée.");
+  const c=snap.data();if(c.boutiqueUid!==user.uid||c.statut!=="commande_boutique"||c.publicVersion===true)throw new Error("Cette commande ne peut plus être envoyée.");if(c.commandeGroupeeId)throw new Error("Cette sous-commande appartient à un panier multi-boutiques. La livraison individuelle est bloquée : attendez la préparation de toutes les boutiques.");
   const batch=dbBoutique.batch();
   batch.update(ref,{montantLivraisonBoutique:montant,statut:"en_attente",publicVersion:true,dateMiseEnLivraison:firebase.firestore.FieldValue.serverTimestamp()});
   batch.update(ref.collection("tarification").doc("prix"),{montantLivraison:montant,montantTotal:montant});
@@ -4899,8 +4904,106 @@ async function ouvrirCommandeBoutique(boutiqueId,index){
  if(!snap.exists)return alert("Boutique introuvable.");
  const b=snap.data();let p=b.produits?.[index];if(!p&&typeof index==="string"){const article=await db.collection("articles_boutiques").doc(index).get();if(article.exists&&article.data().boutiqueId===boutiqueId&&article.data().statut==="approuve")p=article.data();}if(!p)return alert("Produit introuvable.");
  let zone=document.getElementById("commandeBoutiqueZone_"+boutiqueId)||document.getElementById("commandeBoutiqueZoneCatalogue");if(!zone){zone=document.createElement("div");zone.id="commandeBoutiqueZone_"+boutiqueId;zone.dataset.commandeBoutiqueModal="true";zone.style.cssText="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.58);padding:16px;overflow:auto;display:flex;align-items:center;justify-content:center;";document.body.appendChild(zone);}
- zone.innerHTML='<div class="card" style="padding:16px;margin:12px auto;max-width:520px;width:100%;max-height:92vh;overflow:auto;"><div style="display:flex;justify-content:flex-end;"><button type="button" aria-label="Fermer" onclick="this.parentElement.parentElement.parentElement.remove()" style="background:#eee;color:#18352A;border:0;border-radius:8px;padding:7px 12px;">Fermer ✕</button></div><h4>Commander : '+echapperTextePublicite(p.nom)+'</h4><p>Prix unitaire : '+(p.promotionStatut==="approuve"&&p.promotionFin>=new Date().toISOString().slice(0,10)&&p.promotionDebut<=new Date().toISOString().slice(0,10)?'<span style="text-decoration:line-through;">'+Number(p.prix).toLocaleString("fr-FR")+' FCFA</span> <strong>'+Number(p.prixPromotion||p.prix).toLocaleString("fr-FR")+' FCFA</strong>':' '+Number(p.prix).toLocaleString("fr-FR")+' FCFA')+'</p><label>Quantité</label><input type="number" id="qteBoutique_'+boutiqueId+'" min="1" max="99" value="1"><label>Adresse de livraison</label><input id="adresseClientBoutique_'+boutiqueId+'" maxlength="220" placeholder="Quartier, rue, repère, commune"><label>Votre numéro de téléphone</label><input id="telClientBoutique_'+boutiqueId+'" type="tel" maxlength="20" value="'+echapperTextePublicite(profil.data().telephone||"")+'"><label>Commentaire pour la boutique</label><textarea id="commentaireClientBoutique_'+boutiqueId+'" maxlength="500" rows="3" placeholder="Précision sur votre commande (facultatif)"></textarea><p class="notice">Les frais de livraison seront fixés par la boutique après réception de votre commande, avant l’envoi de la demande à un livreur.</p><button type="button" class="primary" onclick="enregistrerCommandeBoutique(\''+boutiqueId+'\',\''+String(index)+'\')">Confirmer ma commande</button><p id="statutCommandeBoutique_'+boutiqueId+'" class="notice"></p></div>';
+ zone.innerHTML='<div class="card" style="padding:16px;margin:12px auto;max-width:520px;width:100%;max-height:92vh;overflow:auto;"><div style="display:flex;justify-content:flex-end;"><button type="button" aria-label="Fermer" onclick="this.parentElement.parentElement.parentElement.remove()" style="background:#eee;color:#18352A;border:0;border-radius:8px;padding:7px 12px;">Fermer ✕</button></div><h4>Commander : '+echapperTextePublicite(p.nom)+'</h4><p>Prix unitaire : '+(p.promotionStatut==="approuve"&&p.promotionFin>=new Date().toISOString().slice(0,10)&&p.promotionDebut<=new Date().toISOString().slice(0,10)?'<span style="text-decoration:line-through;">'+Number(p.prix).toLocaleString("fr-FR")+' FCFA</span> <strong>'+Number(p.prixPromotion||p.prix).toLocaleString("fr-FR")+' FCFA</strong>':' '+Number(p.prix).toLocaleString("fr-FR")+' FCFA')+'</p><label>Quantité</label><input type="number" id="qteBoutique_'+boutiqueId+'" min="1" max="99" value="1"><label>Adresse de livraison</label><input id="adresseClientBoutique_'+boutiqueId+'" maxlength="220" placeholder="Quartier, rue, repère, commune"><label>Votre numéro de téléphone</label><input id="telClientBoutique_'+boutiqueId+'" type="tel" maxlength="20" value="'+echapperTextePublicite(profil.data().telephone||"")+'"><label>Commentaire pour la boutique</label><textarea id="commentaireClientBoutique_'+boutiqueId+'" maxlength="500" rows="3" placeholder="Précision sur votre commande (facultatif)"></textarea><p class="notice">Les frais de livraison seront fixés par la boutique après réception de votre commande, avant l’envoi de la demande à un livreur.</p><button type="button" class="primary" onclick="enregistrerCommandeBoutique(\''+boutiqueId+'\',\''+String(index)+'\')">Confirmer ma commande</button><button type="button" onclick="ajouterAuPanierMultiBoutiques(\''+boutiqueId+'\',\''+String(index)+'\')">Ajouter au panier multi-boutiques</button><p id="statutCommandeBoutique_'+boutiqueId+'" class="notice"></p></div>';
 }
+const MQCI_MULTI_CART_KEY="mqci_panier_multi_boutiques_v1";
+function lirePanierMultiBoutiques(){try{const value=JSON.parse(localStorage.getItem(MQCI_MULTI_CART_KEY)||"[]");if(!Array.isArray(value))return [];const uid=auth.currentUser?.uid;if(!uid)return [];if(value.some(item=>item.ownerUid!==uid)){localStorage.removeItem(MQCI_MULTI_CART_KEY);return [];}return value;}catch(e){return [];}}
+function sauvegarderPanierMultiBoutiques(items){localStorage.setItem(MQCI_MULTI_CART_KEY,JSON.stringify(items));}
+function actualiserBoutonPanierMultiBoutiques(){
+ let button=document.getElementById("mqciPanierMultiBoutiquesBtn");
+ if(!button){button=document.createElement("button");button.id="mqciPanierMultiBoutiquesBtn";button.type="button";button.style.cssText="position:fixed;right:16px;bottom:18px;z-index:99998;border:0;border-radius:28px;padding:13px 17px;background:#173f32;color:white;font-weight:800;box-shadow:0 4px 16px #0004;";button.onclick=ouvrirPanierMultiBoutiques;document.body.appendChild(button);}
+ const items=lirePanierMultiBoutiques(),count=items.reduce((n,x)=>n+Number(x.quantite||0),0),shops=new Set(items.map(x=>x.boutiqueId));
+ button.textContent="🛒 Panier ("+count+") · "+shops.size+" boutique(s)";button.hidden=items.length===0;
+}
+async function ajouterAuPanierMultiBoutiques(boutiqueId,index){
+ if(!auth.currentUser)return alert("Connectez-vous comme client.");
+ const quantity=Number(document.getElementById("qteBoutique_"+boutiqueId)?.value||0);
+ if(!Number.isInteger(quantity)||quantity<1||quantity>99)return alert("Quantité invalide.");
+ try{
+  const snap=await db.collection("demandes_nouveaux_services").doc(boutiqueId).get();if(!snap.exists)throw new Error("Boutique introuvable.");
+  const shop=snap.data();let product=shop.produits?.[index];
+  if(!product&&typeof index==="string"){const article=await db.collection("articles_boutiques").doc(index).get();if(article.exists&&article.data().boutiqueId===boutiqueId&&article.data().statut==="approuve")product=article.data();}
+  if(!product||shop.statut!=="approuve"||shop.visibleManuellement===false)throw new Error("Produit ou boutique indisponible.");
+  if(shop.abonnementFin?.toDate&&shop.abonnementFin.toDate().getTime()<=Date.now())throw new Error("L'abonnement de cette boutique a expiré.");
+  const day=new Date().toISOString().slice(0,10),promo=product.promotionStatut==="approuve"&&product.promotionDebut<=day&&product.promotionFin>=day;
+  const price=Number(promo?product.prixPromotion:product.prix);if(!Number.isInteger(price)||price<=0)throw new Error("Le prix du produit doit être un montant entier en FCFA.");
+  const item={ownerUid:auth.currentUser.uid,boutiqueId:boutiqueId,boutiqueUid:shop.uid,boutiqueNom:shop.titre||"Boutique",produitId:String(product.id||index),produitNom:String(product.nom||"Article"),quantite:quantity,prixUnitaire:price,commentaire:document.getElementById("commentaireClientBoutique_"+boutiqueId)?.value.trim()||""};
+  const items=lirePanierMultiBoutiques(),existing=items.find(x=>x.boutiqueId===item.boutiqueId&&x.produitId===item.produitId);
+  if(existing){if(existing.quantite+quantity>99)throw new Error("Quantité maximale dépassée.");existing.quantite+=quantity;existing.commentaire=item.commentaire||existing.commentaire;}else items.push(item);
+  if(items.length>99)throw new Error("Le panier ne peut pas dépasser 99 références d'articles.");
+  sauvegarderPanierMultiBoutiques(items);actualiserBoutonPanierMultiBoutiques();
+  const status=document.getElementById("statutCommandeBoutique_"+boutiqueId);if(status)status.textContent="Article ajouté au panier. Continuez vos achats dans d'autres boutiques.";
+ }catch(error){console.error(error);alert("Ajout au panier impossible : "+error.message);}
+}
+function ouvrirPanierMultiBoutiques(){
+ const items=lirePanierMultiBoutiques();if(!items.length)return alert("Votre panier est vide.");
+ let modal=document.getElementById("mqciPanierMultiBoutiquesModal");
+ if(!modal){modal=document.createElement("div");modal.id="mqciPanierMultiBoutiquesModal";modal.style.cssText="position:fixed;inset:0;z-index:100000;background:#0009;padding:12px;overflow:auto;display:flex;align-items:center;justify-content:center;";document.body.appendChild(modal);}
+ modal.innerHTML='<section class="card" style="width:100%;max-width:620px;max-height:94vh;overflow:auto;padding:18px;"><div style="display:flex;justify-content:space-between;align-items:center;"><h3>Mon panier multi-boutiques</h3><button type="button" id="mqciFermerPanier">Fermer ✕</button></div><div id="mqciPanierMultiBoutiquesLignes"></div><label>Adresse de livraison commune</label><input id="mqciPanierAdresse" maxlength="220" placeholder="Quartier, rue, repère, commune" style="width:100%;padding:11px;"><label>Téléphone de réception</label><input id="mqciPanierTelephone" type="tel" maxlength="20" placeholder="01, 05 ou 07..." style="width:100%;padding:11px;"><p class="notice">Chaque boutique recevra uniquement les articles qui la concernent. Les frais de livraison seront définis après confirmation des boutiques.</p><button type="button" class="primary" style="width:100%;" onclick="commanderPanierMultiBoutiques()">Confirmer le panier multi-boutiques</button><p id="mqciPanierStatut" class="notice"></p></section>';
+ modal.querySelector("#mqciFermerPanier").onclick=function(){modal.remove();};
+ const list=modal.querySelector("#mqciPanierMultiBoutiquesLignes");
+ items.forEach(function(item,index){const row=document.createElement("div");row.style.cssText="padding:10px 0;border-bottom:1px solid #ddd;";const title=document.createElement("strong");title.textContent=item.produitNom+" × "+item.quantite;const detail=document.createElement("p");detail.textContent=item.boutiqueNom+" · "+(item.prixUnitaire*item.quantite).toLocaleString("fr-FR")+" FCFA";const remove=document.createElement("button");remove.type="button";remove.textContent="Retirer";remove.onclick=function(){const next=lirePanierMultiBoutiques();next.splice(index,1);sauvegarderPanierMultiBoutiques(next);actualiserBoutonPanierMultiBoutiques();if(next.length)ouvrirPanierMultiBoutiques();else modal.remove();};row.append(title,detail,remove);list.appendChild(row);});
+ const total=items.reduce((sum,item)=>sum+item.prixUnitaire*item.quantite,0);const line=document.createElement("p");line.style.fontWeight="800";line.textContent="Total indicatif des articles : "+total.toLocaleString("fr-FR")+" FCFA";list.appendChild(line);
+}
+let mqciDernierGeocodagePanier=0;
+async function geocoderPanierRespectueux(adresse){
+ const wait=Math.max(0,1100-(Date.now()-mqciDernierGeocodagePanier));
+ if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
+ const result=await geocoderAdresseBoutique(adresse);
+ mqciDernierGeocodagePanier=Date.now();
+ return result;
+}
+async function commanderPanierMultiBoutiques(){
+ const user=auth.currentUser,items=lirePanierMultiBoutiques(),status=document.getElementById("mqciPanierStatut");
+ if(!user){if(status)status.textContent="Connectez-vous comme client.";return;}
+ const address=document.getElementById("mqciPanierAdresse")?.value.trim()||"",phone=document.getElementById("mqciPanierTelephone")?.value.trim()||"";
+ const validPhone=function(value){let digits=value.replace(/\D/g,"");if(digits.startsWith("225")&&digits.length===13)digits=digits.slice(3);return /^(01|05|07)\d{8}$/.test(digits);};
+ const grouped=new Map();items.forEach(function(item){if(!grouped.has(item.boutiqueId))grouped.set(item.boutiqueId,[]);grouped.get(item.boutiqueId).push(item);});
+ if(grouped.size<2){if(status)status.textContent="Ajoutez des articles provenant d'au moins deux boutiques.";return;}
+ if(grouped.size>4||items.length>99||!address||!validPhone(phone)){if(status)status.textContent="Vérifiez l'adresse, le téléphone et les limites du panier (2 à 4 boutiques, 99 lignes).";return;}
+ const estimate=items.reduce((sum,item)=>sum+Number(item.prixUnitaire)*Number(item.quantite),0);
+ if(!confirm("Confirmer "+items.length+" ligne(s) dans "+grouped.size+" boutiques ? Total indicatif des articles : "+estimate.toLocaleString("fr-FR")+" FCFA. Les frais de livraison seront communiqués séparément."))return;
+ try{
+  if(status)status.textContent="Vérification des articles et des boutiques...";
+  let profile=await db.collection("clients").doc(user.uid).get();
+  if(!profile.exists){const general=await db.collection("utilisateurs").doc(user.uid).get(),data=general.exists?general.data():{};await db.collection("clients").doc(user.uid).set({uid:user.uid,nom:data.nom||user.displayName||"Client",telephone:data.telephone||user.phoneNumber||"",email:user.email||"",createdAt:firebase.firestore.FieldValue.serverTimestamp()});profile=await db.collection("clients").doc(user.uid).get();}
+  const parent=db.collection("commandes_groupees").doc(),children=Array.from(grouped.keys(),function(){return db.collection("commandes_colis").doc();});
+  const childIds=children.map(function(ref){return ref.id;}),batch=db.batch(),createdAt=firebase.firestore.FieldValue.serverTimestamp();
+  let itemCount=0,articleTotal=0,childIndex=0;
+  const sharedDeliveryCoordinates=await geocoderPanierRespectueux(address);
+  for(const [shopId,lines] of grouped){
+   const shopSnap=await db.collection("demandes_nouveaux_services").doc(shopId).get();if(!shopSnap.exists)throw new Error("Une boutique du panier n'existe plus.");
+   const shop=shopSnap.data();if(shop.uid!==lines[0].boutiqueUid||shop.statut!=="approuve"||shop.visibleManuellement===false)throw new Error("Une boutique n'est plus disponible.");
+   if(shop.abonnementFin?.toDate&&shop.abonnementFin.toDate().getTime()<=Date.now())throw new Error("L'abonnement de "+(shop.titre||"la boutique")+" a expiré.");
+   let shopTotal=0,shopQty=0;const descriptions=[];
+   for(const line of lines){
+    let product=Array.isArray(shop.produits)?shop.produits.find(function(p){return String(p.id||"")===line.produitId;}):null;
+    if(!product){const article=await db.collection("articles_boutiques").doc(line.produitId).get();if(article.exists&&article.data().boutiqueId===shopId&&article.data().statut==="approuve")product=article.data();}
+    if(!product)throw new Error("Un article de "+(shop.titre||"la boutique")+" n'est plus disponible.");
+    const day=new Date().toISOString().slice(0,10),promo=product.promotionStatut==="approuve"&&product.promotionDebut<=day&&product.promotionFin>=day,currentPrice=Number(promo?product.prixPromotion:product.prix);
+    if(!Number.isInteger(currentPrice)||currentPrice!==Number(line.prixUnitaire))throw new Error("Le prix de "+product.nom+" a changé ou n’est pas un montant entier. Actualisez votre panier.");
+    if(!Number.isInteger(line.quantite)||line.quantite<1||line.quantite>99)throw new Error("Quantité invalide.");
+    shopTotal+=currentPrice*line.quantite;shopQty+=line.quantite;descriptions.push(String(product.nom||line.produitNom)+" × "+line.quantite);
+   }
+   itemCount+=shopQty;articleTotal+=shopTotal;
+   const gpsValid=Number.isFinite(Number(shop.latitudeBoutique))&&Number(shop.latitudeBoutique)>=-90&&Number(shop.latitudeBoutique)<=90&&Number.isFinite(Number(shop.longitudeBoutique))&&Number(shop.longitudeBoutique)>=-180&&Number(shop.longitudeBoutique)<=180;
+   const pickup=gpsValid?{latitude:Number(shop.latitudeBoutique),longitude:Number(shop.longitudeBoutique),source:"gps_boutique",precisionMetres:Number(shop.precisionGpsBoutiqueMetres)||null}:await geocoderPanierRespectueux(shop.adresseBoutique||shop.commune);
+   const drop=sharedDeliveryCoordinates,child=children[childIndex],summary=descriptions.join(", "),tracking="BTQ-"+Date.now().toString(36).toUpperCase()+"-"+(childIndex+1);
+   batch.set(child,{clientId:user.uid,service:"livraison",depart:shop.adresseBoutique||shop.commune,destination:address,statut:"commande_boutique",publicVersion:false,createdAt:createdAt,typeCommande:"boutique",boutiqueId:shopId,boutiqueUid:shop.uid,boutiqueNom:shop.titre||"Boutique",montantLivraisonBoutique:0,commandeGroupeeId:parent.id});
+   batch.set(child.collection("informations_privees").doc("details"),{clientId:user.uid,clientNom:profile.data().nom||"Client",clientTelephone:profile.data().telephone||"",telephoneExpediteur:shop.telephone||"",telephoneDestinataire:phone,adresseRecuperation:shop.adresseBoutique||shop.commune,adresseLivraison:address,descriptionColis:"Commande multi-boutiques : "+summary,trackingNumber:tracking,operation:"livraison_boutique",boutiqueUid:shop.uid,telephoneBoutique:shop.telephone||"",telephoneClient:phone,produitCommande:summary,quantiteCommande:shopQty,prixProduit:shopTotal,commentaireCommande:lines.map(function(line){return line.commentaire;}).filter(Boolean).join(" · "),latitudeRecuperation:pickup.latitude,longitudeRecuperation:pickup.longitude,sourceCoordonneesRecuperation:pickup.source||"geocodage_adresse",precisionGpsRecuperationMetres:pickup.precisionMetres||null,latitudeLivraison:drop.latitude,longitudeLivraison:drop.longitude,createdAt:createdAt});
+   batch.set(child.collection("tarification").doc("prix"),{distanceKm:0,distanceMetres:0,tarifKm:100,montantLivraison:0,fraisService:0,montantTotal:0,devise:"FCFA",operation:"livraison_boutique",createdAt:createdAt});
+   childIndex++;
+  }
+  if(itemCount>99)throw new Error("Le panier dépasse la limite de 99 articles.");
+  batch.set(parent,{clientId:user.uid,reference:"MQCI-"+Date.now().toString(36).toUpperCase(),statut:"en_attente_boutiques",nombreBoutiques:grouped.size,nombreArticles:itemCount,sousCommandes:childIds,montantArticles:articleTotal,devise:"XOF",createdAt:createdAt});
+  await batch.commit();sauvegarderPanierMultiBoutiques([]);actualiserBoutonPanierMultiBoutiques();
+  if(status)status.textContent="Commande groupée enregistrée. Référence : "+parent.id+". Chaque boutique reçoit sa sous-commande. Retrouvez le suivi dans votre historique client.";
+  await chargerHistoriqueCommandes();
+ }catch(error){console.error(error);if(status)status.textContent="Commande non enregistrée : "+error.message;}
+}
+
+auth.onAuthStateChanged(function(user){if(user)actualiserBoutonPanierMultiBoutiques();});
+
 async function geocoderAdresseBoutique(adresse){
  const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=ci&q="+encodeURIComponent(adresse+", Côte d'Ivoire");
  const reponse=await fetch(url,{headers:{"Accept":"application/json"}});
@@ -7891,9 +7994,10 @@ async function chargerCommandesAdmin() {
 
   try {
     const maintenant = new Date();
-    const [commandesSnap, partenairesSnap] = await Promise.all([
+    const [commandesSnap, partenairesSnap, commandesGroupeesSnap] = await Promise.all([
       db.collection("commandes_colis").get(),
-      db.collection("partenaires").get()
+      db.collection("partenaires").get(),
+      db.collection("commandes_groupees").get()
     ]);
 
     const partenaires = partenairesSnap.docs.map(doc => {
@@ -7927,11 +8031,29 @@ async function chargerCommandesAdmin() {
 
     if (!commandes.length) {
       const info = document.createElement("p");
-      info.textContent = "Aucune commande enregistrée pour le moment.";
+      info.textContent = "Aucune commande individuelle enregistrée. Vérifie également les tournées multi-boutiques ci-dessous.";
       zone.appendChild(info);
-      return;
     }
 
+    const groupesPrets=commandesGroupeesSnap.docs.map(doc=>({id:doc.id,...doc.data()}))
+      .filter(parent=>parent.statut==="tournee_planifiee"&&parent.tournee?.statut==="planifiee")
+      .sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
+    if(groupesPrets.length){
+      const heading=document.createElement("h3");heading.textContent="🚚 Tournées multi-boutiques à attribuer";zone.appendChild(heading);
+      groupesPrets.forEach(parent=>{
+        const card=document.createElement("article");card.className="stop";
+        const title=document.createElement("strong");title.textContent="Commande groupée · "+(parent.reference||parent.id);card.appendChild(title);
+        const summary=document.createElement("p");summary.textContent=(parent.nombreBoutiques||parent.sousCommandes?.length||0)+" boutiques · "+Number(parent.tournee.totalRoadDistanceKm||0).toLocaleString("fr-FR")+" km · Tarif "+Number(parent.tarificationEstimee?.totalPriceXof||0).toLocaleString("fr-FR")+" FCFA";card.appendChild(summary);
+        const route=document.createElement("p");route.textContent="Ordre de collecte : "+(parent.tournee.orderedShopIds||[]).join(" → ");card.appendChild(route);
+        const eligible=partenaires.filter(p=>p.type==="livreur_independant"&&p.disponible&&p.enLigne===true);
+        const select=document.createElement("select");select.setAttribute("aria-label","Livreur pour la tournée "+parent.id);
+        const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent=eligible.length?"Choisir un livreur disponible":"Aucun livreur éligible en ligne";select.appendChild(placeholder);
+        eligible.forEach(p=>{const option=document.createElement("option");option.value=p.id;option.textContent=(p.nom||"Livreur")+" · "+(p.quartiers||p.commune||"secteur non précisé");select.appendChild(option);});
+        const dispatch=document.createElement("button");dispatch.type="button";dispatch.className="primary";dispatch.textContent="Attribuer la tournée complète";dispatch.disabled=!eligible.length;
+        dispatch.addEventListener("click",()=>attribuerTourneeGroupeeAdmin(parent.id,select.value,dispatch));
+        card.append(select,dispatch);zone.appendChild(card);
+      });
+    }
     const libelles = {en_attente:"En attente",livreur_affecte:"Livreur en route",colis_recupere:"Colis récupéré",en_transit:"En cours de livraison",arrive_destination:"Arrivé à destination",livre:"Livré",annule:"Annulé"};
     const migrationBtn = document.createElement("button");
     migrationBtn.type = "button";
@@ -7982,6 +8104,21 @@ async function chargerCommandesAdmin() {
     console.error("Chargement commandes admin :", erreur);
     zone.innerHTML = "<p>Impossible de charger les commandes : " + echapperTexteCompagnie(erreur.message) + "</p>";
   }
+}
+
+async function attribuerTourneeGroupeeAdmin(commandeGroupeeId,courierUid,button){
+ const admin=auth.currentUser;
+ if(!admin||admin.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
+ if(!courierUid)return alert("Choisis un livreur disponible.");
+ if(!confirm("Attribuer toutes les collectes de cette commande groupée à ce livreur ? Une seule mission sera créée."))return;
+ if(button){button.disabled=true;button.textContent="Attribution en cours…";}
+ try{
+  const token=await admin.getIdToken(),response=await fetch(WORKER_URL+"/api/delivery/grouped-dispatch",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({commandeGroupeeId,courierUid})});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||"Attribution impossible.");
+  alert("La tournée complète a été attribuée au livreur. Il peut maintenant l'accepter depuis son espace partenaire.");
+  await chargerCommandesAdmin();
+ }catch(error){alert("Attribution impossible : "+error.message);if(button){button.disabled=false;button.textContent="Attribuer la tournée complète";}}
 }
 
 async function affecterCommandePartenaire(commandeId, partenaireId) {
@@ -11461,6 +11598,8 @@ function afficherEspacePartenaire(dossier, uid) {
     <h3>📦 Commandes disponibles</h3>
     <button type="button" onclick="chargerCommandesPartenaire()">Actualiser</button>
     <div id="fileCommandesPartenaire"><p>Chargement...</p></div>
+    <h3>🚚 Mes tournées multi-boutiques</h3>
+    <div id="tourneesGroupeesPartenaire"><p>Chargement...</p></div>
     <h3>🚚 Ma mission en cours</h3>
     <div id="missionActivePartenaire"><p>Vérification...</p></div>
     <h3>📋 Mes missions précédentes</h3>
@@ -11491,11 +11630,14 @@ async function chargerCommandesPartenaire() {
     }
     if (activeOrder) {
       await afficherMissionPartenaire(activeOrder, p, mission);
+    } else if (lockSnap.exists && lockSnap.data().tourneeId) {
+      mission.innerHTML = "<p>Une tournée multi-boutiques est active. Suivez ses étapes dans le panneau « Mes tournées multi-boutiques ».</p>";
     } else {
       mission.innerHTML = "<p>Aucune mission en cours. Vous pouvez accepter une commande si vous êtes en ligne.</p>";
     }
 
     ecouterNouvellesCommandesPartenaire(user.uid, p, activeOrder);
+    await chargerTourneesGroupeesPartenaire(user);
 
     if (historique) {
       const hs = await partnerDb.collection("commandes_colis").where("partenaireId", "==", user.uid).get();
@@ -11512,6 +11654,59 @@ async function chargerCommandesPartenaire() {
     file.innerHTML = "<p>Chargement impossible : " + echapperTexteCompagnie(e.message) + "</p>";
     mission.innerHTML = "";
   }
+}
+
+async function appelApiTourneeGroupee(path,payload){
+ const user=partnerAuth.currentUser;if(!user)throw new Error("Session livreur absente.");
+ const token=await user.getIdToken();
+ const response=await fetch(WORKER_URL+path,{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify(payload||{})});
+ const result=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error(result.error||"Action impossible.");
+ return result;
+}
+async function chargerTourneesGroupeesPartenaire(user){
+ const zone=document.getElementById("tourneesGroupeesPartenaire");if(!zone)return;
+ zone.textContent="Chargement des tournées attribuées...";
+ try{
+  const token=await user.getIdToken(),response=await fetch(WORKER_URL+"/api/courier/grouped-tours",{headers:{Authorization:"Bearer "+token}});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||"Chargement impossible.");
+  zone.replaceChildren();
+  if(!Array.isArray(result.missions)||!result.missions.length){zone.textContent="Aucune tournée multi-boutiques attribuée.";return;}
+  const labels={offered:"À accepter",accepted:"Acceptée",collecting:"Collecte en cours",delivering:"En route vers le client",arrive_destination:"Arrivée à destination"};
+  for(const tour of result.missions){
+   const card=document.createElement("section");card.className="stop";card.style.cssText="padding:14px;margin:12px 0;border:1px solid #dcebdd;border-radius:12px;";
+   const title=document.createElement("strong");title.textContent="Tournée multi-boutiques · "+tour.id;card.appendChild(title);
+   const status=document.createElement("p");status.textContent="État : "+(labels[tour.status]||tour.status);card.appendChild(status);
+   const price=document.createElement("p");price.textContent="Tarif total : "+Number(tour.totalPriceXof||0).toLocaleString("fr-FR")+" FCFA";card.appendChild(price);
+   const route=document.createElement("p");route.textContent="Collectes : "+(tour.stops||[]).length+" boutique(s)";card.appendChild(route);
+   if(tour.status==="offered"){
+    const accept=document.createElement("button");accept.className="primary";accept.textContent="Accepter la tournée";
+    accept.addEventListener("click",async()=>{accept.disabled=true;try{await appelApiTourneeGroupee("/api/courier/grouped-tour/accept",{commandeGroupeeId:tour.id});await chargerTourneesGroupeesPartenaire(user);}catch(e){alert("Acceptation impossible : "+e.message);accept.disabled=false;}});card.appendChild(accept);
+   }
+   if(["accepted","collecting"].includes(tour.status)){
+    (tour.stops||[]).forEach(stop=>{
+     const line=document.createElement("p");line.textContent=(stop.boutiqueNom||"Boutique")+" — "+({pending:"À rejoindre",arrived:"Arrivé",picked_up:"Colis récupéré"}[stop.status]||stop.status);card.appendChild(line);
+     if(stop.status==="pending"||stop.status==="arrived"){
+      const action=document.createElement("button");action.textContent=stop.status==="pending"?"Signaler mon arrivée à la boutique":"Confirmer la collecte";
+      action.addEventListener("click",async()=>{action.disabled=true;try{await appelApiTourneeGroupee("/api/courier/grouped-tour/stop",{commandeGroupeeId:tour.id,stopId:stop.id,nextStatus:stop.status==="pending"?"arrived":"picked_up"});await chargerTourneesGroupeesPartenaire(user);}catch(e){alert("Étape impossible : "+e.message);action.disabled=false;}});card.appendChild(action);
+     }
+    });
+   }
+   if(tour.status==="delivering"){
+    const nav=document.createElement("button");nav.className="primary";nav.textContent="Itinéraire vers le client";
+    nav.addEventListener("click",()=>{const d=tour.destination||{};if(!Number.isFinite(d.latitude)||!Number.isFinite(d.longitude))return alert("Coordonnées de destination indisponibles.");location.href="https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(d.latitude+","+d.longitude)+"&travelmode=driving";});card.appendChild(nav);
+    const arrived=document.createElement("button");arrived.textContent="Je suis arrivé chez le client";
+    arrived.addEventListener("click",async()=>{if(!confirm("Confirmer votre arrivée à l'adresse du client ?"))return;arrived.disabled=true;try{await appelApiTourneeGroupee("/api/courier/grouped-tour/destination-arrived",{commandeGroupeeId:tour.id});await chargerTourneesGroupeesPartenaire(user);}catch(e){alert("Arrivée impossible : "+e.message);arrived.disabled=false;}});card.appendChild(arrived);
+   }
+   if(tour.status==="arrive_destination"){
+    const code=document.createElement("input");code.type="text";code.inputMode="numeric";code.maxLength=6;code.placeholder="Code client à 6 chiffres";code.autocomplete="one-time-code";card.appendChild(code);
+    const finish=document.createElement("button");finish.className="primary";finish.textContent="Confirmer la livraison et clôturer";
+    finish.addEventListener("click",async()=>{if(!/^\d{6}$/.test(code.value.trim()))return alert("Saisissez le code à 6 chiffres communiqué par le client.");if(!confirm("Confirmer la remise de toutes les commandes au client ?"))return;finish.disabled=true;try{const result=await appelApiTourneeGroupee("/api/courier/grouped-tour/complete",{commandeGroupeeId:tour.id,code:code.value.trim()});alert("Tournée clôturée. Rémunération livreur : "+Number(result.payout?.courierPayoutXof||0).toLocaleString("fr-FR")+" FCFA. Part plateforme : "+Number(result.payout?.platformShareXof||0).toLocaleString("fr-FR")+" FCFA.");await chargerCommandesPartenaire();}catch(e){alert("Clôture impossible : "+e.message);finish.disabled=false;}});card.appendChild(finish);
+   }
+   zone.appendChild(card);
+  }
+ }catch(error){zone.textContent="Impossible de charger les tournées : "+error.message;}
 }
 
 async function accepterCommandePartenaire(commandeId) {
@@ -11889,23 +12084,93 @@ async function enregistrerCommande() {
   } catch(e) { console.error("Erreur commande :",e); alert("Impossible d'enregistrer la commande : "+e.message); }
 }
 
+async function planifierTourneeCommandeGroupee(parentId,button){
+ const user=auth.currentUser;if(!user)return alert("Connectez-vous pour planifier la livraison.");
+ if(button){button.disabled=true;button.textContent="Calcul de l'itinéraire...";}
+ try{
+  const token=await user.getIdToken();
+  const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/delivery/grouped-plan",{
+   method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
+   body:JSON.stringify({commandeGroupeeId:parentId})
+  });
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||"Impossible de calculer la tournée.");
+  alert("Tournée calculée : "+result.plan.totalRoadDistanceKm+" km · "+Math.ceil(result.plan.totalDurationSeconds/60)+" min · "+Number(result.tarificationEstimee.totalPriceXof).toLocaleString("fr-FR")+" FCFA.");
+  await chargerHistoriqueCommandes();
+ }catch(error){console.error(error);alert("Planification impossible : "+error.message);}
+ finally{if(button&&button.isConnected){button.disabled=false;button.textContent="Calculer la tournée et les frais";}}
+}
+
+async function obtenirCodeLivraisonTourneeGroupee(parentId,button){
+ const user=auth.currentUser;if(!user)return alert("Connectez-vous comme client.");
+ if(button){button.disabled=true;button.textContent="Génération du code...";}
+ try{
+  const token=await user.getIdToken(),response=await fetch(WORKER_URL+"/api/client/grouped-delivery-code",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({commandeGroupeeId:parentId})});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||"Impossible de générer le code.");
+  const zone=button?.parentElement;
+  const code=document.createElement("p");code.style.cssText="padding:12px;border-radius:10px;background:#e8f5ec;font-size:20px;font-weight:800;letter-spacing:4px;text-align:center;";
+  code.textContent="Code de remise : "+result.code+(result.expiresAt?" · expire à "+new Date(result.expiresAt).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"");
+  if(zone){const previous=zone.querySelector("[data-mqci-grouped-delivery-code]");if(previous)previous.remove();code.dataset.mqciGroupedDeliveryCode="true";zone.insertBefore(code,button);}
+  alert("Communiquez ce code au livreur uniquement lorsque vous recevez l'ensemble de vos commandes.");
+ }catch(error){alert("Code indisponible : "+error.message);}
+ finally{if(button&&button.isConnected){button.disabled=false;button.textContent="Générer le code de remise";}}
+}
+
 async function chargerHistoriqueCommandes() {
-  const zone=document.getElementById("zoneHistoriqueCommandes"), user=auth.currentUser;
+  const zone=document.getElementById("zoneHistoriqueCommandes"),user=auth.currentUser;
   if(!zone)return;
   if(!user){zone.innerHTML="<p>Veuillez vous connecter.</p>";return;}
   zone.innerHTML="<p>Chargement de votre historique...</p>";
   try{
-    const snap=await db.collection("commandes_colis").where("clientId","==",user.uid).get();
-    if(snap.empty){zone.innerHTML="<p>Aucune commande enregistrée pour le moment.</p>";return;}
-    const docs=snap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
+    const [snap,groupSnap]=await Promise.all([
+      db.collection("commandes_colis").where("clientId","==",user.uid).get(),
+      db.collection("commandes_groupees").where("clientId","==",user.uid).get()
+    ]);
+    if(snap.empty&&groupSnap.empty){zone.innerHTML="<p>Aucune commande enregistrée pour le moment.</p>";return;}
     zone.innerHTML="<h3>📋 Mes commandes</h3>";
-    for(const doc of docs){
-      const c=doc.data(), priv=await doc.ref.collection("informations_privees").doc("details").get(), d=priv.exists?priv.data():{};
+    const label=function(status){return ({commande_boutique:"Envoyée aux boutiques",confirmee:"Confirmée par la boutique",preparation:"En préparation",prete:"Prête à récupérer",en_attente:"En attente",livreur_affecte:"Livreur affecté",colis_recupere:"Articles récupérés",en_transit:"En cours de livraison",livre:"Livrée",annule:"Annulée",tournee_planifiee:"Tournée planifiée",tournee_attribuee:"Livreur désigné",tournee_acceptee:"Tournée acceptée",tournee_collecte_en_cours:"Collecte des boutiques en cours",tournee_en_livraison:"Livreur en route vers vous",tournee_arrivee_destination:"Livreur arrivé · code de remise disponible",livree:"Livrée"})[status]||status||"Non renseigné";};
+    const parents=groupSnap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
+    for(const parentDoc of parents){
+      const parent=parentDoc.data(),card=document.createElement("section");card.className="card";card.style.cssText="padding:14px;margin:12px 0;border:1px solid #dcebdd;";
+      const title=document.createElement("h4");title.textContent="🛍️ Commande multi-boutiques · "+(parent.reference||parentDoc.id);
+      const summary=document.createElement("p");summary.textContent=(parent.nombreBoutiques||parent.sousCommandes?.length||0)+" boutiques · "+(parent.nombreArticles||0)+" article(s) · "+Number(parent.montantArticles||0).toLocaleString("fr-FR")+" FCFA";
+      const global=document.createElement("p");global.textContent="Statut général : "+label(parent.statut);
+      const subtitle=document.createElement("strong");subtitle.textContent="Suivi par boutique";
+      card.append(title,summary,global,subtitle);
+      const etatsBoutiques=[];
+      for(const childId of (Array.isArray(parent.sousCommandes)?parent.sousCommandes:[])){
+        const childSnap=await db.collection("commandes_colis").doc(childId).get(),row=document.createElement("p");
+        if(!childSnap.exists){row.textContent="Sous-commande indisponible";card.appendChild(row);etatsBoutiques.push("indisponible");continue;}
+        const child=childSnap.data(),etat=child.statutBoutique||"recue";etatsBoutiques.push(etat);
+        const libelle={recue:"Reçue",confirmee:"Confirmée",preparation:"En préparation",prete:"Prête",annulee:"Annulée"}[etat]||label(child.statut);
+        row.textContent=(child.boutiqueNom||"Boutique")+" — "+libelle+(child.montantLivraisonBoutique>0?" · Livraison : "+Number(child.montantLivraisonBoutique).toLocaleString("fr-FR")+" FCFA":"");card.appendChild(row);
+      }
+      const aggregate=document.createElement("p");
+      const allReady=etatsBoutiques.length===parent.nombreBoutiques&&etatsBoutiques.every(x=>x==="prete");
+      aggregate.textContent=allReady?"Toutes les boutiques ont confirmé que les articles sont prêts.":etatsBoutiques.some(x=>x==="annulee")?"Une ou plusieurs sous-commandes sont annulées.":etatsBoutiques.some(x=>x==="preparation")?"Certaines boutiques préparent encore les articles.":"En attente de confirmation des boutiques.";
+      card.insertBefore(aggregate,subtitle);
+      if(parent.tournee?.statut==="planifiee"||["attribuee","acceptee","arrivee_destination","livree"].includes(parent.tournee?.statut)){
+        const plan=document.createElement("p");plan.textContent="Tournée : "+Number(parent.tournee.totalRoadDistanceKm||0)+" km · environ "+Math.ceil(Number(parent.tournee.totalDurationSeconds||0)/60)+" min.";card.appendChild(plan);
+        const price=document.createElement("p");price.textContent="Tarif groupé : "+Number(parent.tarificationEstimee?.totalPriceXof||0).toLocaleString("fr-FR")+" FCFA.";card.appendChild(price);
+        if(parent.tournee?.courierUid){const courier=document.createElement("p");courier.textContent="Un livreur a été désigné pour cette tournée.";card.appendChild(courier);}
+      }else if(allReady){
+        const planButton=document.createElement("button");planButton.type="button";planButton.textContent="Calculer la tournée et les frais";planButton.onclick=()=>planifierTourneeCommandeGroupee(parentDoc.id,planButton);card.appendChild(planButton);
+      }
+      if(parent.tournee?.statut==="arrivee_destination"||parent.statut==="tournee_arrivee_destination"){
+        const codeButton=document.createElement("button");codeButton.className="primary";codeButton.type="button";codeButton.textContent="Générer le code de remise";codeButton.onclick=()=>obtenirCodeLivraisonTourneeGroupee(parentDoc.id,codeButton);card.appendChild(codeButton);
+        const note=document.createElement("p");note.textContent="Donnez ce code au livreur après réception de toutes les commandes.";card.appendChild(note);
+      }
+      zone.appendChild(card);
+    }
+    const individuals=snap.docs.filter(doc=>!doc.data().commandeGroupeeId).slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
+    for(const doc of individuals){
+      const c=doc.data(),priv=await doc.ref.collection("informations_privees").doc("details").get(),d=priv.exists?priv.data():{};
       const card=document.createElement("div");card.className="stop";
-      const n=document.createElement("strong");n.textContent="Commande : "+(d.trackingNumber||doc.id);
-      const s=document.createElement("p");s.textContent="Statut : "+({en_attente:"En attente",livreur_affecte:"Livreur en route",colis_recupere:"Colis récupéré",en_transit:"En cours de livraison",livre:"Livré",annule:"Annulé"}[c.statut]||c.statut||"Non renseigné");
-      const t=document.createElement("p");t.textContent=(c.depart||"")+" → "+(c.destination||"");
-      card.append(n,s,t);zone.appendChild(card);
+      const title=document.createElement("strong");title.textContent="Commande : "+(d.trackingNumber||doc.id);
+      const status=document.createElement("p");status.textContent="Statut : "+label(c.statut);
+      const route=document.createElement("p");route.textContent=(c.depart||"")+" → "+(c.destination||"");
+      card.append(title,status,route);zone.appendChild(card);
     }
   }catch(e){console.error(e);zone.innerHTML="<p>Impossible de charger votre historique : "+echapperTexteCompagnie(e.message)+"</p>";}
 }

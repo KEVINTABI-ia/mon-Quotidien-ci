@@ -124,6 +124,125 @@ describe("Mon Transport CI — règles Firestore", function () {
     await assertFails(updateDoc(doc(otherDb,"commandes_colis",ORDER_ID),{montantLivraisonBoutique:2000}));
   });
 
+  it("autorise la création et la lecture d'une commande parent multi-boutiques uniquement par son client", async () => {
+    const {doc,setDoc,getDoc,serverTimestamp}=require("firebase/firestore");
+    const db=testEnv.authenticatedContext(CLIENT_UID).firestore();
+    const parent=doc(db,"commandes_groupees","group-order-test-001");
+    await assertSucceeds(setDoc(parent,{
+      clientId:CLIENT_UID,reference:"MQCI-GROUP-001",statut:"en_attente_boutiques",
+      nombreBoutiques:2,nombreArticles:3,sousCommandes:["child-shop-a","child-shop-b"],
+      montantArticles:7500,devise:"XOF",createdAt:serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(parent));
+    const other=testEnv.authenticatedContext(OTHER_UID).firestore();
+    await assertFails(getDoc(doc(other,"commandes_groupees","group-order-test-001")));
+    await assertFails(setDoc(doc(other,"commandes_groupees","group-order-forged"),{
+      clientId:CLIENT_UID,reference:"MQCI-GROUP-002",statut:"en_attente_boutiques",
+      nombreBoutiques:2,nombreArticles:2,sousCommandes:["a","b"],
+      montantArticles:2000,devise:"XOF",createdAt:serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(db,"commandes_groupees","invalid-group"),{
+      clientId:CLIENT_UID,reference:"MQCI-GROUP-003",statut:"en_attente",
+      nombreBoutiques:1,nombreArticles:1,sousCommandes:["child-a"],
+      montantArticles:1000,devise:"XOF",createdAt:serverTimestamp()
+    }));
+  });
+
+  it("lie chaque sous-commande boutique au parent du même client et refuse les références non déclarées", async () => {
+    const {doc,writeBatch,serverTimestamp,updateDoc}=require("firebase/firestore");
+    const SHOP_A="group-shop-a",SHOP_B="group-shop-b";
+    await testEnv.withSecurityRulesDisabled(async context=>{
+      const db=context.firestore();
+      await db.doc(`demandes_nouveaux_services/${SHOP_A}`).set({
+        uid:CLIENT_UID,type:"commerce",titre:"Boutique A",commune:"Yopougon",
+        telephone:"0100000000",statut:"approuve",abonnementFin:futureDate()
+      });
+      await db.doc(`demandes_nouveaux_services/${SHOP_B}`).set({
+        uid:OTHER_UID,type:"commerce",titre:"Boutique B",commune:"Adjamé",
+        telephone:"0500000000",statut:"approuve",abonnementFin:futureDate()
+      });
+    });
+    const db=testEnv.authenticatedContext(CLIENT_UID).firestore();
+    const batch=writeBatch(db);
+    const parentId="group-parent-linked";
+    const childA="group-child-a",childB="group-child-b";
+    batch.set(doc(db,"commandes_groupees",parentId),{
+      clientId:CLIENT_UID,reference:"MQCI-GROUP-LINK",statut:"en_attente_boutiques",
+      nombreBoutiques:2,nombreArticles:2,sousCommandes:[childA,childB],
+      montantArticles:6000,devise:"XOF",createdAt:serverTimestamp()
+    });
+    for(const [childId,shopId,shopUid,shopName] of [
+      [childA,SHOP_A,CLIENT_UID,"Boutique A"],[childB,SHOP_B,OTHER_UID,"Boutique B"]
+    ]){
+      batch.set(doc(db,"commandes_colis",childId),{
+        clientId:CLIENT_UID,service:"livraison",depart:"Abidjan",destination:"Yopougon",
+        statut:"commande_boutique",publicVersion:false,createdAt:serverTimestamp(),
+        typeCommande:"boutique",boutiqueId:shopId,boutiqueUid:shopUid,boutiqueNom:shopName,
+        montantLivraisonBoutique:0,commandeGroupeeId:parentId
+      });
+      batch.set(doc(db,"commandes_colis",childId,"informations_privees","details"),{
+        ...privateFixture(),createdAt:serverTimestamp(),telephoneBoutique:"0100000000",
+        telephoneClient:"0100000000",boutiqueUid:shopUid,produitCommande:"Article test",
+        quantiteCommande:1,prixProduit:3000
+      });
+      batch.set(doc(db,"commandes_colis",childId,"tarification","prix"),{
+        distanceKm:0,distanceMetres:0,tarifKm:100,montantLivraison:0,
+        fraisService:0,montantTotal:0,devise:"FCFA",operation:"livraison_boutique",
+        createdAt:serverTimestamp()
+      });
+    }
+    await assertSucceeds(batch.commit());
+
+    // Une sous-commande liée au parent ne peut pas être publiée séparément aux livreurs.
+    const dispatchBatch=writeBatch(db);
+    dispatchBatch.update(doc(db,"commandes_colis",childA),{
+      statut:"en_attente",publicVersion:true,dateMiseEnLivraison:serverTimestamp(),
+      montantLivraisonBoutique:1000
+    });
+    dispatchBatch.update(doc(db,"commandes_colis",childA,"tarification","prix"),{
+      montantLivraison:1000,montantTotal:1000
+    });
+    await assertFails(dispatchBatch.commit());
+
+    const shopOrderRef=doc(db,"commandes_colis",childA);
+    await assertSucceeds(updateDoc(shopOrderRef,{
+      statutBoutique:"confirmee",statutBoutiqueModifieLe:serverTimestamp(),
+      statutBoutiqueModifiePar:CLIENT_UID
+    }));
+    await assertFails(updateDoc(shopOrderRef,{
+      statutBoutique:"prete",statutBoutiqueModifieLe:serverTimestamp(),
+      statutBoutiqueModifiePar:CLIENT_UID
+    }));
+    await assertSucceeds(updateDoc(shopOrderRef,{
+      statutBoutique:"preparation",statutBoutiqueModifieLe:serverTimestamp(),
+      statutBoutiqueModifiePar:CLIENT_UID
+    }));
+    await assertSucceeds(updateDoc(shopOrderRef,{
+      statutBoutique:"prete",statutBoutiqueModifieLe:serverTimestamp(),
+      statutBoutiqueModifiePar:CLIENT_UID
+    }));
+
+    const badBatch=writeBatch(db);
+    const badId="child-not-in-parent";
+    badBatch.set(doc(db,"commandes_colis",badId),{
+      clientId:CLIENT_UID,service:"livraison",depart:"Abidjan",destination:"Yopougon",
+      statut:"commande_boutique",publicVersion:false,createdAt:serverTimestamp(),
+      typeCommande:"boutique",boutiqueId:SHOP_A,boutiqueUid:CLIENT_UID,boutiqueNom:"Boutique A",
+      montantLivraisonBoutique:0,commandeGroupeeId:parentId
+    });
+    badBatch.set(doc(db,"commandes_colis",badId,"informations_privees","details"),{
+      ...privateFixture(),createdAt:serverTimestamp(),telephoneBoutique:"0100000000",
+      telephoneClient:"0100000000",boutiqueUid:CLIENT_UID,produitCommande:"Article test",
+      quantiteCommande:1,prixProduit:3000
+    });
+    badBatch.set(doc(db,"commandes_colis",badId,"tarification","prix"),{
+      distanceKm:0,distanceMetres:0,tarifKm:100,montantLivraison:0,
+      fraisService:0,montantTotal:0,devise:"FCFA",operation:"livraison_boutique",
+      createdAt:serverTimestamp()
+    });
+    await assertFails(badBatch.commit());
+  });
+
   it("autorise un utilisateur authentifié à créer et lire uniquement son profil général", async () => {
     const {doc,setDoc,getDoc,serverTimestamp}=require("firebase/firestore");
     const db=testEnv.authenticatedContext(CLIENT_UID,{phone_number:"+2250700000000"}).firestore();

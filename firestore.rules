@@ -482,12 +482,53 @@ service cloud.firestore {
       allow delete: if estAdmin();
     }
 
+    // Commande parent du panier multi-boutiques. Les sous-commandes restent
+    // dans commandes_colis afin de préserver les flux existants des boutiques.
+    match /commandes_groupees/{commandeGroupeeId} {
+      allow create: if estConnecte()
+        && request.resource.data.keys().hasAll([
+          "clientId", "reference", "statut", "nombreBoutiques",
+          "nombreArticles", "sousCommandes", "montantArticles",
+          "devise", "createdAt"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "clientId", "reference", "statut", "nombreBoutiques",
+          "nombreArticles", "sousCommandes", "montantArticles",
+          "devise", "createdAt"
+        ])
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.reference is string
+        && request.resource.data.reference.size() >= 6
+        && request.resource.data.reference.size() <= 64
+        && request.resource.data.statut == "en_attente_boutiques"
+        && request.resource.data.nombreBoutiques is int
+        && request.resource.data.nombreBoutiques >= 2
+        && request.resource.data.nombreBoutiques <= 4
+        && request.resource.data.nombreArticles is int
+        && request.resource.data.nombreArticles >= request.resource.data.nombreBoutiques
+        && request.resource.data.nombreArticles <= 99
+        && request.resource.data.sousCommandes is list
+        && request.resource.data.sousCommandes.size() == request.resource.data.nombreBoutiques
+        && request.resource.data.sousCommandes.size() >= 2
+        && request.resource.data.sousCommandes.size() <= 4
+        && request.resource.data.montantArticles is int
+        && request.resource.data.montantArticles > 0
+        && request.resource.data.devise == "XOF"
+        && request.resource.data.createdAt == request.time;
+
+      allow read: if estAdmin()
+        || (estConnecte() && resource.data.clientId == request.auth.uid);
+      // Le statut agrégé, les tarifs et la mission seront modifiés par le Worker
+      // après confirmation des boutiques ; aucun client ne peut les réécrire.
+      allow update, delete: if estAdmin();
+    }
+
     match /commandes_colis/{commandeId} {
       allow create: if (
         estConnecte()
         && request.resource.data.clientId == request.auth.uid
         && request.resource.data.keys().hasAll(["clientId","service","depart","destination","statut","createdAt","publicVersion","typeCommande","boutiqueId","boutiqueUid","boutiqueNom","montantLivraisonBoutique"])
-        && request.resource.data.keys().hasOnly(["clientId","service","depart","destination","statut","createdAt","publicVersion","typeCommande","boutiqueId","boutiqueUid","boutiqueNom","montantLivraisonBoutique"])
+        && request.resource.data.keys().hasOnly(["clientId","service","depart","destination","statut","createdAt","publicVersion","typeCommande","boutiqueId","boutiqueUid","boutiqueNom","montantLivraisonBoutique","commandeGroupeeId"])
         && request.resource.data['service'] == "livraison"
         && request.resource.data.statut == "commande_boutique"
         && request.resource.data.publicVersion == false
@@ -499,6 +540,11 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin is timestamp
         && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin > request.time
         && request.resource.data.montantLivraisonBoutique == 0
+        && (!("commandeGroupeeId" in request.resource.data)
+          || (request.resource.data.commandeGroupeeId is string
+            && existsAfter(/databases/$(database)/documents/commandes_groupees/$(request.resource.data.commandeGroupeeId))
+            && getAfter(/databases/$(database)/documents/commandes_groupees/$(request.resource.data.commandeGroupeeId)).data.clientId == request.auth.uid
+            && getAfter(/databases/$(database)/documents/commandes_groupees/$(request.resource.data.commandeGroupeeId)).data.sousCommandes.hasAny([commandeId])))
         && existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details)
         && getAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details).data.clientId == request.auth.uid
         && existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix)
@@ -573,6 +619,23 @@ service cloud.firestore {
           estConnecte()
           && resource.data.typeCommande == "boutique"
           && resource.data.boutiqueUid == request.auth.uid
+          && resource.data.statut == "commande_boutique"
+          && request.resource.data.statutBoutique is string
+          && (
+            (resource.data.get("statutBoutique", "recue") == "recue" && request.resource.data.statutBoutique == "confirmee")
+            || (resource.data.get("statutBoutique", "recue") == "confirmee" && request.resource.data.statutBoutique == "preparation")
+            || (resource.data.get("statutBoutique", "recue") == "preparation" && request.resource.data.statutBoutique == "prete")
+          )
+          && request.resource.data.statutBoutiqueModifiePar == request.auth.uid
+          && request.resource.data.statutBoutiqueModifieLe == request.time
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["statutBoutique", "statutBoutiqueModifieLe", "statutBoutiqueModifiePar"])
+        )
+        || (
+          estConnecte()
+          && resource.data.typeCommande == "boutique"
+          && resource.data.boutiqueUid == request.auth.uid
+          && !("commandeGroupeeId" in resource.data)
           && resource.data.statut == "commande_boutique"
           && request.resource.data.statut == "en_attente"
           && request.resource.data.publicVersion == true
