@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit } from "../cloudflare/mon-business-worker/worker.js";
+import { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, auditData } from "../cloudflare/mon-business-worker/worker.js";
 
 test("normalise les e-mails et refuse les formats invalides",()=>{
   assert.equal(cleanEmail("  COLLABORATEUR@EXAMPLE.CI "), "collaborateur@example.ci");
@@ -51,4 +51,10 @@ test("la limitation de débit refuse une requête au-dessus du seuil",async()=>{
 
 test("la limitation de débit échoue de façon fermée si le binding manque",async()=>{
   await assert.rejects(()=>enforceRateLimit(undefined,"user-1"),/rate_limiter_unavailable/);
+});
+
+test("les journaux distinguent correctement les invitations et les membres",()=>{
+  const now=new Date("2026-11-24T00:00:00.000Z");
+  assert.equal(auditData({businessId:"b1",actorUid:"u1",action:"invitation.created",entityId:"i1",now}).entityType,"invitation");
+  assert.equal(auditData({businessId:"b1",actorUid:"u1",action:"member.access_updated",entityType:"member",entityId:"u2",now}).entityType,"member");
 });
