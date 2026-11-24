@@ -1053,6 +1053,26 @@ export function applyDeliveryTourStopTransition({stops,stopId,nextStatus}) {
     tourStatus:pickedUpCount===updated.length?"delivering":pickedUpCount>0?"collecting":"assigned"
   });
 }
+// Grouped tour remuneration is separate from the courier's prepaid commission wallet.
+// The courier receives 90%; the platform receives the exact remainder (10%, including
+// any indivisible XOF rounding unit) so the two ledger entries always sum to the fare.
+export const GROUPED_TOUR_PAYOUT_RULES = Object.freeze({courierShareBps:9000,platformShareBps:1000});
+export function calculateGroupedTourPayout({totalPriceXof}) {
+  if(!Number.isSafeInteger(totalPriceXof)||totalPriceXof<=0)
+    throw new Error("invalid_grouped_tour_payout_amount");
+  const courierPayoutXof=Math.floor(totalPriceXof*GROUPED_TOUR_PAYOUT_RULES.courierShareBps/10000);
+  const platformShareXof=totalPriceXof-courierPayoutXof;
+  return Object.freeze({currency:"XOF",totalPriceXof,courierShareBps:9000,platformShareBps:1000,courierPayoutXof,platformShareXof});
+}
+export function buildGroupedTourPayoutLedger({tourId,courierUid,totalPriceXof,existingLedger=null,now=new Date()}) {
+  if(typeof tourId!=="string"||!tourId.trim()||typeof courierUid!=="string"||!courierUid.trim())
+    throw new Error("invalid_grouped_tour_payout_identity");
+  if(existingLedger) throw new Error("grouped_tour_payout_already_recorded");
+  if(!(now instanceof Date)||!Number.isFinite(now.getTime())) throw new Error("invalid_grouped_tour_payout_date");
+  const split=calculateGroupedTourPayout({totalPriceXof});
+  return Object.freeze({id:"tour_"+tourId,type:"grouped_tour_payout",tourId,courierUid,status:"ready_for_settlement",...split,createdAt:now.toISOString()});
+}
+
 export const GROUPED_DELIVERY_PRICING = Object.freeze({
   fixedStartFeeXof:500,
   pricePerKmXof:150,
