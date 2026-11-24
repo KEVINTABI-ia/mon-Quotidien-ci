@@ -1770,7 +1770,7 @@ service cloud.firestore {
       }
     }
 
-    // Mon Business — espaces d'entreprise isolés et initialisation atomique.
+// Mon Business — espaces d'entreprise isolés et initialisation atomique.
     match /businesses/{businessId} {
       function membreActif() {
         return request.auth != null
@@ -1833,8 +1833,16 @@ service cloud.firestore {
           && request.resource.data.createdAt == request.time
           && getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.ownerUid == request.auth.uid;
 
-        // Toute modification des droits passe par le Worker dédié et son journal d'audit.
-        allow update: if false;
+        allow update: if proprietaireActif()
+          && memberUid != get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerUid
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.role in ["general_director","activity_manager","accountant","cashier","stock_manager","employee","observer"]
+          && request.resource.data.status in ["active","suspended","revoked"]
+          && request.resource.data.activityIds is list
+          && request.resource.data.permissions is map
+          && request.resource.data.permissions.keys().hasOnly(["view","create","edit","approve","cancel_correct","export","manage_access"])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["role","status","activityIds","permissions","updatedAt"])
+          && request.resource.data.updatedAt == request.time;
         allow delete: if false;
       }
 
@@ -1904,7 +1912,6 @@ service cloud.firestore {
       // Les invitations restent fermées jusqu'à la mise en place d'un jeton sécurisé et expirant.
       allow read, write: if false;
     }
-
 
     match /{document=**} {
       allow read, write: if false;
