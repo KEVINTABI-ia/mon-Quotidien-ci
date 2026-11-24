@@ -4833,8 +4833,10 @@ async function chargerCommandesBoutique(boutiqueId){
     const actions=document.createElement("div");actions.style.cssText="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;";
     const etapes=[["confirmee","✅ Confirmer"],["preparation","🧺 En préparation"],["prete","📦 Prête"]];
     etapes.forEach(([valeur,libelle])=>{const btn=document.createElement("button");btn.type="button";btn.textContent=libelle;btn.onclick=()=>mettreAJourStatutCommandeBoutique(doc.id,valeur);actions.appendChild(btn);});
-    if(c.statut==="commande_boutique"){
+    if(c.statut==="commande_boutique"&&!c.commandeGroupeeId){
      const btn=document.createElement("button");btn.type="button";btn.className="primary";btn.textContent="🚚 Organiser la livraison";btn.onclick=()=>declencherLivraisonBoutique(doc.id);actions.appendChild(btn);
+    }else if(c.commandeGroupeeId){
+     const note=document.createElement("p");note.className="notice";note.textContent="Commande multi-boutiques : la tournée groupée sera organisée après confirmation de disponibilité de toutes les boutiques.";actions.appendChild(note);
     }
     card.appendChild(actions);
    }
@@ -4853,7 +4855,9 @@ async function mettreAJourStatutCommandeBoutique(commandeId,nouveauStatut){
   const ref=partnerDb.collection("commandes_colis").doc(commandeId),snap=await ref.get();
   if(!snap.exists)throw new Error("Commande introuvable.");
   const c=snap.data();if(c.boutiqueUid!==user.uid||c.typeCommande!=="boutique")throw new Error("Vous n'êtes pas autorisé à modifier cette commande.");
-  if(["livre","annulee"].includes(c.statut))throw new Error("Cette commande est déjà clôturée.");
+  if(["livre","annulee"].includes(c.statut)||c.statutBoutique==="annulee")throw new Error("Cette commande est déjà clôturée.");
+  const ordre={recue:0,confirmee:1,preparation:2,prete:3},actuel=ordre[c.statutBoutique||"recue"],suivant=ordre[nouveauStatut];
+  if(suivant!==actuel+1)throw new Error("Respectez l'ordre des étapes : confirmer, préparer, puis déclarer prête.");
   await ref.update({statutBoutique:nouveauStatut,statutBoutiqueModifieLe:firebase.firestore.FieldValue.serverTimestamp(),statutBoutiqueModifiePar:user.uid});
   chargerCommandesBoutique(c.boutiqueId);
  }catch(e){console.error(e);alert("Mise à jour impossible : "+e.message);}
@@ -4868,7 +4872,7 @@ async function declencherLivraisonBoutique(commandeId){
  try{
   const ref=dbBoutique.collection("commandes_colis").doc(commandeId),snap=await ref.get();
   if(!snap.exists)throw new Error("Commande introuvable.");
-  const c=snap.data();if(c.boutiqueUid!==user.uid||c.statut!=="commande_boutique"||c.publicVersion===true)throw new Error("Cette commande ne peut plus être envoyée.");
+  const c=snap.data();if(c.boutiqueUid!==user.uid||c.statut!=="commande_boutique"||c.publicVersion===true)throw new Error("Cette commande ne peut plus être envoyée.");if(c.commandeGroupeeId)throw new Error("Cette sous-commande appartient à un panier multi-boutiques. La livraison individuelle est bloquée : attendez la préparation de toutes les boutiques.");
   const batch=dbBoutique.batch();
   batch.update(ref,{montantLivraisonBoutique:montant,statut:"en_attente",publicVersion:true,dateMiseEnLivraison:firebase.firestore.FieldValue.serverTimestamp()});
   batch.update(ref.collection("tarification").doc("prix"),{montantLivraison:montant,montantTotal:montant});
@@ -12008,11 +12012,17 @@ async function chargerHistoriqueCommandes() {
       const global=document.createElement("p");global.textContent="Statut général : "+label(parent.statut);
       const subtitle=document.createElement("strong");subtitle.textContent="Suivi par boutique";
       card.append(title,summary,global,subtitle);
+      const etatsBoutiques=[];
       for(const childId of (Array.isArray(parent.sousCommandes)?parent.sousCommandes:[])){
         const childSnap=await db.collection("commandes_colis").doc(childId).get(),row=document.createElement("p");
-        if(!childSnap.exists){row.textContent="Sous-commande indisponible";card.appendChild(row);continue;}
-        const child=childSnap.data();row.textContent=(child.boutiqueNom||"Boutique")+" — "+label(child.statut)+(child.montantLivraisonBoutique>0?" · Livraison : "+Number(child.montantLivraisonBoutique).toLocaleString("fr-FR")+" FCFA":"");card.appendChild(row);
+        if(!childSnap.exists){row.textContent="Sous-commande indisponible";card.appendChild(row);etatsBoutiques.push("indisponible");continue;}
+        const child=childSnap.data(),etat=child.statutBoutique||"recue";etatsBoutiques.push(etat);
+        const libelle={recue:"Reçue",confirmee:"Confirmée",preparation:"En préparation",prete:"Prête",annulee:"Annulée"}[etat]||label(child.statut);
+        row.textContent=(child.boutiqueNom||"Boutique")+" — "+libelle+(child.montantLivraisonBoutique>0?" · Livraison : "+Number(child.montantLivraisonBoutique).toLocaleString("fr-FR")+" FCFA":"");card.appendChild(row);
       }
+      const aggregate=document.createElement("p");
+      aggregate.textContent=etatsBoutiques.length&&etatsBoutiques.every(x=>x==="prete")?"Toutes les boutiques ont confirmé que les articles sont prêts.":etatsBoutiques.some(x=>x==="annulee")?"Une ou plusieurs sous-commandes sont annulées.":etatsBoutiques.some(x=>x==="preparation")?"Certaines boutiques préparent encore les articles.":"En attente de confirmation des boutiques.";
+      card.insertBefore(aggregate,subtitle);
       zone.appendChild(card);
     }
     const individuals=snap.docs.filter(doc=>!doc.data().commandeGroupeeId).slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
