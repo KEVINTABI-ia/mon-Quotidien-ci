@@ -144,6 +144,7 @@ async function authenticate(request,env) {
     else if (firebaseCode==="INVALID_ID_TOKEN" || firebaseCode==="TOKEN_EXPIRED" || firebaseCode==="INVALID_ID_TOKEN_AUD") diagnostic="firebase_token_invalid_or_expired";
     else if (firebaseCode==="USER_DISABLED" || user?.disabled===true) diagnostic="firebase_user_disabled";
     else if (response.status>=500) diagnostic="firebase_auth_unavailable";
+    else if (/^[A-Z0-9_]{1,64}$/.test(firebaseCode)) diagnostic="firebase_auth_rejected_"+firebaseCode.toLowerCase();
     console.warn("Mon Business Firebase authentication rejected", {status:response.status,code:diagnostic});
     throw new HttpError(response.status>=500?503:401,diagnostic);
   }
