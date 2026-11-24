@@ -83,6 +83,7 @@ async function signJwt(payload, privateKeyPem) {
   return input+"."+b64url(signature);
 }
 async function googleAccessToken(env) {
+  if (!env.FIREBASE_API_KEY || !env.GOOGLE_SERVICE_ACCOUNT_JSON) throw new HttpError(503,"service_not_configured");
   if (oauthCache && oauthCache.expires>Date.now()+60000) return oauthCache.token;
   let account;
   try { account=JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON||""); } catch { throw new Error("service_account_secret_invalid"); }
@@ -292,7 +293,10 @@ export default {
       cors=corsHeaders(request,env);
       if (request.method==="OPTIONS") return new Response(null,{status:204,headers:cors});
       const url=new URL(request.url);
-      if (url.pathname==="/health" && request.method==="GET") return json({ok:true,service:"mon-business-worker"},200,cors);
+      if (url.pathname==="/health" && request.method==="GET") {
+        const configured=Boolean(env.FIREBASE_API_KEY&&env.GOOGLE_SERVICE_ACCOUNT_JSON);
+        return json({ok:configured,service:"mon-business-worker",configured},configured?200:503,cors);
+      }
       if (request.method!=="POST") return json({error:"method_not_allowed"},405,cors);
       const clientIp=request.headers.get("cf-connecting-ip")||"unknown";
       await enforceRateLimit(env.IP_RATE_LIMITER,clientIp);
