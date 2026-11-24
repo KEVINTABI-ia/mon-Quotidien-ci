@@ -149,7 +149,7 @@ describe("Mon Transport CI — règles Firestore", function () {
   });
 
   it("lie chaque sous-commande boutique au parent du même client et refuse les références non déclarées", async () => {
-    const {doc,writeBatch,serverTimestamp}=require("firebase/firestore");
+    const {doc,writeBatch,serverTimestamp,updateDoc}=require("firebase/firestore");
     const SHOP_A="group-shop-a",SHOP_B="group-shop-b";
     await testEnv.withSecurityRulesDisabled(async context=>{
       const db=context.firestore();
@@ -203,6 +203,24 @@ describe("Mon Transport CI — règles Firestore", function () {
       montantLivraison:1000,montantTotal:1000
     });
     await assertFails(dispatchBatch.commit());
+
+    const shopOrderRef=doc(db,"commandes_colis",childA);
+    await assertSucceeds(updateDoc(shopOrderRef,{
+      statutBoutique:"confirmee",statutBoutiqueModifieLe:serverTimestamp(),
+      statutBoutiqueModifiePar:CLIENT_UID
+    }));
+    await assertFails(updateDoc(shopOrderRef,{
+      statutBoutique:"prete",statutBoutiqueModifieLe:serverTimestamp(),
+      statutBoutiqueModifiePar:CLIENT_UID
+    }));
+    await assertSucceeds(updateDoc(shopOrderRef,{
+      statutBoutique:"preparation",statutBoutiqueModifieLe:serverTimestamp(),
+      statutBoutiqueModifiePar:CLIENT_UID
+    }));
+    await assertSucceeds(updateDoc(shopOrderRef,{
+      statutBoutique:"prete",statutBoutiqueModifieLe:serverTimestamp(),
+      statutBoutiqueModifiePar:CLIENT_UID
+    }));
 
     const badBatch=writeBatch(db);
     const badId="child-not-in-parent";
