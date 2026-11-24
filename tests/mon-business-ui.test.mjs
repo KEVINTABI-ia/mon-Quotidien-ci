@@ -14,7 +14,7 @@ test("les modules métier utilisent les routes API protégées",()=>{
   for(const route of ["/api/mon-business/dashboard","/api/mon-business/modules/","/api/mon-business/transaction"]) {
     assert.ok(html.includes(route), "route absente : "+route);
   }
-  assert.match(html,/Authorization:\\s*["']Bearer/);
+  assert.match(html,/Authorization:\s*["']Bearer/);
   assert.match(html,/X-MON-BUSINESS-PASSWORD/);
 });
 test("la page demande une authentification et un accès MON BUSINESS dédié",()=>{
@@ -28,7 +28,7 @@ test("la page contient les formulaires des principaux modules",()=>{
   }
 });
 test("le script intégré de la page ne contient pas d'erreur de syntaxe",()=>{
-  const scripts=[...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)].map(m=>m[1]).filter(s=>s.trim());
+  const scripts=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).filter(s=>s.trim());
   assert.ok(scripts.length>=1);
   for(const script of scripts) assert.doesNotThrow(()=>new vm.Script(script,{filename:"mon-business.html"}));
 });
