@@ -1090,6 +1090,13 @@ export function transitionGroupedDeliveryTourStop({tour,stopId,nextStatus}) {
   const transition=applyDeliveryTourStopTransition({stops:tour.stops,stopId,nextStatus});
   return Object.freeze({tour:Object.freeze({...tour,stops:transition.stops,status:transition.tourStatus==="delivering"?"delivering":transition.pickedUpCount>0?"collecting":"accepted"}),...transition});
 }
+export function markGroupedTourDestinationArrived({tour,courierUid,now=new Date()}) {
+  if(!tour||tour.status!=="arrive_destination"||!Array.isArray(tour.stops)||tour.stops.length<2||tour.stops.some(stop=>stop.status!=="picked_up"))
+    throw new Error("grouped_tour_pickups_incomplete");
+  if(tour.courierUid!==courierUid) throw new Error("grouped_tour_not_assigned_to_courier");
+  if(!(now instanceof Date)||!Number.isFinite(now.getTime())) throw new Error("invalid_grouped_tour_date");
+  return Object.freeze({...tour,status:"arrive_destination",arrivedAt:now.toISOString()});
+}
 export function completeGroupedDeliveryTour({tour,courierUid,confirmationVerified,existingPayoutLedger=null,now=new Date()}) {
   if(!tour||tour.status!=="delivering"||!Array.isArray(tour.stops)||tour.stops.length<2||tour.stops.some(stop=>stop.status!=="picked_up"))
     throw new Error("grouped_tour_pickups_incomplete");
@@ -2758,6 +2765,25 @@ async function updateGroupedTourStopRequest(request,env) {
     return json({ok:true,mission:{id:parentId,status:transition.tour.status,stops:transition.tour.stops},allPickedUp:transition.allPickedUp});
   }catch(error){const code=String(error?.message||"grouped_tour_stop_update_failed");const status=code.startsWith("delivery_tour_")||code.startsWith("grouped_tour_")?409:409;return json({error:code},status);}
 }
+async function markGroupedTourDestinationArrivedRequest(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body.commandeGroupeeId,uid=auth.user.sub;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId))return json({error:"invalid_grouped_order_id"},400);
+  const missionPath="tournees_livraison/"+parentId,lockPath="partenaires/"+uid+"/verrous/missionActive";
+  try {
+    const tx=await beginFirestoreTransaction(env);
+    const [missionDoc,lockDoc]=await Promise.all([getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,lockPath,tx)]);
+    if(!missionDoc)return json({error:"grouped_tour_not_found"},404);
+    const mission=docData(missionDoc),lock=docData(lockDoc);
+    if(mission.courierUid!==uid)return json({error:"grouped_tour_not_assigned_to_courier"},403);
+    if(!lockDoc||lock?.tourneeId!==parentId||lock?.statut!=="active")return json({error:"active_mission_lock_missing"},409);
+    const now=new Date(),arrived=markGroupedTourDestinationArrived({tour:mission,courierUid:uid,now});
+    await commitFirestoreTransaction(env,[updateWrite(missionPath,{status:arrived.status,arrivedAt:now,updatedAt:now},missionDoc.updateTime)],tx);
+    return json({ok:true,mission:{id:parentId,status:arrived.status,arrivedAt:arrived.arrivedAt}});
+  }catch(error){return json({error:String(error?.message||"grouped_tour_arrival_failed")},409);}
+}
 async function clientGroupedDeliveryCode(request,env) {
   const auth=await requireUser(request,env);
   if(!auth.user)return json({error:"unauthorized"},401);
@@ -2773,7 +2799,7 @@ async function clientGroupedDeliveryCode(request,env) {
     if(!parentDoc||!missionDoc)return json({error:"grouped_tour_not_found"},404);
     const parent=docData(parentDoc),mission=docData(mission);
     if(parent.clientId!==auth.user.sub)return json({error:"grouped_order_not_owned"},403);
-    if(mission.status!=="delivering")return json({error:"grouped_tour_not_at_destination"},409);
+    if(mission.status!=="arrive_destination")return json({error:"grouped_tour_not_at_destination"},409);
     const now=new Date(),existing=docData(confirmationDoc),issuance=deliveryCodeIssuanceState(existing,now);
     if(!issuance.ok){const errors={already_used:["delivery_already_confirmed",409],locked:["delivery_code_locked",429],rate_limited:["delivery_code_rate_limited",429]};const [error,status]=errors[issuance.reason]||["delivery_code_unavailable",409];return json({error},status);}
     const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%1000000).padStart(6,"0");
@@ -2866,7 +2892,7 @@ export default {
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
     else if(url.pathname==="/api/delivery/grouped-plan"&&request.method==="POST") response=await planGroupedDelivery(request,env);
-    else if(url.pathname==="/api/delivery/grouped-dispatch"&&request.method==="POST") response=await dispatchGroupedDeliveryTour(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/accept"&&request.method==="POST") response=await acceptGroupedDeliveryTourRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/stop"&&request.method==="POST") response=await updateGroupedTourStopRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/complete"&&request.method==="POST") response=await completeGroupedDeliveryTourRequest(request,env);\n    else if(url.pathname==="/api/client/grouped-delivery-code"&&request.method==="POST") response=await clientGroupedDeliveryCode(request,env);\n    else if(url.pathname==="/api/delivery/route-preview"&&request.method==="POST") response=await deliveryRoutePreview(request,env);
+    else if(url.pathname==="/api/delivery/grouped-dispatch"&&request.method==="POST") response=await dispatchGroupedDeliveryTour(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/accept"&&request.method==="POST") response=await acceptGroupedDeliveryTourRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/stop"&&request.method==="POST") response=await updateGroupedTourStopRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/destination-arrived"&&request.method==="POST") response=await markGroupedTourDestinationArrivedRequest(request,env);\n    else if(url.pathname==="/api/courier/grouped-tour/complete"&&request.method==="POST") response=await completeGroupedDeliveryTourRequest(request,env);\n    else if(url.pathname==="/api/client/grouped-delivery-code"&&request.method==="POST") response=await clientGroupedDeliveryCode(request,env);\n    else if(url.pathname==="/api/delivery/route-preview"&&request.method==="POST") response=await deliveryRoutePreview(request,env);
     else if(url.pathname==="/api/client/delivery-code"&&request.method==="POST") response=await clientDeliveryCode(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
     else if(url.pathname==="/api/publicites/admin-upload"&&request.method==="POST") response=await publiciteUpload(request,env,true);
