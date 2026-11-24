@@ -11,6 +11,7 @@ import {
   buildGroupedTourPayoutLedger,
   acceptGroupedDeliveryTour,
   transitionGroupedDeliveryTourStop,
+  markGroupedTourDestinationArrived,
   completeGroupedDeliveryTour
 } from "../cloudflare/worker.js";
 
