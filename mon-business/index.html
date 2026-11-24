@@ -131,6 +131,9 @@
   };
   if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const auth=firebase.auth(), db=firebase.firestore();
+  // Utiliser explicitement la même persistance locale Firebase que l'accueil.
+  // L'observateur ne démarre qu'après restauration de la session enregistrée.
+  const authPersistenceReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
   const MON_BUSINESS_API=window.MON_BUSINESS_API||"https://square-wind-47f5.tabikevin57.workers.dev";
   const $=id=>document.getElementById(id);
   let currentUser=null, currentBusinessId=null, currentBusinessOwner=false, lastInviteUrl="";
@@ -151,7 +154,8 @@
     $("registrationNumberWrap").classList.toggle("hidden",!registered);
     $("registrationNumber").required=registered;
   });
-  auth.onAuthStateChanged(user=>{
+  authPersistenceReady.then(()=>{
+    auth.onAuthStateChanged(user=>{
     currentUser=user||null;
     $("registrationCard").classList.toggle("hidden",!user);
     $("activityCard").classList.toggle("hidden",!user);
@@ -164,6 +168,10 @@
     currentBusinessId=localStorage.getItem("mqci_mon_business_id")||null;
     if(currentBusinessId){loadActivities();loadMembers();}
     acceptInvitationFromLink();
+    });
+  }).catch(error=>{
+    $("authState").textContent="Impossible de restaurer votre session sécurisée. Rechargez la page ou reconnectez-vous sur Mon Quotidien CI. Détail : "+(error.code||error.message);
+    $("authState").classList.add("error");
   });
 
   async function acceptInvitationFromLink(){
