@@ -4921,7 +4921,7 @@ async function ajouterAuPanierMultiBoutiques(boutiqueId,index){
   if(!product||shop.statut!=="approuve"||shop.visibleManuellement===false)throw new Error("Produit ou boutique indisponible.");
   if(shop.abonnementFin?.toDate&&shop.abonnementFin.toDate().getTime()<=Date.now())throw new Error("L'abonnement de cette boutique a expiré.");
   const day=new Date().toISOString().slice(0,10),promo=product.promotionStatut==="approuve"&&product.promotionDebut<=day&&product.promotionFin>=day;
-  const price=Number(promo?product.prixPromotion:product.prix);if(!Number.isFinite(price)||price<=0)throw new Error("Prix du produit invalide.");
+  const price=Number(promo?product.prixPromotion:product.prix);if(!Number.isInteger(price)||price<=0)throw new Error("Le prix du produit doit être un montant entier en FCFA.");
   const item={ownerUid:auth.currentUser.uid,boutiqueId:boutiqueId,boutiqueUid:shop.uid,boutiqueNom:shop.titre||"Boutique",produitId:String(product.id||index),produitNom:String(product.nom||"Article"),quantite:quantity,prixUnitaire:price,commentaire:document.getElementById("commentaireClientBoutique_"+boutiqueId)?.value.trim()||""};
   const items=lirePanierMultiBoutiques(),existing=items.find(x=>x.boutiqueId===item.boutiqueId&&x.produitId===item.produitId);
   if(existing){if(existing.quantite+quantity>99)throw new Error("Quantité maximale dépassée.");existing.quantite+=quantity;existing.commentaire=item.commentaire||existing.commentaire;}else items.push(item);
@@ -4940,6 +4940,14 @@ function ouvrirPanierMultiBoutiques(){
  items.forEach(function(item,index){const row=document.createElement("div");row.style.cssText="padding:10px 0;border-bottom:1px solid #ddd;";const title=document.createElement("strong");title.textContent=item.produitNom+" × "+item.quantite;const detail=document.createElement("p");detail.textContent=item.boutiqueNom+" · "+(item.prixUnitaire*item.quantite).toLocaleString("fr-FR")+" FCFA";const remove=document.createElement("button");remove.type="button";remove.textContent="Retirer";remove.onclick=function(){const next=lirePanierMultiBoutiques();next.splice(index,1);sauvegarderPanierMultiBoutiques(next);actualiserBoutonPanierMultiBoutiques();if(next.length)ouvrirPanierMultiBoutiques();else modal.remove();};row.append(title,detail,remove);list.appendChild(row);});
  const total=items.reduce((sum,item)=>sum+item.prixUnitaire*item.quantite,0);const line=document.createElement("p");line.style.fontWeight="800";line.textContent="Total indicatif des articles : "+total.toLocaleString("fr-FR")+" FCFA";list.appendChild(line);
 }
+let mqciDernierGeocodagePanier=0;
+async function geocoderPanierRespectueux(adresse){
+ const wait=Math.max(0,1100-(Date.now()-mqciDernierGeocodagePanier));
+ if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
+ const result=await geocoderAdresseBoutique(adresse);
+ mqciDernierGeocodagePanier=Date.now();
+ return result;
+}
 async function commanderPanierMultiBoutiques(){
  const user=auth.currentUser,items=lirePanierMultiBoutiques(),status=document.getElementById("mqciPanierStatut");
  if(!user){if(status)status.textContent="Connectez-vous comme client.";return;}
@@ -4957,6 +4965,7 @@ async function commanderPanierMultiBoutiques(){
   const parent=db.collection("commandes_groupees").doc(),children=Array.from(grouped.keys(),function(){return db.collection("commandes_colis").doc();});
   const childIds=children.map(function(ref){return ref.id;}),batch=db.batch(),createdAt=firebase.firestore.FieldValue.serverTimestamp();
   let itemCount=0,articleTotal=0,childIndex=0;
+  const sharedDeliveryCoordinates=await geocoderPanierRespectueux(address);
   for(const [shopId,lines] of grouped){
    const shopSnap=await db.collection("demandes_nouveaux_services").doc(shopId).get();if(!shopSnap.exists)throw new Error("Une boutique du panier n'existe plus.");
    const shop=shopSnap.data();if(shop.uid!==lines[0].boutiqueUid||shop.statut!=="approuve"||shop.visibleManuellement===false)throw new Error("Une boutique n'est plus disponible.");
@@ -4967,14 +4976,14 @@ async function commanderPanierMultiBoutiques(){
     if(!product){const article=await db.collection("articles_boutiques").doc(line.produitId).get();if(article.exists&&article.data().boutiqueId===shopId&&article.data().statut==="approuve")product=article.data();}
     if(!product)throw new Error("Un article de "+(shop.titre||"la boutique")+" n'est plus disponible.");
     const day=new Date().toISOString().slice(0,10),promo=product.promotionStatut==="approuve"&&product.promotionDebut<=day&&product.promotionFin>=day,currentPrice=Number(promo?product.prixPromotion:product.prix);
-    if(currentPrice!==Number(line.prixUnitaire))throw new Error("Le prix de "+product.nom+" a changé. Actualisez votre panier.");
+    if(!Number.isInteger(currentPrice)||currentPrice!==Number(line.prixUnitaire))throw new Error("Le prix de "+product.nom+" a changé ou n’est pas un montant entier. Actualisez votre panier.");
     if(!Number.isInteger(line.quantite)||line.quantite<1||line.quantite>99)throw new Error("Quantité invalide.");
     shopTotal+=currentPrice*line.quantite;shopQty+=line.quantite;descriptions.push(String(product.nom||line.produitNom)+" × "+line.quantite);
    }
    itemCount+=shopQty;articleTotal+=shopTotal;
    const gpsValid=Number.isFinite(Number(shop.latitudeBoutique))&&Number(shop.latitudeBoutique)>=-90&&Number(shop.latitudeBoutique)<=90&&Number.isFinite(Number(shop.longitudeBoutique))&&Number(shop.longitudeBoutique)>=-180&&Number(shop.longitudeBoutique)<=180;
-   const pickup=gpsValid?{latitude:Number(shop.latitudeBoutique),longitude:Number(shop.longitudeBoutique),source:"gps_boutique",precisionMetres:Number(shop.precisionGpsBoutiqueMetres)||null}:await geocoderAdresseBoutique(shop.adresseBoutique||shop.commune);
-   const drop=await geocoderAdresseBoutique(address),child=children[childIndex],summary=descriptions.join(", "),tracking="BTQ-"+Date.now().toString(36).toUpperCase()+"-"+(childIndex+1);
+   const pickup=gpsValid?{latitude:Number(shop.latitudeBoutique),longitude:Number(shop.longitudeBoutique),source:"gps_boutique",precisionMetres:Number(shop.precisionGpsBoutiqueMetres)||null}:await geocoderPanierRespectueux(shop.adresseBoutique||shop.commune);
+   const drop=sharedDeliveryCoordinates,child=children[childIndex],summary=descriptions.join(", "),tracking="BTQ-"+Date.now().toString(36).toUpperCase()+"-"+(childIndex+1);
    batch.set(child,{clientId:user.uid,service:"livraison",depart:shop.adresseBoutique||shop.commune,destination:address,statut:"commande_boutique",publicVersion:false,createdAt:createdAt,typeCommande:"boutique",boutiqueId:shopId,boutiqueUid:shop.uid,boutiqueNom:shop.titre||"Boutique",montantLivraisonBoutique:0,commandeGroupeeId:parent.id});
    batch.set(child.collection("informations_privees").doc("details"),{clientId:user.uid,clientNom:profile.data().nom||"Client",clientTelephone:profile.data().telephone||"",telephoneExpediteur:shop.telephone||"",telephoneDestinataire:phone,adresseRecuperation:shop.adresseBoutique||shop.commune,adresseLivraison:address,descriptionColis:"Commande multi-boutiques : "+summary,trackingNumber:tracking,operation:"livraison_boutique",boutiqueUid:shop.uid,telephoneBoutique:shop.telephone||"",telephoneClient:phone,produitCommande:summary,quantiteCommande:shopQty,prixProduit:shopTotal,commentaireCommande:lines.map(function(line){return line.commentaire;}).filter(Boolean).join(" · "),latitudeRecuperation:pickup.latitude,longitudeRecuperation:pickup.longitude,sourceCoordonneesRecuperation:pickup.source||"geocodage_adresse",precisionGpsRecuperationMetres:pickup.precisionMetres||null,latitudeLivraison:drop.latitude,longitudeLivraison:drop.longitude,createdAt:createdAt});
    batch.set(child.collection("tarification").doc("prix"),{distanceKm:0,distanceMetres:0,tarifKm:100,montantLivraison:0,fraisService:0,montantTotal:0,devise:"FCFA",operation:"livraison_boutique",createdAt:createdAt});
