@@ -1169,6 +1169,7 @@ export function deliveryCodeIssuanceState(existing,now=new Date()) {
   if(issuanceCount>=3)return {ok:false,reason:"rate_limited"};
   return {ok:true,attempts,issuanceCount:issuanceCount+1,issuanceWindowStartedAt:inWindow?started:now};
 }
+export function isValidGroupedDeliveryCode(code) { return typeof code === "string" && /^\d{6}$/.test(code); }
 export async function hashDeliveryConfirmationCode(code) {
   if(typeof code!=="string"||!/^\d{6}$/.test(code))return null;
   const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(code));
@@ -2865,7 +2866,7 @@ async function completeGroupedDeliveryTourRequest(request,env) {
   if(!auth.user)return json({error:"unauthorized"},401);
   let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
   const parentId=body.commandeGroupeeId,code=typeof body.code==="string"?body.code:"",uid=auth.user.sub;
-  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId)||!/^\\d{6}$/.test(code))return json({error:"invalid_grouped_tour_completion"},400);
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId)||!isValidGroupedDeliveryCode(code))return json({error:"invalid_grouped_tour_completion"},400);
   const parentPath="commandes_groupees/"+parentId,missionPath="tournees_livraison/"+parentId,partnerPath="partenaires/"+uid;
   const walletPath="portefeuilles_livreurs/"+uid,lockPath=partnerPath+"/verrous/missionActive";
   const confirmationPath=parentPath+"/informations_privees/confirmation";
