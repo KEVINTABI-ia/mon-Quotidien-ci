@@ -1073,6 +1073,32 @@ export function buildGroupedTourPayoutLedger({tourId,courierUid,totalPriceXof,ex
   return Object.freeze({id:"tour_"+tourId,type:"grouped_tour_payout",tourId,courierUid,status:"ready_for_settlement",...split,createdAt:now.toISOString()});
 }
 
+// Pure lifecycle guards for a single courier-owned grouped tour. Firestore
+// transactions must persist these results atomically before exposing them to clients.
+export function acceptGroupedDeliveryTour({tour,courierUid,activeMission=null,now=new Date()}) {
+  if(!tour||typeof tour.id!=="string"||!tour.id.trim()||typeof courierUid!=="string"||!courierUid.trim())
+    throw new Error("invalid_grouped_tour_assignment");
+  if(tour.courierUid!==courierUid) throw new Error("grouped_tour_not_assigned_to_courier");
+  if(tour.status!=="offered") throw new Error("grouped_tour_not_available");
+  if(activeMission&&activeMission.status!=="completed"&&activeMission.status!=="cancelled")
+    throw new Error("courier_already_has_active_mission");
+  if(!(now instanceof Date)||!Number.isFinite(now.getTime())) throw new Error("invalid_grouped_tour_date");
+  return Object.freeze({tour:Object.freeze({...tour,status:"accepted",acceptedAt:now.toISOString()}),activeMissionLock:Object.freeze({tourId:tour.id,status:"active",createdAt:now.toISOString()})});
+}
+export function transitionGroupedDeliveryTourStop({tour,stopId,nextStatus}) {
+  if(!tour||!["accepted","collecting"].includes(tour.status)) throw new Error("grouped_tour_not_collecting");
+  const transition=applyDeliveryTourStopTransition({stops:tour.stops,stopId,nextStatus});
+  return Object.freeze({tour:Object.freeze({...tour,stops:transition.stops,status:transition.tourStatus==="delivering"?"delivering":transition.tourStatus}),...transition});
+}
+export function completeGroupedDeliveryTour({tour,courierUid,confirmationVerified,existingPayoutLedger=null,now=new Date()}) {
+  if(!tour||tour.status!=="delivering"||!Array.isArray(tour.stops)||tour.stops.length<2||tour.stops.some(stop=>stop.status!=="picked_up"))
+    throw new Error("grouped_tour_pickups_incomplete");
+  if(tour.courierUid!==courierUid) throw new Error("grouped_tour_not_assigned_to_courier");
+  if(confirmationVerified!==true) throw new Error("grouped_tour_confirmation_required");
+  const payoutLedger=buildGroupedTourPayoutLedger({tourId:tour.id,courierUid,totalPriceXof:tour.totalPriceXof,existingLedger:existingPayoutLedger,now});
+  return Object.freeze({tour:Object.freeze({...tour,status:"completed",completedAt:now.toISOString(),payoutLedgerId:payoutLedger.id}),payoutLedger,activeMissionLock:null});
+}
+
 export const GROUPED_DELIVERY_PRICING = Object.freeze({
   fixedStartFeeXof:500,
   pricePerKmXof:150,
