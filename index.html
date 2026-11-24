@@ -11993,41 +11993,38 @@ async function chargerHistoriqueCommandes() {
   if(!user){zone.innerHTML="<p>Veuillez vous connecter.</p>";return;}
   zone.innerHTML="<p>Chargement de votre historique...</p>";
   try{
-    const [childSnap,parentSnap]=await Promise.all([
+    const [snap,groupSnap]=await Promise.all([
       db.collection("commandes_colis").where("clientId","==",user.uid).get(),
       db.collection("commandes_groupees").where("clientId","==",user.uid).get()
     ]);
-    if(childSnap.empty&&parentSnap.empty){zone.innerHTML="<p>Aucune commande enregistrée pour le moment.</p>";return;}
-    const childDocs=childSnap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
-    const childById=new Map(childDocs.map(doc=>[doc.id,doc]));
+    if(snap.empty&&groupSnap.empty){zone.innerHTML="<p>Aucune commande enregistrée pour le moment.</p>";return;}
     zone.innerHTML="<h3>📋 Mes commandes</h3>";
-    const statusLabel=function(status){return ({en_attente_boutiques:"En attente de confirmation des boutiques",commande_boutique:"En attente de confirmation",confirmee:"Confirmée par la boutique",preparation:"En préparation",prete:"Prête pour le ramassage",en_attente:"En attente du livreur",livreur_affecte:"Livreur affecté",colis_recupere:"Articles récupérés",en_transit:"En cours de livraison",livre:"Livré",annule:"Annulé"})[status]||status||"Non renseigné";};
-    const parents=parentSnap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
+    const label=function(status){return ({commande_boutique:"Envoyée aux boutiques",confirmee:"Confirmée par la boutique",preparation:"En préparation",prete:"Prête à récupérer",en_attente:"En attente",livreur_affecte:"Livreur affecté",colis_recupere:"Articles récupérés",en_transit:"En cours de livraison",livre:"Livrée",annule:"Annulée"})[status]||status||"Non renseigné";};
+    const parents=groupSnap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
     for(const parentDoc of parents){
-      const parent=parentDoc.data(),card=document.createElement("div");card.className="stop";
-      const title=document.createElement("strong");title.textContent="🛍️ Commande multi-boutiques · "+(parent.reference||parentDoc.id);
-      const state=document.createElement("p");state.textContent="Statut global : "+statusLabel(parent.statut);
-      const totals=document.createElement("p");totals.textContent=parent.nombreBoutiques+" boutiques · "+parent.nombreArticles+" article(s) · "+Number(parent.montantArticles||0).toLocaleString("fr-FR")+" FCFA d'articles";
-      const subTitle=document.createElement("strong");subTitle.textContent="Suivi par boutique";
-      card.append(title,state,totals,subTitle);
+      const parent=parentDoc.data(),card=document.createElement("section");card.className="card";card.style.cssText="padding:14px;margin:12px 0;border:1px solid #dcebdd;";
+      const title=document.createElement("h4");title.textContent="🛍️ Commande multi-boutiques · "+(parent.reference||parentDoc.id);
+      const summary=document.createElement("p");summary.textContent=(parent.nombreBoutiques||parent.sousCommandes?.length||0)+" boutiques · "+(parent.nombreArticles||0)+" article(s) · "+Number(parent.montantArticles||0).toLocaleString("fr-FR")+" FCFA";
+      const global=document.createElement("p");global.textContent="Statut général : "+label(parent.statut);
+      const subtitle=document.createElement("strong");subtitle.textContent="Suivi par boutique";
+      card.append(title,summary,global,subtitle);
       for(const childId of (Array.isArray(parent.sousCommandes)?parent.sousCommandes:[])){
-        const childDoc=childById.get(childId);if(!childDoc)continue;
-        const child=childDoc.data(),line=document.createElement("p");
-        line.textContent=(child.boutiqueNom||"Boutique")+" — "+statusLabel(child.statut);
-        card.appendChild(line);
+        const childSnap=await db.collection("commandes_colis").doc(childId).get(),row=document.createElement("p");
+        if(!childSnap.exists){row.textContent="Sous-commande indisponible";card.appendChild(row);continue;}
+        const child=childSnap.data();row.textContent=(child.boutiqueNom||"Boutique")+" — "+label(child.statut)+(child.montantLivraisonBoutique>0?" · Livraison : "+Number(child.montantLivraisonBoutique).toLocaleString("fr-FR")+" FCFA":"");card.appendChild(row);
       }
       zone.appendChild(card);
     }
-    for(const childDoc of childDocs){
-      const c=childDoc.data();if(c.commandeGroupeeId)continue;
-      const privateSnap=await childDoc.ref.collection("informations_privees").doc("details").get(),details=privateSnap.exists?privateSnap.data():{};
+    const individuals=snap.docs.filter(doc=>!doc.data().commandeGroupeeId).slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
+    for(const doc of individuals){
+      const c=doc.data(),priv=await doc.ref.collection("informations_privees").doc("details").get(),d=priv.exists?priv.data():{};
       const card=document.createElement("div");card.className="stop";
-      const title=document.createElement("strong");title.textContent="Commande : "+(details.trackingNumber||childDoc.id);
-      const state=document.createElement("p");state.textContent="Statut : "+statusLabel(c.statut);
+      const title=document.createElement("strong");title.textContent="Commande : "+(d.trackingNumber||doc.id);
+      const status=document.createElement("p");status.textContent="Statut : "+label(c.statut);
       const route=document.createElement("p");route.textContent=(c.depart||"")+" → "+(c.destination||"");
-      card.append(title,state,route);zone.appendChild(card);
+      card.append(title,status,route);zone.appendChild(card);
     }
-  }catch(error){console.error(error);zone.innerHTML="<p>Impossible de charger votre historique : "+echapperTexteCompagnie(error.message)+"</p>";}
+  }catch(e){console.error(e);zone.innerHTML="<p>Impossible de charger votre historique : "+echapperTexteCompagnie(e.message)+"</p>";}
 }
 
 
