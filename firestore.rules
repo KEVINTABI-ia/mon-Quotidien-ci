@@ -619,6 +619,7 @@ service cloud.firestore {
           estConnecte()
           && resource.data.typeCommande == "boutique"
           && resource.data.boutiqueUid == request.auth.uid
+          && !("commandeGroupeeId" in resource.data)
           && resource.data.statut == "commande_boutique"
           && request.resource.data.statut == "en_attente"
           && request.resource.data.publicVersion == true
