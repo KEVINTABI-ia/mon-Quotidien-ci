@@ -619,6 +619,22 @@ service cloud.firestore {
           estConnecte()
           && resource.data.typeCommande == "boutique"
           && resource.data.boutiqueUid == request.auth.uid
+          && resource.data.statut == "commande_boutique"
+          && request.resource.data.statutBoutique is string
+          && (
+            (resource.data.get("statutBoutique", "recue") == "recue" && request.resource.data.statutBoutique == "confirmee")
+            || (resource.data.get("statutBoutique", "recue") == "confirmee" && request.resource.data.statutBoutique == "preparation")
+            || (resource.data.get("statutBoutique", "recue") == "preparation" && request.resource.data.statutBoutique == "prete")
+          )
+          && request.resource.data.statutBoutiqueModifiePar == request.auth.uid
+          && request.resource.data.statutBoutiqueModifieLe == request.time
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["statutBoutique", "statutBoutiqueModifieLe", "statutBoutiqueModifiePar"])
+        )
+        || (
+          estConnecte()
+          && resource.data.typeCommande == "boutique"
+          && resource.data.boutiqueUid == request.auth.uid
           && !("commandeGroupeeId" in resource.data)
           && resource.data.statut == "commande_boutique"
           && request.resource.data.statut == "en_attente"
