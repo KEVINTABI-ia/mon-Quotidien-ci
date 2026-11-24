@@ -2563,6 +2563,70 @@ async function subscriptionPlans(request,env) {
   if(!plans) return json({error:"unsupported_subscription_service"},400);
   return json({serviceId:requested,currency:"XOF",provider:"jeko",plans,checkedAt:now.toISOString()});
 }
+async function planGroupedDelivery(request,env) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  let body;try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const parentId=body?.commandeGroupeeId;
+  if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId))return json({error:"invalid_grouped_order_id"},400);
+  let transaction;
+  try{
+    transaction=await beginFirestoreTransaction(env);
+    const parentPath="commandes_groupees/"+parentId;
+    const parentDoc=await getDocInTransaction(env,parentPath,transaction);
+    if(!parentDoc)return json({error:"grouped_order_not_found"},404);
+    const parent=docData(parentDoc);
+    if(parent.clientId!==auth.user.sub)return json({error:"forbidden"},403);
+    if(parent.tournee?.statut==="planifiee")return json({ok:true,alreadyPlanned:true,plan:parent.tournee,tarification:parent.tarificationLivraison||null},200);
+    if(parent.statut!=="en_attente_boutiques"||!Array.isArray(parent.sousCommandes)||parent.sousCommandes.length<2||parent.sousCommandes.length>4)
+      return json({error:"grouped_order_not_plannable"},409);
+    const childDocs=await Promise.all(parent.sousCommandes.map(id=>getDocInTransaction(env,"commandes_colis/"+id,transaction)));
+    if(childDocs.some(doc=>!doc))return json({error:"grouped_order_child_missing"},409);
+    const children=childDocs.map(docData);
+    if(children.some(child=>child.clientId!==auth.user.sub||child.commandeGroupeeId!==parentId||child.typeCommande!=="boutique"))
+      return json({error:"grouped_order_child_mismatch"},409);
+    if(children.some(child=>child.statutBoutique!=="prete"))
+      return json({error:"shops_not_all_ready"},409);
+    const detailsDocs=await Promise.all(parent.sousCommandes.map(id=>getDocInTransaction(env,"commandes_colis/"+id+"/informations_privees/details",transaction)));
+    if(detailsDocs.some(doc=>!doc))return json({error:"grouped_order_private_details_missing"},409);
+    const details=detailsDocs.map(docData);
+    const shops=children.map((child,index)=>({
+      id:parent.sousCommandes[index],
+      latitude:Number(details[index].latitudeRecuperation),
+      longitude:Number(details[index].longitudeRecuperation)
+    }));
+    const destination={id:"destination",latitude:Number(details[0].latitudeLivraison),longitude:Number(details[0].longitudeLivraison)};
+    if(details.some(item=>Number(item.latitudeLivraison)!==destination.latitude||Number(item.longitudeLivraison)!==destination.longitude))
+      return json({error:"grouped_order_destinations_mismatch"},409);
+    const plan=await buildGroupedDeliveryPlanWithOsrm({
+      shops,destination,baseUrl:env.OSRM_BASE_URL||"https://router.project-osrm.org"
+    });
+    const tarification=calculateGroupedDeliveryPrice({roadDistanceKm:plan.totalRoadDistanceKm,shopCount:shops.length});
+    const snapshot={
+      statut:"planifiee",
+      orderedShopIds:plan.orderedShopIds,
+      destinationStopId:plan.destinationStopId,
+      totalRoadDistanceKm:plan.totalRoadDistanceKm,
+      totalDurationSeconds:plan.totalDurationSeconds,
+      provider:plan.provider,
+      distanceScope:plan.distanceScope,
+      plannedAt:new Date().toISOString()
+    };
+    await commitFirestoreTransaction(env,[updateWrite(parentPath,{
+      statut:"tournee_planifiee",
+      tournee:snapshot,
+      tarificationLivraison:tarification,
+      updatedAt:new Date()
+    },parentDoc.updateTime)],transaction);
+    return json({ok:true,plan:snapshot,tarification,providerNotice:"Plan calculé par OSRM. L'approche du livreur jusqu'à la première boutique sera prise en compte lors de l'affectation."},200);
+  }catch(error){
+    console.error("Grouped delivery planning failed",{code:error?.message||"unknown"});
+    const code=String(error?.message||"grouped_delivery_plan_failed");
+    const status=code.startsWith("invalid_")?400:code.startsWith("osrm_")?502:code==="firestore_transaction_commit_409"?409:503;
+    return json({error:code},status);
+  }
+}
+
 async function deliveryRoutePreview(request,env) {
   const auth=await requireUser(request,env);
   if(!auth.user)return json({error:"unauthorized"},401);
@@ -2598,6 +2662,7 @@ export default {
     else if(/^\/api\/ai\/conversations\/[0-9a-f-]{36}\/messages$/i.test(url.pathname)&&request.method==="GET") response=await aiConversationHistory(request,env,url.pathname.split("/")[4]);
     else if(url.pathname==="/api/jeko/checkout"&&request.method==="POST") response=await createCheckout(request,env);
     else if(url.pathname==="/api/courier/mission/complete"&&request.method==="POST") response=await completeCourierMission(request,env);
+    else if(url.pathname==="/api/delivery/grouped-plan"&&request.method==="POST") response=await planGroupedDelivery(request,env);
     else if(url.pathname==="/api/delivery/route-preview"&&request.method==="POST") response=await deliveryRoutePreview(request,env);
     else if(url.pathname==="/api/client/delivery-code"&&request.method==="POST") response=await clientDeliveryCode(request,env);
     else if(url.pathname==="/api/publicites/upload"&&request.method==="POST") response=await publiciteUpload(request,env,false);
