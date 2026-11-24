@@ -97,11 +97,12 @@ test("tour enters delivery phase only after every shop pickup is confirmed",()=>
 
 
 test("OSRM table response feeds road distances and durations into the delivery tour planner",async()=>{
+ const osrmStops=routeStops.map((stop,index)=>({...stop,latitude:stop.latitude??(index===0?5.34:5.38),longitude:stop.longitude??(index===0?-4.03:-3.99)}));
  const distances=routeMatrix.map(row=>row.map(value=>value*1000));
  const durations=routeMatrix.map(row=>row.map(value=>value*120));
  let requestedUrl="";
  const result=await buildDeliveryTourRouteWithOsrm({
-  stops:routeStops,
+  stops:osrmStops,
   fetchImpl:async url=>{
    requestedUrl=url;
    return {ok:true,json:async()=>({code:"Ok",distances,durations})};
@@ -114,17 +115,18 @@ test("OSRM table response feeds road distances and durations into the delivery t
  assert.equal(result.totalRoadDistanceKm,7);
  assert.equal(result.totalDurationSeconds,840);
  assert.equal(result.provider,"osrm");
- assert.match(decodeURIComponent(parsed.pathname),/-4\\.02,5\\.35/);
+ assert.match(decodeURIComponent(parsed.pathname),/-4\\.03,5\\.34/);
 });
 
 test("OSRM adapter rejects incomplete or invalid routing responses",async()=>{
+ const osrmStops=routeStops.map((stop,index)=>({...stop,latitude:stop.latitude??(index===0?5.34:5.38),longitude:stop.longitude??(index===0?-4.03:-3.99)}));
  await assert.rejects(()=>buildDeliveryTourRouteWithOsrm({
-  stops:routeStops,fetchImpl:async()=>({ok:true,json:async()=>({code:"NoRoute"})})
+  stops:osrmStops,fetchImpl:async()=>({ok:true,json:async()=>({code:"NoRoute"})})
  }),/invalid_osrm_matrix/);
  await assert.rejects(()=>buildDeliveryTourRouteWithOsrm({
-  stops:routeStops,baseUrl:"http://router.project-osrm.org",fetchImpl:async()=>({ok:true,json:async()=>({})})
+  stops:osrmStops,baseUrl:"http://router.project-osrm.org",fetchImpl:async()=>({ok:true,json:async()=>({})})
  }),/invalid_osrm_base_url/);
  await assert.rejects(()=>buildDeliveryTourRouteWithOsrm({
-  stops:routeStops,fetchImpl:async()=>({ok:false,status:429})
+  stops:osrmStops,fetchImpl:async()=>({ok:false,status:429})
  }),/osrm_http_429/);
 });
