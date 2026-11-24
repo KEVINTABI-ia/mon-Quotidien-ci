@@ -4997,6 +4997,8 @@ async function commanderPanierMultiBoutiques(){
  }catch(error){console.error(error);if(status)status.textContent="Commande non enregistrée : "+error.message;}
 }
 
+auth.onAuthStateChanged(function(user){if(user)actualiserBoutonPanierMultiBoutiques();});
+
 async function geocoderAdresseBoutique(adresse){
  const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=ci&q="+encodeURIComponent(adresse+", Côte d'Ivoire");
  const reponse=await fetch(url,{headers:{"Accept":"application/json"}});
