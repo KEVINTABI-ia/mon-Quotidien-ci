@@ -29,6 +29,7 @@ button,.btn{border:0;border-radius:11px;padding:13px 16px;font:700 14px inherit;
 @media(max-width:650px){.dashboard-grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
+.module-nav{display:flex;gap:8px;overflow-x:auto;padding:8px 2px 14px;margin-bottom:10px;scrollbar-width:thin}.module-nav button{white-space:nowrap;background:#eaf4ef;color:var(--deep);flex:0 0 auto}.module-nav button.active{background:var(--deep);color:#fff}.module-view{display:none}.module-view.active{display:block}.module-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}.module-form label{margin-top:4px}.module-list{margin-top:12px}.module-row{padding:12px 0;border-bottom:1px solid var(--line)}.module-row strong{display:block;color:var(--deep)}
 </style>
 </head>
 <body>
@@ -64,7 +65,16 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
 <section class="panel hidden" id="dashboardPanel">
 <h2 id="dashboardTitle">Mon espace MON BUSINESS</h2><div id="subscriptionStatus" class="notice"></div>
 
-<div id="businessDashboard">
+<nav class="module-nav hidden" id="moduleNav" aria-label="Modules MON BUSINESS">
+<button type="button" class="active" data-module="overview" onclick="showBusinessModule('overview')">Vue d’ensemble</button>
+<button type="button" data-module="produit" onclick="showBusinessModule('produit')">Stocks & produits</button>
+<button type="button" data-module="client" onclick="showBusinessModule('client')">Clients</button>
+<button type="button" data-module="vente" onclick="showBusinessModule('vente')">Ventes & commandes</button>
+<button type="button" data-module="achat" onclick="showBusinessModule('achat')">Achats & fournisseurs</button>
+<button type="button" data-module="personnel" onclick="showBusinessModule('personnel')">Personnel</button>
+<button type="button" data-module="reports" onclick="showBusinessModule('reports')">Rapports</button>
+</nav>
+<div id="businessDashboard">\n<section class="module-view active" id="module-overview">
   <h3 style="margin:18px 0 4px;color:var(--deep)">Vue d’ensemble</h3>
   <p class="muted" id="dashboardPeriod">Vos indicateurs de gestion</p>
   <div class="metrics">
@@ -162,6 +172,56 @@ async function loadBusinessDashboard(){
     if(!canWrite)message("operationStatus","Votre accès est expiré : le tableau de bord reste consultable, mais les nouvelles opérations sont bloquées.",true);
   }catch(e){if(list)list.textContent=e.message;}
 }
+function showBusinessModule(module){
+ document.querySelectorAll(".module-view").forEach(el=>el.classList.remove("active"));
+ const target=document.getElementById("module-"+module);if(target)target.classList.add("active");
+ document.querySelectorAll("#moduleNav button").forEach(btn=>btn.classList.toggle("active",btn.dataset.module===module));
+ if(["produit","client","vente","achat","personnel"].includes(module))loadModuleRecords(module);
+ if(module==="reports")loadBusinessReports();
+}
+function moduleValue(id){return document.getElementById(id)?.value?.trim()||"";}
+async function loadModuleRecords(module){
+ const box=document.getElementById("list-"+module);if(!box)return;box.textContent="Chargement…";
+ try{
+  const user=auth.currentUser,token=await user.getIdToken();
+  const res=await fetch(API+"/api/mon-business/modules/"+module+"?companyId="+encodeURIComponent(companyId),{headers:{Authorization:"Bearer "+token,"X-MON-BUSINESS-PASSWORD":activeBusinessPassword||""}});
+  const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||"Chargement impossible.");
+  box.replaceChildren();const records=Array.isArray(data.records)?data.records:[];
+  if(!records.length){box.textContent="Aucun enregistrement pour le moment.";return;}
+  records.forEach(record=>{
+   const row=document.createElement("div");row.className="module-row";const title=document.createElement("strong"),meta=document.createElement("span");title.textContent=record.data?.name||record.data?.label||"Enregistrement";
+   meta.className="muted";meta.textContent=Object.entries(record.data||{}).map(([k,v])=>k==="amountXof"||k==="unitPrice"?k+": "+formatXof(v):k+": "+String(v)).join(" · ");row.append(title,meta);box.append(row);
+  });
+ }catch(e){box.textContent=e.message;}
+}
+async function saveModuleRecord(module){
+ const prefix={produit:"p",client:"c",vente:"v",achat:"a",personnel:"s"}[module];if(!prefix)return;
+ const keys={produit:["name","sku","category","quantity","unitPrice","minQuantity","unit"],client:["name","phone","email","address","notes"],vente:["label","amountXof","clientName","paymentMethod","status"],achat:["label","amountXof","supplierName","date","notes"],personnel:["name","phone","role","email","status"]}[module];
+ const data={};keys.forEach(key=>{const el=document.getElementById(prefix+"-"+key);if(el&&el.value!=="")data[key]=["quantity","unitPrice","minQuantity","amountXof"].includes(key)?Number(el.value):el.value.trim();});
+ try{
+  const user=auth.currentUser,token=await user.getIdToken();
+  const res=await fetch(API+"/api/mon-business/modules/"+module,{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json","X-MON-BUSINESS-PASSWORD":activeBusinessPassword||""},body:JSON.stringify({companyId,data})});
+  const result=await res.json().catch(()=>({}));if(!res.ok)throw new Error(result.error==="invalid_record"?"Vérifiez les champs obligatoires et les montants.":result.error||"Enregistrement impossible.");
+  keys.forEach(key=>{const el=document.getElementById(prefix+"-"+key);if(el&&el.type!=="select")el.value="";});
+  await loadModuleRecords(module);
+ }catch(e){alert(e.message);}
+}
+async function loadBusinessReports(){
+ const box=document.getElementById("reportsContent");if(!box)return;
+ try{
+  const user=auth.currentUser,token=await user.getIdToken();
+  const modules=["produit","client","vente","achat","personnel"];
+  const results=await Promise.all(modules.map(async module=>{
+   const res=await fetch(API+"/api/mon-business/modules/"+module+"?companyId="+encodeURIComponent(companyId),{headers:{Authorization:"Bearer "+token,"X-MON-BUSINESS-PASSWORD":activeBusinessPassword||""}});
+   const data=await res.json();if(!res.ok)throw new Error(data.error||"Rapport indisponible");return [module,data.records||[]];
+  }));
+  const counts=Object.fromEntries(results.map(([key,rows])=>[key,rows.length]));
+  const sales=results.find(x=>x[0]==="vente")[1].reduce((sum,row)=>sum+Number(row.data?.amountXof||0),0);
+  const purchases=results.find(x=>x[0]==="achat")[1].reduce((sum,row)=>sum+Number(row.data?.amountXof||0),0);
+  box.textContent="Produits : "+counts.produit+" · Clients : "+counts.client+" · Ventes enregistrées : "+counts.vente+" ("+formatXof(sales)+") · Achats enregistrés : "+counts.achat+" ("+formatXof(purchases)+") · Membres du personnel : "+counts.personnel+". Ces chiffres correspondent aux 100 derniers enregistrements par module.";
+ }catch(e){box.textContent=e.message;}
+}
+
 async function saveBusinessOperation(){
   const button=document.getElementById("saveOperationButton");
   const body={companyId,type:document.getElementById("operationType").value,amountXof:Number(document.getElementById("operationAmount").value),label:document.getElementById("operationLabel").value,category:document.getElementById("operationCategory").value,note:document.getElementById("operationNote").value};
@@ -178,7 +238,7 @@ async function saveBusinessOperation(){
 
 async function api(path,body){const user=auth.currentUser;if(!user)throw new Error("Connectez-vous d’abord.");const token=await user.getIdToken();const headers={"Authorization":"Bearer "+token,"Content-Type":"application/json"};if(activeBusinessPassword)headers["X-MON-BUSINESS-PASSWORD"]=activeBusinessPassword;const response=await fetch(API+path,{method:"POST",headers,body:JSON.stringify(body)});const data=await response.json().catch(()=>({}));if(!response.ok){const map={business_trial_already_used:"Cet essai gratuit a déjà été utilisé pour cette entreprise.",mon_business_trial_or_subscription_active:"Votre période d’essai ou votre abonnement est encore actif.",existing_payment_requires_review:"Un paiement précédent doit être vérifié avant une nouvelle tentative.",invalid_business_identity:"Vérifiez le nom et le numéro de téléphone professionnel."};throw new Error(map[data.error]||data.error||"Une erreur est survenue.");}return data;}
 async function startTrial(){try{const password=document.getElementById("newBusinessPassword").value;if(password!==document.getElementById("confirmBusinessPassword").value)throw new Error("Les deux mots de passe ne correspondent pas.");if(password.length<8)throw new Error("Le mot de passe doit contenir au moins 8 caractères.");message("companyStatus","Création sécurisée de votre espace…");const data=await api("/api/mon-business/trial",{managerName:document.getElementById("managerName").value,companyName:document.getElementById("companyName").value,phone:document.getElementById("companyPhone").value,password});companyId=data.companyId;company=data.company;activeBusinessPassword=password;showDashboard();}catch(e){message("companyStatus",e.message,true);}}
-function showDashboard(){document.getElementById("authPanel").classList.add("hidden");document.getElementById("companyPanel").classList.add("hidden");document.getElementById("dashboardPanel").classList.remove("hidden");document.getElementById("dashboardTitle").textContent=company.companyName;const trialEnd=company.trialEndAt?.seconds?new Date(company.trialEndAt.seconds*1000):new Date(company.trialEndAt);const expiry=company.subscriptionEndAt?.seconds?new Date(company.subscriptionEndAt.seconds*1000):company.subscriptionEndAt?new Date(company.subscriptionEndAt):null;let text="";if(company.status==="trial"&&trialEnd.getTime()>Date.now()){text="Essai gratuit en cours jusqu’au "+trialEnd.toLocaleDateString("fr-FR")+". Aucune facturation pendant cette période.";document.getElementById("paymentPanel").classList.add("hidden");}else if(company.status==="active"&&expiry&&expiry.getTime()>Date.now()){text="Formule "+(company.planLabel||company.planId)+" active jusqu’au "+expiry.toLocaleDateString("fr-FR")+".";document.getElementById("paymentPanel").classList.add("hidden");}else{text="Votre période d’essai ou votre abonnement est terminé. Choisissez une formule pour réactiver votre espace.";document.getElementById("paymentPanel").classList.remove("hidden");}document.getElementById("subscriptionStatus").textContent=text;loadBusinessDashboard();}
+function showDashboard(){document.getElementById("moduleNav").classList.remove("hidden");showBusinessModule("overview");document.getElementById("authPanel").classList.add("hidden");document.getElementById("companyPanel").classList.add("hidden");document.getElementById("dashboardPanel").classList.remove("hidden");document.getElementById("dashboardTitle").textContent=company.companyName;const trialEnd=company.trialEndAt?.seconds?new Date(company.trialEndAt.seconds*1000):new Date(company.trialEndAt);const expiry=company.subscriptionEndAt?.seconds?new Date(company.subscriptionEndAt.seconds*1000):company.subscriptionEndAt?new Date(company.subscriptionEndAt):null;let text="";if(company.status==="trial"&&trialEnd.getTime()>Date.now()){text="Essai gratuit en cours jusqu’au "+trialEnd.toLocaleDateString("fr-FR")+". Aucune facturation pendant cette période.";document.getElementById("paymentPanel").classList.add("hidden");}else if(company.status==="active"&&expiry&&expiry.getTime()>Date.now()){text="Formule "+(company.planLabel||company.planId)+" active jusqu’au "+expiry.toLocaleDateString("fr-FR")+".";document.getElementById("paymentPanel").classList.add("hidden");}else{text="Votre période d’essai ou votre abonnement est terminé. Choisissez une formule pour réactiver votre espace.";document.getElementById("paymentPanel").classList.remove("hidden");}document.getElementById("subscriptionStatus").textContent=text;loadBusinessDashboard();}
 async function paySubscription(){try{message("dashboardStatus","Préparation du paiement Jèko…");const data=await api("/api/jeko/checkout",{serviceId:"mon_business",companyId,planId:document.getElementById("planId").value,paymentMethod:document.getElementById("paymentMethod").value});window.location.href=data.checkoutUrl;}catch(e){message("dashboardStatus",e.message,true);}}
 async function loadCompanyChoices(){
  const user=auth.currentUser;if(!user)return;
