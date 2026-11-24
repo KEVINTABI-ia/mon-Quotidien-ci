@@ -131,7 +131,7 @@
   };
   if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const auth=firebase.auth(), db=firebase.firestore();
-  const MON_BUSINESS_API=window.MON_BUSINESS_API||"https://mon-business-api.tabikevin57.workers.dev";
+  const MON_BUSINESS_API=window.MON_BUSINESS_API||"https://square-wind-47f5.tabikevin57.workers.dev";
   const $=id=>document.getElementById(id);
   let currentUser=null, currentBusinessId=null, currentBusinessOwner=false, lastInviteUrl="";
   async function callWorker(path,payload){
