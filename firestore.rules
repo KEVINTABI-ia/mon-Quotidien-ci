@@ -528,7 +528,7 @@ service cloud.firestore {
         estConnecte()
         && request.resource.data.clientId == request.auth.uid
         && request.resource.data.keys().hasAll(["clientId","service","depart","destination","statut","createdAt","publicVersion","typeCommande","boutiqueId","boutiqueUid","boutiqueNom","montantLivraisonBoutique"])
-        && request.resource.data.keys().hasOnly(["clientId","service","depart","destination","statut","createdAt","publicVersion","typeCommande","boutiqueId","boutiqueUid","boutiqueNom","montantLivraisonBoutique"])
+        && request.resource.data.keys().hasOnly(["clientId","service","depart","destination","statut","createdAt","publicVersion","typeCommande","boutiqueId","boutiqueUid","boutiqueNom","montantLivraisonBoutique","commandeGroupeeId"])
         && request.resource.data['service'] == "livraison"
         && request.resource.data.statut == "commande_boutique"
         && request.resource.data.publicVersion == false
@@ -540,6 +540,11 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin is timestamp
         && get(/databases/$(database)/documents/demandes_nouveaux_services/$(request.resource.data.boutiqueId)).data.abonnementFin > request.time
         && request.resource.data.montantLivraisonBoutique == 0
+        && (!("commandeGroupeeId" in request.resource.data)
+          || (request.resource.data.commandeGroupeeId is string
+            && existsAfter(/databases/$(database)/documents/commandes_groupees/$(request.resource.data.commandeGroupeeId))
+            && getAfter(/databases/$(database)/documents/commandes_groupees/$(request.resource.data.commandeGroupeeId)).data.clientId == request.auth.uid
+            && getAfter(/databases/$(database)/documents/commandes_groupees/$(request.resource.data.commandeGroupeeId)).data.sousCommandes.hasAny([commandeId])))
         && existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details)
         && getAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/informations_privees/details).data.clientId == request.auth.uid
         && existsAfter(/databases/$(database)/documents/commandes_colis/$(commandeId)/tarification/prix)
