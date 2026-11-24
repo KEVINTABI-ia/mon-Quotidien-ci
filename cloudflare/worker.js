@@ -2731,15 +2731,17 @@ async function dispatchGroupedDeliveryTour(request,env) {
   const parentId=body.commandeGroupeeId,courierUid=body.courierUid;
   if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId)||typeof courierUid!=="string"||courierUid.length<5||courierUid.length>128)
     return json({error:"invalid_grouped_tour_assignment"},400);
-  const parentPath="commandes_groupees/"+parentId,missionPath="tournees_livraison/"+parentId,partnerPath="partenaires/"+courierUid;
+  const parentPath="commandes_groupees/"+parentId,missionPath="tournees_livraison/"+parentId,partnerPath="partenaires/"+courierUid,lockPath=partnerPath+"/verrous/missionActive";
   let tx;
   try {
     tx=await beginFirestoreTransaction(env);
-    const [parentDoc,partnerDoc,missionDoc]=await Promise.all([
-      getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,partnerPath,tx),getDocInTransaction(env,missionPath,tx)
+    const [parentDoc,partnerDoc,missionDoc,lockDoc]=await Promise.all([
+      getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,partnerPath,tx),getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,lockPath,tx)
     ]);
     if(!parentDoc)return json({error:"grouped_order_not_found"},404);
     if(missionDoc)return json({error:"grouped_tour_already_dispatched"},409);
+    const lock=docData(lockDoc);
+    if(lockDoc&&lock?.statut==="active")return json({error:"courier_already_has_active_mission"},409);
     const parent=docData(parentDoc),profile=docData(partnerDoc);
     if(parent.statut!=="tournee_planifiee"||parent.tournee?.statut!=="planifiee"||!Array.isArray(parent.sousCommandes)||parent.sousCommandes.length<2||parent.sousCommandes.length>4)
       return json({error:"grouped_tour_not_ready_for_dispatch"},409);
