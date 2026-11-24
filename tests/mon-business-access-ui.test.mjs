@@ -12,13 +12,13 @@ test("la page avancée charge Firebase et sa configuration du Worker",()=>{
   assert.match(html,/window\.MON_BUSINESS_API/);
 });
 test("l'espace expose création entreprise, activités et invitations WhatsApp",()=>{
-  for(const id of ["businessForm","activityForm","inviteForm","inviteEmail","inviteRole","inviteActivities","copyInviteLink","shareInviteLink","membersList"]) {
+  for(const id of ["businessForm","activityForm","inviteForm","inviteEmail","inviteRole","inviteActivities","copyInviteLink","shareInviteLink","membersList","invitationsList"]) {
     assert.match(html,new RegExp('id="'+id+'"'));
   }
   assert.match(html,/wa\.me/);
 });
 test("les invitations utilisent le Worker et ne sont pas écrites depuis le navigateur",()=>{
-  for(const route of ["/v1/invitations","/v1/invitations/accept","/v1/members/update"]) assert.ok(html.includes(route));
+  for(const route of ["/v1/invitations","/v1/invitations/list","/v1/invitations/accept","/v1/invitations/revoke","/v1/members/update"]) assert.ok(html.includes(route));
   assert.match(html,/getIdToken\(\)/);
   assert.match(worker,/emailVerified\s*!==\s*true/);
 });
