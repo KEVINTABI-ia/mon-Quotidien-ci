@@ -4,28 +4,31 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const html=fs.readFileSync("mon-business.html","utf8");
-test("la page Mon Business contient les contrôles d'enregistrement et d'activités",()=>{
-  for(const id of ["businessName","legalStatus","registrationNumber","activityName","activityType","createBusiness","addActivity","activities"]) {
+test("la page MON BUSINESS expose la navigation des modules métier",()=>{
+  for(const module of ["overview","produit","client","vente","achat","personnel","reports"]) {
+    assert.match(html,new RegExp('data-module="'+module+'"'));
+    assert.match(html,new RegExp('id="module-'+module+'"'));
+  }
+});
+test("les modules métier utilisent les routes API protégées",()=>{
+  for(const route of ["/api/mon-business/dashboard","/api/mon-business/modules/","/api/mon-business/transaction"]) {
+    assert.ok(html.includes(route), "route absente : "+route);
+  }
+  assert.match(html,/Authorization:\\s*["']Bearer/);
+  assert.match(html,/X-MON-BUSINESS-PASSWORD/);
+});
+test("la page demande une authentification et un accès MON BUSINESS dédié",()=>{
+  assert.match(html,/firebase\.auth\(\)/);
+  assert.match(html,/getIdToken\(\)/);
+  assert.match(html,/activeBusinessPassword/);
+});
+test("la page contient les formulaires des principaux modules",()=>{
+  for(const id of ["p-name","c-name","v-label","a-label","s-name","reportsContent"]) {
     assert.match(html,new RegExp('id="'+id+'"'));
   }
 });
-test("l'initialisation Firebase utilise la configuration du projet existant",()=>{
-  assert.match(html,/projectId:"mon-transport-ci"/);
-  assert.match(html,/firebase\.auth\(\)/);
-  assert.match(html,/firebase\.firestore\(\)/);
-});
-test("les écritures d'entreprise créent propriétaire et entreprise dans le même batch",()=>{
-  assert.match(html,/batch=db\.batch\(\)/);
-  assert.match(html,/batch\.set\(ref\.collection\("members"\)\.doc\(currentUser\.uid\)/);
-  assert.match(html,/await batch\.commit\(\)/);
-});
-test("la création d'activité vérifie l'entreprise courante et associe le créateur",()=>{
-  assert.match(html,/if\(!currentBusinessId\|\|!currentUser\)/);
-  assert.match(html,/createdBy:currentUser\.uid/);
-  assert.match(html,/businessId:currentBusinessId/);
-});
 test("le script intégré de la page ne contient pas d'erreur de syntaxe",()=>{
-  const scripts=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).filter(s=>s.trim());
-  assert.equal(scripts.length,1);
-  assert.doesNotThrow(()=>new vm.Script(scripts[0],{filename:"mon-business.html"}));
+  const scripts=[...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)].map(m=>m[1]).filter(s=>s.trim());
+  assert.ok(scripts.length>=1);
+  for(const script of scripts) assert.doesNotThrow(()=>new vm.Script(script,{filename:"mon-business.html"}));
 });
