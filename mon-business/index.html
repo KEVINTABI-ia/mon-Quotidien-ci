@@ -90,6 +90,8 @@
       <button type="button" id="copyInviteLink" class="secondary">Copier le lien</button>
       <button type="button" id="shareInviteLink">Partager sur WhatsApp</button>
     </div>
+    <h3>Invitations en attente</h3>
+    <div id="invitationsList" class="muted">Chargement des invitations…</div>
     <div id="memberStatus" class="status hidden" role="status" aria-live="polite"></div>
     <div id="membersList"></div>
   </section>
@@ -237,6 +239,7 @@
       lastInviteUrl=result.inviteUrl;
       setStatus("inviteStatus","Invitation créée. Expiration : "+new Date(result.expiresAt).toLocaleString("fr-FR")+". Partagez ce lien uniquement avec la personne invitée.");
       $("inviteLinkActions").classList.remove("hidden");
+      await loadInvitations();
     }catch(error){
       setStatus("inviteStatus",error.message==="worker_not_configured"?"Le Worker sécurisé n'est pas encore déployé/configuré.":"Création impossible : "+error.message,true);
     }finally{button.disabled=false;}
@@ -250,6 +253,35 @@
     if(!lastInviteUrl)return;
     window.open("https://wa.me/?text="+encodeURIComponent("Vous êtes invité à rejoindre mon espace Mon Business : "+lastInviteUrl),"_blank","noopener");
   });
+
+  async function loadInvitations(){
+    if(!currentBusinessId||!currentBusinessOwner)return;
+    const list=$("invitationsList");list.textContent="Chargement des invitations…";
+    try{
+      const result=await callWorker("/v1/invitations/list",{businessId:currentBusinessId});
+      list.replaceChildren();
+      const invitations=Array.isArray(result.invitations)?result.invitations:[];
+      if(!invitations.length){list.textContent="Aucune invitation en attente.";return;}
+      invitations.forEach(invitation=>{
+        const item=document.createElement("div");item.className="status";
+        const label=document.createElement("strong");
+        const expiry=invitation.expiresAt?new Date(invitation.expiresAt).toLocaleString("fr-FR"):"expiration inconnue";
+        label.textContent=invitation.email+" · "+invitation.role+" · expire le "+expiry;
+        const revoke=document.createElement("button");revoke.type="button";revoke.className="secondary";revoke.textContent="Révoquer";
+        revoke.addEventListener("click",async()=>{
+          if(!window.confirm("Révoquer l’invitation envoyée à "+invitation.email+" ?"))return;
+          revoke.disabled=true;
+          try{
+            await callWorker("/v1/invitations/revoke",{businessId:currentBusinessId,invitationId:invitation.invitationId});
+            setStatus("memberStatus","Invitation révoquée.");
+            await loadInvitations();
+          }catch(error){setStatus("memberStatus","Révocation impossible : "+error.message,true);}
+          finally{revoke.disabled=false;}
+        });
+        item.append(label,revoke);list.append(item);
+      });
+    }catch(error){list.textContent="Impossible de charger les invitations : "+error.message;}
+  }
 
   async function loadMembers(){
     if(!currentBusinessId||!currentUser)return;
@@ -298,6 +330,7 @@
         }
         list.appendChild(item);
       });
+      await loadInvitations();
     }catch(error){
       console.error("Mon Business member read error",error);
       setStatus("memberStatus","Impossible de charger les collaborateurs.",true);
