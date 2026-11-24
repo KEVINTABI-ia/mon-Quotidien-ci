@@ -10,6 +10,7 @@ import {
   calculateGroupedTourPayout,
   buildGroupedTourPayoutLedger,
   buildGroupedTourStops,
+  courierGroupedTourSubscriptionActive,
   acceptGroupedDeliveryTour,
   transitionGroupedDeliveryTourStop,
   markGroupedTourDestinationArrived,
@@ -210,6 +211,15 @@ test("grouped tour payout ledger is uniquely keyed and refuses duplicate settlem
  assert.throws(()=>buildGroupedTourPayoutLedger({tourId:"tour-42",courierUid:"courier-7",totalPriceXof:5000,existingLedger:{status:"paid"},now}),/grouped_tour_payout_already_recorded/);
 });
 
+
+test("grouped tour dispatch requires an approved active courier subscription",()=>{
+ const now=new Date("2026-11-24T12:00:00.000Z");
+ assert.equal(courierGroupedTourSubscriptionActive({statutAbonnementPartenaire:"Essai",dateFinEssai:new Date("2026-11-25T00:00:00.000Z")},now),true);
+ assert.equal(courierGroupedTourSubscriptionActive({statutAbonnementPartenaire:"Actif",dateExpirationAbonnement:new Date("2026-12-01T00:00:00.000Z")},now),true);
+ assert.equal(courierGroupedTourSubscriptionActive({statutAbonnementPartenaire:"Essai",dateFinEssai:new Date("2026-11-23T00:00:00.000Z")},now),false);
+ assert.equal(courierGroupedTourSubscriptionActive({statutAbonnementPartenaire:"Actif",dateExpirationAbonnement:"invalid"},now),false);
+ assert.equal(courierGroupedTourSubscriptionActive({statutAbonnementPartenaire:"inactif"},now),false);
+});
 
 test("grouped tour maps optimized shop order to the correct child order IDs",()=>{
  const children=[
