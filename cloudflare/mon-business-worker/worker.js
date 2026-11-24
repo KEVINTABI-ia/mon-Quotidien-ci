@@ -216,6 +216,28 @@ async function acceptInvitation(request,env,user,body) {
   ]);
   return json({accepted:true,businessId,role:data.role});
 }
+async function listInvitations(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id");
+  await requireOwner(env,user,businessId);
+  const response=await fetch("https://firestore.googleapis.com/v1/projects/"+PROJECT_ID+"/databases/(default)/documents:runQuery",{
+    method:"POST",
+    headers:{authorization:"Bearer "+await googleAccessToken(env),"content-type":"application/json"},
+    body:JSON.stringify({structuredQuery:{
+      from:[{collectionId:"businessInvitations"}],
+      where:{fieldFilter:{field:{fieldPath:"businessId"},op:"EQUAL",value:{stringValue:businessId}}},
+      orderBy:[{field:{fieldPath:"createdAt"},direction:"DESCENDING"}],
+      limit:100
+    }})
+  });
+  if(!response.ok)throw new Error("firestore_query_failed");
+  const rows=await response.json();
+  return json({invitations:(Array.isArray(rows)?rows:[])
+    .filter(row=>row.document?.name)
+    .map(row=>({id:row.document.name.split("/").pop(),...decodeDocument(row.document)}))
+    .filter(item=>item.businessId===businessId&&item.status==="pending")
+    .map(item=>({invitationId:item.id,email:item.email,role:item.role,activityIds:item.activityIds,expiresAt:item.expiresAt,status:item.status}))});
+}
+
 async function revokeInvitation(request,env,user,body) {
   const businessId=assertId(body.businessId,"business_id");
   await requireOwner(env,user,businessId);
@@ -287,6 +309,7 @@ export default {
       let response;
       if (url.pathname==="/v1/invitations") response=await createInvitation(request,env,user,body);
       else if (url.pathname==="/v1/invitations/accept") response=await acceptInvitation(request,env,user,body);
+      else if (url.pathname==="/v1/invitations/list") response=await listInvitations(env,user,body);
       else if (url.pathname==="/v1/invitations/revoke") response=await revokeInvitation(request,env,user,body);
       else if (url.pathname==="/v1/members/update") response=await updateMember(request,env,user,body);
       else throw new HttpError(404,"route_not_found");
@@ -301,4 +324,4 @@ export default {
   }
 };
 
-export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit };
+export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, listInvitations };
