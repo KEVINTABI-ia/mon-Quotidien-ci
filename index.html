@@ -7994,9 +7994,10 @@ async function chargerCommandesAdmin() {
 
   try {
     const maintenant = new Date();
-    const [commandesSnap, partenairesSnap] = await Promise.all([
+    const [commandesSnap, partenairesSnap, commandesGroupeesSnap] = await Promise.all([
       db.collection("commandes_colis").get(),
-      db.collection("partenaires").get()
+      db.collection("partenaires").get(),
+      db.collection("commandes_groupees").get()
     ]);
 
     const partenaires = partenairesSnap.docs.map(doc => {
@@ -8035,6 +8036,25 @@ async function chargerCommandesAdmin() {
       return;
     }
 
+    const groupesPrets=commandesGroupeesSnap.docs.map(doc=>({id:doc.id,...doc.data()}))
+      .filter(parent=>parent.statut==="tournee_planifiee"&&parent.tournee?.statut==="planifiee")
+      .sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
+    if(groupesPrets.length){
+      const heading=document.createElement("h3");heading.textContent="🚚 Tournées multi-boutiques à attribuer";zone.appendChild(heading);
+      groupesPrets.forEach(parent=>{
+        const card=document.createElement("article");card.className="stop";
+        const title=document.createElement("strong");title.textContent="Commande groupée · "+(parent.reference||parent.id);card.appendChild(title);
+        const summary=document.createElement("p");summary.textContent=(parent.nombreBoutiques||parent.sousCommandes?.length||0)+" boutiques · "+Number(parent.tournee.totalRoadDistanceKm||0).toLocaleString("fr-FR")+" km · Tarif "+Number(parent.tarificationEstimee?.totalPriceXof||0).toLocaleString("fr-FR")+" FCFA";card.appendChild(summary);
+        const route=document.createElement("p");route.textContent="Ordre de collecte : "+(parent.tournee.orderedShopIds||[]).join(" → ");card.appendChild(route);
+        const eligible=partenaires.filter(p=>p.type==="livreur_independant"&&p.disponible&&p.enLigne===true);
+        const select=document.createElement("select");select.setAttribute("aria-label","Livreur pour la tournée "+parent.id);
+        const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent=eligible.length?"Choisir un livreur disponible":"Aucun livreur éligible en ligne";select.appendChild(placeholder);
+        eligible.forEach(p=>{const option=document.createElement("option");option.value=p.id;option.textContent=(p.nom||"Livreur")+" · "+(p.quartiers||p.commune||"secteur non précisé");select.appendChild(option);});
+        const dispatch=document.createElement("button");dispatch.type="button";dispatch.className="primary";dispatch.textContent="Attribuer la tournée complète";dispatch.disabled=!eligible.length;
+        dispatch.addEventListener("click",()=>attribuerTourneeGroupeeAdmin(parent.id,select.value,dispatch));
+        card.append(select,dispatch);zone.appendChild(card);
+      });
+    }
     const libelles = {en_attente:"En attente",livreur_affecte:"Livreur en route",colis_recupere:"Colis récupéré",en_transit:"En cours de livraison",arrive_destination:"Arrivé à destination",livre:"Livré",annule:"Annulé"};
     const migrationBtn = document.createElement("button");
     migrationBtn.type = "button";
@@ -8085,6 +8105,21 @@ async function chargerCommandesAdmin() {
     console.error("Chargement commandes admin :", erreur);
     zone.innerHTML = "<p>Impossible de charger les commandes : " + echapperTexteCompagnie(erreur.message) + "</p>";
   }
+}
+
+async function attribuerTourneeGroupeeAdmin(commandeGroupeeId,courierUid,button){
+ const admin=auth.currentUser;
+ if(!admin||admin.uid!==ADMIN_UID)return alert("Accès réservé à l'administrateur.");
+ if(!courierUid)return alert("Choisis un livreur disponible.");
+ if(!confirm("Attribuer toutes les collectes de cette commande groupée à ce livreur ? Une seule mission sera créée."))return;
+ if(button){button.disabled=true;button.textContent="Attribution en cours…";}
+ try{
+  const token=await admin.getIdToken(),response=await fetch(WORKER_URL+"/api/delivery/grouped-dispatch",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({commandeGroupeeId,courierUid})});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||"Attribution impossible.");
+  alert("La tournée complète a été attribuée au livreur. Il peut maintenant l'accepter depuis son espace partenaire.");
+  await chargerCommandesAdmin();
+ }catch(error){alert("Attribution impossible : "+error.message);if(button){button.disabled=false;button.textContent="Attribuer la tournée complète";}}
 }
 
 async function affecterCommandePartenaire(commandeId, partenaireId) {
