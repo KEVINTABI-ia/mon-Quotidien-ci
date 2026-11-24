@@ -11630,6 +11630,8 @@ async function chargerCommandesPartenaire() {
     }
     if (activeOrder) {
       await afficherMissionPartenaire(activeOrder, p, mission);
+    } else if (lockSnap.exists && lockSnap.data().tourneeId) {
+      mission.innerHTML = "<p>Une tournée multi-boutiques est active. Suivez ses étapes dans le panneau « Mes tournées multi-boutiques ».</p>";
     } else {
       mission.innerHTML = "<p>Aucune mission en cours. Vous pouvez accepter une commande si vous êtes en ligne.</p>";
     }
