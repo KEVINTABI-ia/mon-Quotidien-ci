@@ -9,6 +9,7 @@ import {
   applyDeliveryTourStopTransition,
   calculateGroupedTourPayout,
   buildGroupedTourPayoutLedger,
+  buildGroupedTourStops,
   acceptGroupedDeliveryTour,
   transitionGroupedDeliveryTourStop,
   markGroupedTourDestinationArrived,
@@ -209,6 +210,20 @@ test("grouped tour payout ledger is uniquely keyed and refuses duplicate settlem
  assert.throws(()=>buildGroupedTourPayoutLedger({tourId:"tour-42",courierUid:"courier-7",totalPriceXof:5000,existingLedger:{status:"paid"},now}),/grouped_tour_payout_already_recorded/);
 });
 
+
+test("grouped tour maps optimized shop order to the correct child order IDs",()=>{
+ const children=[
+  {id:"order-a",boutiqueId:"shop-a",boutiqueNom:"Boutique A"},
+  {id:"order-b",boutiqueId:"shop-b",boutiqueNom:"Boutique B"},
+  {id:"order-c",boutiqueId:"shop-c",boutiqueNom:"Boutique C"}
+ ];
+ const stops=buildGroupedTourStops({orderedShopIds:["shop-c","shop-a","shop-b"],children});
+ assert.deepEqual(stops.map(stop=>stop.id),["order-c","order-a","order-b"]);
+ assert.deepEqual(stops.map(stop=>stop.boutiqueNom),["Boutique C","Boutique A","Boutique B"]);
+ assert.ok(stops.every(stop=>stop.status==="pending"));
+ assert.throws(()=>buildGroupedTourStops({orderedShopIds:["shop-x","shop-a","shop-b"],children}),/grouped_tour_pickup_order_invalid/);
+ assert.throws(()=>buildGroupedTourStops({orderedShopIds:["shop-a","shop-a","shop-b"],children}),/grouped_tour_pickup_order_invalid/);
+});
 
 test("grouped tour acceptance creates a unique active mission lock and rejects concurrent missions",()=>{
  const now=new Date("2026-11-24T12:00:00.000Z");
