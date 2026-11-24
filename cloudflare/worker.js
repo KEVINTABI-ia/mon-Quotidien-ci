@@ -1067,6 +1067,7 @@ async function createCheckout(request,env) {
   } else if(serviceId==="mon_business") {
     const companyId=body.companyId,planId=body.planId,plan=buildMonBusinessPlan(planId);
     if(typeof companyId!=="string"||!/^[a-f0-9]{64}$/.test(companyId)||!plan)return json({error:"invalid_mon_business_plan"},400);
+    const access=await authorizeMonBusinessRequest(request,env,companyId);if(access.error)return access.error;
     const targetPath="mon_business_companies/"+companyId,companyDoc=await getDoc(env,targetPath),company=docData(companyDoc);
     if(!companyDoc||company?.uid!==user.sub||company.trialUsed!==true)return json({error:"mon_business_company_not_found"},403);
     const trialEnd=company.trialEndAt instanceof Date?company.trialEndAt:(company.trialEndAt?new Date(company.trialEndAt):null);
@@ -2027,9 +2028,9 @@ async function monBusinessDashboard(request, env) {
   if (!authResult.user) return json({ error: "unauthorized", diagnostic: authResult.diagnostic }, 401);
   const url = new URL(request.url), companyId = url.searchParams.get("companyId") || "";
   if (!/^[a-f0-9]{64}$/.test(companyId)) return json({ error: "invalid_company_id" }, 400);
-  const companyDoc = await getDoc(env, "mon_business_companies/" + companyId);
-  const company = docData(companyDoc);
-  if (!companyDoc || company?.uid !== authResult.user.sub) return json({ error: "company_not_found" }, 404);
+  const access = await authorizeMonBusinessRequest(request,env,companyId);
+  if(access.error)return access.error;
+  const companyDoc = access.doc, company = access.company;
   const token = await serviceToken(env);
   const endpoint = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents:runQuery";
   let transactions = [];
@@ -2095,6 +2096,8 @@ async function createMonBusinessTransaction(request, env) {
   if (!/^[a-f0-9]{64}$/.test(companyId) || !transaction) return json({ error: "invalid_transaction" }, 400);
   const transactionId = crypto.randomUUID();
   const transactionPath = "mon_business_transactions/" + transactionId;
+  const access = await authorizeMonBusinessRequest(request,env,companyId);
+  if(access.error)return access.error;
   const companyPath = "mon_business_companies/" + companyId;
   const tx = await beginFirestoreTransaction(env);
   try {
@@ -2155,6 +2158,81 @@ async function monBusinessHash(value) {
   return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))))
     .map(v => v.toString(16).padStart(2, "0")).join("");
 }
+
+function publicMonBusinessCompany(company) {
+  if(!company)return company;
+  const {passwordSalt,passwordHash,...safe}=company;
+  return safe;
+}
+export function normalizeMonBusinessPassword(password) {
+  return typeof password === "string" && password.length >= 8 && password.length <= 128 ? password : null;
+}
+async function hashMonBusinessPassword(password, saltHex) {
+  const salt = saltHex ? Uint8Array.from(saltHex.match(/.{2}/g).map(x=>parseInt(x,16))) : crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:210000,hash:"SHA-256"},key,256);
+  return { salt: Array.from(salt,x=>x.toString(16).padStart(2,"0")).join(""),
+    hash: Array.from(new Uint8Array(bits),x=>x.toString(16).padStart(2,"0")).join("") };
+}
+async function verifyMonBusinessPassword(company, password) {
+  if (!company?.passwordSalt || !company?.passwordHash || !normalizeMonBusinessPassword(password)) return false;
+  const candidate = await hashMonBusinessPassword(password, company.passwordSalt);
+  const a=candidate.hash,b=company.passwordHash;
+  if(a.length!==b.length)return false;
+  let diff=0;for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);
+  return diff===0;
+}
+async function listMonBusinessCompanies(request, env) {
+  const authResult=await requireUser(request,env);
+  if(!authResult.user)return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
+  const token=await serviceToken(env),endpoint="https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents:runQuery";
+  const response=await fetch(endpoint,{method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},
+    body:JSON.stringify({structuredQuery:{from:[{collectionId:"mon_business_companies"}],
+      where:{fieldFilter:{field:{fieldPath:"uid"},op:"EQUAL",value:{stringValue:authResult.user.sub}}},limit:30}})});
+  if(!response.ok)return json({error:"business_list_unavailable"},502);
+  const rows=await response.json();
+  const companies=(Array.isArray(rows)?rows:[]).filter(x=>x?.document?.name?.includes("/documents/mon_business_companies/"))
+    .map(x=>({id:x.document.name.split("/").pop(),...docData(x.document)}))
+    .filter(x=>x.uid===authResult.user.sub)
+    .map(x=>({companyId:x.id,companyName:x.companyName,managerName:x.managerName||"",phone:x.phone||"",status:x.status,passwordConfigured:!!(x.passwordSalt&&x.passwordHash)}));
+  return json({companies});
+}
+async function unlockMonBusinessCompany(request,env) {
+  const authResult=await requireUser(request,env);
+  if(!authResult.user)return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const companyId=body.companyId||"";
+  if(!/^[a-f0-9]{64}$/.test(companyId))return json({error:"invalid_company_id"},400);
+  const doc=await getDoc(env,"mon_business_companies/"+companyId),company=docData(doc);
+  if(!doc||company?.uid!==authResult.user.sub)return json({error:"company_not_found"},404);
+  if(!company.passwordSalt||!company.passwordHash)return json({error:"password_setup_required"},409);
+  if(!await verifyMonBusinessPassword(company,body.password))return json({error:"invalid_business_password"},403);
+  return json({companyId,company:publicMonBusinessCompany(company)});
+}
+async function setupMonBusinessPassword(request,env) {
+  const authResult=await requireUser(request,env);
+  if(!authResult.user)return json({error:"unauthorized",diagnostic:authResult.diagnostic},401);
+  let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
+  const companyId=body.companyId||"",password=normalizeMonBusinessPassword(body.password);
+  if(!/^[a-f0-9]{64}$/.test(companyId)||!password)return json({error:"invalid_business_password"},400);
+  const path="mon_business_companies/"+companyId,doc=await getDoc(env,path),company=docData(doc);
+  if(!doc||company?.uid!==authResult.user.sub)return json({error:"company_not_found"},404);
+  if(company.passwordSalt&&company.passwordHash)return json({error:"business_password_already_configured"},409);
+  const credential=await hashMonBusinessPassword(password);
+  await commitWrites(env,[updateWrite(path,{passwordSalt:credential.salt,passwordHash:credential.hash,updatedAt:new Date()},doc.updateTime)]);
+  const updated=await getDoc(env,path);
+  return json({companyId,company:publicMonBusinessCompany(docData(updated))});
+}
+async function authorizeMonBusinessRequest(request,env,companyId) {
+  const authResult=await requireUser(request,env);
+  if(!authResult.user)return {error:json({error:"unauthorized",diagnostic:authResult.diagnostic},401)};
+  const doc=await getDoc(env,"mon_business_companies/"+companyId),company=docData(doc);
+  if(!doc||company?.uid!==authResult.user.sub)return {error:json({error:"company_not_found"},404)};
+  if(!company.passwordSalt||!company.passwordHash)return {error:json({error:"password_setup_required"},409)};
+  if(!await verifyMonBusinessPassword(company,request.headers.get("X-MON-BUSINESS-PASSWORD")))return {error:json({error:"invalid_business_password"},403)};
+  return {user:authResult.user,company,doc};
+}
+
 async function getMonBusinessCompany(request, env) {
   const authResult = await requireUser(request, env);
   if (!authResult.user) return json({ error: "unauthorized", diagnostic: authResult.diagnostic }, 401);
@@ -2163,7 +2241,7 @@ async function getMonBusinessCompany(request, env) {
   const companyDoc = await getDoc(env, "mon_business_companies/" + companyId);
   const company = docData(companyDoc);
   if (!companyDoc || company?.uid !== authResult.user.sub) return json({ error: "company_not_found" }, 404);
-  return json({ companyId, company });
+  return json({ companyId, company:publicMonBusinessCompany(company) });
 }
 async function startMonBusinessTrial(request, env) {
   const authResult = await requireUser(request, env);
@@ -2171,7 +2249,10 @@ async function startMonBusinessTrial(request, env) {
   let body = {};
   try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
   const identity = normalizeMonBusinessIdentity(body.companyName, body.phone);
-  if (!identity) return json({ error: "invalid_business_identity" }, 400);
+  const password = normalizeMonBusinessPassword(body.password);
+  const managerName = typeof body.managerName==="string" ? body.managerName.trim().replace(/\s+/g," ").slice(0,100) : "";
+  if (!identity || !password || managerName.length<2) return json({ error: !password ? "invalid_business_password" : "invalid_business_identity" }, 400);
+  const credential = await hashMonBusinessPassword(password);
   const companyName = body.companyName.trim().replace(/\s+/g, " ");
   const phone = "+225" + identity.normalizedPhone.slice(3);
   const claimId = await monBusinessHash(identity.normalizedName + "|" + identity.normalizedPhone);
@@ -2183,14 +2264,14 @@ async function startMonBusinessTrial(request, env) {
     const claim = docData(existingClaim);
     if (claim?.uid === authResult.user.sub) {
       const existingCompany = await getDoc(env, companyPath);
-      if (existingCompany) return json({ companyId, company: docData(existingCompany), alreadyRegistered: true });
+      if (existingCompany) return json({ companyId, company: publicMonBusinessCompany(docData(existingCompany)), alreadyRegistered: true });
     }
     return json({ error: "business_trial_already_used" }, 409);
   }
   const now = new Date(), trialEnd = new Date(now.getTime() + 30 * 86400000);
   const company = {
-    uid: authResult.user.sub, companyName, normalizedName: identity.normalizedName,
-    phone, planId: null, planLabel: null, status: "trial",
+    uid: authResult.user.sub, companyName, managerName, normalizedName: identity.normalizedName,
+    phone, passwordSalt:credential.salt, passwordHash:credential.hash, planId: null, planLabel: null, status: "trial",
     trialUsed: true, trialStartAt: now, trialEndAt: trialEnd,
     subscriptionStartAt: null, subscriptionEndAt: null,
     pendingPaymentId: null, createdAt: now, updatedAt: now
@@ -2205,7 +2286,7 @@ async function startMonBusinessTrial(request, env) {
     if (claimAfter) return json({ error: "business_trial_already_used" }, 409);
     throw error;
   }
-  return json({ companyId, company }, 201);
+  return json({ companyId, company:publicMonBusinessCompany(company) }, 201);
 }
 
 async function subscriptionPlans(request,env) {
@@ -2225,7 +2306,7 @@ export default {
     if(origin==="https://kevintabi-ia.github.io"&&request.method==="OPTIONS") {
       return new Response(null,{status:204,headers:{
         "Access-Control-Allow-Origin":origin,"Access-Control-Allow-Methods":"GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers":"Authorization, Content-Type","Access-Control-Max-Age":"86400","Vary":"Origin"
+        "Access-Control-Allow-Headers":"Authorization, Content-Type, X-MON-BUSINESS-PASSWORD","Access-Control-Max-Age":"86400","Vary":"Origin"
       }});
     }
     let response;
@@ -2244,6 +2325,9 @@ export default {
     else if(url.pathname==="/api/jeko/status"&&request.method==="GET") response=await paymentStatus(request,env);
     else if(url.pathname==="/api/jeko/subscription-plans"&&request.method==="GET") response=await subscriptionPlans(request,env);
     else if(url.pathname==="/api/mon-business/trial"&&request.method==="POST") response=await startMonBusinessTrial(request,env);
+    else if(url.pathname==="/api/mon-business/companies"&&request.method==="GET") response=await listMonBusinessCompanies(request,env);
+    else if(url.pathname==="/api/mon-business/access"&&request.method==="POST") response=await unlockMonBusinessCompany(request,env);
+    else if(url.pathname==="/api/mon-business/password/setup"&&request.method==="POST") response=await setupMonBusinessPassword(request,env);
     else if(url.pathname==="/api/mon-business/company"&&request.method==="GET") response=await getMonBusinessCompany(request,env);
     else if(url.pathname==="/api/mon-business/dashboard"&&request.method==="GET") response=await monBusinessDashboard(request,env);
     else if(url.pathname==="/api/mon-business/transaction"&&request.method==="POST") response=await createMonBusinessTransaction(request,env);

@@ -14517,6 +14517,17 @@ body.mqci-ai-no-scroll{
   });
 })();
 </script>
+
+<script id="mqci-open-business-category-from-return">
+(function(){
+ function openBusinessCategory(){
+  if(new URLSearchParams(location.search).get("openSection")!=="homeDemarches")return;
+  if(typeof ouvrirFamilleAccueil==="function")ouvrirFamilleAccueil("homeDemarches");
+ }
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",openBusinessCategory,{once:true});
+ else openBusinessCategory();
+})();
+</script>
 </body>
 </html>
 <style id="mqci-pied-page-sous-admin-sans-espace-vide">
