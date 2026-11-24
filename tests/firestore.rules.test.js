@@ -193,6 +193,17 @@ describe("Mon Transport CI — règles Firestore", function () {
     }
     await assertSucceeds(batch.commit());
 
+    // Une sous-commande liée au parent ne peut pas être publiée séparément aux livreurs.
+    const dispatchBatch=writeBatch(db);
+    dispatchBatch.update(doc(db,"commandes_colis",childA),{
+      statut:"en_attente",publicVersion:true,dateMiseEnLivraison:serverTimestamp(),
+      montantLivraisonBoutique:1000
+    });
+    dispatchBatch.update(doc(db,"commandes_colis",childA,"tarification","prix"),{
+      montantLivraison:1000,montantTotal:1000
+    });
+    await assertFails(dispatchBatch.commit());
+
     const badBatch=writeBatch(db);
     const badId="child-not-in-parent";
     badBatch.set(doc(db,"commandes_colis",badId),{
