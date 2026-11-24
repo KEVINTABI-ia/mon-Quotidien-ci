@@ -4,6 +4,7 @@ import {
   calculateGroupedDeliveryPrice,
   GROUPED_DELIVERY_PRICING,
   optimizeDeliveryTourRoute,
+  buildDeliveryTourRouteWithOsrm,
   applyDeliveryTourStopTransition
 } from "../cloudflare/worker.js";
 
@@ -92,4 +93,38 @@ test("tour enters delivery phase only after every shop pickup is confirmed",()=>
  }
  assert.equal(state.allPickedUp,true);
  assert.equal(state.tourStatus,"delivering");
+});
+
+
+test("OSRM table response feeds road distances and durations into the delivery tour planner",async()=>{
+ const distances=routeMatrix.map(row=>row.map(value=>value*1000));
+ const durations=routeMatrix.map(row=>row.map(value=>value*120));
+ let requestedUrl="";
+ const result=await buildDeliveryTourRouteWithOsrm({
+  stops:routeStops,
+  fetchImpl:async url=>{
+   requestedUrl=url;
+   return {ok:true,json:async()=>({code:"Ok",distances,durations})};
+  }
+ });
+ const parsed=new URL(requestedUrl);
+ assert.match(parsed.pathname,/^\\/table\\/v1\\/driving\\//);
+ assert.equal(parsed.searchParams.get("annotations"),"distance,duration");
+ assert.deepEqual(result.orderedStopIds,["courier","shop-b","shop-a","shop-c","customer"]);
+ assert.equal(result.totalRoadDistanceKm,7);
+ assert.equal(result.totalDurationSeconds,840);
+ assert.equal(result.provider,"osrm");
+ assert.match(decodeURIComponent(parsed.pathname),/-4\\.02,5\\.35/);
+});
+
+test("OSRM adapter rejects incomplete or invalid routing responses",async()=>{
+ await assert.rejects(()=>buildDeliveryTourRouteWithOsrm({
+  stops:routeStops,fetchImpl:async()=>({ok:true,json:async()=>({code:"NoRoute"})})
+ }),/invalid_osrm_matrix/);
+ await assert.rejects(()=>buildDeliveryTourRouteWithOsrm({
+  stops:routeStops,baseUrl:"http://router.project-osrm.org",fetchImpl:async()=>({ok:true,json:async()=>({})})
+ }),/invalid_osrm_base_url/);
+ await assert.rejects(()=>buildDeliveryTourRouteWithOsrm({
+  stops:routeStops,fetchImpl:async()=>({ok:false,status:429})
+ }),/osrm_http_429/);
 });
