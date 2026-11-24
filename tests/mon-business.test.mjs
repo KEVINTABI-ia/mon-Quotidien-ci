@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildMonBusinessPlan, normalizeMonBusinessIdentity, normalizeMonBusinessTransaction } from "../cloudflare/worker.js";
+import { buildMonBusinessPlan, normalizeMonBusinessIdentity, normalizeMonBusinessPassword, normalizeMonBusinessTransaction } from "../cloudflare/worker.js";
 
 test("MON BUSINESS exposes only the three approved quarterly plans",()=>{
   assert.deepEqual(buildMonBusinessPlan("standard"),{label:"Standard",amountXof:15000,durationMonths:3});
@@ -14,6 +14,11 @@ test("MON BUSINESS normalizes an Ivorian business identity",()=>{
   assert.equal(normalizeMonBusinessIdentity("A","+225 07 00 00 00 00"),null);
 });
 
+test("MON BUSINESS exige un mot de passe dédié de 8 caractères minimum",()=>{
+  assert.equal(normalizeMonBusinessPassword("1234567"),null);
+  assert.equal(normalizeMonBusinessPassword("12345678"),"12345678");
+  assert.equal(normalizeMonBusinessPassword("x".repeat(129)),null);
+});
 test("MON BUSINESS valide les opérations de recette et de dépense",()=>{
   assert.deepEqual(normalizeMonBusinessTransaction({type:"recette",amountXof:2500,label:" Vente du jour ",category:"Vente"}),{type:"recette",amountXof:2500,label:"Vente du jour",category:"Vente",note:""});
   assert.equal(normalizeMonBusinessTransaction({type:"autre",amountXof:2500,label:"Vente"}),null);
