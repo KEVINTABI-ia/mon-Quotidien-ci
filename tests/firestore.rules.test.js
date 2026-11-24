@@ -148,6 +148,72 @@ describe("Mon Transport CI — règles Firestore", function () {
     }));
   });
 
+  it("lie chaque sous-commande boutique au parent du même client et refuse les références non déclarées", async () => {
+    const {doc,writeBatch,serverTimestamp}=require("firebase/firestore");
+    const SHOP_A="group-shop-a",SHOP_B="group-shop-b";
+    await testEnv.withSecurityRulesDisabled(async context=>{
+      const db=context.firestore();
+      await db.doc(`demandes_nouveaux_services/${SHOP_A}`).set({
+        uid:CLIENT_UID,type:"commerce",titre:"Boutique A",commune:"Yopougon",
+        telephone:"0100000000",statut:"approuve",abonnementFin:futureDate()
+      });
+      await db.doc(`demandes_nouveaux_services/${SHOP_B}`).set({
+        uid:OTHER_UID,type:"commerce",titre:"Boutique B",commune:"Adjamé",
+        telephone:"0500000000",statut:"approuve",abonnementFin:futureDate()
+      });
+    });
+    const db=testEnv.authenticatedContext(CLIENT_UID).firestore();
+    const batch=writeBatch(db);
+    const parentId="group-parent-linked";
+    const childA="group-child-a",childB="group-child-b";
+    batch.set(doc(db,"commandes_groupees",parentId),{
+      clientId:CLIENT_UID,reference:"MQCI-GROUP-LINK",statut:"en_attente_boutiques",
+      nombreBoutiques:2,nombreArticles:2,sousCommandes:[childA,childB],
+      montantArticles:6000,devise:"XOF",createdAt:serverTimestamp()
+    });
+    for(const [childId,shopId,shopUid,shopName] of [
+      [childA,SHOP_A,CLIENT_UID,"Boutique A"],[childB,SHOP_B,OTHER_UID,"Boutique B"]
+    ]){
+      batch.set(doc(db,"commandes_colis",childId),{
+        clientId:CLIENT_UID,service:"livraison",depart:"Abidjan",destination:"Yopougon",
+        statut:"commande_boutique",publicVersion:false,createdAt:serverTimestamp(),
+        typeCommande:"boutique",boutiqueId:shopId,boutiqueUid:shopUid,boutiqueNom:shopName,
+        montantLivraisonBoutique:0,commandeGroupeeId:parentId
+      });
+      batch.set(doc(db,"commandes_colis",childId,"informations_privees","details"),{
+        ...privateFixture(),createdAt:serverTimestamp(),telephoneBoutique:"0100000000",
+        telephoneClient:"0100000000",boutiqueUid:shopUid,produitCommande:"Article test",
+        quantiteCommande:1,prixProduit:3000
+      });
+      batch.set(doc(db,"commandes_colis",childId,"tarification","prix"),{
+        distanceKm:0,distanceMetres:0,tarifKm:100,montantLivraison:0,
+        fraisService:0,montantTotal:0,devise:"FCFA",operation:"livraison_boutique",
+        createdAt:serverTimestamp()
+      });
+    }
+    await assertSucceeds(batch.commit());
+
+    const badBatch=writeBatch(db);
+    const badId="child-not-in-parent";
+    badBatch.set(doc(db,"commandes_colis",badId),{
+      clientId:CLIENT_UID,service:"livraison",depart:"Abidjan",destination:"Yopougon",
+      statut:"commande_boutique",publicVersion:false,createdAt:serverTimestamp(),
+      typeCommande:"boutique",boutiqueId:SHOP_A,boutiqueUid:CLIENT_UID,boutiqueNom:"Boutique A",
+      montantLivraisonBoutique:0,commandeGroupeeId:parentId
+    });
+    badBatch.set(doc(db,"commandes_colis",badId,"informations_privees","details"),{
+      ...privateFixture(),createdAt:serverTimestamp(),telephoneBoutique:"0100000000",
+      telephoneClient:"0100000000",boutiqueUid:CLIENT_UID,produitCommande:"Article test",
+      quantiteCommande:1,prixProduit:3000
+    });
+    badBatch.set(doc(db,"commandes_colis",badId,"tarification","prix"),{
+      distanceKm:0,distanceMetres:0,tarifKm:100,montantLivraison:0,
+      fraisService:0,montantTotal:0,devise:"FCFA",operation:"livraison_boutique",
+      createdAt:serverTimestamp()
+    });
+    await assertFails(badBatch.commit());
+  });
+
   it("autorise un utilisateur authentifié à créer et lire uniquement son profil général", async () => {
     const {doc,setDoc,getDoc,serverTimestamp}=require("firebase/firestore");
     const db=testEnv.authenticatedContext(CLIENT_UID,{phone_number:"+2250700000000"}).firestore();
