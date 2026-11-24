@@ -11685,7 +11685,7 @@ async function chargerTourneesGroupeesPartenaire(user){
    }
    if(["accepted","collecting"].includes(tour.status)){
     (tour.stops||[]).forEach(stop=>{
-     const line=document.createElement("p");line.textContent="Boutique "+stop.id+" — "+({pending:"À rejoindre",arrived:"Arrivé",picked_up:"Colis récupéré"}[stop.status]||stop.status);card.appendChild(line);
+     const line=document.createElement("p");line.textContent=(stop.boutiqueNom||"Boutique")+" — "+({pending:"À rejoindre",arrived:"Arrivé",picked_up:"Colis récupéré"}[stop.status]||stop.status);card.appendChild(line);
      if(stop.status==="pending"||stop.status==="arrived"){
       const action=document.createElement("button");action.textContent=stop.status==="pending"?"Signaler mon arrivée à la boutique":"Confirmer la collecte";
       action.addEventListener("click",async()=>{action.disabled=true;try{await appelApiTourneeGroupee("/api/courier/grouped-tour/stop",{commandeGroupeeId:tour.id,stopId:stop.id,nextStatus:stop.status==="pending"?"arrived":"picked_up"});await chargerTourneesGroupeesPartenaire(user);}catch(e){alert("Étape impossible : "+e.message);action.disabled=false;}});card.appendChild(action);
@@ -12104,7 +12104,7 @@ async function obtenirCodeLivraisonTourneeGroupee(parentId,button){
  const user=auth.currentUser;if(!user)return alert("Connectez-vous comme client.");
  if(button){button.disabled=true;button.textContent="Génération du code...";}
  try{
-  const token=await user.getIdToken(),response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/client/grouped-delivery-code",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({commandeGroupeeId:parentId})});
+  const token=await user.getIdToken(),response=await fetch(WORKER_URL+"/api/client/grouped-delivery-code",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({commandeGroupeeId:parentId})});
   const result=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(result.error||"Impossible de générer le code.");
   const zone=button?.parentElement;
