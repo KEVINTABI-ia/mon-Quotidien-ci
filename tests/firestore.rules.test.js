@@ -1097,6 +1097,8 @@ describe("Mon Transport CI — règles Firestore", function () {
         commune:"Yopougon",telephone:"0700000000",description:"Boutique de test",
         email:"client@example.test",numeroIdentite:"ID-BOUTIQUE-12345",
         adresseBoutique:"Yopougon, Abidjan",
+        latitudeBoutique:5.35,longitudeBoutique:-4.02,precisionGpsBoutiqueMetres:12,
+        positionBoutiqueSource:"gps",positionBoutiqueCaptureAt:new Date().toISOString(),
         planAbonnementId:"boutiques_3mois",abonnementStatut:"a_payer",
         montantAbonnement:7000,dureeAbonnementJours:90,paiementStatut:"a_payer",
         statut:"en_attente",createdAt:serverTimestamp()
@@ -1175,6 +1177,8 @@ describe("Mon Transport CI — règles Firestore", function () {
         categorie:"Boutique",commune:"Yopougon",telephone:"0700000000",
         description:"Présentation de la boutique partenaire de test.",
         email:"client@example.test",numeroIdentite:"ID-BOUTIQUE-12345",modePartenaire:true,
+        adresseBoutique:"Yopougon, Abidjan",latitudeBoutique:5.35,longitudeBoutique:-4.02,
+        precisionGpsBoutiqueMetres:12,positionBoutiqueSource:"gps",positionBoutiqueCaptureAt:new Date().toISOString(),
         statut:"en_attente",createdAt:serverTimestamp()
       }));
     });

@@ -884,6 +884,35 @@ async function commitFirestoreTransaction(env,writes,transaction) {
 function deleteWrite(path,updateTime) {
   return {delete:resourceName(path),currentDocument:updateTime?{updateTime}:{exists:true}};
 }
+export const GROUPED_DELIVERY_PRICING = Object.freeze({
+  fixedStartFeeXof:500,
+  pricePerKmXof:150,
+  additionalShopFeeXof:200,
+  roundingStepXof:100,
+  minimumTourPriceXof:1000,
+  maxShops:25,
+  maxRoadDistanceKm:250
+});
+export function calculateGroupedDeliveryPrice({roadDistanceKm,shopCount}) {
+  const rules=GROUPED_DELIVERY_PRICING;
+  if(typeof roadDistanceKm!=="number"||!Number.isFinite(roadDistanceKm)||roadDistanceKm<=0||roadDistanceKm>rules.maxRoadDistanceKm)
+    throw new Error("invalid_grouped_delivery_distance");
+  if(!Number.isSafeInteger(shopCount)||shopCount<2||shopCount>rules.maxShops)
+    throw new Error("invalid_grouped_delivery_shop_count");
+  const distanceComponentXof=roadDistanceKm*rules.pricePerKmXof;
+  const additionalShopsComponentXof=(shopCount-1)*rules.additionalShopFeeXof;
+  const rawPriceXof=rules.fixedStartFeeXof+distanceComponentXof+additionalShopsComponentXof;
+  const roundedPriceXof=Math.round(rawPriceXof/rules.roundingStepXof)*rules.roundingStepXof;
+  const totalPriceXof=Math.max(rules.minimumTourPriceXof,roundedPriceXof);
+  return Object.freeze({
+    currency:"XOF",fixedStartFeeXof:rules.fixedStartFeeXof,
+    roadDistanceKm,pricePerKmXof:rules.pricePerKmXof,
+    distanceComponentXof,shopCount,
+    additionalShopFeeXof:rules.additionalShopFeeXof,
+    additionalShopsComponentXof,rawPriceXof,roundedPriceXof,
+    minimumTourPriceXof:rules.minimumTourPriceXof,totalPriceXof
+  });
+}
 export function courierProfileCanCompleteMission(profile,uid) {
   return !!profile&&profile.uid===uid&&profile.type==="livreur_independant"&&
     profile.statut==="approuve"&&(profile.etatCompte||"actif")==="actif";
