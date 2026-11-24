@@ -2577,7 +2577,7 @@ async function planGroupedDelivery(request,env) {
     if(!parentDoc)return json({error:"grouped_order_not_found"},404);
     const parent=docData(parentDoc);
     if(parent.clientId!==auth.user.sub)return json({error:"forbidden"},403);
-    if(parent.tournee?.statut==="planifiee")return json({ok:true,alreadyPlanned:true,plan:parent.tournee,tarification:parent.tarificationLivraison||null},200);
+    if(parent.tournee?.statut==="planifiee")return json({ok:true,alreadyPlanned:true,plan:parent.tournee,tarificationEstimee:parent.tarificationEstimee||null},200);
     if(parent.statut!=="en_attente_boutiques"||!Array.isArray(parent.sousCommandes)||parent.sousCommandes.length<2||parent.sousCommandes.length>4)
       return json({error:"grouped_order_not_plannable"},409);
     const childDocs=await Promise.all(parent.sousCommandes.map(id=>getDocInTransaction(env,"commandes_colis/"+id,transaction)));
@@ -2615,10 +2615,10 @@ async function planGroupedDelivery(request,env) {
     await commitFirestoreTransaction(env,[updateWrite(parentPath,{
       statut:"tournee_planifiee",
       tournee:snapshot,
-      tarificationLivraison:tarification,
+      tarificationEstimee:tarification,
       updatedAt:new Date()
     },parentDoc.updateTime)],transaction);
-    return json({ok:true,plan:snapshot,tarification,providerNotice:"Plan calculé par OSRM. L'approche du livreur jusqu'à la première boutique sera prise en compte lors de l'affectation."},200);
+    return json({ok:true,plan:snapshot,tarificationEstimee:tarification,providerNotice:"Plan calculé par OSRM. L'approche du livreur jusqu'à la première boutique sera prise en compte lors de l'affectation."},200);
   }catch(error){
     console.error("Grouped delivery planning failed",{code:error?.message||"unknown"});
     const code=String(error?.message||"grouped_delivery_plan_failed");
