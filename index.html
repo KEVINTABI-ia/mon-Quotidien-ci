@@ -4984,6 +4984,7 @@ async function commanderPanierMultiBoutiques(){
   batch.set(parent,{clientId:user.uid,reference:"MQCI-"+Date.now().toString(36).toUpperCase(),statut:"en_attente_boutiques",nombreBoutiques:grouped.size,nombreArticles:itemCount,sousCommandes:childIds,montantArticles:articleTotal,devise:"XOF",createdAt:createdAt});
   await batch.commit();sauvegarderPanierMultiBoutiques([]);actualiserBoutonPanierMultiBoutiques();
   if(status)status.textContent="Commande groupée enregistrée. Référence : "+parent.id+". Chaque boutique reçoit sa sous-commande. Retrouvez le suivi dans votre historique client.";
+  await chargerHistoriqueCommandes();
  }catch(error){console.error(error);if(status)status.textContent="Commande non enregistrée : "+error.message;}
 }
 
@@ -11976,24 +11977,46 @@ async function enregistrerCommande() {
 }
 
 async function chargerHistoriqueCommandes() {
-  const zone=document.getElementById("zoneHistoriqueCommandes"), user=auth.currentUser;
+  const zone=document.getElementById("zoneHistoriqueCommandes"),user=auth.currentUser;
   if(!zone)return;
   if(!user){zone.innerHTML="<p>Veuillez vous connecter.</p>";return;}
   zone.innerHTML="<p>Chargement de votre historique...</p>";
   try{
-    const snap=await db.collection("commandes_colis").where("clientId","==",user.uid).get();
-    if(snap.empty){zone.innerHTML="<p>Aucune commande enregistrée pour le moment.</p>";return;}
-    const docs=snap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
+    const [childSnap,parentSnap]=await Promise.all([
+      db.collection("commandes_colis").where("clientId","==",user.uid).get(),
+      db.collection("commandes_groupees").where("clientId","==",user.uid).get()
+    ]);
+    if(childSnap.empty&&parentSnap.empty){zone.innerHTML="<p>Aucune commande enregistrée pour le moment.</p>";return;}
+    const childDocs=childSnap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
+    const childById=new Map(childDocs.map(doc=>[doc.id,doc]));
     zone.innerHTML="<h3>📋 Mes commandes</h3>";
-    for(const doc of docs){
-      const c=doc.data(), priv=await doc.ref.collection("informations_privees").doc("details").get(), d=priv.exists?priv.data():{};
-      const card=document.createElement("div");card.className="stop";
-      const n=document.createElement("strong");n.textContent="Commande : "+(d.trackingNumber||doc.id);
-      const s=document.createElement("p");s.textContent="Statut : "+({en_attente:"En attente",livreur_affecte:"Livreur en route",colis_recupere:"Colis récupéré",en_transit:"En cours de livraison",livre:"Livré",annule:"Annulé"}[c.statut]||c.statut||"Non renseigné");
-      const t=document.createElement("p");t.textContent=(c.depart||"")+" → "+(c.destination||"");
-      card.append(n,s,t);zone.appendChild(card);
+    const statusLabel=function(status){return ({en_attente_boutiques:"En attente de confirmation des boutiques",commande_boutique:"En attente de confirmation",confirmee:"Confirmée par la boutique",preparation:"En préparation",prete:"Prête pour le ramassage",en_attente:"En attente du livreur",livreur_affecte:"Livreur affecté",colis_recupere:"Articles récupérés",en_transit:"En cours de livraison",livre:"Livré",annule:"Annulé"})[status]||status||"Non renseigné";};
+    const parents=parentSnap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
+    for(const parentDoc of parents){
+      const parent=parentDoc.data(),card=document.createElement("div");card.className="stop";
+      const title=document.createElement("strong");title.textContent="🛍️ Commande multi-boutiques · "+(parent.reference||parentDoc.id);
+      const state=document.createElement("p");state.textContent="Statut global : "+statusLabel(parent.statut);
+      const totals=document.createElement("p");totals.textContent=parent.nombreBoutiques+" boutiques · "+parent.nombreArticles+" article(s) · "+Number(parent.montantArticles||0).toLocaleString("fr-FR")+" FCFA d'articles";
+      const subTitle=document.createElement("strong");subTitle.textContent="Suivi par boutique";
+      card.append(title,state,totals,subTitle);
+      for(const childId of (Array.isArray(parent.sousCommandes)?parent.sousCommandes:[])){
+        const childDoc=childById.get(childId);if(!childDoc)continue;
+        const child=childDoc.data(),line=document.createElement("p");
+        line.textContent=(child.boutiqueNom||"Boutique")+" — "+statusLabel(child.statut);
+        card.appendChild(line);
+      }
+      zone.appendChild(card);
     }
-  }catch(e){console.error(e);zone.innerHTML="<p>Impossible de charger votre historique : "+echapperTexteCompagnie(e.message)+"</p>";}
+    for(const childDoc of childDocs){
+      const c=childDoc.data();if(c.commandeGroupeeId)continue;
+      const privateSnap=await childDoc.ref.collection("informations_privees").doc("details").get(),details=privateSnap.exists?privateSnap.data():{};
+      const card=document.createElement("div");card.className="stop";
+      const title=document.createElement("strong");title.textContent="Commande : "+(details.trackingNumber||childDoc.id);
+      const state=document.createElement("p");state.textContent="Statut : "+statusLabel(c.statut);
+      const route=document.createElement("p");route.textContent=(c.depart||"")+" → "+(c.destination||"");
+      card.append(title,state,route);zone.appendChild(card);
+    }
+  }catch(error){console.error(error);zone.innerHTML="<p>Impossible de charger votre historique : "+echapperTexteCompagnie(error.message)+"</p>";}
 }
 
 
