@@ -2657,10 +2657,12 @@ async function planGroupedDelivery(request,env) {
     if(detailsDocs.some(doc=>!doc))return json({error:"grouped_order_private_details_missing"},409);
     const details=detailsDocs.map(docData);
     const shops=children.map((child,index)=>({
-      id:parent.sousCommandes[index],
+      id:child.boutiqueId,
       latitude:Number(details[index].latitudeRecuperation),
       longitude:Number(details[index].longitudeRecuperation)
     }));
+    if(shops.some(shop=>typeof shop.id!=="string"||!shop.id.trim())||new Set(shops.map(shop=>shop.id)).size!==shops.length)
+      return json({error:"grouped_order_shop_identity_invalid"},409);
     const destination={id:"destination",latitude:Number(details[0].latitudeLivraison),longitude:Number(details[0].longitudeLivraison)};
     if(details.some(item=>Number(item.latitudeLivraison)!==destination.latitude||Number(item.longitudeLivraison)!==destination.longitude))
       return json({error:"grouped_order_destinations_mismatch"},409);
