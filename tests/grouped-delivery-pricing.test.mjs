@@ -8,6 +8,7 @@ import {
   buildGroupedDeliveryPlanWithOsrm,
   applyDeliveryTourStopTransition,
   calculateGroupedTourCommission,
+  isValidGroupedDeliveryCode,
   buildGroupedTourStops,
   courierGroupedTourSubscriptionActive,
   acceptGroupedDeliveryTour,
@@ -271,4 +272,10 @@ test("grouped tour closes only after verified customer confirmation without an i
  assert.equal(result.activeMissionLock,null);
  assert.equal(result.payoutLedger,undefined);
  assert.equal(result.tour.status,"completed");
+});
+
+
+test("grouped delivery completion accepts exactly six numeric confirmation digits",()=>{
+ assert.equal(isValidGroupedDeliveryCode("004219"),true);
+ for(const code of ["12345","1234567","12a456","abcdef","",null,123456]) assert.equal(isValidGroupedDeliveryCode(code),false);
 });
