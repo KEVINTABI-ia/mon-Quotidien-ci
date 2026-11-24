@@ -172,3 +172,36 @@ test("grouped delivery planner rejects invalid pickup count, coordinates and OSR
   shops,destination,fetchImpl:async()=>({ok:true,json:async()=>({code:"NoRoute"})})
  }),/invalid_osrm_matrix/);
 });
+
+
+test("grouped tour payout allocates 90% to the courier and 10% to the platform",()=>{
+ const {calculateGroupedTourPayout}=require("../cloudflare/worker.js");
+ const payout=calculateGroupedTourPayout({totalPriceXof:2100});
+ assert.equal(payout.courierPayoutXof,1890);
+ assert.equal(payout.platformShareXof,210);
+ assert.equal(payout.courierPayoutXof+payout.platformShareXof,payout.totalPriceXof);
+ assert.equal(payout.currency,"XOF");
+});
+
+test("grouped tour payout conserves indivisible XOF amounts and rejects invalid fares",()=>{
+ const {calculateGroupedTourPayout}=require("../cloudflare/worker.js");
+ const payout=calculateGroupedTourPayout({totalPriceXof:1001});
+ assert.equal(payout.courierPayoutXof,900);
+ assert.equal(payout.platformShareXof,101);
+ assert.equal(payout.courierPayoutXof+payout.platformShareXof,1001);
+ for(const totalPriceXof of [0,-1,1.5,NaN,Infinity,"2000",null])
+  assert.throws(()=>calculateGroupedTourPayout({totalPriceXof}),/invalid_grouped_tour_payout_amount/);
+});
+
+test("grouped tour payout ledger is uniquely keyed and refuses duplicate settlement records",()=>{
+ const {buildGroupedTourPayoutLedger}=require("../cloudflare/worker.js");
+ const now=new Date("2026-11-24T12:00:00.000Z");
+ const ledger=buildGroupedTourPayoutLedger({tourId:"tour-42",courierUid:"courier-7",totalPriceXof:5000,now});
+ assert.equal(ledger.id,"tour_tour-42");
+ assert.equal(ledger.status,"ready_for_settlement");
+ assert.equal(ledger.courierUid,"courier-7");
+ assert.equal(ledger.courierPayoutXof,4500);
+ assert.equal(ledger.platformShareXof,500);
+ assert.equal(ledger.createdAt,now.toISOString());
+ assert.throws(()=>buildGroupedTourPayoutLedger({tourId:"tour-42",courierUid:"courier-7",totalPriceXof:5000,existingLedger:{status:"paid"},now}),/grouped_tour_payout_already_recorded/);
+});
