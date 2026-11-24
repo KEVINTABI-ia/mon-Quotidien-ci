@@ -4362,7 +4362,7 @@ async function capturerPositionGpsBoutique(){
  try{
   const position=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:20000,maximumAge:0}));
   const latitude=position.coords.latitude,longitude=position.coords.longitude,accuracy=position.coords.accuracy;
-  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||!Number.isFinite(accuracy))throw new Error("coordonnées GPS invalides");
+  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||!Number.isFinite(accuracy)||accuracy<=0||accuracy>100000)throw new Error("coordonnées GPS invalides ou trop imprécises");
   lat.value=String(latitude);lng.value=String(longitude);precision.value=String(Math.round(accuracy));captureAt.value=new Date(position.timestamp||Date.now()).toISOString();
   const niveau=accuracy<=20?"très bonne":accuracy<=75?"bonne":accuracy<=150?"approximative":"faible";
   statut.textContent="Position enregistrée : "+latitude.toFixed(6)+", "+longitude.toFixed(6)+" · précision estimée ±"+Math.round(accuracy)+" m ("+niveau+"). Vérifiez que vous êtes bien dans la boutique.";
