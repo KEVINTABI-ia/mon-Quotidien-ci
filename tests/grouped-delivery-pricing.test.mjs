@@ -7,8 +7,7 @@ import {
   buildDeliveryTourRouteWithOsrm,
   buildGroupedDeliveryPlanWithOsrm,
   applyDeliveryTourStopTransition,
-  calculateGroupedTourPayout,
-  buildGroupedTourPayoutLedger,
+  calculateGroupedTourCommission,
   buildGroupedTourStops,
   courierGroupedTourSubscriptionActive,
   acceptGroupedDeliveryTour,
@@ -182,35 +181,32 @@ test("grouped delivery planner rejects invalid pickup count, coordinates and OSR
 });
 
 
-test("grouped tour payout allocates 90% to the courier and 10% to the platform",()=>{
- const payout=calculateGroupedTourPayout({totalPriceXof:2100});
- assert.equal(payout.courierPayoutXof,1890);
- assert.equal(payout.platformShareXof,210);
- assert.equal(payout.courierPayoutXof+payout.platformShareXof,payout.totalPriceXof);
- assert.equal(payout.currency,"XOF");
+test("grouped tour commission debits only the prepaid courier wallet; customer payment remains cash",()=>{
+ const commission=calculateGroupedTourCommission({totalPriceXof:5000,balanceXof:2000,debtXof:0});
+ assert.equal(commission.deliveryFeeXof,5000);
+ assert.equal(commission.commissionRate,0.10);
+ assert.equal(commission.commissionDueXof,500);
+ assert.equal(commission.debitXof,500);
+ assert.equal(commission.balanceAfterXof,1500);
+ assert.equal(commission.debtAddedXof,0);
+ assert.equal(commission.currency,"XOF");
 });
 
-test("grouped tour payout conserves indivisible XOF amounts and rejects invalid fares",()=>{
- const payout=calculateGroupedTourPayout({totalPriceXof:1001});
- assert.equal(payout.courierPayoutXof,900);
- assert.equal(payout.platformShareXof,101);
- assert.equal(payout.courierPayoutXof+payout.platformShareXof,1001);
+test("grouped tour commission records unpaid commission debt when prepaid balance is insufficient",()=>{
+ const commission=calculateGroupedTourCommission({totalPriceXof:5000,balanceXof:200,debtXof:0});
+ assert.equal(commission.commissionDueXof,500);
+ assert.equal(commission.debitXof,200);
+ assert.equal(commission.balanceAfterXof,0);
+ assert.equal(commission.debtAddedXof,300);
+ assert.equal(commission.debtAfterXof,300);
+});
+
+test("grouped tour commission rejects invalid delivery fees and wallet amounts",()=>{
  for(const totalPriceXof of [0,-1,1.5,NaN,Infinity,"2000",null])
-  assert.throws(()=>calculateGroupedTourPayout({totalPriceXof}),/invalid_grouped_tour_payout_amount/);
+  assert.throws(()=>calculateGroupedTourCommission({totalPriceXof,balanceXof:1000}),/invalid_grouped_tour_commission_amount/);
+ for(const balanceXof of [-1,1.5,NaN,"1000",null])
+  assert.throws(()=>calculateGroupedTourCommission({totalPriceXof:5000,balanceXof}),/invalid_courier_wallet_ledger_amount/);
 });
-
-test("grouped tour payout ledger is uniquely keyed and refuses duplicate settlement records",()=>{
- const now=new Date("2026-11-24T12:00:00.000Z");
- const ledger=buildGroupedTourPayoutLedger({tourId:"tour-42",courierUid:"courier-7",totalPriceXof:5000,now});
- assert.equal(ledger.id,"tour_tour-42");
- assert.equal(ledger.status,"ready_for_settlement");
- assert.equal(ledger.courierUid,"courier-7");
- assert.equal(ledger.courierPayoutXof,4500);
- assert.equal(ledger.platformShareXof,500);
- assert.equal(ledger.createdAt,now.toISOString());
- assert.throws(()=>buildGroupedTourPayoutLedger({tourId:"tour-42",courierUid:"courier-7",totalPriceXof:5000,existingLedger:{status:"paid"},now}),/grouped_tour_payout_already_recorded/);
-});
-
 
 test("grouped tour dispatch requires an approved active courier subscription",()=>{
  const now=new Date("2026-11-24T12:00:00.000Z");
@@ -275,5 +271,5 @@ test("grouped tour closes only after verified customer confirmation and creates 
  assert.equal(result.payoutLedger.courierPayoutXof,4500);
  assert.equal(result.payoutLedger.platformShareXof,500);
  assert.equal(result.activeMissionLock,null);
- assert.throws(()=>completeGroupedDeliveryTour({tour,courierUid:"courier-1",confirmationVerified:true,existingPayoutLedger:result.payoutLedger,now}),/already_recorded/);
+ assert.throws(()=>completeGroupedDeliveryTour({tour,courierUid:"courier-1",confirmationVerified:true,now}),/already_recorded/);
 });
