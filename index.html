@@ -4308,7 +4308,7 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  <label>Commune</label><input id="nsCommune" maxlength="60" placeholder="Ex. Yopougon" required>
  ${modePartenaire?'<label>Numéro de carte nationale d’identité / NNI (obligatoire)</label><input id="nsNumeroIdentite" type="text" maxlength="60" autocomplete="off" required>':''}
  ${["hebergement","depannage_domicile","auto_ecole","vulcanisateur"].includes(type)?'<label>Quartier</label><input id="nsQuartier" maxlength="80" placeholder="Ex. Niangon, Angré, Riviera" required>':''}
- ${type==="commerce"?'<label>Adresse précise de récupération de la boutique</label><input id="nsAdresseBoutique" maxlength="220" placeholder="Quartier, rue, repère, commune" required>':''}
+ ${type==="commerce"?'<label>Adresse précise de récupération de la boutique</label><input id="nsAdresseBoutique" maxlength="220" placeholder="Quartier, rue, repère, commune" required><button type="button" onclick="capturerPositionGpsBoutique()" style="width:100%;margin:8px 0;">📍 Enregistrer ma position GPS depuis la boutique</button><p id="nsStatutGpsBoutique" class="notice" aria-live="polite">Placez-vous dans votre boutique et autorisez la localisation pour enregistrer son point GPS exact.</p><input id="nsBoutiqueLatitude" type="hidden"><input id="nsBoutiqueLongitude" type="hidden"><input id="nsBoutiqueGpsPrecision" type="hidden"><input id="nsBoutiqueGpsCaptureAt" type="hidden">':''}
  <label>Téléphone</label><input id="nsTelephone" type="tel" maxlength="20" placeholder="Ex. 07 00 00 00 00" required>
  ${type==="auto_ecole"?'<label>Informations sur l’auto-école</label><textarea id="nsInfosProfessionnelles" rows="4" maxlength="1200" placeholder="Numéro d’agrément, catégories de permis enseignées, nombre de véhicules, modalités et horaires de formation." required></textarea>':type==="vulcanisateur"?'<label>Prestations de vulcanisation</label><textarea id="nsInfosProfessionnelles" rows="4" maxlength="1200" placeholder="Réparation de pneus, crevaison, équilibrage, vente de pneus, dépannage mobile ou atelier fixe, horaires." required></textarea>':type==="depannage_domicile"?'<label>Expérience et prestations proposées</label><textarea id="nsInfosProfessionnelles" rows="4" maxlength="1200" placeholder="Décrivez vos prestations, votre expérience, vos disponibilités et les quartiers desservis." required></textarea>':''}
  <label>Description et détails</label><textarea id="nsDescription" rows="4" maxlength="1200" placeholder="Présentez votre activité et vos services" required></textarea>
@@ -4348,6 +4348,28 @@ function choisirNouveauService(type,categorieInitiale,modePartenaire,cibleZoneId
  }
  if(type==="commerce"&&!modePartenaire)initialiserFormulaireAbonnementBoutique();
  chargerNouveauxServicesPublics(type);
+}
+async function capturerPositionGpsBoutique(){
+ const statut=document.getElementById("nsStatutGpsBoutique");
+ const lat=document.getElementById("nsBoutiqueLatitude");
+ const lng=document.getElementById("nsBoutiqueLongitude");
+ const precision=document.getElementById("nsBoutiqueGpsPrecision");
+ const captureAt=document.getElementById("nsBoutiqueGpsCaptureAt");
+ if(!statut||!lat||!lng||!precision||!captureAt)return;
+ if(!window.isSecureContext){statut.textContent="La localisation GPS nécessite une page HTTPS sécurisée.";return;}
+ if(!navigator.geolocation){statut.textContent="La géolocalisation n'est pas disponible sur cet appareil.";return;}
+ statut.textContent="Demande de position GPS… Autorisez la localisation dans votre navigateur.";
+ try{
+  const position=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:20000,maximumAge:0}));
+  const latitude=position.coords.latitude,longitude=position.coords.longitude,accuracy=position.coords.accuracy;
+  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||!Number.isFinite(accuracy))throw new Error("coordonnées GPS invalides");
+  lat.value=String(latitude);lng.value=String(longitude);precision.value=String(Math.round(accuracy));captureAt.value=new Date(position.timestamp||Date.now()).toISOString();
+  const niveau=accuracy<=20?"très bonne":accuracy<=75?"bonne":accuracy<=150?"approximative":"faible";
+  statut.textContent="Position enregistrée : "+latitude.toFixed(6)+", "+longitude.toFixed(6)+" · précision estimée ±"+Math.round(accuracy)+" m ("+niveau+"). Vérifiez que vous êtes bien dans la boutique.";
+ }catch(error){
+  lat.value="";lng.value="";precision.value="";captureAt.value="";
+  statut.textContent=error.code===1?"Autorisez la localisation pour ce site dans les réglages du téléphone, puis réessayez.":error.code===3?"Le GPS met trop de temps à répondre. Activez la localisation et réessayez.":"Position GPS impossible à récupérer. Vérifiez les réglages de localisation et réessayez.";
+ }
 }
 function previsualiserPhotoNouveauService(event){
  const file=event.target.files && event.target.files[0],img=document.getElementById("nsPhotoPreview");
@@ -4395,7 +4417,9 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
  const montantAbonnement=estBoutique&&!boutiquePartenaire?Number(dureeOption?.dataset?.montant||0):0;
  const dureeAbonnementJours=estBoutique&&!boutiquePartenaire?Number(dureeSelect?.value||0):0;
  const adresseBoutique=estBoutique?(document.getElementById("nsAdresseBoutique")?.value.trim()||""):"";
+ const boutiqueGps=estBoutique?{latitude:Number(document.getElementById("nsBoutiqueLatitude")?.value),longitude:Number(document.getElementById("nsBoutiqueLongitude")?.value),precisionMetres:Number(document.getElementById("nsBoutiqueGpsPrecision")?.value),captureAt:document.getElementById("nsBoutiqueGpsCaptureAt")?.value||""}:null;
  if(estBoutique&&!adresseBoutique){statut.textContent="Renseignez l’adresse précise de récupération de votre établissement.";return;}
+ if(estBoutique&&(!boutiqueGps||!Number.isFinite(boutiqueGps.latitude)||boutiqueGps.latitude < -90||boutiqueGps.latitude > 90||!Number.isFinite(boutiqueGps.longitude)||boutiqueGps.longitude < -180||boutiqueGps.longitude > 180||!Number.isFinite(boutiqueGps.precisionMetres)||boutiqueGps.precisionMetres<=0)){statut.textContent="Enregistrez la position GPS de votre boutique avant d’envoyer le dossier.";return;}
 
  if(estBoutique&&!boutiquePartenaire&&(!dureeSelect||!dureeOption||!Number.isInteger(montantAbonnement)||montantAbonnement<=0||!Number.isInteger(dureeAbonnementJours)||dureeAbonnementJours<=0)){statut.textContent="Choisissez une formule d’abonnement disponible avant de continuer.";return;}
  const infosProfessionnelles=document.getElementById("nsInfosProfessionnelles")?.value.trim()||"";
@@ -4425,7 +4449,7 @@ window.envoyerNouveauService = async function envoyerNouveauService(){
    ...(infosProfessionnelles?{infosProfessionnelles}:{}),
    ...(modePartenaire?{modePartenaire:true,numeroIdentite}:{}),
    ...(photoUrl?{photoUrl}:{}),
-   ...(estBoutique?{adresseBoutique}:{}),
+   ...(estBoutique?{adresseBoutique,latitudeBoutique:boutiqueGps.latitude,longitudeBoutique:boutiqueGps.longitude,precisionGpsBoutiqueMetres:Math.round(boutiqueGps.precisionMetres),positionBoutiqueSource:"gps",positionBoutiqueCaptureAt:boutiqueGps.captureAt}:{}),
    ...(estBoutique&&!boutiquePartenaire?{planAbonnementId:dureeOption.dataset.config,montantAbonnement,dureeAbonnementJours,abonnementStatut:"a_payer",paiementStatut:"a_payer"}:{}),
    statut:"en_attente",createdAt:firebase.firestore.FieldValue.serverTimestamp()
   };
