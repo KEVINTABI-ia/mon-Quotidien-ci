@@ -8031,9 +8031,8 @@ async function chargerCommandesAdmin() {
 
     if (!commandes.length) {
       const info = document.createElement("p");
-      info.textContent = "Aucune commande enregistrée pour le moment.";
+      info.textContent = "Aucune commande individuelle enregistrée. Vérifie également les tournées multi-boutiques ci-dessous.";
       zone.appendChild(info);
-      return;
     }
 
     const groupesPrets=commandesGroupeesSnap.docs.map(doc=>({id:doc.id,...doc.data()}))
