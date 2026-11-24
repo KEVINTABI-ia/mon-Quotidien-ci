@@ -2153,7 +2153,7 @@ export const MON_BUSINESS_MODULES = Object.freeze({
   achat: ["label","amountXof","supplierName","date","notes"],
   personnel: ["name","phone","role","email","status"]
 });
-function normalizeMonBusinessRecord(module, input) {
+export function normalizeMonBusinessRecord(module, input) {
   const allowed=MON_BUSINESS_MODULES[module];
   if(!allowed||!input||typeof input!=="object"||Array.isArray(input))return null;
   const data={};
