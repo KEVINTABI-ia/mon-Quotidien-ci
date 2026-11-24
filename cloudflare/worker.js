@@ -2824,7 +2824,7 @@ async function clientGroupedDeliveryCode(request,env) {
       getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,confirmationPath,tx)
     ]);
     if(!parentDoc||!missionDoc)return json({error:"grouped_tour_not_found"},404);
-    const parent=docData(parentDoc),mission=docData(mission);
+    const parent=docData(parentDoc),mission=docData(missionDoc);
     if(parent.clientId!==auth.user.sub)return json({error:"grouped_order_not_owned"},403);
     if(mission.status!=="arrive_destination")return json({error:"grouped_tour_not_at_destination"},409);
     const now=new Date(),existing=docData(confirmationDoc),issuance=deliveryCodeIssuanceState(existing,now);
