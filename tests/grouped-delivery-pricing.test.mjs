@@ -6,7 +6,9 @@ import {
   optimizeDeliveryTourRoute,
   buildDeliveryTourRouteWithOsrm,
   buildGroupedDeliveryPlanWithOsrm,
-  applyDeliveryTourStopTransition
+  applyDeliveryTourStopTransition,
+  calculateGroupedTourPayout,
+  buildGroupedTourPayoutLedger
 } from "../cloudflare/worker.js";
 
 test("grouped tour price follows the validated distance and shop formula",()=>{
@@ -175,7 +177,6 @@ test("grouped delivery planner rejects invalid pickup count, coordinates and OSR
 
 
 test("grouped tour payout allocates 90% to the courier and 10% to the platform",()=>{
- const {calculateGroupedTourPayout}=require("../cloudflare/worker.js");
  const payout=calculateGroupedTourPayout({totalPriceXof:2100});
  assert.equal(payout.courierPayoutXof,1890);
  assert.equal(payout.platformShareXof,210);
@@ -194,7 +195,6 @@ test("grouped tour payout conserves indivisible XOF amounts and rejects invalid 
 });
 
 test("grouped tour payout ledger is uniquely keyed and refuses duplicate settlement records",()=>{
- const {buildGroupedTourPayoutLedger}=require("../cloudflare/worker.js");
  const now=new Date("2026-11-24T12:00:00.000Z");
  const ledger=buildGroupedTourPayoutLedger({tourId:"tour-42",courierUid:"courier-7",totalPriceXof:5000,now});
  assert.equal(ledger.id,"tour_tour-42");
