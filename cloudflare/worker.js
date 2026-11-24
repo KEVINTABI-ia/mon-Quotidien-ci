@@ -2145,6 +2145,70 @@ async function createMonBusinessTransaction(request, env) {
   }
 }
 
+
+export const MON_BUSINESS_MODULES = Object.freeze({
+  produit: ["name","sku","category","quantity","unitPrice","minQuantity","unit"],
+  client: ["name","phone","email","address","notes"],
+  vente: ["label","amountXof","clientName","paymentMethod","status","items"],
+  achat: ["label","amountXof","supplierName","date","notes"],
+  personnel: ["name","phone","role","email","status"]
+});
+function normalizeMonBusinessRecord(module, input) {
+  const allowed=MON_BUSINESS_MODULES[module];
+  if(!allowed||!input||typeof input!=="object"||Array.isArray(input))return null;
+  const data={};
+  for(const key of allowed) {
+    const value=input[key];
+    if(value===undefined||value===null||value==="")continue;
+    if(typeof value==="string")data[key]=value.trim().slice(0,key==="notes"||key==="address"?500:160);
+    else if(typeof value==="number"&&Number.isFinite(value))data[key]=value;
+    else if(typeof value==="boolean")data[key]=value;
+    else if(key==="items"&&Array.isArray(value))data[key]=value.slice(0,30).map(item=>({
+      productName:typeof item?.productName==="string"?item.productName.trim().slice(0,120):"",
+      quantity:Number.isSafeInteger(item?.quantity)&&item.quantity>0?item.quantity:0,
+      unitPrice:Number.isSafeInteger(item?.unitPrice)&&item.unitPrice>=0?item.unitPrice:0
+    })).filter(item=>item.productName&&item.quantity>0);
+  }
+  if(module==="produit"&&(!data.name||!Number.isSafeInteger(data.quantity)||data.quantity<0||!Number.isSafeInteger(data.unitPrice)||data.unitPrice<0))return null;
+  if(module==="client"&&!data.name)return null;
+  if(["vente","achat"].includes(module)&&(!data.label||!Number.isSafeInteger(data.amountXof)||data.amountXof<1))return null;
+  if(module==="personnel"&&!data.name)return null;
+  return data;
+}
+async function monBusinessModuleRecords(request,env,module,method) {
+  const auth=await requireUser(request,env);
+  if(!auth.user)return json({error:"unauthorized"},401);
+  if(!MON_BUSINESS_MODULES[module])return json({error:"invalid_module"},404);
+  const url=new URL(request.url),companyId=url.searchParams.get("companyId")||"";
+  let body={};
+  if(method==="POST"){try{body=await request.json();}catch{return json({error:"invalid_json"},400);}}
+  const id=method==="POST"?body.companyId:companyId;
+  if(!/^[a-f0-9]{64}$/.test(id))return json({error:"invalid_company_id"},400);
+  const access=await authorizeMonBusinessRequest(request,env,id);
+  if(access.error)return access.error;
+  const now=new Date();
+  if(method==="POST") {
+    const data=normalizeMonBusinessRecord(module,body.data);
+    if(!data)return json({error:"invalid_record"},400);
+    const recordId=crypto.randomUUID(),record={uid:auth.user.sub,companyId:id,module,data,createdAt:now,updatedAt:now};
+    await commitWrites(env,[createWrite("mon_business_records/"+recordId,record)]);
+    return json({ok:true,record:{id:recordId,...record}},201);
+  }
+  const token=await serviceToken(env),endpoint="https://firestore.googleapis.com/v1/projects/"+FIREBASE_PROJECT_ID+"/databases/(default)/documents:runQuery";
+  const response=await fetch(endpoint,{method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},
+    body:JSON.stringify({structuredQuery:{from:[{collectionId:"mon_business_records"}],where:{compositeFilter:{op:"AND",filters:[
+      {fieldFilter:{field:{fieldPath:"companyId"},op:"EQUAL",value:{stringValue:id}}},
+      {fieldFilter:{field:{fieldPath:"module"},op:"EQUAL",value:{stringValue:module}}}
+    ]}},limit:100}})});
+  if(!response.ok)return json({error:"module_records_unavailable"},502);
+  const rows=await response.json();
+  const records=(Array.isArray(rows)?rows:[]).filter(row=>row?.document?.name?.includes("/documents/mon_business_records/"))
+    .map(row=>({id:row.document.name.split("/").pop(),...docData(row.document)}))
+    .filter(item=>item.uid===auth.user.sub&&item.companyId===id&&item.module===module)
+    .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+  return json({records});
+}
+
 export function normalizeMonBusinessIdentity(name, phone) {
   const normalizedName = typeof name === "string"
     ? name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ")
@@ -2333,6 +2397,7 @@ export default {
     else if(url.pathname==="/api/mon-business/company"&&request.method==="GET") response=await getMonBusinessCompany(request,env);
     else if(url.pathname==="/api/mon-business/dashboard"&&request.method==="GET") response=await monBusinessDashboard(request,env);
     else if(url.pathname==="/api/mon-business/transaction"&&request.method==="POST") response=await createMonBusinessTransaction(request,env);
+    else if(/^\/api\/mon-business\/modules\/(produit|client|vente|achat|personnel)$/.test(url.pathname)&&["GET","POST"].includes(request.method)) response=await monBusinessModuleRecords(request,env,url.pathname.split("/").pop(),request.method);
     else if(url.pathname==="/api/jeko/diagnostic"&&request.method==="GET") response=await jekoDiagnostic(request,env);
     else if(url.pathname==="/api/jeko/network-diagnostic"&&request.method==="GET") response=await jekoNetworkDiagnostic(request,env);
     else response=json({error:"not_found"},404);
