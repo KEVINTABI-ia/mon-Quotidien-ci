@@ -4,6 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const html=fs.readFileSync("mon-business/index.html","utf8");
+const worker=fs.readFileSync("cloudflare/mon-business-worker/worker.js","utf8");
 test("la page avancée charge Firebase et sa configuration du Worker",()=>{
   assert.match(html,/firebase-auth-compat\.js/);
   assert.match(html,/firebase-firestore-compat\.js/);
@@ -19,7 +20,7 @@ test("l'espace expose création entreprise, activités et invitations WhatsApp",
 test("les invitations utilisent le Worker et ne sont pas écrites depuis le navigateur",()=>{
   for(const route of ["/v1/invitations","/v1/invitations/accept","/v1/members/update"]) assert.ok(html.includes(route));
   assert.match(html,/getIdToken\(\)/);
-  assert.match(html,/emailVerified/);
+  assert.match(worker,/emailVerified\s*!==\s*true/);
 });
 test("les scripts intégrés de la page sont syntaxiquement valides",()=>{
   const scripts=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).filter(s=>s.trim());
