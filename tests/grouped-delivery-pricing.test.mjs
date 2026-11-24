@@ -231,7 +231,9 @@ test("grouped tour stops advance sequentially and only enter delivery after ever
 
 test("grouped tour closes only after verified customer confirmation and creates one payout",()=>{
  const now=new Date("2026-11-24T12:00:00.000Z");
- const tour={id:"tour-3",courierUid:"courier-1",status:"delivering",totalPriceXof:5000,stops:[{id:"shop-a",status:"picked_up"},{id:"shop-b",status:"picked_up"}]};
+ const delivering={id:"tour-3",courierUid:"courier-1",status:"delivering",totalPriceXof:5000,stops:[{id:"shop-a",status:"picked_up"},{id:"shop-b",status:"picked_up"}]};
+ const tour=markGroupedTourDestinationArrived({tour:delivering,courierUid:"courier-1",now});
+ assert.equal(tour.status,"arrive_destination");
  assert.throws(()=>completeGroupedDeliveryTour({tour,courierUid:"courier-1",confirmationVerified:false,now}),/confirmation_required/);
  const result=completeGroupedDeliveryTour({tour,courierUid:"courier-1",confirmationVerified:true,now});
  assert.equal(result.tour.status,"completed");
