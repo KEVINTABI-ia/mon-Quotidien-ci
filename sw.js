@@ -24,8 +24,8 @@ messaging.onBackgroundMessage(payload => {
   return self.registration.showNotification(title, options);
 });
 
-const CACHE_NAME = "mon-quotidien-ci-shell-v29";
-const APP_SHELL = "./";
+const CACHE_NAME = "mon-quotidien-ci-shell-v30";
+const APP_SHELL = "./index.html?release=20261124-378";
 
 self.addEventListener("install", event => {
   event.waitUntil(
@@ -51,7 +51,7 @@ self.addEventListener("fetch", event => {
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: "no-store" })
         .then(response => {
           if (response && response.ok) {
             const copy = response.clone();
