@@ -205,3 +205,36 @@ test("grouped tour payout ledger is uniquely keyed and refuses duplicate settlem
  assert.equal(ledger.createdAt,now.toISOString());
  assert.throws(()=>buildGroupedTourPayoutLedger({tourId:"tour-42",courierUid:"courier-7",totalPriceXof:5000,existingLedger:{status:"paid"},now}),/grouped_tour_payout_already_recorded/);
 });
+
+
+test("grouped tour acceptance creates a unique active mission lock and rejects concurrent missions",()=>{
+ const now=new Date("2026-11-24T12:00:00.000Z");
+ const tour={id:"tour-1",courierUid:"courier-1",status:"offered",stops:[{id:"shop-a",status:"pending"},{id:"shop-b",status:"pending"}],totalPriceXof:2100};
+ const accepted=acceptGroupedDeliveryTour({tour,courierUid:"courier-1",now});
+ assert.equal(accepted.tour.status,"accepted");
+ assert.deepEqual(accepted.activeMissionLock,{tourId:"tour-1",status:"active",createdAt:now.toISOString()});
+ assert.throws(()=>acceptGroupedDeliveryTour({tour,courierUid:"courier-1",activeMission:accepted.activeMissionLock,now}),/courier_already_has_active_mission/);
+ assert.throws(()=>acceptGroupedDeliveryTour({tour,courierUid:"other-courier",now}),/not_assigned_to_courier/);
+});
+
+test("grouped tour stops advance sequentially and only enter delivery after every pickup",()=>{
+ let tour={id:"tour-2",courierUid:"courier-1",status:"accepted",stops:[{id:"shop-a",status:"pending"},{id:"shop-b",status:"pending"}]};
+ assert.throws(()=>transitionGroupedDeliveryTourStop({tour,stopId:"shop-b",nextStatus:"arrived"}),/previous_stop_incomplete/);
+ tour=transitionGroupedDeliveryTourStop({tour,stopId:"shop-a",nextStatus:"arrived"}).tour;
+ tour=transitionGroupedDeliveryTourStop({tour,stopId:"shop-a",nextStatus:"picked_up"}).tour;
+ tour=transitionGroupedDeliveryTourStop({tour,stopId:"shop-b",nextStatus:"arrived"}).tour;
+ tour=transitionGroupedDeliveryTourStop({tour,stopId:"shop-b",nextStatus:"picked_up"}).tour;
+ assert.equal(tour.status,"delivering");
+});
+
+test("grouped tour closes only after verified customer confirmation and creates one payout",()=>{
+ const now=new Date("2026-11-24T12:00:00.000Z");
+ const tour={id:"tour-3",courierUid:"courier-1",status:"delivering",totalPriceXof:5000,stops:[{id:"shop-a",status:"picked_up"},{id:"shop-b",status:"picked_up"}]};
+ assert.throws(()=>completeGroupedDeliveryTour({tour,courierUid:"courier-1",confirmationVerified:false,now}),/confirmation_required/);
+ const result=completeGroupedDeliveryTour({tour,courierUid:"courier-1",confirmationVerified:true,now});
+ assert.equal(result.tour.status,"completed");
+ assert.equal(result.payoutLedger.courierPayoutXof,4500);
+ assert.equal(result.payoutLedger.platformShareXof,500);
+ assert.equal(result.activeMissionLock,null);
+ assert.throws(()=>completeGroupedDeliveryTour({tour,courierUid:"courier-1",confirmationVerified:true,existingPayoutLedger:result.payoutLedger,now}),/already_recorded/);
+});
