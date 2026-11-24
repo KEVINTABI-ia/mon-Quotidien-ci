@@ -503,14 +503,14 @@ service cloud.firestore {
         && request.resource.data.statut == "en_attente_boutiques"
         && request.resource.data.nombreBoutiques is int
         && request.resource.data.nombreBoutiques >= 2
-        && request.resource.data.nombreBoutiques <= 25
+        && request.resource.data.nombreBoutiques <= 4
         && request.resource.data.nombreArticles is int
         && request.resource.data.nombreArticles >= request.resource.data.nombreBoutiques
         && request.resource.data.nombreArticles <= 99
         && request.resource.data.sousCommandes is list
         && request.resource.data.sousCommandes.size() == request.resource.data.nombreBoutiques
         && request.resource.data.sousCommandes.size() >= 2
-        && request.resource.data.sousCommandes.size() <= 25
+        && request.resource.data.sousCommandes.size() <= 4
         && request.resource.data.montantArticles is int
         && request.resource.data.montantArticles > 0
         && request.resource.data.devise == "XOF"
