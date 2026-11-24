@@ -939,7 +939,7 @@ service cloud.firestore {
       allow create: if estConnecte()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasAll(["uid","type","titre","categorie","commune","telephone","description","email","statut","createdAt"])
-        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","quartier","telephone","description","infosProfessionnelles","email","numeroIdentite","photoUrl","adresseBoutique","montantAbonnement","dureeAbonnementJours","paiementStatut","modePartenaire","planAbonnementId","abonnementStatut","statut","createdAt"])
+        && request.resource.data.keys().hasOnly(["uid","type","titre","categorie","commune","quartier","telephone","description","infosProfessionnelles","email","numeroIdentite","photoUrl","adresseBoutique","latitudeBoutique","longitudeBoutique","precisionGpsBoutiqueMetres","positionBoutiqueSource","positionBoutiqueCaptureAt","montantAbonnement","dureeAbonnementJours","paiementStatut","modePartenaire","planAbonnementId","abonnementStatut","statut","createdAt"])
         && request.resource.data.type in ["auto_ecole","vulcanisateur","depannage","hebergement","depannage_domicile","commerce","annonce"]
         && (!request.resource.data.keys().hasAny(["modePartenaire"]) || request.resource.data.get("modePartenaire", false) == true)
         && (request.resource.data.get("modePartenaire", false) != true
@@ -964,6 +964,22 @@ service cloud.firestore {
             && request.resource.data.dureeAbonnementJours is int
             && request.resource.data.dureeAbonnementJours > 0
             && request.resource.data.dureeAbonnementJours <= 90))
+        && (request.resource.data.type != "commerce"
+          || (request.resource.data.adresseBoutique is string
+            && request.resource.data.adresseBoutique.size() > 4
+            && request.resource.data.adresseBoutique.size() <= 220
+            && request.resource.data.latitudeBoutique is number
+            && request.resource.data.latitudeBoutique >= -90
+            && request.resource.data.latitudeBoutique <= 90
+            && request.resource.data.longitudeBoutique is number
+            && request.resource.data.longitudeBoutique >= -180
+            && request.resource.data.longitudeBoutique <= 180
+            && request.resource.data.precisionGpsBoutiqueMetres is int
+            && request.resource.data.precisionGpsBoutiqueMetres > 0
+            && request.resource.data.precisionGpsBoutiqueMetres <= 100000
+            && request.resource.data.positionBoutiqueSource == "gps"
+            && request.resource.data.positionBoutiqueCaptureAt is string
+            && request.resource.data.positionBoutiqueCaptureAt.size() <= 40))
         && request.resource.data.titre is string && request.resource.data.titre.size() > 0 && request.resource.data.titre.size() <= 100
         && request.resource.data.categorie is string && request.resource.data.categorie.size() <= 80
         && request.resource.data.commune is string && request.resource.data.commune.size() > 0 && request.resource.data.commune.size() <= 60
