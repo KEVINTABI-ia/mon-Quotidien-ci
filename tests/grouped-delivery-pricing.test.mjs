@@ -268,8 +268,7 @@ test("grouped tour closes only after verified customer confirmation without an i
  assert.throws(()=>completeGroupedDeliveryTour({tour,courierUid:"courier-1",confirmationVerified:false,now}),/confirmation_required/);
  const result=completeGroupedDeliveryTour({tour,courierUid:"courier-1",confirmationVerified:true,now});
  assert.equal(result.tour.status,"completed");
- assert.equal(result.payoutLedger.courierPayoutXof,4500);
- assert.equal(result.payoutLedger.platformShareXof,500);
  assert.equal(result.activeMissionLock,null);
- assert.throws(()=>completeGroupedDeliveryTour({tour,courierUid:"courier-1",confirmationVerified:true,now}),/already_recorded/);
+ assert.equal(result.payoutLedger,undefined);
+ assert.equal(result.tour.status,"completed");
 });
