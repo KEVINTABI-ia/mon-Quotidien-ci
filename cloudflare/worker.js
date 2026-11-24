@@ -1073,6 +1073,19 @@ export function buildGroupedTourPayoutLedger({tourId,courierUid,totalPriceXof,ex
   return Object.freeze({id:"tour_"+tourId,type:"grouped_tour_payout",tourId,courierUid,status:"ready_for_settlement",...split,createdAt:now.toISOString()});
 }
 
+export function buildGroupedTourStops({orderedShopIds,children}) {
+  if(!Array.isArray(orderedShopIds)||orderedShopIds.length<2||orderedShopIds.length>4||!Array.isArray(children)||children.length!==orderedShopIds.length)
+    throw new Error("grouped_tour_pickup_order_invalid");
+  const stops=orderedShopIds.map(boutiqueId=>{
+    const child=children.find(item=>item.boutiqueId===boutiqueId);
+    return child&&typeof child.id==="string"&&child.id.trim()
+      ?{id:child.id,boutiqueId,boutiqueNom:child.boutiqueNom||"Boutique",status:"pending"}:null;
+  });
+  if(stops.some(stop=>!stop)||new Set(stops.map(stop=>stop.id)).size!==stops.length)
+    throw new Error("grouped_tour_pickup_order_invalid");
+  return Object.freeze(stops.map(stop=>Object.freeze(stop)));
+}
+
 // Pure lifecycle guards for a single courier-owned grouped tour. Firestore
 // transactions must persist these results atomically before exposing them to clients.
 export function acceptGroupedDeliveryTour({tour,courierUid,activeMission=null,now=new Date()}) {
@@ -2725,14 +2738,9 @@ async function dispatchGroupedDeliveryTour(request,env) {
     const children=childDocs.map((doc,index)=>({...docData(doc),id:parent.sousCommandes[index]}));
     if(children.some(child=>child.clientId!==parent.clientId||child.commandeGroupeeId!==parentId||child.statutBoutique!=="prete"||typeof child.boutiqueId!=="string"))
       return json({error:"grouped_order_child_not_ready"},409);
-    if(!Array.isArray(parent.tournee.orderedShopIds)||parent.tournee.orderedShopIds.length!==children.length)
-      return json({error:"grouped_tour_pickup_order_invalid"},409);
-    const stops=parent.tournee.orderedShopIds.map(boutiqueId=>{
-      const child=children.find(item=>item.boutiqueId===boutiqueId);
-      return child?{id:child.id,boutiqueId,boutiqueNom:child.boutiqueNom||"Boutique",status:"pending"}:null;
-    });
-    if(stops.some(stop=>!stop)||new Set(stops.map(stop=>stop.id)).size!==stops.length)
-      return json({error:"grouped_tour_pickup_order_invalid"},409);
+    let stops;
+    try{stops=buildGroupedTourStops({orderedShopIds:parent.tournee.orderedShopIds,children});}
+    catch{return json({error:"grouped_tour_pickup_order_invalid"},409);}
     if(!courierProfileCanCompleteMission(profile,courierUid)||profile.enLigne!==true)return json({error:"courier_profile_not_eligible_or_offline"},403);
     const price=parent.tarificationEstimee;
     if(!price||!Number.isSafeInteger(price.totalPriceXof)||price.totalPriceXof<1)return json({error:"grouped_tour_price_missing"},409);
