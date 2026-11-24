@@ -1091,14 +1091,14 @@ export function transitionGroupedDeliveryTourStop({tour,stopId,nextStatus}) {
   return Object.freeze({tour:Object.freeze({...tour,stops:transition.stops,status:transition.tourStatus==="delivering"?"delivering":transition.pickedUpCount>0?"collecting":"accepted"}),...transition});
 }
 export function markGroupedTourDestinationArrived({tour,courierUid,now=new Date()}) {
-  if(!tour||tour.status!=="arrive_destination"||!Array.isArray(tour.stops)||tour.stops.length<2||tour.stops.some(stop=>stop.status!=="picked_up"))
+  if(!tour||tour.status!=="delivering"||!Array.isArray(tour.stops)||tour.stops.length<2||tour.stops.some(stop=>stop.status!=="picked_up"))
     throw new Error("grouped_tour_pickups_incomplete");
   if(tour.courierUid!==courierUid) throw new Error("grouped_tour_not_assigned_to_courier");
   if(!(now instanceof Date)||!Number.isFinite(now.getTime())) throw new Error("invalid_grouped_tour_date");
   return Object.freeze({...tour,status:"arrive_destination",arrivedAt:now.toISOString()});
 }
 export function completeGroupedDeliveryTour({tour,courierUid,confirmationVerified,existingPayoutLedger=null,now=new Date()}) {
-  if(!tour||tour.status!=="delivering"||!Array.isArray(tour.stops)||tour.stops.length<2||tour.stops.some(stop=>stop.status!=="picked_up"))
+  if(!tour||tour.status!=="arrive_destination"||!Array.isArray(tour.stops)||tour.stops.length<2||tour.stops.some(stop=>stop.status!=="picked_up"))
     throw new Error("grouped_tour_pickups_incomplete");
   if(tour.courierUid!==courierUid) throw new Error("grouped_tour_not_assigned_to_courier");
   if(confirmationVerified!==true) throw new Error("grouped_tour_confirmation_required");
