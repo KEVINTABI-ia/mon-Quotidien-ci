@@ -2725,7 +2725,7 @@ async function dispatchGroupedDeliveryTour(request,env) {
     const children=childDocs.map(docData);
     if(children.some(child=>child.clientId!==parent.clientId||child.commandeGroupeeId!==parentId||child.statutBoutique!=="prete"))
       return json({error:"grouped_order_child_not_ready"},409);
-    if(!courierProfileCanCompleteMission(profile,courierUid))return json({error:"courier_profile_not_eligible"},403);
+    if(!courierProfileCanCompleteMission(profile,courierUid)||profile.enLigne!==true)return json({error:"courier_profile_not_eligible_or_offline"},403);
     const price=parent.tarificationEstimee;
     if(!price||!Number.isSafeInteger(price.totalPriceXof)||price.totalPriceXof<1)return json({error:"grouped_tour_price_missing"},409);
     const now=new Date(),stops=parent.tournee.orderedShopIds.map(id=>({id,status:"pending"}));
