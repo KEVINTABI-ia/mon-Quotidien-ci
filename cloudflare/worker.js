@@ -2795,16 +2795,19 @@ async function markGroupedTourDestinationArrivedRequest(request,env) {
   let body={};try{body=await request.json();}catch{return json({error:"invalid_json"},400);}
   const parentId=body.commandeGroupeeId,uid=auth.user.sub;
   if(typeof parentId!=="string"||!/^[A-Za-z0-9_-]{1,150}$/.test(parentId))return json({error:"invalid_grouped_order_id"},400);
-  const missionPath="tournees_livraison/"+parentId,lockPath="partenaires/"+uid+"/verrous/missionActive";
+  const missionPath="tournees_livraison/"+parentId,parentPath="commandes_groupees/"+parentId,lockPath="partenaires/"+uid+"/verrous/missionActive";
   try {
     const tx=await beginFirestoreTransaction(env);
-    const [missionDoc,lockDoc]=await Promise.all([getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,lockPath,tx)]);
-    if(!missionDoc)return json({error:"grouped_tour_not_found"},404);
-    const mission=docData(missionDoc),lock=docData(lockDoc);
+    const [missionDoc,parentDoc,lockDoc]=await Promise.all([getDocInTransaction(env,missionPath,tx),getDocInTransaction(env,parentPath,tx),getDocInTransaction(env,lockPath,tx)]);
+    if(!missionDoc||!parentDoc)return json({error:"grouped_tour_not_found"},404);
+    const mission=docData(missionDoc),parent=docData(parentDoc),lock=docData(lockDoc);
     if(mission.courierUid!==uid)return json({error:"grouped_tour_not_assigned_to_courier"},403);
     if(!lockDoc||lock?.tourneeId!==parentId||lock?.statut!=="active")return json({error:"active_mission_lock_missing"},409);
     const now=new Date(),arrived=markGroupedTourDestinationArrived({tour:mission,courierUid:uid,now});
-    await commitFirestoreTransaction(env,[updateWrite(missionPath,{status:arrived.status,arrivedAt:now,updatedAt:now},missionDoc.updateTime)],tx);
+    await commitFirestoreTransaction(env,[
+      updateWrite(missionPath,{status:arrived.status,arrivedAt:now,updatedAt:now},missionDoc.updateTime),
+      updateWrite(parentPath,{statut:"tournee_arrivee_destination",tournee:{...parent.tournee,statut:"arrivee_destination",arrivedAt:now},updatedAt:now},parentDoc.updateTime)
+    ],tx);
     return json({ok:true,mission:{id:parentId,status:arrived.status,arrivedAt:arrived.arrivedAt}});
   }catch(error){return json({error:String(error?.message||"grouped_tour_arrival_failed")},409);}
 }
