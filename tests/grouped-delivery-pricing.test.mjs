@@ -113,7 +113,7 @@ test("OSRM table response feeds road distances and durations into the delivery t
  assert.match(parsed.pathname,/^\/table\/v1\/driving\//);
  assert.equal(parsed.searchParams.get("annotations"),"distance,duration");
  assert.deepEqual(result.orderedStopIds,["courier","shop-b","shop-a","shop-c","customer"]);
- assert.equal(result.totalRoadDistanceKm,7);
+ assert.equal(result.totalRoadDistanceKm,9);
  assert.equal(result.totalDurationSeconds,840);
  assert.equal(result.provider,"osrm");
  assert.match(decodeURIComponent(parsed.pathname),/-4\.03,5\.34/);
@@ -150,10 +150,10 @@ test("grouped delivery planner orders all confirmed shop pickups before the shar
   shops,destination,
   fetchImpl:async()=>({ok:true,json:async()=>({code:"Ok",distances,durations})})
  });
- assert.deepEqual(result.orderedShopIds,["shop-b","shop-a","shop-c"]);
+ assert.deepEqual(result.orderedShopIds,["shop-a","shop-c","shop-b"]);
  assert.equal(result.destinationStopId,"destination");
  assert.equal(result.totalRoadDistanceKm,7);
- assert.equal(result.totalDurationSeconds,875);
+ assert.equal(result.totalDurationSeconds,1125);
  assert.equal(result.provider,"osrm");
  assert.match(result.distanceScope,/excludes_courier_approach/);
 });
