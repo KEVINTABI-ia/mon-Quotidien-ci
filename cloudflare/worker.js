@@ -2159,6 +2159,11 @@ async function monBusinessHash(value) {
     .map(v => v.toString(16).padStart(2, "0")).join("");
 }
 
+function publicMonBusinessCompany(company) {
+  if(!company)return company;
+  const {passwordSalt,passwordHash,...safe}=company;
+  return safe;
+}
 export function normalizeMonBusinessPassword(password) {
   return typeof password === "string" && password.length >= 8 && password.length <= 128 ? password : null;
 }
@@ -2202,7 +2207,7 @@ async function unlockMonBusinessCompany(request,env) {
   if(!doc||company?.uid!==authResult.user.sub)return json({error:"company_not_found"},404);
   if(!company.passwordSalt||!company.passwordHash)return json({error:"password_setup_required"},409);
   if(!await verifyMonBusinessPassword(company,body.password))return json({error:"invalid_business_password"},403);
-  return json({companyId,company});
+  return json({companyId,company:publicMonBusinessCompany(company)});
 }
 async function setupMonBusinessPassword(request,env) {
   const authResult=await requireUser(request,env);
@@ -2216,7 +2221,7 @@ async function setupMonBusinessPassword(request,env) {
   const credential=await hashMonBusinessPassword(password);
   await commitWrites(env,[updateWrite(path,{passwordSalt:credential.salt,passwordHash:credential.hash,updatedAt:new Date()},doc.updateTime)]);
   const updated=await getDoc(env,path);
-  return json({companyId,company:docData(updated)});
+  return json({companyId,company:publicMonBusinessCompany(docData(updated))});
 }
 async function authorizeMonBusinessRequest(request,env,companyId) {
   const authResult=await requireUser(request,env);
@@ -2236,7 +2241,7 @@ async function getMonBusinessCompany(request, env) {
   const companyDoc = await getDoc(env, "mon_business_companies/" + companyId);
   const company = docData(companyDoc);
   if (!companyDoc || company?.uid !== authResult.user.sub) return json({ error: "company_not_found" }, 404);
-  return json({ companyId, company });
+  return json({ companyId, company:publicMonBusinessCompany(company) });
 }
 async function startMonBusinessTrial(request, env) {
   const authResult = await requireUser(request, env);
@@ -2259,7 +2264,7 @@ async function startMonBusinessTrial(request, env) {
     const claim = docData(existingClaim);
     if (claim?.uid === authResult.user.sub) {
       const existingCompany = await getDoc(env, companyPath);
-      if (existingCompany) return json({ companyId, company: docData(existingCompany), alreadyRegistered: true });
+      if (existingCompany) return json({ companyId, company: publicMonBusinessCompany(docData(existingCompany)), alreadyRegistered: true });
     }
     return json({ error: "business_trial_already_used" }, 409);
   }
@@ -2281,7 +2286,7 @@ async function startMonBusinessTrial(request, env) {
     if (claimAfter) return json({ error: "business_trial_already_used" }, 409);
     throw error;
   }
-  return json({ companyId, company }, 201);
+  return json({ companyId, company:publicMonBusinessCompany(company) }, 201);
 }
 
 async function subscriptionPlans(request,env) {
