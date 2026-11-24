@@ -11564,6 +11564,8 @@ function afficherEspacePartenaire(dossier, uid) {
     <h3>📦 Commandes disponibles</h3>
     <button type="button" onclick="chargerCommandesPartenaire()">Actualiser</button>
     <div id="fileCommandesPartenaire"><p>Chargement...</p></div>
+    <h3>🚚 Mes tournées multi-boutiques</h3>
+    <div id="tourneesGroupeesPartenaire"><p>Chargement...</p></div>
     <h3>🚚 Ma mission en cours</h3>
     <div id="missionActivePartenaire"><p>Vérification...</p></div>
     <h3>📋 Mes missions précédentes</h3>
@@ -11599,6 +11601,7 @@ async function chargerCommandesPartenaire() {
     }
 
     ecouterNouvellesCommandesPartenaire(user.uid, p, activeOrder);
+    await chargerTourneesGroupeesPartenaire(user);
 
     if (historique) {
       const hs = await partnerDb.collection("commandes_colis").where("partenaireId", "==", user.uid).get();
@@ -11615,6 +11618,59 @@ async function chargerCommandesPartenaire() {
     file.innerHTML = "<p>Chargement impossible : " + echapperTexteCompagnie(e.message) + "</p>";
     mission.innerHTML = "";
   }
+}
+
+async function appelApiTourneeGroupee(path,payload){
+ const user=partnerAuth.currentUser;if(!user)throw new Error("Session livreur absente.");
+ const token=await user.getIdToken();
+ const response=await fetch(WORKER_URL+path,{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify(payload||{})});
+ const result=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error(result.error||"Action impossible.");
+ return result;
+}
+async function chargerTourneesGroupeesPartenaire(user){
+ const zone=document.getElementById("tourneesGroupeesPartenaire");if(!zone)return;
+ zone.textContent="Chargement des tournées attribuées...";
+ try{
+  const token=await user.getIdToken(),response=await fetch(WORKER_URL+"/api/courier/grouped-tours",{headers:{Authorization:"Bearer "+token}});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||"Chargement impossible.");
+  zone.replaceChildren();
+  if(!Array.isArray(result.missions)||!result.missions.length){zone.textContent="Aucune tournée multi-boutiques attribuée.";return;}
+  const labels={offered:"À accepter",accepted:"Acceptée",collecting:"Collecte en cours",delivering:"En route vers le client",arrive_destination:"Arrivée à destination"};
+  for(const tour of result.missions){
+   const card=document.createElement("section");card.className="stop";card.style.cssText="padding:14px;margin:12px 0;border:1px solid #dcebdd;border-radius:12px;";
+   const title=document.createElement("strong");title.textContent="Tournée multi-boutiques · "+tour.id;card.appendChild(title);
+   const status=document.createElement("p");status.textContent="État : "+(labels[tour.status]||tour.status);card.appendChild(status);
+   const price=document.createElement("p");price.textContent="Tarif total : "+Number(tour.totalPriceXof||0).toLocaleString("fr-FR")+" FCFA";card.appendChild(price);
+   const route=document.createElement("p");route.textContent="Collectes : "+(tour.stops||[]).length+" boutique(s)";card.appendChild(route);
+   if(tour.status==="offered"){
+    const accept=document.createElement("button");accept.className="primary";accept.textContent="Accepter la tournée";
+    accept.addEventListener("click",async()=>{accept.disabled=true;try{await appelApiTourneeGroupee("/api/courier/grouped-tour/accept",{commandeGroupeeId:tour.id});await chargerTourneesGroupeesPartenaire(user);}catch(e){alert("Acceptation impossible : "+e.message);accept.disabled=false;}});card.appendChild(accept);
+   }
+   if(["accepted","collecting"].includes(tour.status)){
+    (tour.stops||[]).forEach(stop=>{
+     const line=document.createElement("p");line.textContent="Boutique "+stop.id+" — "+({pending:"À rejoindre",arrived:"Arrivé",picked_up:"Colis récupéré"}[stop.status]||stop.status);card.appendChild(line);
+     if(stop.status==="pending"||stop.status==="arrived"){
+      const action=document.createElement("button");action.textContent=stop.status==="pending"?"Signaler mon arrivée à la boutique":"Confirmer la collecte";
+      action.addEventListener("click",async()=>{action.disabled=true;try{await appelApiTourneeGroupee("/api/courier/grouped-tour/stop",{commandeGroupeeId:tour.id,stopId:stop.id,nextStatus:stop.status==="pending"?"arrived":"picked_up"});await chargerTourneesGroupeesPartenaire(user);}catch(e){alert("Étape impossible : "+e.message);action.disabled=false;}});card.appendChild(action);
+     }
+    });
+   }
+   if(tour.status==="delivering"){
+    const nav=document.createElement("button");nav.className="primary";nav.textContent="Itinéraire vers le client";
+    nav.addEventListener("click",()=>{const d=tour.destination||{};if(!Number.isFinite(d.latitude)||!Number.isFinite(d.longitude))return alert("Coordonnées de destination indisponibles.");location.href="https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(d.latitude+","+d.longitude)+"&travelmode=driving";});card.appendChild(nav);
+    const arrived=document.createElement("button");arrived.textContent="Je suis arrivé chez le client";
+    arrived.addEventListener("click",async()=>{if(!confirm("Confirmer votre arrivée à l'adresse du client ?"))return;arrived.disabled=true;try{await appelApiTourneeGroupee("/api/courier/grouped-tour/destination-arrived",{commandeGroupeeId:tour.id});await chargerTourneesGroupeesPartenaire(user);}catch(e){alert("Arrivée impossible : "+e.message);arrived.disabled=false;}});card.appendChild(arrived);
+   }
+   if(tour.status==="arrive_destination"){
+    const code=document.createElement("input");code.type="text";code.inputMode="numeric";code.maxLength=6;code.placeholder="Code client à 6 chiffres";code.autocomplete="one-time-code";card.appendChild(code);
+    const finish=document.createElement("button");finish.className="primary";finish.textContent="Confirmer la livraison et clôturer";
+    finish.addEventListener("click",async()=>{if(!/^\d{6}$/.test(code.value.trim()))return alert("Saisissez le code à 6 chiffres communiqué par le client.");if(!confirm("Confirmer la remise de toutes les commandes au client ?"))return;finish.disabled=true;try{const result=await appelApiTourneeGroupee("/api/courier/grouped-tour/complete",{commandeGroupeeId:tour.id,code:code.value.trim()});alert("Tournée clôturée. Rémunération livreur : "+Number(result.payout?.courierPayoutXof||0).toLocaleString("fr-FR")+" FCFA. Part plateforme : "+Number(result.payout?.platformShareXof||0).toLocaleString("fr-FR")+" FCFA.");await chargerCommandesPartenaire();}catch(e){alert("Clôture impossible : "+e.message);finish.disabled=false;}});card.appendChild(finish);
+   }
+   zone.appendChild(card);
+  }
+ }catch(error){zone.textContent="Impossible de charger les tournées : "+error.message;}
 }
 
 async function accepterCommandePartenaire(commandeId) {
