@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#075B35">
+  <title>Mon Business — Mon Quotidien CI</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#17352c;background:#f3f7f4}
+    *{box-sizing:border-box}body{margin:0}header{background:#075b35;color:white;padding:22px 18px}
+    header a{color:#fff}main{max-width:760px;margin:24px auto;padding:0 16px}
+    .card{background:#fff;border:1px solid #dce8df;border-radius:18px;padding:20px;margin:0 0 16px;box-shadow:0 5px 18px #143b2510}
+    h1{font-size:22px;margin:0 0 5px}h2{font-size:19px;margin:0 0 14px}p{line-height:1.55}
+    label{display:block;font-weight:650;font-size:14px;margin:12px 0 6px}
+    input,select{width:100%;padding:13px;border:1px solid #cbdacf;border-radius:10px;font:inherit;background:#fff}
+    button{border:0;border-radius:11px;padding:13px 16px;background:#087c62;color:white;font-weight:750;font:inherit;cursor:pointer}
+    button:disabled{opacity:.55;cursor:wait}.secondary{background:#edf5ef;color:#15583b}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.muted{color:#60766a;font-size:13px}
+    .status{padding:12px;border-radius:10px;background:#edf5ef;margin-top:12px;white-space:pre-wrap}
+    .error{background:#fff0ed;color:#8e261b}.hidden{display:none!important}
+    .pill{display:inline-block;background:#e6f3e9;color:#145b39;padding:5px 9px;border-radius:30px;font-size:12px;font-weight:700}
+    @media(max-width:560px){.grid{grid-template-columns:1fr}}
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore-compat.js"></script>
+  <script src="./config.js"></script>
+</head>
+<body>
+<header>
+  <h1>Mon Business</h1>
+  <div>MON QUOTIDIEN CI · Le quotidien à portée de main !</div>
+  <p><a href="../index.html">← Retour à Mon Quotidien CI</a></p>
+</header>
+<main>
+  <section class="card">
+    <span class="pill">Phase 1 · Fondations</span>
+    <h2 style="margin-top:12px">Votre espace professionnel</h2>
+    <p class="muted">Créez votre entreprise, qu'elle soit immatriculée ou non. Vous pourrez ensuite organiser plusieurs secteurs d'activité dans le même espace.</p>
+    <div id="authState" class="status">Vérification de votre session…</div>
+    <p id="userInfo" class="muted hidden"></p>
+  </section>
+
+  <section id="registrationCard" class="card hidden">
+    <h2>Enregistrer une entreprise</h2>
+    <form id="businessForm">
+      <label for="businessName">Nom de l'entreprise</label>
+      <input id="businessName" maxlength="140" minlength="2" required autocomplete="organization">
+      <label for="legalStatus">Situation administrative</label>
+      <select id="legalStatus" required>
+        <option value="unregistered">Non immatriculée (activité en lancement ou informelle)</option>
+        <option value="registered">Immatriculée</option>
+      </select>
+      <div id="registrationNumberWrap" class="hidden">
+        <label for="registrationNumber">Numéro d'immatriculation</label>
+        <input id="registrationNumber" maxlength="100">
+      </div>
+      <button id="createBusinessButton" type="submit">Créer mon espace entreprise</button>
+    </form>
+    <div id="businessStatus" class="status hidden" role="status" aria-live="polite"></div>
+  </section>
+
+  <section id="membersCard" class="card hidden">
+    <h2>Collaborateurs et autorisations</h2>
+    <p class="muted">Les collaborateurs apparaîtront ici après acceptation d'une invitation sécurisée. L'ajout direct par UID est désactivé pour éviter d'accorder l'accès au mauvais compte.</p>
+    <h3>Inviter un collaborateur</h3>
+    <p class="muted">Créez un lien sécurisé, puis partagez-le manuellement par WhatsApp ou SMS. Aucun abonnement e-mail payant n'est nécessaire.</p>
+    <form id="inviteForm">
+      <label for="inviteEmail">E-mail vérifié du collaborateur</label>
+      <input id="inviteEmail" type="email" maxlength="254" required>
+      <label for="inviteRole">Rôle</label>
+      <select id="inviteRole" required>
+        <option value="general_director">Directeur général</option><option value="activity_manager">Responsable d'activité</option>
+        <option value="accountant">Comptable</option><option value="cashier">Caissier</option>
+        <option value="stock_manager">Gestionnaire de stock</option><option value="employee">Employé</option><option value="observer">Observateur</option>
+      </select>
+      <label for="inviteActivities">Activités autorisées (maintenir Ctrl/Cmd pour plusieurs choix)</label>
+      <select id="inviteActivities" multiple size="4" required></select>
+      <label for="inviteExpiry">Validité du lien</label>
+      <select id="inviteExpiry"><option value="24">24 heures</option><option value="72">3 jours</option><option value="168" selected>7 jours</option><option value="336">14 jours</option></select>
+      <div class="grid">
+        <label><input type="checkbox" id="inviteCreate"> Créer</label><label><input type="checkbox" id="inviteEdit"> Modifier</label>
+        <label><input type="checkbox" id="inviteApprove"> Approuver</label><label><input type="checkbox" id="inviteExport"> Exporter</label>
+        <label><input type="checkbox" id="inviteManage"> Gérer les accès</label>
+      </div>
+      <button id="inviteButton" type="submit">Créer l'invitation</button>
+    </form>
+    <div id="inviteStatus" class="status hidden" role="status" aria-live="polite"></div>
+    <div id="inviteLinkActions" class="hidden">
+      <button type="button" id="copyInviteLink" class="secondary">Copier le lien</button>
+      <button type="button" id="shareInviteLink">Partager sur WhatsApp</button>
+    </div>
+    <h3>Invitations en attente</h3>
+    <div id="invitationsList" class="muted">Chargement des invitations…</div>
+    <div id="memberStatus" class="status hidden" role="status" aria-live="polite"></div>
+    <div id="membersList"></div>
+  </section>
+
+  <section id="activityCard" class="card hidden">
+    <h2>Ajouter un secteur d'activité</h2>
+    <p class="muted">Chaque activité aura ses propres données et ses propres droits d'accès. Le tableau de bord global pourra ensuite consolider les résultats.</p>
+    <form id="activityForm">
+      <label for="activityName">Nom de l'activité</label>
+      <input id="activityName" maxlength="100" minlength="2" required placeholder="Ex. Boutique principale">
+      <label for="activityType">Type d'activité</label>
+      <select id="activityType" required>
+        <option value="">Choisir un secteur</option>
+        <option value="commerce">Commerce / boutique</option>
+        <option value="transport">Transport / mobilité</option>
+        <option value="livraison">Livraison / logistique</option>
+        <option value="restauration">Restauration</option>
+        <option value="agriculture">Agriculture / élevage</option>
+        <option value="services">Prestations de services</option>
+        <option value="autre">Autre activité</option>
+      </select>
+      <button id="createActivityButton" type="submit">Ajouter cette activité</button>
+    </form>
+    <div id="activityStatus" class="status hidden" role="status" aria-live="polite"></div>
+    <div id="activitiesList"></div>
+  </section>
+</main>
+<script>
+(function(){
+  const firebaseConfig = {
+    apiKey:"AIzaSyBJFCyGS-cEaEm0_c_-p0CzunNcME9-u7",
+    authDomain:"mon-transport-ci.firebaseapp.com",
+    projectId:"mon-transport-ci",
+    storageBucket:"mon-transport-ci.firebasestorage.app",
+    messagingSenderId:"326599026854",
+    appId:"1:326599026854:web:73a33f95f427854aec6c67"
+  };
+  if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const auth=firebase.auth(), db=firebase.firestore();
+  const MON_BUSINESS_API=window.MON_BUSINESS_API||"";
+  const $=id=>document.getElementById(id);
+  let currentUser=null, currentBusinessId=null, currentBusinessOwner=false, lastInviteUrl="";
+  async function callWorker(path,payload){
+    if(!MON_BUSINESS_API)throw new Error("worker_not_configured");
+    const idToken=await currentUser.getIdToken();
+    const response=await fetch(MON_BUSINESS_API.replace(/\/$/,"")+path,{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+idToken},body:JSON.stringify(payload)});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(result.error||"worker_request_failed");
+    return result;
+  }
+  const setStatus=(id,message,isError=false)=>{
+    const el=$(id);el.textContent=message;el.classList.remove("hidden","error");
+    if(isError)el.classList.add("error");
+  };
+  $("legalStatus").addEventListener("change",()=>{
+    const registered=$("legalStatus").value==="registered";
+    $("registrationNumberWrap").classList.toggle("hidden",!registered);
+    $("registrationNumber").required=registered;
+  });
+  auth.onAuthStateChanged(user=>{
+    currentUser=user||null;
+    $("registrationCard").classList.toggle("hidden",!user);
+    $("activityCard").classList.toggle("hidden",!user);
+    $("authState").textContent=user
+      ?"Session connectée. Vous pouvez créer votre espace professionnel."
+      :"Connectez-vous d'abord sur Mon Quotidien CI, puis revenez sur cette page.";
+    $("userInfo").classList.toggle("hidden",!user);
+    $("userInfo").textContent=user?"Compte Firebase authentifié · "+user.uid:"";
+    if(!user){currentBusinessId=null;return;}
+    currentBusinessId=localStorage.getItem("mqci_mon_business_id")||null;
+    if(currentBusinessId){loadActivities();loadMembers();}
+    acceptInvitationFromLink();
+  });
+
+  async function acceptInvitationFromLink(){
+    const params=new URLSearchParams((location.hash||"").replace(/^#/,""));
+    const invitationId=params.get("invitation"),token=params.get("token");
+    if(!invitationId||!token)return;
+    if(!currentUser){
+      setStatus("authState","Connectez-vous d'abord sur Mon Quotidien CI avec l'adresse e-mail invitée, puis revenez sur ce lien.");
+      return;
+    }
+    try{
+      setStatus("authState","Vérification de votre invitation sécurisée…");
+      const result=await callWorker("/v1/invitations/accept",{invitationId,token});
+      currentBusinessId=result.businessId;
+      localStorage.setItem("mqci_mon_business_id",currentBusinessId);
+      history.replaceState(null,"",location.pathname+location.search);
+      setStatus("authState","Invitation acceptée. Votre accès collaborateur est maintenant actif.");
+      await loadMembers();
+      await loadActivities();
+    }catch(error){
+      setStatus("authState","Invitation non acceptée : "+error.message,true);
+    }
+  }
+
+  $("businessForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(!currentUser)return;
+    const name=$("businessName").value.trim();
+    const legalStatus=$("legalStatus").value;
+    const registrationNumber=$("registrationNumber").value.trim();
+    if(name.length<2)return setStatus("businessStatus","Le nom doit contenir au moins 2 caractères.",true);
+    if(legalStatus==="registered"&&!registrationNumber)return setStatus("businessStatus","Le numéro d'immatriculation est obligatoire.",true);
+    const button=$("createBusinessButton");button.disabled=true;
+    try{
+      const businessRef=db.collection("businesses").doc();
+      const memberRef=businessRef.collection("members").doc(currentUser.uid);
+      const now=firebase.firestore.FieldValue.serverTimestamp();
+      const business={
+        name,legalStatus,ownerUid:currentUser.uid,status:"active",
+        schemaVersion:1,createdAt:now,updatedAt:now
+      };
+      if(legalStatus==="registered")business.registrationNumber=registrationNumber;
+      const batch=db.batch();
+      batch.set(businessRef,business);
+      batch.set(memberRef,{
+        uid:currentUser.uid,role:"owner",status:"active",
+        activityIds:[],permissions:{},createdAt:now
+      });
+      await batch.commit();
+      currentBusinessId=businessRef.id;
+      currentBusinessOwner=true;
+      $("membersCard").classList.remove("hidden");
+      localStorage.setItem("mqci_mon_business_id",currentBusinessId);
+      setStatus("businessStatus","Entreprise créée. Votre compte en est le propriétaire.");
+      $("activityCard").classList.remove("hidden");
+      await loadActivities();
+      await loadMembers();
+    }catch(error){
+      console.error("Mon Business registration error",error);
+      setStatus("businessStatus","Impossible de créer l'entreprise. Vérifiez votre connexion et vos autorisations, puis réessayez.",true);
+    }finally{button.disabled=false;}
+  });
+
+
+  $("inviteForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(!currentUser||!currentBusinessId||!currentBusinessOwner)return setStatus("inviteStatus","Seul le propriétaire actif peut inviter.",true);
+    const activityIds=Array.from($("inviteActivities").selectedOptions).map(option=>option.value);
+    if(!activityIds.length)return setStatus("inviteStatus","Sélectionnez au moins une activité.",true);
+    const permissions={view:true,create:$("inviteCreate").checked,edit:$("inviteEdit").checked,approve:$("inviteApprove").checked,export:$("inviteExport").checked,manage_access:$("inviteManage").checked};
+    const button=$("inviteButton");button.disabled=true;
+    try{
+      const result=await callWorker("/v1/invitations",{businessId:currentBusinessId,email:$("inviteEmail").value.trim(),role:$("inviteRole").value,activityIds,permissions,expiresInHours:Number($("inviteExpiry").value)});
+      lastInviteUrl=result.inviteUrl;
+      setStatus("inviteStatus","Invitation créée. Expiration : "+new Date(result.expiresAt).toLocaleString("fr-FR")+". Partagez ce lien uniquement avec la personne invitée.");
+      $("inviteLinkActions").classList.remove("hidden");
+      await loadInvitations();
+    }catch(error){
+      setStatus("inviteStatus",error.message==="worker_not_configured"?"Le Worker sécurisé n'est pas encore déployé/configuré.":"Création impossible : "+error.message,true);
+    }finally{button.disabled=false;}
+  });
+  $("copyInviteLink").addEventListener("click",async()=>{
+    if(!lastInviteUrl)return;
+    try{await navigator.clipboard.writeText(lastInviteUrl);setStatus("inviteStatus","Lien copié. Partagez-le avec le collaborateur invité.");}
+    catch{setStatus("inviteStatus","Copie automatique indisponible. Copiez le lien depuis le navigateur.",true);}
+  });
+  $("shareInviteLink").addEventListener("click",()=>{
+    if(!lastInviteUrl)return;
+    window.open("https://wa.me/?text="+encodeURIComponent("Vous êtes invité à rejoindre mon espace Mon Business : "+lastInviteUrl),"_blank","noopener");
+  });
+
+  async function loadInvitations(){
+    if(!currentBusinessId||!currentBusinessOwner)return;
+    const list=$("invitationsList");list.textContent="Chargement des invitations…";
+    try{
+      const result=await callWorker("/v1/invitations/list",{businessId:currentBusinessId});
+      list.replaceChildren();
+      const invitations=Array.isArray(result.invitations)?result.invitations:[];
+      if(!invitations.length){list.textContent="Aucune invitation en attente.";return;}
+      invitations.forEach(invitation=>{
+        const item=document.createElement("div");item.className="status";
+        const label=document.createElement("strong");
+        const expiry=invitation.expiresAt?new Date(invitation.expiresAt).toLocaleString("fr-FR"):"expiration inconnue";
+        label.textContent=invitation.email+" · "+invitation.role+" · expire le "+expiry;
+        const revoke=document.createElement("button");revoke.type="button";revoke.className="secondary";revoke.textContent="Révoquer";
+        revoke.addEventListener("click",async()=>{
+          if(!window.confirm("Révoquer l’invitation envoyée à "+invitation.email+" ?"))return;
+          revoke.disabled=true;
+          try{
+            await callWorker("/v1/invitations/revoke",{businessId:currentBusinessId,invitationId:invitation.invitationId});
+            setStatus("memberStatus","Invitation révoquée.");
+            await loadInvitations();
+          }catch(error){setStatus("memberStatus","Révocation impossible : "+error.message,true);}
+          finally{revoke.disabled=false;}
+        });
+        item.append(label,revoke);list.append(item);
+      });
+    }catch(error){list.textContent="Impossible de charger les invitations : "+error.message;}
+  }
+
+  async function loadMembers(){
+    if(!currentBusinessId||!currentUser)return;
+    try{
+      const businessRef=db.collection("businesses").doc(currentBusinessId);
+      const ownerDoc=await businessRef.collection("members").doc(currentUser.uid).get();
+      currentBusinessOwner=ownerDoc.exists&&ownerDoc.data().role==="owner"&&ownerDoc.data().status==="active";
+      $("membersCard").classList.toggle("hidden",!currentBusinessOwner);
+      if(!currentBusinessOwner)return;
+      const [membersSnap,activitiesSnap]=await Promise.all([
+        businessRef.collection("members").get(),
+        businessRef.collection("activities").get()
+      ]);
+      const list=$("membersList");list.replaceChildren();
+      membersSnap.forEach(memberDoc=>{
+        const m=memberDoc.data();
+        const item=document.createElement("div");item.className="status";
+        const label=document.createElement("strong");
+        label.textContent=(m.uid||memberDoc.id)+" · "+m.role+" · "+m.status;
+        item.appendChild(label);
+        if(memberDoc.id!==currentUser.uid){
+          const controls=document.createElement("div");controls.className="grid";
+          const role=document.createElement("select");
+          ["general_director","activity_manager","accountant","cashier","stock_manager","employee","observer"].forEach(value=>{
+            const option=document.createElement("option");option.value=value;option.textContent=value;role.appendChild(option);
+          });
+          role.value=m.role;
+          const state=document.createElement("select");
+          [["active","Actif"],["suspended","Suspendu"],["revoked","Révoqué"]].forEach(([value,labelText])=>{
+            const option=document.createElement("option");option.value=value;option.textContent=labelText;state.appendChild(option);
+          });
+          state.value=m.status;
+          const save=document.createElement("button");save.type="button";save.textContent="Enregistrer";
+          save.addEventListener("click",async()=>{
+            save.disabled=true;
+            try{
+              await callWorker("/v1/members/update",{businessId:currentBusinessId,memberUid:memberDoc.id,role:role.value,status:state.value,activityIds:m.activityIds||[],permissions:{...(m.permissions||{}),view:true}});
+              setStatus("memberStatus","Droits du collaborateur mis à jour.");
+              await loadMembers();
+            }catch(error){
+              console.error("Mon Business member update error",error);
+              setStatus("memberStatus","Modification refusée. Vérifiez les autorisations.",true);
+            }finally{save.disabled=false;}
+          });
+          controls.append(role,state,save);item.appendChild(controls);
+        }
+        list.appendChild(item);
+      });
+      await loadInvitations();
+    }catch(error){
+      console.error("Mon Business member read error",error);
+      setStatus("memberStatus","Impossible de charger les collaborateurs.",true);
+    }
+  }
+
+  async function loadActivities(){
+    if(!currentBusinessId||!currentUser)return;
+    try{
+      const businessRef=db.collection("businesses").doc(currentBusinessId);
+      const member=await businessRef.collection("members").doc(currentUser.uid).get();
+      if(!member.exists||member.data().role!=="owner"||member.data().status!=="active"){
+        $("activityCard").classList.add("hidden");
+        return;
+      }
+      const snap=await businessRef.collection("activities").get();
+      const inviteSelect=$("inviteActivities");
+      if(inviteSelect){inviteSelect.replaceChildren();snap.forEach(doc=>{const option=document.createElement("option");option.value=doc.id;option.textContent=doc.data().name;inviteSelect.appendChild(option);});}
+      const list=$("activitiesList");list.replaceChildren();
+      snap.forEach(doc=>{
+        const item=document.createElement("p");
+        item.className="status";
+        item.textContent=doc.data().name+" · "+doc.data().type;
+        list.appendChild(item);
+      });
+      if(!snap.size){
+        const empty=document.createElement("p");empty.className="muted";
+        empty.textContent="Aucune activité enregistrée pour le moment.";
+        list.appendChild(empty);
+      }
+    }catch(error){
+      console.error("Mon Business activity read error",error);
+      setStatus("activityStatus","L'accès à cet espace n'a pas pu être vérifié. Recréez ou sélectionnez un espace auquel votre compte a accès.",true);
+    }
+  }
+
+  $("activityForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(!currentUser||!currentBusinessId)return setStatus("activityStatus","Créez d'abord votre entreprise.",true);
+    const name=$("activityName").value.trim(),type=$("activityType").value;
+    if(name.length<2||!type)return setStatus("activityStatus","Renseignez le nom et le type de l'activité.",true);
+    const button=$("createActivityButton");button.disabled=true;
+    try{
+      const ref=db.collection("businesses").doc(currentBusinessId).collection("activities").doc();
+      const now=firebase.firestore.FieldValue.serverTimestamp();
+      await ref.set({
+        businessId:currentBusinessId,name,type,status:"active",
+        createdBy:currentUser.uid,createdAt:now,updatedAt:now
+      });
+      $("activityName").value="";$("activityType").value="";
+      setStatus("activityStatus","Activité ajoutée avec succès.");
+      await loadActivities();
+    }catch(error){
+      console.error("Mon Business activity create error",error);
+      setStatus("activityStatus","Impossible d'ajouter cette activité. Vérifiez les droits de votre compte.",true);
+    }finally{button.disabled=false;}
+  });
+})();
+</script>
+</body>
+</html>
