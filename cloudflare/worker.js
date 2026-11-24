@@ -884,6 +884,75 @@ async function commitFirestoreTransaction(env,writes,transaction) {
 function deleteWrite(path,updateTime) {
   return {delete:resourceName(path),currentDocument:updateTime?{updateTime}:{exists:true}};
 }
+// Planificateur déterministe : la matrice doit provenir d'un calculateur d'itinéraires routiers.
+export function optimizeDeliveryTourRoute({stops,distanceMatrix}) {
+  if(!Array.isArray(stops)||stops.length<3||stops.length>GROUPED_DELIVERY_PRICING.maxShops+2)
+    throw new Error("invalid_delivery_tour_stops");
+  const shopStops=stops.slice(1,-1),ids=new Set();
+  if(shopStops.length<2||stops[0]?.type!=="origin"||stops.at(-1)?.type!=="destination")
+    throw new Error("invalid_delivery_tour_endpoints");
+  for(const stop of stops){
+    if(!stop||typeof stop.id!=="string"||!stop.id.trim()||ids.has(stop.id))
+      throw new Error("invalid_delivery_tour_stop_id");
+    ids.add(stop.id);
+    if(stop.type==="shop"&&(!Number.isFinite(stop.latitude)||stop.latitude < -90||stop.latitude>90||!Number.isFinite(stop.longitude)||stop.longitude < -180||stop.longitude>180))
+      throw new Error("invalid_delivery_tour_shop_coordinates");
+  }
+  if(shopStops.some(stop=>stop.type!=="shop"))
+    throw new Error("invalid_delivery_tour_shop_stops");
+  const n=stops.length;
+  if(!Array.isArray(distanceMatrix)||distanceMatrix.length!==n||distanceMatrix.some(row=>!Array.isArray(row)||row.length!==n))
+    throw new Error("invalid_delivery_tour_distance_matrix");
+  for(const row of distanceMatrix)for(const distance of row)
+    if(typeof distance!=="number"||!Number.isFinite(distance)||distance<0||distance>100000)
+      throw new Error("invalid_delivery_tour_road_distance");
+  const remaining=new Set(shopStops.map((_,i)=>i+1)),ordered=[0];
+  let current=0,totalDistanceKm=0;
+  while(remaining.size){
+    let selected=-1,shortest=Infinity;
+    for(const candidate of remaining){
+      const distance=distanceMatrix[current][candidate];
+      if(distance<shortest){shortest=distance;selected=candidate;}
+    }
+    if(selected<0||!Number.isFinite(shortest))throw new Error("delivery_tour_route_unavailable");
+    ordered.push(selected);remaining.delete(selected);totalDistanceKm+=shortest;current=selected;
+  }
+  const destinationIndex=n-1,finalLeg=distanceMatrix[current][destinationIndex];
+  totalDistanceKm+=finalLeg;ordered.push(destinationIndex);
+  if(totalDistanceKm<=0||totalDistanceKm>GROUPED_DELIVERY_PRICING.maxRoadDistanceKm)
+    throw new Error("invalid_delivery_tour_total_distance");
+  return Object.freeze({
+    orderedStopIds:Object.freeze(ordered.map(index=>stops[index].id)),
+    pickupStopIds:Object.freeze(ordered.slice(1,-1).map(index=>stops[index].id)),
+    destinationStopId:stops[destinationIndex].id,
+    totalRoadDistanceKm:Number(totalDistanceKm.toFixed(3))
+  });
+}
+export const DELIVERY_TOUR_STOP_TRANSITIONS=Object.freeze({
+  pending:Object.freeze(["arrived"]),
+  arrived:Object.freeze(["picked_up"]),
+  picked_up:Object.freeze([])
+});
+export function applyDeliveryTourStopTransition({stops,stopId,nextStatus}) {
+  if(!Array.isArray(stops)||stops.length<2||stops.length>GROUPED_DELIVERY_PRICING.maxShops)
+    throw new Error("invalid_delivery_tour_stops");
+  const index=stops.findIndex(stop=>stop?.id===stopId);
+  if(index<0||stops.filter(stop=>stop?.id===stopId).length!==1)
+    throw new Error("delivery_tour_stop_not_found");
+  const current=stops[index];
+  if(!DELIVERY_TOUR_STOP_TRANSITIONS[current.status]?.includes(nextStatus))
+    throw new Error("invalid_delivery_tour_stop_transition");
+  if(stops.slice(0,index).some(stop=>stop.status!=="picked_up"))
+    throw new Error("delivery_tour_previous_stop_incomplete");
+  const updated=stops.map((stop,i)=>i===index?Object.freeze({...stop,status:nextStatus}):stop);
+  const pickedUpCount=updated.filter(stop=>stop.status==="picked_up").length;
+  return Object.freeze({
+    stops:Object.freeze(updated),
+    pickedUpCount,
+    allPickedUp:pickedUpCount===updated.length,
+    tourStatus:pickedUpCount===updated.length?"delivering":pickedUpCount>0?"collecting":"assigned"
+  });
+}
 export const GROUPED_DELIVERY_PRICING = Object.freeze({
   fixedStartFeeXof:500,
   pricePerKmXof:150,
