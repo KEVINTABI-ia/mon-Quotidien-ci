@@ -125,12 +125,28 @@ async function commit(env,writes) {
 async function authenticate(request,env) {
   const token=(request.headers.get("authorization")||"").match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token || token.length>10000) throw new HttpError(401,"authentication_required");
-  const response=await fetch(FIREBASE_LOOKUP+"?key="+encodeURIComponent(env.FIREBASE_API_KEY||""),{
-    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({idToken:token})
-  });
+  if (!env.FIREBASE_API_KEY) throw new HttpError(503,"firebase_api_key_missing");
+  let response;
+  try {
+    response=await fetch(FIREBASE_LOOKUP+"?key="+encodeURIComponent(env.FIREBASE_API_KEY),{
+      method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({idToken:token})
+    });
+  } catch {
+    console.warn("Mon Business Firebase authentication service unreachable");
+    throw new HttpError(503,"firebase_auth_unavailable");
+  }
   const data=await response.json().catch(()=>({}));
   const user=data.users?.[0];
-  if (!response.ok || !user?.localId || user.disabled===true) throw new HttpError(401,"invalid_session");
+  if (!response.ok || !user?.localId || user.disabled===true) {
+    const firebaseCode=typeof data.error?.message==="string"?data.error.message.split(" :")[0]:"";
+    let diagnostic="firebase_auth_rejected";
+    if (firebaseCode==="API_KEY_INVALID") diagnostic="firebase_api_key_invalid";
+    else if (firebaseCode==="INVALID_ID_TOKEN" || firebaseCode==="TOKEN_EXPIRED" || firebaseCode==="INVALID_ID_TOKEN_AUD") diagnostic="firebase_token_invalid_or_expired";
+    else if (firebaseCode==="USER_DISABLED" || user?.disabled===true) diagnostic="firebase_user_disabled";
+    else if (response.status>=500) diagnostic="firebase_auth_unavailable";
+    console.warn("Mon Business Firebase authentication rejected", {status:response.status,code:diagnostic});
+    throw new HttpError(response.status>=500?503:401,diagnostic);
+  }
   if (!user.email || user.emailVerified!==true) throw new HttpError(403,"verified_email_required");
   return {uid:user.localId,email:cleanEmail(user.email)};
 }
