@@ -235,6 +235,13 @@ test("grouped tour maps optimized shop order to the correct child order IDs",()=
  assert.throws(()=>buildGroupedTourStops({orderedShopIds:["shop-a","shop-a","shop-b"],children}),/grouped_tour_pickup_order_invalid/);
 });
 
+test("grouped tour dispatch rejects a courier who already has an active individual mission",()=>{
+ const now=new Date("2026-11-24T12:00:00.000Z");
+ const tour={id:"tour-9",courierUid:"courier-1",status:"offered",stops:[{id:"shop-a",status:"pending"},{id:"shop-b",status:"pending"}]};
+ const activeMission={tourId:"individual-order-7",status:"active"};
+ assert.throws(()=>acceptGroupedDeliveryTour({tour,courierUid:"courier-1",activeMission,now}),/courier_already_has_active_mission/);
+});
+
 test("grouped tour acceptance creates a unique active mission lock and rejects concurrent missions",()=>{
  const now=new Date("2026-11-24T12:00:00.000Z");
  const tour={id:"tour-1",courierUid:"courier-1",status:"offered",stops:[{id:"shop-a",status:"pending"},{id:"shop-b",status:"pending"}],totalPriceXof:2100};
