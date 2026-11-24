@@ -161,8 +161,8 @@ function randomToken() {
   const bytes=crypto.getRandomValues(new Uint8Array(32));
   return b64url(bytes);
 }
-function auditData({businessId,actorUid,action,entityId,now,details={}}) {
-  return {businessId,actorUid,action,entityType:"invitation",entityId,details,occurredAt:now};
+function auditData({businessId,actorUid,action,entityType="invitation",entityId,now,details={}}) {
+  return {businessId,actorUid,action,entityType,entityId,details,occurredAt:now};
 }
 function inviteLink(id,token) {
   return APP_INVITE_URL+"#invitation="+encodeURIComponent(id)+"&token="+encodeURIComponent(token);
@@ -250,7 +250,7 @@ async function updateMember(request,env,user,body) {
   await commit(env,[
     writeDocument(path,{role,status,activityIds,permissions,updatedAt:now},""+member.updateTime,true),
     writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,auditData({
-      businessId,actorUid:user.uid,action:"member.access_updated",entityId:memberUid,now,
+      businessId,actorUid:user.uid,action:"member.access_updated",entityType:"member",entityId:memberUid,now,
       details:{role,status,activityIds,permissions}
     }),"create")
   ]);
@@ -301,4 +301,4 @@ export default {
   }
 };
 
-export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit };
+export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, auditData };
