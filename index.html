@@ -4831,8 +4831,9 @@ async function chargerCommandesBoutique(boutiqueId){
    card.append(h,details,adresse,commentaire,prix,status,statutBoutique);
    if(c.statut!=="livre"&&c.statut!=="annulee"){
     const actions=document.createElement("div");actions.style.cssText="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;";
-    const etapes=[["confirmee","✅ Confirmer"],["preparation","🧺 En préparation"],["prete","📦 Prête"]];
-    etapes.forEach(([valeur,libelle])=>{const btn=document.createElement("button");btn.type="button";btn.textContent=libelle;btn.onclick=()=>mettreAJourStatutCommandeBoutique(doc.id,valeur);actions.appendChild(btn);});
+    const prochaineEtape={recue:"confirmee",confirmee:"preparation",preparation:"prete"}[c.statutBoutique||"recue"];
+    const libellesEtapes={confirmee:"✅ Confirmer",preparation:"🧺 En préparation",prete:"📦 Prête"};
+    if(prochaineEtape){const btn=document.createElement("button");btn.type="button";btn.textContent=libellesEtapes[prochaineEtape];btn.onclick=()=>mettreAJourStatutCommandeBoutique(doc.id,prochaineEtape);actions.appendChild(btn);}
     if(c.statut==="commande_boutique"&&!c.commandeGroupeeId){
      const btn=document.createElement("button");btn.type="button";btn.className="primary";btn.textContent="🚚 Organiser la livraison";btn.onclick=()=>declencherLivraisonBoutique(doc.id);actions.appendChild(btn);
     }else if(c.commandeGroupeeId){
