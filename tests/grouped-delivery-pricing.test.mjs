@@ -5,6 +5,7 @@ import {
   GROUPED_DELIVERY_PRICING,
   optimizeDeliveryTourRoute,
   buildDeliveryTourRouteWithOsrm,
+  buildGroupedDeliveryPlanWithOsrm,
   applyDeliveryTourStopTransition
 } from "../cloudflare/worker.js";
 
@@ -129,4 +130,45 @@ test("OSRM adapter rejects incomplete or invalid routing responses",async()=>{
  await assert.rejects(()=>buildDeliveryTourRouteWithOsrm({
   stops:osrmStops,fetchImpl:async()=>({ok:false,status:429})
  }),/osrm_http_429/);
+});
+
+test("grouped delivery planner orders all confirmed shop pickups before the shared destination",async()=>{
+ const shops=[
+  {id:"shop-a",latitude:5.35,longitude:-4.02},
+  {id:"shop-b",latitude:5.36,longitude:-4.01},
+  {id:"shop-c",latitude:5.37,longitude:-4.00}
+ ];
+ const destination={id:"destination",latitude:5.38,longitude:-3.99};
+ const distances=[
+  [0,4000,1000,7000],
+  [4000,0,2000,6000],
+  [1000,2000,0,5000],
+  [7000,6000,5000,0]
+ ];
+ const durations=distances.map(row=>row.map(value=>value/8));
+ const result=await buildGroupedDeliveryPlanWithOsrm({
+  shops,destination,
+  fetchImpl:async()=>({ok:true,json:async()=>({code:"Ok",distances,durations})})
+ });
+ assert.deepEqual(result.orderedShopIds,["shop-b","shop-a","shop-c"]);
+ assert.equal(result.destinationStopId,"destination");
+ assert.equal(result.totalRoadDistanceKm,7);
+ assert.equal(result.totalDurationSeconds,875);
+ assert.equal(result.provider,"osrm");
+ assert.match(result.distanceScope,/excludes_courier_approach/);
+});
+
+test("grouped delivery planner rejects invalid pickup count, coordinates and OSRM responses",async()=>{
+ const shops=[{id:"a",latitude:5.35,longitude:-4.02},{id:"b",latitude:5.36,longitude:-4.01}];
+ const destination={id:"destination",latitude:5.37,longitude:-4.00};
+ await assert.rejects(()=>buildGroupedDeliveryPlanWithOsrm({
+  shops:shops.slice(0,1),destination,fetchImpl:async()=>({ok:true,json:async()=>({})})
+ }),/invalid_grouped_delivery_stops/);
+ await assert.rejects(()=>buildGroupedDeliveryPlanWithOsrm({
+  shops:shops.map((shop,index)=>index===0?{...shop,latitude:100}:shop),destination,
+  fetchImpl:async()=>({ok:true,json:async()=>({})})
+ }),/invalid_grouped_delivery_coordinates/);
+ await assert.rejects(()=>buildGroupedDeliveryPlanWithOsrm({
+  shops,destination,fetchImpl:async()=>({ok:true,json:async()=>({code:"NoRoute"})})
+ }),/invalid_osrm_matrix/);
 });
