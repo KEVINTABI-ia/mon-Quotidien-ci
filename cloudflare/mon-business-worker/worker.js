@@ -225,7 +225,6 @@ async function listInvitations(env,user,body) {
     body:JSON.stringify({structuredQuery:{
       from:[{collectionId:"businessInvitations"}],
       where:{fieldFilter:{field:{fieldPath:"businessId"},op:"EQUAL",value:{stringValue:businessId}}},
-      orderBy:[{field:{fieldPath:"createdAt"},direction:"DESCENDING"}],
       limit:100
     }})
   });
@@ -235,6 +234,7 @@ async function listInvitations(env,user,body) {
     .filter(row=>row.document?.name)
     .map(row=>({id:row.document.name.split("/").pop(),...decodeDocument(row.document)}))
     .filter(item=>item.businessId===businessId&&item.status==="pending")
+    .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0))
     .map(item=>({invitationId:item.id,email:item.email,role:item.role,activityIds:item.activityIds,expiresAt:item.expiresAt,status:item.status}))});
 }
 
