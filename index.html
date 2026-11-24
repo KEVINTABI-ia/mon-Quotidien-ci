@@ -11992,6 +11992,23 @@ async function enregistrerCommande() {
   } catch(e) { console.error("Erreur commande :",e); alert("Impossible d'enregistrer la commande : "+e.message); }
 }
 
+async function planifierTourneeCommandeGroupee(parentId,button){
+ const user=auth.currentUser;if(!user)return alert("Connectez-vous pour planifier la livraison.");
+ if(button){button.disabled=true;button.textContent="Calcul de l'itinéraire...";}
+ try{
+  const token=await user.getIdToken();
+  const response=await fetch("https://mon-quotidien-jeko.tabikevin57.workers.dev/api/delivery/grouped-plan",{
+   method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
+   body:JSON.stringify({commandeGroupeeId:parentId})
+  });
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||"Impossible de calculer la tournée.");
+  alert("Tournée calculée : "+result.plan.totalRoadDistanceKm+" km · "+Math.ceil(result.plan.totalDurationSeconds/60)+" min · "+Number(result.tarification.totalPriceXof).toLocaleString("fr-FR")+" FCFA.");
+  await chargerHistoriqueCommandes();
+ }catch(error){console.error(error);alert("Planification impossible : "+error.message);}
+ finally{if(button&&button.isConnected){button.disabled=false;button.textContent="Calculer la tournée et les frais";}}
+}
+
 async function chargerHistoriqueCommandes() {
   const zone=document.getElementById("zoneHistoriqueCommandes"),user=auth.currentUser;
   if(!zone)return;
@@ -12004,7 +12021,7 @@ async function chargerHistoriqueCommandes() {
     ]);
     if(snap.empty&&groupSnap.empty){zone.innerHTML="<p>Aucune commande enregistrée pour le moment.</p>";return;}
     zone.innerHTML="<h3>📋 Mes commandes</h3>";
-    const label=function(status){return ({commande_boutique:"Envoyée aux boutiques",confirmee:"Confirmée par la boutique",preparation:"En préparation",prete:"Prête à récupérer",en_attente:"En attente",livreur_affecte:"Livreur affecté",colis_recupere:"Articles récupérés",en_transit:"En cours de livraison",livre:"Livrée",annule:"Annulée"})[status]||status||"Non renseigné";};
+    const label=function(status){return ({commande_boutique:"Envoyée aux boutiques",confirmee:"Confirmée par la boutique",preparation:"En préparation",prete:"Prête à récupérer",en_attente:"En attente",livreur_affecte:"Livreur affecté",colis_recupere:"Articles récupérés",en_transit:"En cours de livraison",livre:"Livrée",annule:"Annulée",tournee_planifiee:"Tournée planifiée"})[status]||status||"Non renseigné";};
     const parents=groupSnap.docs.slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
     for(const parentDoc of parents){
       const parent=parentDoc.data(),card=document.createElement("section");card.className="card";card.style.cssText="padding:14px;margin:12px 0;border:1px solid #dcebdd;";
@@ -12022,8 +12039,15 @@ async function chargerHistoriqueCommandes() {
         row.textContent=(child.boutiqueNom||"Boutique")+" — "+libelle+(child.montantLivraisonBoutique>0?" · Livraison : "+Number(child.montantLivraisonBoutique).toLocaleString("fr-FR")+" FCFA":"");card.appendChild(row);
       }
       const aggregate=document.createElement("p");
-      aggregate.textContent=etatsBoutiques.length&&etatsBoutiques.every(x=>x==="prete")?"Toutes les boutiques ont confirmé que les articles sont prêts.":etatsBoutiques.some(x=>x==="annulee")?"Une ou plusieurs sous-commandes sont annulées.":etatsBoutiques.some(x=>x==="preparation")?"Certaines boutiques préparent encore les articles.":"En attente de confirmation des boutiques.";
+      const allReady=etatsBoutiques.length===parent.nombreBoutiques&&etatsBoutiques.every(x=>x==="prete");
+      aggregate.textContent=allReady?"Toutes les boutiques ont confirmé que les articles sont prêts.":etatsBoutiques.some(x=>x==="annulee")?"Une ou plusieurs sous-commandes sont annulées.":etatsBoutiques.some(x=>x==="preparation")?"Certaines boutiques préparent encore les articles.":"En attente de confirmation des boutiques.";
       card.insertBefore(aggregate,subtitle);
+      if(parent.tournee?.statut==="planifiee"){
+        const plan=document.createElement("p");plan.textContent="Tournée : "+parent.tournee.totalRoadDistanceKm+" km · environ "+Math.ceil(parent.tournee.totalDurationSeconds/60)+" min.";card.appendChild(plan);
+        const price=document.createElement("p");price.textContent="Tarif groupé estimé : "+Number(parent.tarificationLivraison?.totalPriceXof||0).toLocaleString("fr-FR")+" FCFA.";card.appendChild(price);
+      }else if(allReady){
+        const planButton=document.createElement("button");planButton.type="button";planButton.textContent="Calculer la tournée et les frais";planButton.onclick=()=>planifierTourneeCommandeGroupee(parentDoc.id,planButton);card.appendChild(planButton);
+      }
       zone.appendChild(card);
     }
     const individuals=snap.docs.filter(doc=>!doc.data().commandeGroupeeId).slice().sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
