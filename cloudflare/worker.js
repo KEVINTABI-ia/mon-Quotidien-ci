@@ -2693,7 +2693,7 @@ async function listCourierGroupedTours(request,env) {
     const enriched=await Promise.all(missions.map(async mission=>{
       const routeStopIds=(mission.stops||[]).map(stop=>stop.id);
       const details=await Promise.all(routeStopIds.map(id=>getDoc(env,"commandes_colis/"+id+"/informations_privees/details")));
-      const pickups=details.map((doc,index)=>{const data=docData(doc)||{};return {id:routeStopIds[index],status:mission.stops[index]?.status||"pending",latitude:Number(data.latitudeRecuperation),longitude:Number(data.longitudeRecuperation)};});
+      const pickups=details.map((doc,index)=>{const data=docData(doc)||{};return {id:routeStopIds[index],boutiqueNom:mission.stops[index]?.boutiqueNom||"Boutique",status:mission.stops[index]?.status||"pending",latitude:Number(data.latitudeRecuperation),longitude:Number(data.longitudeRecuperation)};});
       const first=docData(details.find(Boolean))||{};
       return {id:mission.id,commandeGroupeeId:mission.commandeGroupeeId,status:mission.status,stops:pickups,destination:{latitude:Number(first.latitudeLivraison),longitude:Number(first.longitudeLivraison)},totalPriceXof:mission.totalPriceXof,currency:mission.currency,createdAt:mission.createdAt,acceptedAt:mission.acceptedAt||null};
     }));
@@ -2722,13 +2722,21 @@ async function dispatchGroupedDeliveryTour(request,env) {
       return json({error:"grouped_tour_not_ready_for_dispatch"},409);
     const childDocs=await Promise.all(parent.sousCommandes.map(id=>getDocInTransaction(env,"commandes_colis/"+id,tx)));
     if(childDocs.some(doc=>!doc))return json({error:"grouped_order_child_missing"},409);
-    const children=childDocs.map(docData);
-    if(children.some(child=>child.clientId!==parent.clientId||child.commandeGroupeeId!==parentId||child.statutBoutique!=="prete"))
+    const children=childDocs.map((doc,index)=>({...docData(doc),id:parent.sousCommandes[index]}));
+    if(children.some(child=>child.clientId!==parent.clientId||child.commandeGroupeeId!==parentId||child.statutBoutique!=="prete"||typeof child.boutiqueId!=="string"))
       return json({error:"grouped_order_child_not_ready"},409);
+    if(!Array.isArray(parent.tournee.orderedShopIds)||parent.tournee.orderedShopIds.length!==children.length)
+      return json({error:"grouped_tour_pickup_order_invalid"},409);
+    const stops=parent.tournee.orderedShopIds.map(boutiqueId=>{
+      const child=children.find(item=>item.boutiqueId===boutiqueId);
+      return child?{id:child.id,boutiqueId,boutiqueNom:child.boutiqueNom||"Boutique",status:"pending"}:null;
+    });
+    if(stops.some(stop=>!stop)||new Set(stops.map(stop=>stop.id)).size!==stops.length)
+      return json({error:"grouped_tour_pickup_order_invalid"},409);
     if(!courierProfileCanCompleteMission(profile,courierUid)||profile.enLigne!==true)return json({error:"courier_profile_not_eligible_or_offline"},403);
     const price=parent.tarificationEstimee;
     if(!price||!Number.isSafeInteger(price.totalPriceXof)||price.totalPriceXof<1)return json({error:"grouped_tour_price_missing"},409);
-    const now=new Date(),stops=parent.tournee.orderedShopIds.map(id=>({id,status:"pending"}));
+    const now=new Date();
     const mission={id:parentId,commandeGroupeeId:parentId,clientId:parent.clientId,courierUid,status:"offered",stops,
       destinationStopId:parent.tournee.destinationStopId,totalPriceXof:price.totalPriceXof,currency:"XOF",
       sousCommandes:parent.sousCommandes,createdAt:now,updatedAt:now};
