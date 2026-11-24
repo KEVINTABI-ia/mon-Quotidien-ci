@@ -2167,10 +2167,11 @@ function publicMonBusinessCompany(company) {
 export function normalizeMonBusinessPassword(password) {
   return typeof password === "string" && password.length >= 8 && password.length <= 128 ? password : null;
 }
+export const MON_BUSINESS_PASSWORD_ITERATIONS = 100000;
 async function hashMonBusinessPassword(password, saltHex) {
   const salt = saltHex ? Uint8Array.from(saltHex.match(/.{2}/g).map(x=>parseInt(x,16))) : crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:210000,hash:"SHA-256"},key,256);
+  const bits = await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:MON_BUSINESS_PASSWORD_ITERATIONS,hash:"SHA-256"},key,256);
   return { salt: Array.from(salt,x=>x.toString(16).padStart(2,"0")).join(""),
     hash: Array.from(new Uint8Array(bits),x=>x.toString(16).padStart(2,"0")).join("") };
 }

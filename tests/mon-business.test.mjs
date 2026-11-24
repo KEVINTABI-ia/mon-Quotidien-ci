@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildMonBusinessPlan, normalizeMonBusinessIdentity, normalizeMonBusinessPassword, normalizeMonBusinessTransaction } from "../cloudflare/worker.js";
+import { buildMonBusinessPlan, normalizeMonBusinessIdentity, normalizeMonBusinessPassword, normalizeMonBusinessTransaction, MON_BUSINESS_PASSWORD_ITERATIONS } from "../cloudflare/worker.js";
 
 test("MON BUSINESS exposes only the three approved quarterly plans",()=>{
   assert.deepEqual(buildMonBusinessPlan("standard"),{label:"Standard",amountXof:15000,durationMonths:3});
@@ -25,4 +25,9 @@ test("MON BUSINESS valide les opérations de recette et de dépense",()=>{
   assert.equal(normalizeMonBusinessTransaction({type:"depense",amountXof:0,label:"Loyer"}),null);
   assert.equal(normalizeMonBusinessTransaction({type:"depense",amountXof:1500,label:"x"}),null);
   assert.equal(normalizeMonBusinessTransaction({type:"depense",amountXof:1.5,label:"Loyer"}),null);
+});
+
+test("MON BUSINESS uses a PBKDF2 iteration count supported by Cloudflare Workers",()=>{
+  assert.equal(MON_BUSINESS_PASSWORD_ITERATIONS,100000);
+  assert.ok(MON_BUSINESS_PASSWORD_ITERATIONS<=100000);
 });
