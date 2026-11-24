@@ -929,6 +929,61 @@ export async function buildDeliveryTourRouteWithOsrm({stops,baseUrl="https://rou
   return Object.freeze({...route,totalDurationSeconds:Math.round(totalDurationSeconds),provider:"osrm"});
 }
 
+export async function buildGroupedDeliveryPlanWithOsrm({shops,destination,baseUrl="https://router.project-osrm.org",fetchImpl=fetch}) {
+  if(!Array.isArray(shops)||shops.length<2||shops.length>4||!destination||typeof destination.id!=="string")
+    throw new Error("invalid_grouped_delivery_stops");
+  const stops=[...shops,destination],ids=new Set();
+  for(const stop of stops){
+    if(!stop||typeof stop.id!=="string"||!stop.id.trim()||ids.has(stop.id)
+      ||!Number.isFinite(stop.latitude)||stop.latitude < -90||stop.latitude>90
+      ||!Number.isFinite(stop.longitude)||stop.longitude < -180||stop.longitude>180)
+      throw new Error("invalid_grouped_delivery_coordinates");
+    ids.add(stop.id);
+  }
+  let endpoint;
+  try{endpoint=new URL(baseUrl);}catch{throw new Error("invalid_osrm_base_url");}
+  if(endpoint.protocol!=="https:"||endpoint.username||endpoint.password||endpoint.search||endpoint.hash)
+    throw new Error("invalid_osrm_base_url");
+  const coordinates=stops.map(stop=>String(stop.longitude)+","+String(stop.latitude)).join(";");
+  const url=new URL("/table/v1/driving/"+coordinates,endpoint.origin);
+  url.searchParams.set("annotations","distance,duration");
+  let response;
+  try{response=await fetchImpl(url.toString(),{method:"GET",headers:{accept:"application/json"},signal:AbortSignal.timeout(10000)});}
+  catch{throw new Error("osrm_network_error");}
+  if(!response.ok)throw new Error("osrm_http_"+response.status);
+  let payload;try{payload=await response.json();}catch{throw new Error("invalid_osrm_response");}
+  const n=stops.length,distances=payload?.distances,durations=payload?.durations;
+  if(payload?.code!=="Ok"||!Array.isArray(distances)||!Array.isArray(durations)
+    ||distances.length!==n||durations.length!==n
+    ||distances.some(row=>!Array.isArray(row)||row.length!==n)
+    ||durations.some(row=>!Array.isArray(row)||row.length!==n))
+    throw new Error("invalid_osrm_matrix");
+  for(const matrix of [distances,durations])for(const row of matrix)for(const value of row)
+    if(typeof value!=="number"||!Number.isFinite(value)||value<0)throw new Error("invalid_osrm_matrix_value");
+  let best=null;
+  const visit=(order,remaining)=>{
+    if(!remaining.length){
+      const indexes=[...order,n-1];let metres=0,seconds=0;
+      for(let i=1;i<indexes.length;i++){metres+=distances[indexes[i-1]][indexes[i]];seconds+=durations[indexes[i-1]][indexes[i]];}
+      if(!best||metres<best.metres)best={order:order.slice(),metres,seconds};
+      return;
+    }
+    for(let i=0;i<remaining.length;i++)visit([...order,remaining[i]],[...remaining.slice(0,i),...remaining.slice(i+1)]);
+  };
+  visit([],shops.map((_,i)=>i));
+  if(!best||best.metres<=0)throw new Error("delivery_tour_route_unavailable");
+  const totalRoadDistanceKm=Number((best.metres/1000).toFixed(3));
+  if(totalRoadDistanceKm>GROUPED_DELIVERY_PRICING.maxRoadDistanceKm)throw new Error("invalid_delivery_tour_total_distance");
+  return Object.freeze({
+    orderedShopIds:Object.freeze(best.order.map(index=>shops[index].id)),
+    destinationStopId:destination.id,
+    totalRoadDistanceKm,
+    totalDurationSeconds:Math.round(best.seconds),
+    provider:"osrm",
+    distanceScope:"between_first_pickup_and_destination_excludes_courier_approach"
+  });
+}
+
 // Planificateur déterministe : la matrice doit provenir d'un calculateur d'itinéraires routiers.
 export function optimizeDeliveryTourRoute({stops,distanceMatrix}) {
   if(!Array.isArray(stops)||stops.length<3||stops.length>GROUPED_DELIVERY_PRICING.maxShops+2)
