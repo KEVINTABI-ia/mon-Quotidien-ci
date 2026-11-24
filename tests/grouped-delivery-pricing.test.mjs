@@ -185,7 +185,6 @@ test("grouped tour payout allocates 90% to the courier and 10% to the platform",
 });
 
 test("grouped tour payout conserves indivisible XOF amounts and rejects invalid fares",()=>{
- const {calculateGroupedTourPayout}=require("../cloudflare/worker.js");
  const payout=calculateGroupedTourPayout({totalPriceXof:1001});
  assert.equal(payout.courierPayoutXof,900);
  assert.equal(payout.platformShareXof,101);
