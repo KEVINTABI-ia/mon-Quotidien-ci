@@ -2513,6 +2513,76 @@ async function payerPublicitePartenaire(){
  }
 }
 
+function ouvrirDemandePubliciteAccueil(){
+  if(!auth||!auth.currentUser){alert("Connectez-vous à votre compte Mon Quotidien CI pour faire une publicité.");return;}
+  let modal=document.getElementById("mqciDemandePubliciteAccueil");
+  if(!modal){
+    modal=document.createElement("section");
+    modal.id="mqciDemandePubliciteAccueil";
+    modal.setAttribute("role","dialog");
+    modal.setAttribute("aria-modal","true");
+    modal.setAttribute("aria-labelledby","mqciDemandePubliciteTitre");
+    modal.style.cssText="position:fixed;inset:0;z-index:2147483200;background:rgba(0,0,0,.62);display:none;overflow:auto;padding:18px 12px;box-sizing:border-box;";
+    modal.innerHTML=`
+      <form id="mqciDemandePubliciteForm" class="card" style="max-width:520px;margin:18px auto;padding:18px;background:#fff;color:#183b2a;">
+        <h2 id="mqciDemandePubliciteTitre">📢 Faire une publicité</h2>
+        <p class="notice">Choisissez votre formule. Notre équipe vous contactera pour récupérer votre affiche et finaliser la publication dans l’Espace publicitaire.</p>
+        <label for="mqciPubNom">Votre nom</label><input id="mqciPubNom" required maxlength="100" autocomplete="name" placeholder="Nom complet">
+        <label for="mqciPubTelephone">Téléphone WhatsApp</label><input id="mqciPubTelephone" required type="tel" maxlength="25" autocomplete="tel" placeholder="+225 07 00 00 00 00">
+        <label for="mqciPubActivite">Nom de l’activité ou de l’entreprise</label><input id="mqciPubActivite" required maxlength="120" placeholder="Nom de votre activité">
+        <label for="mqciPubDescription">Description de la publicité (facultatif)</label><textarea id="mqciPubDescription" maxlength="700" rows="3" placeholder="Présentez votre activité ou votre offre"></textarea>
+        <label for="mqciPubForfait">Choisir une formule</label>
+        <select id="mqciPubForfait" required>
+          <option value="decouverte">Découverte — 3 jours — 2 000 FCFA</option>
+          <option value="visibilite">Visibilité — 7 jours — 5 000 FCFA</option>
+          <option value="professionnel">Professionnel — 15 jours — 9 000 FCFA</option>
+          <option value="premium">Premium — 30 jours — 15 000 FCFA</option>
+        </select>
+        <p class="notice">Après l’envoi, l’équipe vous contactera pour les modalités de paiement et la réception de votre affiche (JPG, PNG ou WebP).</p>
+        <p id="mqciPubStatus" class="notice" role="status" aria-live="polite"></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="submit" class="primary" id="mqciPubSubmit">Envoyer ma demande</button>
+          <button type="button" id="mqciPubCancel">Fermer</button>
+        </div>
+      </form>`;
+    document.body.appendChild(modal);
+    modal.querySelector("#mqciPubCancel").addEventListener("click",()=>{modal.style.display="none";});
+    modal.addEventListener("click",e=>{if(e.target===modal)modal.style.display="none";});
+    modal.querySelector("form").addEventListener("submit",async e=>{
+      e.preventDefault();
+      const user=auth&&auth.currentUser,form=e.currentTarget,status=modal.querySelector("#mqciPubStatus"),button=modal.querySelector("#mqciPubSubmit");
+      if(!user){status.textContent="Votre session a expiré. Reconnectez-vous puis réessayez.";return;}
+      const forfaits={
+        decouverte:{nom:"Découverte",jours:3,montant:2000,texte:"Découverte - 3 jours - 2 000 FCFA"},
+        visibilite:{nom:"Visibilité",jours:7,montant:5000,texte:"Visibilité - 7 jours - 5 000 FCFA"},
+        professionnel:{nom:"Professionnel",jours:15,montant:9000,texte:"Professionnel - 15 jours - 9 000 FCFA"},
+        premium:{nom:"Premium",jours:30,montant:15000,texte:"Premium - 30 jours - 15 000 FCFA"}
+      };
+      const choix=forfaits[modal.querySelector("#mqciPubForfait").value];
+      if(!choix)return;
+      button.disabled=true;status.textContent="Envoi de votre demande...";
+      try{
+        await db.collection("demandes_publicites").add({
+          uid:user.uid,nom:modal.querySelector("#mqciPubNom").value.trim(),
+          telephone:modal.querySelector("#mqciPubTelephone").value.trim(),
+          activite:modal.querySelector("#mqciPubActivite").value.trim(),
+          description:modal.querySelector("#mqciPubDescription").value.trim(),
+          forfait:choix.nom,forfaitTexte:choix.texte,dureeJours:choix.jours,montantFCFA:choix.montant,
+          statut:"en_attente",source:"menu_accueil",
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
+        status.textContent="Demande envoyée. Notre équipe vous contactera au numéro indiqué pour le paiement et la réception de votre affiche.";
+        form.reset();
+      }catch(err){
+        console.error("Demande publicitaire depuis l’accueil :",err);
+        status.textContent="Impossible d’envoyer la demande pour le moment. Vérifiez votre connexion puis réessayez.";
+      }finally{button.disabled=false;}
+    });
+  }
+  modal.style.display="block";
+  modal.querySelector("#mqciPubNom").focus();
+}
+
 function ouvrirFormulairePublicite() {
   const formulaire = document.getElementById("formulairePublicite");
   formulaire.style.display = "block";
@@ -12767,13 +12837,15 @@ window.mtcAfficherActeJudiciaire = function(type){
     menuPanel.setAttribute('role','group');
     menuPanel.setAttribute('aria-label','Accès professionnels');
     menuPanel.innerHTML=`
+      <button type="button">📢 Faire une publicité</button>
       <button type="button">➕ Devenir partenaire</button>
       <button type="button">🔐 Connexion à mon espace partenaire</button>
       <button type="button">⚠️ Signaler un problème</button>`;
     const actions=menuPanel.querySelectorAll('button');
-    actions[0].addEventListener('click',()=>{fermerMenuPro();ouvrirEspacePartenaire('inscription');});
-    actions[1].addEventListener('click',()=>{fermerMenuPro();ouvrirEspacePartenaire('connexion');});
-    actions[2].addEventListener('click',()=>{fermerMenuPro();signalerProblemeGeneral();});
+    actions[0].addEventListener('click',()=>{fermerMenuPro();ouvrirDemandePubliciteAccueil();});
+    actions[1].addEventListener('click',()=>{fermerMenuPro();ouvrirEspacePartenaire('inscription');});
+    actions[2].addEventListener('click',()=>{fermerMenuPro();ouvrirEspacePartenaire('connexion');});
+    actions[3].addEventListener('click',()=>{fermerMenuPro();signalerProblemeGeneral();});
     const headerPro=document.querySelector('header.mqci-header-premium');
     function alignerBoutonMenuSurIdentite(){
       const identite=headerPro?.querySelector('.mqci-brand-lockup');
