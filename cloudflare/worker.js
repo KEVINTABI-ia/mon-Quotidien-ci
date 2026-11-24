@@ -1088,7 +1088,7 @@ export function acceptGroupedDeliveryTour({tour,courierUid,activeMission=null,no
 export function transitionGroupedDeliveryTourStop({tour,stopId,nextStatus}) {
   if(!tour||!["accepted","collecting"].includes(tour.status)) throw new Error("grouped_tour_not_collecting");
   const transition=applyDeliveryTourStopTransition({stops:tour.stops,stopId,nextStatus});
-  return Object.freeze({tour:Object.freeze({...tour,stops:transition.stops,status:transition.tourStatus==="delivering"?"delivering":transition.tourStatus}),...transition});
+  return Object.freeze({tour:Object.freeze({...tour,stops:transition.stops,status:transition.tourStatus==="delivering"?"delivering":transition.pickedUpCount>0?"collecting":"accepted"}),...transition});
 }
 export function completeGroupedDeliveryTour({tour,courierUid,confirmationVerified,existingPayoutLedger=null,now=new Date()}) {
   if(!tour||tour.status!=="delivering"||!Array.isArray(tour.stops)||tour.stops.length<2||tour.stops.some(stop=>stop.status!=="picked_up"))
