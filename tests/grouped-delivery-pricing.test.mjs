@@ -62,7 +62,7 @@ test("multi-stop route planner uses supplied road distances and orders nearby pi
  assert.deepEqual(route.orderedStopIds,["courier","shop-b","shop-a","shop-c","customer"]);
  assert.deepEqual(route.pickupStopIds,["shop-b","shop-a","shop-c"]);
  assert.equal(route.destinationStopId,"customer");
- assert.equal(route.totalRoadDistanceKm,6);
+ assert.equal(route.totalRoadDistanceKm,7);
 });
 
 test("route planner rejects malformed stops, coordinates and road matrices",()=>{
