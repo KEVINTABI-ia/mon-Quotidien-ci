@@ -2691,8 +2691,9 @@ async function listCourierGroupedTours(request,env) {
     if(!response.ok)throw new Error("grouped_tour_list_query_failed");
     const rows=await response.json(),missions=(Array.isArray(rows)?rows:[]).filter(row=>row?.document?.name).map(row=>({id:row.document.name.split("/").pop(),...docData(row.document)})).filter(mission=>mission.courierUid===uid&&["offered","accepted","collecting","delivering","arrive_destination"].includes(mission.status));
     const enriched=await Promise.all(missions.map(async mission=>{
-      const details=await Promise.all((mission.sousCommandes||[]).map(id=>getDoc(env,"commandes_colis/"+id+"/informations_privees/details")));
-      const pickups=details.map((doc,index)=>{const data=docData(doc)||{};return {id:mission.sousCommandes[index],status:mission.stops?.find(stop=>stop.id===mission.sousCommandes[index])?.status||"pending",latitude:Number(data.latitudeRecuperation),longitude:Number(data.longitudeRecuperation)};});
+      const routeStopIds=(mission.stops||[]).map(stop=>stop.id);
+      const details=await Promise.all(routeStopIds.map(id=>getDoc(env,"commandes_colis/"+id+"/informations_privees/details")));
+      const pickups=details.map((doc,index)=>{const data=docData(doc)||{};return {id:routeStopIds[index],status:mission.stops[index]?.status||"pending",latitude:Number(data.latitudeRecuperation),longitude:Number(data.longitudeRecuperation)};});
       const first=docData(details.find(Boolean))||{};
       return {id:mission.id,commandeGroupeeId:mission.commandeGroupeeId,status:mission.status,stops:pickups,destination:{latitude:Number(first.latitudeLivraison),longitude:Number(first.longitudeLivraison)},totalPriceXof:mission.totalPriceXof,currency:mission.currency,createdAt:mission.createdAt,acceptedAt:mission.acceptedAt||null};
     }));
