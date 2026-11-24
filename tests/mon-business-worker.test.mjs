@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import vm from "node:vm";
 import { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, auditData } from "../cloudflare/mon-business-worker/worker.js";
 
 test("normalise les e-mails et refuse les formats invalides",()=>{
@@ -57,4 +59,15 @@ test("les journaux distinguent correctement les invitations et les membres",()=>
   const now=new Date("2026-11-24T00:00:00.000Z");
   assert.equal(auditData({businessId:"b1",actorUid:"u1",action:"invitation.created",entityId:"i1",now}).entityType,"invitation");
   assert.equal(auditData({businessId:"b1",actorUid:"u1",action:"member.access_updated",entityType:"member",entityId:"u2",now}).entityType,"member");
+});
+
+test("la page multi-activités charge sa configuration et son script est syntaxiquement valide",()=>{
+  const html=fs.readFileSync("mon-business/index.html","utf8");
+  const config=fs.readFileSync("mon-business/config.js","utf8");
+  assert.match(html,/<script src="\\.\/config\\.js"><\\/script>/);
+  assert.match(config,/window\\.MON_BUSINESS_API\\s*=\\s*["']["']/);
+  assert.ok(!html.includes("currentBusinessId=businessRef.id;\\\\n      currentBusinessOwner=true;"));
+  const scripts=[...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)].map(m=>m[1]).filter(s=>s.trim());
+  assert.equal(scripts.length,1);
+  for(const script of scripts) assert.doesNotThrow(()=>new vm.Script(script,{filename:"mon-business/index.html"}));
 });
