@@ -1073,6 +1073,14 @@ export function buildGroupedTourPayoutLedger({tourId,courierUid,totalPriceXof,ex
   return Object.freeze({id:"tour_"+tourId,type:"grouped_tour_payout",tourId,courierUid,status:"ready_for_settlement",...split,createdAt:now.toISOString()});
 }
 
+export function courierGroupedTourSubscriptionActive(profile,now=new Date()) {
+  if(!profile||!(now instanceof Date)||!Number.isFinite(now.getTime()))return false;
+  const asDate=value=>value instanceof Date?value:value?new Date(value):null;
+  const trialEnd=asDate(profile.dateFinEssai),paidEnd=asDate(profile.dateExpirationAbonnement);
+  return (profile.statutAbonnementPartenaire==="Essai"&&!!trialEnd&&Number.isFinite(trialEnd.getTime())&&trialEnd.getTime()>now.getTime())
+    ||(profile.statutAbonnementPartenaire==="Actif"&&!!paidEnd&&Number.isFinite(paidEnd.getTime())&&paidEnd.getTime()>now.getTime());
+}
+
 export function buildGroupedTourStops({orderedShopIds,children}) {
   if(!Array.isArray(orderedShopIds)||orderedShopIds.length<2||orderedShopIds.length>4||!Array.isArray(children)||children.length!==orderedShopIds.length)
     throw new Error("grouped_tour_pickup_order_invalid");
@@ -2743,7 +2751,7 @@ async function dispatchGroupedDeliveryTour(request,env) {
     let stops;
     try{stops=buildGroupedTourStops({orderedShopIds:parent.tournee.orderedShopIds,children});}
     catch{return json({error:"grouped_tour_pickup_order_invalid"},409);}
-    if(!courierProfileCanCompleteMission(profile,courierUid)||profile.enLigne!==true)return json({error:"courier_profile_not_eligible_or_offline"},403);
+    if(!courierProfileCanCompleteMission(profile,courierUid)||!courierGroupedTourSubscriptionActive(profile)||profile.enLigne!==true)return json({error:"courier_profile_not_eligible_or_offline"},403);
     const price=parent.tarificationEstimee;
     if(!price||!Number.isSafeInteger(price.totalPriceXof)||price.totalPriceXof<1)return json({error:"grouped_tour_price_missing"},409);
     const now=new Date();
@@ -2775,7 +2783,7 @@ async function acceptGroupedDeliveryTourRequest(request,env) {
     ]);
     if(!missionDoc||!parentDoc)return json({error:"grouped_tour_not_found"},404);
     const mission=docData(missionDoc),profile=docData(partnerDoc),lock=docData(lockDoc);
-    if(!courierProfileCanCompleteMission(profile,uid))return json({error:"courier_profile_not_eligible"},403);
+    if(!courierProfileCanCompleteMission(profile,uid)||!courierGroupedTourSubscriptionActive(profile))return json({error:"courier_profile_not_eligible"},403);
     if(mission.courierUid!==uid)return json({error:"grouped_tour_not_assigned_to_courier"},403);
     if(lockDoc&&lock?.statut==="active")return json({error:"courier_already_has_active_mission"},409);
     const now=new Date(),accepted=acceptGroupedDeliveryTour({tour:mission,courierUid:uid,activeMission:lockDoc?lock:null,now});
