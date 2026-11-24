@@ -220,6 +220,7 @@
       setStatus("businessStatus","Entreprise créée. Votre compte en est le propriétaire.");
       $("activityCard").classList.remove("hidden");
       await loadActivities();
+      await loadMembers();
     }catch(error){
       console.error("Mon Business registration error",error);
       setStatus("businessStatus","Impossible de créer l'entreprise. Vérifiez votre connexion et vos autorisations, puis réessayez.",true);
