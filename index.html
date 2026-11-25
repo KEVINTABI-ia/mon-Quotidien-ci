@@ -13489,7 +13489,7 @@ async function chargerArticlesBoutiquesAccueil(){
     +'<div class="mqci-produit-image">'+(photo?'<img src="'+photo+'" alt="'+nom+'" loading="lazy">':'<span aria-hidden="true">🛍️</span>')+'</div>'
     +'<strong class="mqci-produit-nom">'+nom+'</strong><p class="mqci-produit-prix">'+Number(p.prix).toLocaleString("fr-FR")+' FCFA</p>'
     +'<p class="mqci-produit-boutique">'+boutique+'</p><button type="button" class="primary" data-article-index="'+i+'">Commander</button></article>';
-  }).join("")+'</div>';
+  }).join("")+'</div><div class="mqci-articles-voir-plus-wrap"><button type="button" class="mqci-articles-voir-plus" onclick="ouvrirTourBoutiques()">Voir plus</button></div>';
   zone.querySelectorAll("[data-article-index]").forEach(btn=>btn.addEventListener("click",()=>{const p=visibles[Number(btn.dataset.articleIndex)];if(p)ouvrirCommandeBoutique(p.boutiqueId,p.index);}));
   // Défilement automatique d'une carte toutes les 15 secondes, sans désactiver le balayage manuel.
   if(window.timerArticlesBoutiquesAccueil)clearInterval(window.timerArticlesBoutiquesAccueil);
@@ -15046,6 +15046,58 @@ body.mqci-ai-no-scroll{
   }else{
     initialiser();
   }
+})();
+</script>
+
+<style id="mqci-navigation-ia-et-partenaires-v2">
+/* Hors accueil : déplacer le conteneur parent du raccourci IA, pas son bouton seul. */
+body.mqci-outside-home #mqciPartnerDropdown{
+ position:fixed!important;left:14px!important;right:auto!important;top:auto!important;
+ bottom:calc(14px + env(safe-area-inset-bottom))!important;z-index:2147482000!important;
+ display:flex!important;align-items:center!important;gap:0!important;
+}
+body.mqci-outside-home #mqciPartnerDropdown #mqciPartnerDropdownToggle{display:none!important}
+body.mqci-outside-home #mqciPartnerDropdown #mqciAiLauncher{
+ position:relative!important;inset:auto!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ min-width:48px!important;min-height:42px!important;padding:0 13px!important;border-radius:999px!important;
+}
+/* Le menu déroulant d'accueil reste le seul point d'entrée "Devenir partenaire". */
+#mqciPartnerDropdownPanel button[data-mqci-hidden-partner-action="true"]{display:none!important}
+#devenirPartenaire #zoneChoixPartenaire button[onclick*="ouvrirEspacePartenaire"]{display:none!important}
+#homeFamilyLauncher button[onclick*="ouvrirEspacePartenaire('accueil')"]{display:none!important}
+.mqci-articles-voir-plus-wrap{display:flex!important;justify-content:flex-end!important;width:100%!important;margin:2px 0 12px!important}
+.mqci-articles-voir-plus{
+ border:0!important;border-radius:999px!important;padding:9px 17px!important;
+ background:#075B35!important;color:#fff!important;font-size:13px!important;font-weight:800!important;
+ box-shadow:0 3px 10px rgba(0,0,0,.12)!important;cursor:pointer!important;
+}
+</style>
+<script id="mqci-nettoyage-points-entree-partenaires">
+(function(){
+ function masquerActionsPartenairesEnDouble(){
+  document.querySelectorAll("button").forEach(function(btn){
+   if(btn.closest("#mqciPartnerDropdown") || btn.closest("#mqciPartnerDropdownPanel"))return;
+   const texte=(btn.textContent||"").replace(/^[^A-Za-zÀ-ÿ]*/,"").trim().toLowerCase();
+   const devenir=/^(devenir partenaire|devenir commerçant partenaire|devenir partenaire dans cette catégorie)/i.test(texte);
+   const connexion=/connexion à mon espace partenaire|connexion à l'espace propriétaire|connexion à l’espace propriétaire/i.test(texte);
+   if(devenir){btn.style.setProperty("display","none","important");return;}
+   if(connexion && !btn.closest("#connexionBoutiqueZone")){
+    btn.style.setProperty("display","none","important");
+   }
+  });
+  const panel=document.getElementById("mqciPartnerDropdownPanel");
+  if(panel){
+   const login=[...panel.querySelectorAll("button")].find(b=>/connexion à mon espace partenaire/i.test(b.textContent||""));
+   if(login)login.style.setProperty("display","none","important");
+  }
+ }
+ function init(){
+  masquerActionsPartenairesEnDouble();
+  const observer=new MutationObserver(masquerActionsPartenairesEnDouble);
+  observer.observe(document.body,{childList:true,subtree:true});
+ }
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
 </script>
 </body>
