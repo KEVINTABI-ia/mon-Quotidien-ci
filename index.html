@@ -11656,12 +11656,17 @@ function partenaireAbonnementValide(p) {
      (p.statutAbonnementPartenaire === "Actif" && abonnement && abonnement > maintenant));
 }
 
-async function definirDisponibilitePartenaire(enLigne) {
+async async function definirDisponibilitePartenaire(enLigne) {
+  activerSonCommandesPartenaire();
   const user=partnerAuth.currentUser;
-  if(!user)return;
-  partnerDb.collection("partenaires_colis").doc(user.uid).update({enLigne:!!enLigne})
-    .then(()=>{const etat=document.getElementById("etatDisponibilitePartenaire");if(etat)etat.textContent=enLigne?"🟢 Vous êtes en ligne.":"⚪ Vous êtes hors ligne.";})
-    .catch(e=>console.error("Mise à jour disponibilité impossible",e));
+  if(!user)return alert("Veuillez vous reconnecter.");
+  try {
+    const ref=partnerDb.collection("partenaires").doc(user.uid);
+    const snap=await ref.get();
+    if(!snap.exists||!partenaireAbonnementValide(snap.data()))return alert("Votre dossier doit être approuvé et votre abonnement actif pour modifier votre disponibilité.");
+    await ref.update({enLigne:!!enLigne,derniereActivite:firebase.firestore.FieldValue.serverTimestamp()});
+    await afficherEspacePartenaire({...snap.data(),enLigne:!!enLigne},user.uid);
+  } catch(e) { console.error(e); alert("Impossible de modifier votre disponibilité : "+e.message); }
 }
 function basculerDisponibilitePartenaire() {
   activerSonCommandesPartenaire();
