@@ -7717,6 +7717,7 @@ async function chargerPortefeuilleLivreur(){
   const ref=partnerDb.collection("portefeuilles_livreurs").doc(user.uid),snap=await ref.get(),wallet=snap.exists?snap.data():{};
   const balance=Number(wallet.soldeDisponibleXof||0),debt=Number(wallet.detteCommissionXof||0);
   if(solde)solde.textContent=balance.toLocaleString("fr-FR")+" FCFA";
+  const kpiSolde=document.getElementById("kpiSoldeLivreur");if(kpiSolde)kpiSolde.textContent=balance.toLocaleString("fr-FR")+" F";
   if(alerte)alerte.textContent=debt>0?"Dette de commission : "+debt.toLocaleString("fr-FR")+" FCFA. Rechargez pour régulariser.":(balance<=0?"Solde épuisé : aucune nouvelle mission ne peut être acceptée.":(balance<=1000?"Solde faible : pensez à recharger votre portefeuille.":"Votre portefeuille est actif."));
   if(historique){
    const entries=await ref.collection("journal").orderBy("createdAt","desc").limit(8).get();
@@ -11692,10 +11693,74 @@ function afficherEspacePartenaire(dossier, uid) {
   const dateAffichee = dateFin && dateFin.toDate ? dateFin.toDate().toLocaleDateString("fr-FR") : (dateFin ? new Date(dateFin).toLocaleDateString("fr-FR") : "");
   const eligible = partenaireAbonnementValide(dossier);
   zone.innerHTML = `
-    <hr><h3>👋 Mon espace partenaire</h3>
-    <p><strong>Nom :</strong> ${echapperTexteCompagnie(dossier.nom || "")}</p>
-    <p><strong>Profil :</strong> ${dossier.type === "livreur_independant" ? "Livreur indépendant" : "Responsable de gare"}</p>
-    <div class="notice"><strong>Abonnement :</strong> ${eligible ? "Actif" : "À renouveler"} ${dateAffichee ? "— échéance : " + dateAffichee : ""}</div>
+    <style>
+      #zoneEspacePartenaire .livreur-dashboard{font-family:inherit;color:#172b22}
+      #zoneEspacePartenaire .livreur-hero{background:linear-gradient(125deg,#064e35,#087b50);color:#fff;padding:22px;border-radius:20px;margin:14px 0;box-shadow:0 10px 26px rgba(5,75,48,.16)}
+      #zoneEspacePartenaire .livreur-hero h2{margin:0 0 7px;font-size:1.35rem}
+      #zoneEspacePartenaire .livreur-hero p{margin:5px 0;color:#e3f5eb}
+      #zoneEspacePartenaire .livreur-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+      #zoneEspacePartenaire .livreur-kpi{background:#fff;border:1px solid #e3ebe6;border-radius:15px;padding:14px;min-width:0;box-shadow:0 3px 12px rgba(15,45,30,.04)}
+      #zoneEspacePartenaire .livreur-kpi small{display:block;color:#64756c;font-size:.78rem;margin-bottom:7px}
+      #zoneEspacePartenaire .livreur-kpi strong{font-size:1.15rem;color:#075b35;overflow-wrap:anywhere}
+      #zoneEspacePartenaire .livreur-panel{background:#fff;border:1px solid #e3ebe6;border-radius:16px;padding:15px;margin:13px 0;box-shadow:0 3px 12px rgba(15,45,30,.04)}
+      #zoneEspacePartenaire .livreur-panel h3{margin:0 0 12px;color:#123e2b}
+      #zoneEspacePartenaire .livreur-status{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:99px;background:rgba(255,255,255,.15);font-size:.85rem}
+      #zoneEspacePartenaire .livreur-action{width:100%;border-radius:12px;padding:13px;font-weight:700}
+      @media(min-width:650px){#zoneEspacePartenaire .livreur-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+    </style>
+    <div class="livreur-dashboard">
+      <div class="livreur-hero">
+        <h2>Bonjour ${echapperTexteCompagnie((dossier.nom || "Livreur").split(" ")[0])} 👋</h2>
+        <p>Votre activité de livraison, en un seul endroit.</p>
+        <div class="livreur-status">${dossier.enLigne === true ? "🟢 En ligne — disponible pour recevoir des missions" : "⚪ Hors ligne"}</div>
+      </div>
+      <div class="livreur-grid">
+        <div class="livreur-kpi"><small>Portefeuille commissions</small><strong id="kpiSoldeLivreur">Chargement…</strong></div>
+        <div class="livreur-kpi"><small>Mission en cours</small><strong id="kpiMissionLivreur">Vérification…</strong></div>
+        <div class="livreur-kpi"><small>Missions terminées</small><strong id="kpiMissionsTerminees">—</strong></div>
+        <div class="livreur-kpi"><small>Statut du compte</small><strong>${eligible ? "Actif" : "À renouveler"}</strong></div>
+      </div>
+      <div class="livreur-panel">
+        <h3>⚡ Disponibilité</h3>
+        <p id="etatDisponibilitePartenaire">${dossier.enLigne === true ? "🟢 Vous êtes en ligne et pouvez recevoir des commandes." : "⚪ Vous êtes hors ligne."}</p>
+        <button type="button" class="primary livreur-action" onclick="basculerDisponibilitePartenaire()" ${eligible ? "" : "disabled"}>${dossier.enLigne === true ? "Passer hors ligne" : "Passer en ligne"}</button>
+      </div>
+      <div class="livreur-panel">
+        <h3>💳 Mon portefeuille de commissions</h3>
+        <p><strong>Solde disponible :</strong> <span id="soldePortefeuilleLivreur">Chargement...</span></p>
+        <p id="alertePortefeuilleLivreur" class="notice" aria-live="polite">Chargement du statut du portefeuille...</p>
+        <label for="montantRechargePortefeuille">Montant à recharger (FCFA)</label>
+        <select id="montantRechargePortefeuille" onchange="afficherMontantPersonnalisePortefeuille()" style="width:100%;padding:12px;">
+          <option value="2000">2 000 FCFA</option><option value="3000">3 000 FCFA</option><option value="4000">4 000 FCFA</option>
+          <option value="5000">5 000 FCFA</option><option value="6000">6 000 FCFA</option><option value="7000">7 000 FCFA</option>
+          <option value="8000">8 000 FCFA</option><option value="9000">9 000 FCFA</option><option value="10000" selected>10 000 FCFA</option>
+          <option value="personnalise">Autre montant</option>
+        </select>
+        <input id="montantRechargePersonnalisePortefeuille" type="number" min="2000" max="10000000" step="1" inputmode="numeric" placeholder="Montant personnalisé (minimum 2 000 FCFA)" aria-label="Montant personnalisé en FCFA" style="display:none;width:100%;padding:12px;margin-top:8px;">
+        <small>Recharge minimum : 2 000 FCFA.</small>
+        <label for="moyenRechargePortefeuille">Moyen de paiement</label>
+        <select id="moyenRechargePortefeuille" style="width:100%;padding:12px;">
+          <option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option>
+        </select>
+        <button id="boutonRechargePortefeuille" type="button" class="primary livreur-action" onclick="rechargerPortefeuilleLivreur()">Recharger avec Jèko</button>
+        <button type="button" class="livreur-action" onclick="chargerPortefeuilleLivreur()">Actualiser le portefeuille</button>
+        <p class="notice">Alerte à 1 000 FCFA. À zéro, les nouvelles missions sont bloquées. Le crédit est confirmé uniquement après validation sécurisée par Jèko.</p>
+        <p id="statutRechargePortefeuille" aria-live="polite"></p>
+        <h4>Historique financier</h4><div id="historiquePortefeuilleLivreur"><p>Chargement...</p></div>
+      </div>
+      <div class="livreur-panel"><h3>📦 Nouvelles missions disponibles</h3>
+        <button type="button" onclick="chargerCommandesPartenaire()">Actualiser les missions</button>
+        <div id="fileCommandesPartenaire"><p>Chargement...</p></div>
+      </div>
+      <div class="livreur-panel"><h3>🚚 Mes tournées multi-boutiques</h3><div id="tourneesGroupeesPartenaire"><p>Chargement...</p></div></div>
+      <div class="livreur-panel"><h3>🛵 Ma mission en cours</h3><div id="missionActivePartenaire"><p>Vérification...</p></div></div>
+      <div class="livreur-panel"><h3>📋 Historique de mes livraisons</h3><div id="historiquePartenaire"></div></div>
+      <div class="livreur-panel"><h3>👤 Mon profil partenaire</h3>
+        <p><strong>Nom :</strong> ${echapperTexteCompagnie(dossier.nom || "")}</p>
+        <p><strong>Profil :</strong> ${dossier.type === "livreur_independant" ? "Livreur indépendant" : "Responsable de gare"}</p>
+        <p><strong>Abonnement :</strong> ${eligible ? "Actif" : "À renouveler"} ${dateAffichee ? "— échéance : " + dateAffichee : ""}</p>
+      </div>
+    </div>
     ${dossier.type === "livreur_independant" ? `
     <section class="card" style="padding:15px;margin:14px 0;border:1px solid #dcebdd;border-radius:14px;">
       <h3>💳 Mon portefeuille de commissions</h3>
@@ -11759,6 +11824,7 @@ async function chargerCommandesPartenaire() {
       const activeSnap = await partnerDb.collection("commandes_colis").doc(lockSnap.data().commandeId).get();
       if (activeSnap.exists) activeOrder = {id: activeSnap.id, ...activeSnap.data()};
     }
+    const kpiMission=document.getElementById("kpiMissionLivreur");if(kpiMission)kpiMission.textContent=activeOrder ? "En cours" : (lockSnap.exists && lockSnap.data().tourneeId ? "Tournée active" : "Aucune");
     if (activeOrder) {
       await afficherMissionPartenaire(activeOrder, p, mission);
     } else if (lockSnap.exists && lockSnap.data().tourneeId) {
@@ -11773,6 +11839,7 @@ async function chargerCommandesPartenaire() {
     if (historique) {
       const hs = await partnerDb.collection("commandes_colis").where("partenaireId", "==", user.uid).get();
       const done = hs.docs.filter(d => ["livre","annule"].includes(d.data().statut));
+      const kpiDone=document.getElementById("kpiMissionsTerminees");if(kpiDone)kpiDone.textContent=done.filter(d=>d.data().statut==="livre").length.toLocaleString("fr-FR");
       historique.innerHTML = done.length ? "" : "<p>Aucune mission terminée.</p>";
       done.forEach(d => {
         const el = document.createElement("p");
