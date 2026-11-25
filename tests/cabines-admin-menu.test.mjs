@@ -36,5 +36,5 @@ test("Reversements cabine: utiliser la même instance Firestore que le module ca
   const end = cabines.indexOf("window.cabAdminCabine", start);
   const handler = cabines.slice(start, end);
   assert.match(handler, /const reversementDb=partnerDb/);
-  assert.match(handler, /await reversementDb\\.runTransaction/);
+  assert.ok(handler.includes("await reversementDb.runTransaction("));
 });
