@@ -158,7 +158,8 @@ function rendreCatalogueCabine(){
 function selectionnerForfaitCabine(x){
  cabSelectedOffer=x;
  $("cabOperateur").value=x.op;$("cabService").value=x.type;
- $("cabFeePreview").hidden=true;$("cabAmountWrap").hidden=true;
+ $("cabFeePreview").hidden=false;$("cabAmountWrap").hidden=true;
+ afficherRecapitulatifFraisCabine(x.price);
  const phone=$("cabNumero").value.trim();
  if(phone.length<8||phone.length>20){$("cabMessage").textContent="Saisissez d’abord le numéro du bénéficiaire, puis appuyez sur Souscrire."; $("cabNumero").focus();$("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});return;}
  $("cabMessage").textContent="Offre sélectionnée. Préparation du paiement…";$("cabEnvoyer").click();
@@ -250,8 +251,9 @@ $("cabCancelForm").onclick=retourMenuCabine;
 function cabSelectLogo(container,attribute,selectId,value){const select=$(selectId);select.value=value;$(container).querySelectorAll("[data-"+attribute+"]").forEach(b=>{const active=b.getAttribute("data-"+attribute)===value;b.classList.toggle("selected",active);b.setAttribute("aria-pressed",active?"true":"false");});}
 $("cabOperatorChoices").querySelectorAll("[data-operator]").forEach(b=>b.onclick=()=>cabSelectLogo("cabOperatorChoices","operator","cabOperateur",b.dataset.operator));
 $("cabPaymentChoices").querySelectorAll("[data-payment]").forEach(b=>b.onclick=()=>cabSelectLogo("cabPaymentChoices","payment","cabPaymentMethod",b.dataset.payment));
-function fraisCabine(montant){return montant<=999?18:(montant<=3000?40:75);}
-function actualiserFraisCabine(){const amount=Number($("cabMontant").value),fee=Number.isSafeInteger(amount)&&amount>=200?fraisCabine(amount):null;$("cabFeePreview").textContent=fee===null?"Frais : montant minimum 200 FCFA.":"Frais : "+money(fee)+" · Total à payer : "+money(amount+fee);}
+function fraisCabine(montant){return Math.round(montant*0.04);}
+function afficherRecapitulatifFraisCabine(amount){const fee=Number.isSafeInteger(amount)&&amount>=200?fraisCabine(amount):null;$("cabFeePreview").textContent=fee===null?"Frais de service : montant minimum 200 FCFA.":"Prix du service : "+money(amount)+" · Frais de service (4 %) : "+money(fee)+" · Total à payer : "+money(amount+fee);}
+function actualiserFraisCabine(){afficherRecapitulatifFraisCabine(Number($("cabMontant").value));}
 $("cabMontant").addEventListener("input",actualiserFraisCabine);
 $("cabService").addEventListener("change",()=>{rendreCatalogueCabine();$("cabCatalogue").hidden=$("cabService").value==="transfert_unites";});
 $("cabEnvoyer").onclick=async()=>{
