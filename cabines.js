@@ -439,7 +439,9 @@ window.cabAdminEnregistrerReversement=async demandeId=>{
  if(!Number.isSafeInteger(amount)||amount<=0||!date||! /^\d{4}-\d{2}-\d{2}$/.test(date)||!reference||reference.length>80||!method){alert("Renseignez un montant valide, la date, la référence et le moyen de paiement.");return;}
  const safeRef=reference.toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9_-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,80);
  if(!safeRef){alert("La référence doit contenir des caractères exploitables.");return;}
- const demandRef=db.collection("demandes_cabines").doc(demandeId),entryRef=demandRef.collection("reversements").doc(safeRef);
+ // Utiliser la même instance Firestore que celle déjà utilisée par les transactions cabinistes.
+ const reversementDb=partnerDb;
+ const demandRef=reversementDb.collection("demandes_cabines").doc(demandeId),entryRef=demandRef.collection("reversements").doc(safeRef);
  try{
   // Firestore Web transactions ne lisent pas une CollectionReference.
   // Charger le journal existant hors transaction, puis sérialiser les écritures
@@ -447,7 +449,7 @@ window.cabAdminEnregistrerReversement=async demandeId=>{
   const reversementsExistants=await demandRef.collection("reversements").get();
   const paidHistorique=reversementsExistants.docs.reduce((sum,p)=>sum+Number(p.data().montantXof||0),0);
   if(!Number.isSafeInteger(paidHistorique)||paidHistorique<0)throw new Error("Historique des reversements invalide.");
-  await db.runTransaction(async tx=>{
+  await reversementDb.runTransaction(async tx=>{
    const [snap,existing]=await Promise.all([tx.get(demandRef),tx.get(entryRef)]);
    if(!snap.exists)throw new Error("Prestation introuvable.");
    const d=snap.data();
