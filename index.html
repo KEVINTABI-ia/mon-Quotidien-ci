@@ -11707,12 +11707,24 @@ function afficherEspacePartenaire(dossier, uid) {
       #zoneEspacePartenaire .livreur-status{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:99px;background:rgba(255,255,255,.15);font-size:.85rem}
       #zoneEspacePartenaire .livreur-action{width:100%;border-radius:12px;padding:13px;font-weight:700}
       @media(min-width:650px){#zoneEspacePartenaire .livreur-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+      #zoneEspacePartenaire .livreur-dashboard{max-width:1100px;margin:0 auto;padding:8px 0 24px}
+      #zoneEspacePartenaire .livreur-hero{background:linear-gradient(125deg,#e87900,#f5a000)!important;color:#fff!important;border-radius:22px!important}
+      #zoneEspacePartenaire .livreur-hero h2,#zoneEspacePartenaire .livreur-hero p{color:#fff!important}
+      #zoneEspacePartenaire .livreur-panel{border:1px solid #e8ece8;border-radius:17px;padding:16px;background:#fff;box-shadow:0 4px 14px #183c280c}
+      #zoneEspacePartenaire .livreur-kpi strong{color:#168347}
+      #zoneEspacePartenaire .livreur-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+      #zoneEspacePartenaire .livreur-shortcuts a{display:block;text-align:center;text-decoration:none;color:#244432;background:#fff;border:1px solid #e8ece8;border-radius:14px;padding:13px 6px;font-weight:700}
+      #zoneEspacePartenaire .livreur-shortcuts span{display:block;font-size:1.35rem;margin-bottom:5px}
+      #zoneEspacePartenaire .livreur-nav{display:flex;justify-content:space-around;gap:5px;position:sticky;bottom:0;background:#fff;border:1px solid #e8ece8;border-radius:15px;padding:10px 4px;z-index:5}
+      #zoneEspacePartenaire .livreur-nav a{flex:1;text-align:center;text-decoration:none;color:#52645a;font-size:.75rem}
+      #zoneEspacePartenaire .livreur-nav span{display:block;font-size:1.15rem}
+      @media(min-width:650px){#zoneEspacePartenaire .livreur-shortcuts{grid-template-columns:repeat(4,minmax(0,1fr))}}
     </style>
     <div class="livreur-dashboard">
-      <div class="livreur-hero">
-        <h2>Bonjour ${echapperTexteCompagnie((dossier.nom || "Livreur").split(" ")[0])} 👋</h2>
-        <p>Votre activité de livraison, en un seul endroit.</p>
-        <div class="livreur-status">${dossier.enLigne === true ? "🟢 En ligne — disponible pour recevoir des missions" : "⚪ Hors ligne"}</div>
+      <div class="livreur-hero" id="accueilLivreur">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:15px"><strong style="letter-spacing:.08em">MON QUOTIDIEN CI</strong><span>🔔</span></div>
+        <div style="display:flex;align-items:center;gap:14px"><div style="width:72px;height:72px;flex:0 0 72px;border-radius:50%;background:#fff;color:#168347;display:grid;place-items:center;font-size:2rem;font-weight:800;border:3px solid #fff">${echapperTexteCompagnie((dossier.nom || "L").charAt(0).toUpperCase())}</div><div><h2>Bonjour ${echapperTexteCompagnie((dossier.nom || "Livreur").split(" ")[0])} !</h2><p>Bienvenue dans votre espace professionnel</p><div class="livreur-status">${dossier.enLigne === true ? "🟢 En ligne" : "⚪ Hors ligne"}</div></div></div>
       </div>
       <div class="livreur-grid">
         <div class="livreur-kpi"><small>Portefeuille commissions</small><strong id="kpiSoldeLivreur">Chargement…</strong></div>
@@ -11720,12 +11732,13 @@ function afficherEspacePartenaire(dossier, uid) {
         <div class="livreur-kpi"><small>Missions terminées</small><strong id="kpiMissionsTerminees">—</strong></div>
         <div class="livreur-kpi"><small>Statut du compte</small><strong>${eligible ? "Actif" : "À renouveler"}</strong></div>
       </div>
+      <nav class="livreur-shortcuts" aria-label="Raccourcis livreur"><a href="#missionsLivreur"><span>🚚</span>Mes livraisons</a><a href="#portefeuilleLivreur"><span>💳</span>Mon portefeuille</a><a href="#navigationLivreur"><span>📍</span>Carte & navigation</a><a href="#profilLivreur"><span>👤</span>Mon profil</a></nav>
       <div class="livreur-panel">
         <h3>⚡ Disponibilité</h3>
         <p id="etatDisponibilitePartenaire">${dossier.enLigne === true ? "🟢 Vous êtes en ligne et pouvez recevoir des commandes." : "⚪ Vous êtes hors ligne."}</p>
         <button type="button" class="primary livreur-action" onclick="basculerDisponibilitePartenaire()" ${eligible ? "" : "disabled"}>${dossier.enLigne === true ? "Passer hors ligne" : "Passer en ligne"}</button>
       </div>
-      <div class="livreur-panel">
+      <div class="livreur-panel" id="portefeuilleLivreur">
         <h3>💳 Mon portefeuille de commissions</h3>
         <p><strong>Solde disponible :</strong> <span id="soldePortefeuilleLivreur">Chargement...</span></p>
         <p id="alertePortefeuilleLivreur" class="notice" aria-live="polite">Chargement du statut du portefeuille...</p>
@@ -11748,18 +11761,19 @@ function afficherEspacePartenaire(dossier, uid) {
         <p id="statutRechargePortefeuille" aria-live="polite"></p>
         <h4>Historique financier</h4><div id="historiquePortefeuilleLivreur"><p>Chargement...</p></div>
       </div>
-      <div class="livreur-panel"><h3>📦 Nouvelles missions disponibles</h3>
+      <div class="livreur-panel" id="missionsLivreur"><h3>📦 Nouvelles demandes</h3>
         <button type="button" onclick="chargerCommandesPartenaire()">Actualiser les missions</button>
         <div id="fileCommandesPartenaire"><p>Chargement...</p></div>
       </div>
       <div class="livreur-panel"><h3>🚚 Mes tournées multi-boutiques</h3><div id="tourneesGroupeesPartenaire"><p>Chargement...</p></div></div>
-      <div class="livreur-panel"><h3>🛵 Ma mission en cours</h3><div id="missionActivePartenaire"><p>Vérification...</p></div></div>
+      <div class="livreur-panel" id="navigationLivreur"><h3>🛵 Suivi de livraison & navigation</h3><div id="missionActivePartenaire"><p>Vérification...</p></div></div>
       <div class="livreur-panel"><h3>📋 Historique de mes livraisons</h3><div id="historiquePartenaire"></div></div>
-      <div class="livreur-panel"><h3>👤 Mon profil partenaire</h3>
+      <div class="livreur-panel" id="profilLivreur"><h3>👤 Mon profil</h3>
         <p><strong>Nom :</strong> ${echapperTexteCompagnie(dossier.nom || "")}</p>
         <p><strong>Profil :</strong> ${dossier.type === "livreur_independant" ? "Livreur indépendant" : "Responsable de gare"}</p>
         <p><strong>Abonnement :</strong> ${eligible ? "Actif" : "À renouveler"} ${dateAffichee ? "— échéance : " + dateAffichee : ""}</p>
       </div>
+      <nav class="livreur-nav" aria-label="Navigation espace livreur"><a href="#accueilLivreur"><span>⌂</span>Accueil</a><a href="#missionsLivreur"><span>▣</span>Livraisons</a><a href="#portefeuilleLivreur"><span>▤</span>Portefeuille</a><a href="#profilLivreur"><span>♙</span>Profil</a></nav>
     </div>
 
 `;
