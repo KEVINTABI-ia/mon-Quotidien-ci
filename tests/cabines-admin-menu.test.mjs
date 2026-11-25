@@ -38,3 +38,22 @@ test("Reversements cabine: utiliser la même instance Firestore que le module ca
   assert.match(handler, /const reversementDb=partnerDb/);
   assert.ok(handler.includes("await reversementDb.runTransaction("));
 });
+
+
+test("Administration cabine: afficher les opérations et le solde par cabine sans formulaire de reversement", async () => {
+  assert.match(cabines, /Opérations et soldes des cabines/);
+  assert.match(cabines, /data-cab-payer/);
+  assert.match(cabines, /window\.cabAdminPayerTransaction/);
+  assert.doesNotMatch(cabines, /Enregistrer le reversement manuel/);
+});
+
+test("Paiement cabine: paiement transactionnel unique et réservé à une prestation terminée", () => {
+  const start = cabines.indexOf("window.cabAdminPayerTransaction=");
+  const end = cabines.indexOf("window.cabAdminCabine=", start);
+  const handler = cabines.slice(start, end);
+  assert.match(handler, /payDb\.runTransaction/);
+  assert.match(handler, /d\.statut!==\\"terminee\\"/);
+  assert.match(handler, /existing\.exists/);
+  assert.match(handler, /reversementsTotalXof:earned/);
+  assert.match(handler, /type:\\"paiement_transaction\\"/);
+});
