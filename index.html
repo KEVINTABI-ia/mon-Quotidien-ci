@@ -15072,6 +15072,20 @@ body.mqci-outside-home #mqciPartnerDropdown #mqciAiLauncher{
  background:#075B35!important;color:#fff!important;font-size:13px!important;font-weight:800!important;
  box-shadow:0 3px 10px rgba(0,0,0,.12)!important;cursor:pointer!important;
 }
+
+/* Forcer l'ancrage au coin inférieur gauche, sans centrage hérité du parent. */
+body.mqci-outside-home #mqciPartnerDropdown{
+ position:fixed!important;
+ top:auto!important;right:auto!important;left:12px!important;
+ bottom:calc(env(safe-area-inset-bottom, 0px) + 12px)!important;
+ transform:none!important;translate:none!important;
+ margin:0!important;width:max-content!important;height:auto!important;
+ display:flex!important;align-items:center!important;justify-content:flex-start!important;
+}
+body.mqci-outside-home #mqciPartnerDropdown #mqciAiLauncher{
+ position:static!important;top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;
+ transform:none!important;translate:none!important;margin:0!important;
+}
 </style>
 <script id="mqci-nettoyage-points-entree-partenaires">
 (function(){
