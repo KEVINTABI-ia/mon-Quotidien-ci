@@ -397,8 +397,8 @@ function panneauAdmin(){
  let z=document.getElementById("cabAdminPanel");
  if(!z){z=document.createElement("section");z.id="cabAdminPanel";z.className="card";document.getElementById("espaceAdmin").appendChild(z);}
  z.style.display="block";z.innerHTML="<h3>Cabines téléphoniques — administration</h3><h4>Candidatures partenaires</h4><div id='cabAdminCabines'>Chargement…</div><h4>Opérations et soldes des cabines</h4><p class='cab-muted'>Chaque opération terminée peut être réglée individuellement. Le bouton « Payer » marque le montant restant comme payé et le déduit du solde de la cabine. Aucun transfert Wave, Jèko ou bancaire n’est déclenché automatiquement.</p><div id='cabAdminComptabilite'>Chargement…</div><h4>Demandes des clients</h4><div id='cabAdminDemandes'>Chargement…</div>";
- partnerDb.collection("cabines_telephoniques").limit(200).get().then(q=>{$("cabAdminCabines").innerHTML=q.empty?"Aucune candidature.":q.docs.map(d=>{const x=d.data();return "<article class='cab-item'><strong>"+esc(x.nom)+"</strong> · "+esc(x.commune)+" · "+esc(x.telephone)+"<p>"+esc(x.adresse)+" · "+esc((x.operateurs||[]).join(", "))+"</p><p>Statut : "+esc(x.statut)+"</p>"+(x.statut==="en_attente"?"<button type='button' onclick=\"window.cabAdminCabine('"+d.id+"','approuve')\">Approuver</button><button type='button' onclick=\"window.cabAdminCabine('"+d.id+"','refuse')\">Refuser</button>":"")+"</article>";}).join("");}).catch(e=>$("cabAdminCabines").textContent="Chargement impossible : "+e.message);
- partnerDb.collection("demandes_cabines").limit(200).get().then(q=>{$("cabAdminDemandes").innerHTML=q.empty?"Aucune demande.":q.docs.map(d=>{const x=d.data();return "<article class='cab-item'><strong>"+esc(x.operateur)+" · "+esc(x.typeService)+"</strong><p>"+esc(x.commune)+" · "+esc(x.numeroBeneficiaire)+" · "+money(x.montantPrestation)+"</p><p>"+esc(libelleStatut(x.statut))+" · Cabiniste : "+esc(x.cabineNom||"Non attribuée")+"</p></article>";}).join("");}).catch(e=>$("cabAdminDemandes").textContent="Chargement impossible : "+e.message);
+ db.collection("cabines_telephoniques").limit(200).get().then(q=>{$("cabAdminCabines").innerHTML=q.empty?"Aucune candidature.":q.docs.map(d=>{const x=d.data();return "<article class='cab-item'><strong>"+esc(x.nom)+"</strong> · "+esc(x.commune)+" · "+esc(x.telephone)+"<p>"+esc(x.adresse)+" · "+esc((x.operateurs||[]).join(", "))+"</p><p>Statut : "+esc(x.statut)+"</p>"+(x.statut==="en_attente"?"<button type='button' onclick=\"window.cabAdminCabine('"+d.id+"','approuve')\">Approuver</button><button type='button' onclick=\"window.cabAdminCabine('"+d.id+"','refuse')\">Refuser</button>":"")+"</article>";}).join("");}).catch(e=>$("cabAdminCabines").textContent="Chargement impossible : "+e.message);
+ db.collection("demandes_cabines").limit(200).get().then(q=>{$("cabAdminDemandes").innerHTML=q.empty?"Aucune demande.":q.docs.map(d=>{const x=d.data();return "<article class='cab-item'><strong>"+esc(x.operateur)+" · "+esc(x.typeService)+"</strong><p>"+esc(x.commune)+" · "+esc(x.numeroBeneficiaire)+" · "+money(x.montantPrestation)+"</p><p>"+esc(libelleStatut(x.statut))+" · Cabiniste : "+esc(x.cabineNom||"Non attribuée")+"</p></article>";}).join("");}).catch(e=>$("cabAdminDemandes").textContent="Chargement impossible : "+e.message);
  chargerComptabiliteCabines();
 }
 
@@ -406,8 +406,8 @@ async function chargerComptabiliteCabines(){
  const root=$("cabAdminComptabilite");if(!root)return;
  try{
   const [cabines,demandes]=await Promise.all([
-   partnerDb.collection("cabines_telephoniques").limit(300).get(),
-   partnerDb.collection("demandes_cabines").limit(500).get()
+   db.collection("cabines_telephoniques").limit(300).get(),
+   db.collection("demandes_cabines").limit(500).get()
   ]);
   const grouped=new Map();
   demandes.docs.forEach(doc=>{const d=doc.data();if(d.cabineUid){if(!grouped.has(d.cabineUid))grouped.set(d.cabineUid,[]);grouped.get(d.cabineUid).push(doc);}});
@@ -442,7 +442,7 @@ async function chargerComptabiliteCabines(){
 window.cabAdminPayerTransaction=async demandeId=>{
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){alert("Accès administrateur requis.");return;}
  if(!confirm("Confirmer le paiement de cette transaction ? Le montant restant sera déduit du solde de la cabine."))return;
- const payDb=partnerDb;
+ const payDb=db;
  const demandRef=payDb.collection("demandes_cabines").doc(demandeId);
  const paymentRef=demandRef.collection("reversements").doc("paiement-administrateur");
  try{

@@ -1810,7 +1810,8 @@ service cloud.firestore {
           && request.resource.data.moyenPaiement is string
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.createdAt == request.time
-          && request.resource.data.keys().hasOnly(["demandeId","cabineUid","cabineNom","montantXof","dateReversement","reference","moyenPaiement","createdAt","createdBy"]);
+          && request.resource.data.keys().hasOnly(["demandeId","cabineUid","cabineNom","montantXof","dateReversement","reference","moyenPaiement","createdAt","createdBy","type"])
+          && (!("type" in request.resource.data) || request.resource.data.type == "paiement_transaction");
         allow update, delete: if false;
       }
     }
