@@ -7676,7 +7676,7 @@ async function connecterPartenaire(){
       const champsConnexion=document.getElementById("champsConnexionPartenaire");
       const boutonConnexion=document.getElementById("boutonConnexionPartenaire");
       if(champsConnexion)champsConnexion.style.display="none";
-      if(boutonConnexion){boutonConnexion.textContent="Me déconnecter";boutonConnexion.onclick=deconnecterPartenaire;}
+      if(boutonConnexion)boutonConnexion.style.display="none";
       statut.textContent = "Votre abonnement est arrivé à expiration. Vous pouvez demander son renouvellement depuis votre espace partenaire.";
       afficherEspacePartenaire(dossier, uid);
       return;
@@ -7686,18 +7686,12 @@ async function connecterPartenaire(){
     const accesAbonnement = abonnementActif
       ? "Abonnement actif jusqu'au " + dateExpirationAbonnement.toLocaleDateString("fr-FR") + "."
       : "Essai gratuit jusqu'au " + dateFinEssai.toLocaleDateString("fr-FR") + ".";
-    statut.textContent = (avertissement
-      ? "Connexion réussie. Avertissement de l'administrateur : " + (avertissement.motif || "Veuillez respecter les règles de la plateforme.") + " "
-      : "Connexion réussie. Votre compte est approuvé. ")
-      + accesAbonnement;
+    statut.textContent = "";
 
     const champsConnexion = document.getElementById("champsConnexionPartenaire");
     const boutonConnexion = document.getElementById("boutonConnexionPartenaire");
     if (champsConnexion) champsConnexion.style.display = "none";
-    if (boutonConnexion) {
-      boutonConnexion.textContent = "Me déconnecter";
-      boutonConnexion.onclick = deconnecterPartenaire;
-    }
+    if (boutonConnexion) boutonConnexion.style.display = "none";
     afficherEspacePartenaire(dossier, uid);
 
   } catch(erreur) {
@@ -11662,7 +11656,14 @@ function partenaireAbonnementValide(p) {
      (p.statutAbonnementPartenaire === "Actif" && abonnement && abonnement > maintenant));
 }
 
-async function basculerDisponibilitePartenaire() {
+async function definirDisponibilitePartenaire(enLigne) {
+  const user=partnerAuth.currentUser;
+  if(!user)return;
+  partnerDb.collection("partenaires_colis").doc(user.uid).update({enLigne:!!enLigne})
+    .then(()=>{const etat=document.getElementById("etatDisponibilitePartenaire");if(etat)etat.textContent=enLigne?"🟢 Vous êtes en ligne.":"⚪ Vous êtes hors ligne.";})
+    .catch(e=>console.error("Mise à jour disponibilité impossible",e));
+}
+function basculerDisponibilitePartenaire() {
   activerSonCommandesPartenaire();
   const user = partnerAuth.currentUser;
   if (!user) return alert("Veuillez vous reconnecter.");
@@ -11724,25 +11725,23 @@ function afficherEspacePartenaire(dossier, uid) {
     <div class="livreur-dashboard">
       <div class="livreur-hero" id="accueilLivreur">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:15px"><strong style="letter-spacing:.08em">MON QUOTIDIEN CI</strong><span>🔔</span></div>
-        <div style="display:flex;align-items:center;gap:14px"><div style="width:72px;height:72px;flex:0 0 72px;border-radius:50%;background:#fff;color:#168347;display:grid;place-items:center;font-size:2rem;font-weight:800;border:3px solid #fff">${echapperTexteCompagnie((dossier.nom || "L").charAt(0).toUpperCase())}</div><div><h2>Bonjour ${echapperTexteCompagnie((dossier.nom || "Livreur").split(" ")[0])} !</h2><p>Bienvenue dans votre espace professionnel</p><div class="livreur-status">${dossier.enLigne === true ? "🟢 En ligne" : "⚪ Hors ligne"}</div></div></div>
+        <div style="display:flex;align-items:center;gap:14px"><div style="width:72px;height:72px;flex:0 0 72px;border-radius:50%;overflow:hidden;background:#fff;color:#168347;display:grid;place-items:center;font-size:2rem;font-weight:800;border:3px solid #fff">${dossier.photoProfil ? '<img src="'+echapperTexteCompagnie(dossier.photoProfil)+'" alt="Photo du livreur" style="width:100%;height:100%;object-fit:cover">' : echapperTexteCompagnie((dossier.nom || "L").charAt(0).toUpperCase())}</div><div style="min-width:0"><h2>Bonjour ${echapperTexteCompagnie((dossier.nom || "Livreur").split(" ")[0])} !</h2><p style="margin:5px 0">Solde : <strong id="kpiSoldeLivreur">Chargement…</strong></p><button type="button" onclick="document.getElementById('rechargeRapideLivreur')?.scrollIntoView({behavior:'smooth',block:'center'})" style="background:#fff;color:#a95400;border:0;border-radius:10px;padding:8px 13px;font-weight:700">Me recharger</button></div></div>
       </div>
       <div class="livreur-grid">
-        <div class="livreur-kpi"><small>Portefeuille commissions</small><strong id="kpiSoldeLivreur">Chargement…</strong></div>
         <div class="livreur-kpi"><small>Mission en cours</small><strong id="kpiMissionLivreur">Vérification…</strong></div>
         <div class="livreur-kpi"><small>Autres missions actives</small><strong id="kpiMissionsAttente">—</strong></div>
         <div class="livreur-kpi"><small>Missions terminées</small><strong id="kpiMissionsTerminees">—</strong></div>
         <div class="livreur-kpi"><small>Statut du compte</small><strong>${eligible ? "Actif" : "À renouveler"}</strong></div>
       </div>
-      <nav class="livreur-shortcuts" aria-label="Raccourcis livreur"><a href="#missionsLivreur"><span>🚚</span>Mes livraisons</a><a href="#portefeuilleLivreur"><span>💳</span>Mon portefeuille</a><a href="#navigationLivreur"><span>📍</span>Carte & navigation</a><a href="#profilLivreur"><span>👤</span>Mon profil</a></nav>
+      <nav class="livreur-shortcuts" aria-label="Raccourcis livreur"><a href="#missionsLivreur"><span>🚚</span>Mes livraisons</a><a href="#navigationLivreur"><span>📍</span>Carte & navigation</a></nav>
       <div class="livreur-panel">
         <h3>⚡ Disponibilité</h3>
-        <p id="etatDisponibilitePartenaire">${dossier.enLigne === true ? "🟢 Vous êtes en ligne et pouvez recevoir des commandes." : "⚪ Vous êtes hors ligne."}</p>
-        <button type="button" class="primary livreur-action" onclick="basculerDisponibilitePartenaire()" ${eligible ? "" : "disabled"}>${dossier.enLigne === true ? "Passer hors ligne" : "Passer en ligne"}</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="primary livreur-action" style="flex:1;min-width:120px" onclick="definirDisponibilitePartenaire(true)" ${eligible && dossier.enLigne !== true ? "" : "disabled"}>🟢 En ligne</button><button type="button" class="livreur-action" style="flex:1;min-width:120px" onclick="definirDisponibilitePartenaire(false)" ${dossier.enLigne === true ? "" : "disabled"}>⚪ Hors ligne</button></div>
       </div>
       <div class="livreur-panel" id="portefeuilleLivreur">
-        <h3>💳 Mon portefeuille de commissions</h3>
-        <p><strong>Solde disponible :</strong> <span id="soldePortefeuilleLivreur">Chargement...</span></p>
-        <p id="alertePortefeuilleLivreur" class="notice" aria-live="polite">Chargement du statut du portefeuille...</p>
+        <div id="rechargeRapideLivreur"><h3>💳 Recharger mon solde avec Jèko</h3></div>
+        <span id="soldePortefeuilleLivreur" style="display:none">Chargement...</span>
+        <p id="alertePortefeuilleLivreur" class="notice" aria-live="polite" style="display:none">Chargement...</p>
         <label for="montantRechargePortefeuille">Montant à recharger (FCFA)</label>
         <select id="montantRechargePortefeuille" onchange="afficherMontantPersonnalisePortefeuille()" style="width:100%;padding:12px;">
           <option value="2000">2 000 FCFA</option><option value="3000">3 000 FCFA</option><option value="4000">4 000 FCFA</option>
@@ -11757,10 +11756,8 @@ function afficherEspacePartenaire(dossier, uid) {
           <option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option>
         </select>
         <button id="boutonRechargePortefeuille" type="button" class="primary livreur-action" onclick="rechargerPortefeuilleLivreur()">Recharger avec Jèko</button>
-        <button type="button" class="livreur-action" onclick="chargerPortefeuilleLivreur()">Actualiser le portefeuille</button>
-        <p class="notice">Alerte à 1 000 FCFA. À zéro, les nouvelles missions sont bloquées. Le crédit est confirmé uniquement après validation sécurisée par Jèko.</p>
         <p id="statutRechargePortefeuille" aria-live="polite"></p>
-        <h4>Historique financier</h4><div id="historiquePortefeuilleLivreur"><p>Chargement...</p></div>
+        <div id="historiquePortefeuilleLivreur" style="display:none"></div>
       </div>
       <div class="livreur-panel" id="missionsLivreur"><h3>📦 Nouvelles demandes</h3>
         <button type="button" onclick="chargerCommandesPartenaire()">Actualiser les missions</button>
@@ -11769,12 +11766,7 @@ function afficherEspacePartenaire(dossier, uid) {
       <div class="livreur-panel"><h3>🚚 Mes tournées multi-boutiques</h3><div id="tourneesGroupeesPartenaire"><p>Chargement...</p></div></div>
       <div class="livreur-panel" id="navigationLivreur"><h3>🛵 Suivi de livraison & navigation</h3><div id="missionActivePartenaire"><p>Vérification...</p></div></div>
       <div class="livreur-panel"><h3>📋 Historique de mes livraisons</h3><div id="historiquePartenaire"></div></div>
-      <div class="livreur-panel" id="profilLivreur"><h3>👤 Mon profil</h3>
-        <p><strong>Nom :</strong> ${echapperTexteCompagnie(dossier.nom || "")}</p>
-        <p><strong>Profil :</strong> ${dossier.type === "livreur_independant" ? "Livreur indépendant" : "Responsable de gare"}</p>
-        <p><strong>Abonnement :</strong> ${eligible ? "Actif" : "À renouveler"} ${dateAffichee ? "— échéance : " + dateAffichee : ""}</p>
-      </div>
-      <nav class="livreur-nav" aria-label="Navigation espace livreur"><a href="#accueilLivreur"><span>⌂</span>Accueil</a><a href="#missionsLivreur"><span>▣</span>Livraisons</a><a href="#portefeuilleLivreur"><span>▤</span>Portefeuille</a><a href="#profilLivreur"><span>♙</span>Profil</a></nav>
+      <nav class="livreur-nav" aria-label="Navigation espace livreur"><a href="#accueilLivreur"><span>⌂</span>Accueil</a><a href="#missionsLivreur"><span>▣</span>Livraisons</a><a href="#navigationLivreur"><span>⌖</span>Suivi</a></nav>
     </div>
 
 `;
