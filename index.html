@@ -11656,7 +11656,7 @@ function partenaireAbonnementValide(p) {
      (p.statutAbonnementPartenaire === "Actif" && abonnement && abonnement > maintenant));
 }
 
-async async function definirDisponibilitePartenaire(enLigne) {
+async function definirDisponibilitePartenaire(enLigne) {
   activerSonCommandesPartenaire();
   const user=partnerAuth.currentUser;
   if(!user)return alert("Veuillez vous reconnecter.");
