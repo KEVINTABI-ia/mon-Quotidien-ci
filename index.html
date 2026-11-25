@@ -11673,7 +11673,7 @@ function definirDisponibilitePartenaire(enLigne) {
     alert("Impossible de modifier votre disponibilité : "+e.message);
   });
 }
-function basculerDisponibilitePartenaire() {
+async function basculerDisponibilitePartenaire() {
   activerSonCommandesPartenaire();
   const user = partnerAuth.currentUser;
   if (!user) return alert("Veuillez vous reconnecter.");
