@@ -447,8 +447,14 @@ window.cabAdminEnregistrerReversement=async demandeId=>{
   const reversementsExistants=await demandRef.collection("reversements").get();
   const paidHistorique=reversementsExistants.docs.reduce((sum,p)=>sum+Number(p.data().montantXof||0),0);
   if(!Number.isSafeInteger(paidHistorique)||paidHistorique<0)throw new Error("Historique des reversements invalide.");
-  await db.runTransaction(async tx=>{
-   const [snap,existing]=await Promise.all([tx.get(demandRef),tx.get(entryRef)]);
+  // Utiliser les références natives du même SDK que la transaction.
+  // L'application expose l'API compat, dont les wrappers ne doivent pas être
+  // transmis directement à la transaction native.
+  const nativeDb=db._delegate,nativeDemandRef=demandRef._delegate,nativeEntryRef=entryRef._delegate;
+  if(!nativeDb||!nativeDemandRef||!nativeEntryRef)throw new Error("Connexion Firestore incompatible : rechargez l'application.");
+  await nativeDb.runTransaction(async tx=>{
+   const snap=await tx.get(nativeDemandRef);
+   const existing=await tx.get(nativeEntryRef);
    if(!snap.exists)throw new Error("Prestation introuvable.");
    const d=snap.data();
    if(d.statut!=="terminee"||!d.cabineUid)throw new Error("Seule une prestation terminée et attribuée peut être réglée.");
@@ -456,10 +462,9 @@ window.cabAdminEnregistrerReversement=async demandeId=>{
    const paid=Number.isSafeInteger(d.reversementsTotalXof)?d.reversementsTotalXof:paidHistorique;
    const earned=Number(d.montantAReverser??d.montantPrestation??0),balance=earned-paid;
    if(!Number.isSafeInteger(earned)||earned<=0||!Number.isSafeInteger(paid)||paid<0||amount>balance)throw new Error("Montant supérieur au solde restant ("+Math.max(0,balance)+" FCFA).");
-   // Le document parent sert de compteur atomique : une seconde transaction
-   // concurrente sera relancée et relira le cumul actualisé.
-   tx.update(demandRef,{reversementsTotalXof:paid+amount});
-   tx.set(entryRef,{demandeId,cabineUid:d.cabineUid,cabineNom:d.cabineNom||"",montantXof:amount,dateReversement:date,reference,moyenPaiement:method,createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:auth.currentUser.uid});
+   tx.update(nativeDemandRef,{reversementsTotalXof:paid+amount});
+   const serverTimestamp=firebase.firestore.FieldValue.serverTimestamp();
+   tx.set(nativeEntryRef,{demandeId,cabineUid:d.cabineUid,cabineNom:d.cabineNom||"",montantXof:amount,dateReversement:date,reference,moyenPaiement:method,createdAt:serverTimestamp._delegate||serverTimestamp,createdBy:auth.currentUser.uid});
   });
   alert("Reversement manuel enregistré. Aucun transfert d’argent n’a été déclenché par l’application.");
   await chargerComptabiliteCabines();
