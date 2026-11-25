@@ -14991,6 +14991,63 @@ body.mqci-ai-no-scroll{
  else openBusinessCategory();
 })();
 </script>
+
+<!-- Navigation hors accueil : styles uniquement, sans déplacer les composants ni leurs gestionnaires. -->
+<style id="mqci-navigation-hors-accueil-style">
+  body.mqci-outside-home #accueilBottomNav{display:none!important}
+  body.mqci-outside-home #mqciPartnerDropdownToggle,
+  body.mqci-outside-home #mqciPartnerDropdownPanel,
+  body.mqci-outside-home #menuDropdown{display:none!important}
+  body.mqci-outside-home #mqciAiLauncher:not([hidden]){
+    position:fixed!important;
+    left:14px!important;
+    right:auto!important;
+    top:auto!important;
+    bottom:calc(14px + env(safe-area-inset-bottom))!important;
+    z-index:2147482000!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    min-width:48px!important;
+    min-height:42px!important;
+    width:auto!important;
+    padding:0 13px!important;
+    border-radius:999px!important;
+  }
+</style>
+<script>
+(function(){
+  function synchroniserNavigationHorsAccueil(){
+    const overlay=document.getElementById("vuePleinEcran");
+    const accueil=document.getElementById("accueilHomeShell");
+    const horsAccueil=!!(
+      overlay?.classList.contains("actif") ||
+      accueil?.classList.contains("family-view-active")
+    );
+    document.body.classList.toggle("mqci-outside-home",horsAccueil);
+    if(horsAccueil){
+      const panel=document.getElementById("mqciPartnerDropdownPanel");
+      const toggle=document.getElementById("mqciPartnerDropdownToggle");
+      if(panel) panel.hidden=true;
+      if(toggle) toggle.setAttribute("aria-expanded","false");
+    }
+  }
+  function initialiser(){
+    synchroniserNavigationHorsAccueil();
+    const observer=new MutationObserver(synchroniserNavigationHorsAccueil);
+    const overlay=document.getElementById("vuePleinEcran");
+    const accueil=document.getElementById("accueilHomeShell");
+    if(overlay) observer.observe(overlay,{attributes:true,attributeFilter:["class"]});
+    if(accueil) observer.observe(accueil,{attributes:true,attributeFilter:["class"]});
+    window.addEventListener("pageshow",synchroniserNavigationHorsAccueil);
+  }
+  if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",initialiser,{once:true});
+  }else{
+    initialiser();
+  }
+})();
+</script>
 </body>
 </html>
 <style id="mqci-pied-page-sous-admin-sans-espace-vide">
