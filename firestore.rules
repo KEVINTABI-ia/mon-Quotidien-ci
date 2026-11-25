@@ -2016,7 +2016,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(["boutiqueId","boutiqueUid","titre","type","date","heure","description","statut","createdAt","updatedAt"])
         && request.resource.data.titre is string && request.resource.data.titre.size() > 0 && request.resource.data.titre.size() <= 120
         && request.resource.data.type in ["rendez_vous","tache","commande","rappel"]
-        && request.resource.data.date is string && request.resource.data.date.matches("^\\d{4}-\\d{2}-\\d{2}$")
+        && request.resource.data.date is string && request.resource.data.date.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
         && request.resource.data.heure is string && request.resource.data.heure.size() <= 5
         && request.resource.data.description is string && request.resource.data.description.size() <= 500
         && request.resource.data.statut == "a_faire"
