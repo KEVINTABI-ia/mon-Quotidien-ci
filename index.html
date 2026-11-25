@@ -15049,44 +15049,62 @@ body.mqci-ai-no-scroll{
 })();
 </script>
 
-<style id="mqci-navigation-ia-et-partenaires-v2">
-/* Hors accueil : déplacer le conteneur parent du raccourci IA, pas son bouton seul. */
-body.mqci-outside-home #mqciPartnerDropdown{
- position:fixed!important;left:14px!important;right:auto!important;top:auto!important;
- bottom:calc(14px + env(safe-area-inset-bottom))!important;z-index:2147482000!important;
- display:flex!important;align-items:center!important;gap:0!important;
+<style id="mqci-navigation-ia-et-partenaires-v3">
+/* Le lanceur IA est un élément indépendant du menu supérieur : l'ancrer lui-même. */
+body.mqci-outside-home #mqciAiLauncher:not([hidden]){
+ position:fixed!important;left:12px!important;right:auto!important;top:auto!important;
+ bottom:calc(env(safe-area-inset-bottom, 0px) + 12px)!important;
+ transform:none!important;translate:none!important;margin:0!important;
+ z-index:2147483000!important;display:inline-flex!important;
 }
-body.mqci-outside-home #mqciPartnerDropdown #mqciPartnerDropdownToggle{display:none!important}
-body.mqci-outside-home #mqciPartnerDropdown #mqciAiLauncher{
- position:relative!important;inset:auto!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;
- display:inline-flex!important;align-items:center!important;justify-content:center!important;
- min-width:48px!important;min-height:42px!important;padding:0 13px!important;border-radius:999px!important;
-}
-/* Le menu déroulant d'accueil reste le seul point d'entrée "Devenir partenaire". */
-#mqciPartnerDropdownPanel button[data-mqci-hidden-partner-action="true"]{display:none!important}
-#devenirPartenaire #zoneChoixPartenaire button[onclick*="ouvrirEspacePartenaire"]{display:none!important}
-#homeFamilyLauncher button[onclick*="ouvrirEspacePartenaire('accueil')"]{display:none!important}
+/* Ne jamais masquer la connexion partenaire dans le menu déroulant d'accueil. */
+#mqciPartnerDropdownPanel button{visibility:visible}
 .mqci-articles-voir-plus-wrap{display:flex!important;justify-content:flex-end!important;width:100%!important;margin:2px 0 12px!important}
 .mqci-articles-voir-plus{
  border:0!important;border-radius:999px!important;padding:9px 17px!important;
  background:#075B35!important;color:#fff!important;font-size:13px!important;font-weight:800!important;
  box-shadow:0 3px 10px rgba(0,0,0,.12)!important;cursor:pointer!important;
 }
-
-/* Forcer l'ancrage au coin inférieur gauche, sans centrage hérité du parent. */
-body.mqci-outside-home #mqciPartnerDropdown{
- position:fixed!important;
- top:auto!important;right:auto!important;left:12px!important;
- bottom:calc(env(safe-area-inset-bottom, 0px) + 12px)!important;
- transform:none!important;translate:none!important;
- margin:0!important;width:max-content!important;height:auto!important;
- display:flex!important;align-items:center!important;justify-content:flex-start!important;
-}
-body.mqci-outside-home #mqciPartnerDropdown #mqciAiLauncher{
- position:static!important;top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;
- transform:none!important;translate:none!important;margin:0!important;
-}
 </style>
+<script id="mqci-navigation-hors-accueil-v3">
+(function(){
+ function synchroniser(){
+  const overlay=document.getElementById("vuePleinEcran");
+  const accueil=document.getElementById("accueilHomeShell");
+  const horsAccueil=!!(overlay && (overlay.classList.contains("actif") || overlay.getAttribute("aria-hidden")==="false") || accueil && accueil.classList.contains("family-view-active"));
+  document.body.classList.toggle("mqci-outside-home",horsAccueil);
+  const ai=document.getElementById("mqciAiLauncher");
+  if(ai && horsAccueil){
+   ai.style.setProperty("position","fixed","important");
+   ai.style.setProperty("left","12px","important");
+   ai.style.setProperty("right","auto","important");
+   ai.style.setProperty("top","auto","important");
+   ai.style.setProperty("bottom","calc(env(safe-area-inset-bottom, 0px) + 12px)","important");
+   ai.style.setProperty("transform","none","important");
+   ai.style.setProperty("z-index","2147483000","important");
+  }else if(ai){
+   ["position","left","right","top","bottom","transform","z-index"].forEach(k=>ai.style.removeProperty(k));
+  }
+  if(horsAccueil){
+   const panel=document.getElementById("mqciPartnerDropdownPanel");
+   const toggle=document.getElementById("mqciPartnerDropdownToggle");
+   if(panel)panel.hidden=true;
+   if(toggle)toggle.setAttribute("aria-expanded","false");
+  }
+ }
+ function init(){
+  synchroniser();
+  const observer=new MutationObserver(synchroniser);
+  const overlay=document.getElementById("vuePleinEcran");
+  const accueil=document.getElementById("accueilHomeShell");
+  if(overlay)observer.observe(overlay,{attributes:true,attributeFilter:["class","style","aria-hidden"]});
+  if(accueil)observer.observe(accueil,{attributes:true,attributeFilter:["class"]});
+  window.addEventListener("pageshow",synchroniser);
+  window.addEventListener("resize",synchroniser);
+ }
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
+})();
+</script>
 <script id="mqci-nettoyage-points-entree-partenaires">
 (function(){
  function masquerActionsPartenairesEnDouble(){
@@ -15096,15 +15114,8 @@ body.mqci-outside-home #mqciPartnerDropdown #mqciAiLauncher{
    const devenir=/^(devenir partenaire|devenir commerçant partenaire|devenir partenaire dans cette catégorie)/i.test(texte);
    const connexion=/connexion à mon espace partenaire|connexion à l'espace propriétaire|connexion à l’espace propriétaire/i.test(texte);
    if(devenir){btn.style.setProperty("display","none","important");return;}
-   if(connexion && !btn.closest("#connexionBoutiqueZone")){
-    btn.style.setProperty("display","none","important");
-   }
+   if(connexion && !btn.closest("#connexionBoutiqueZone"))btn.style.setProperty("display","none","important");
   });
-  const panel=document.getElementById("mqciPartnerDropdownPanel");
-  if(panel){
-   const login=[...panel.querySelectorAll("button")].find(b=>/connexion à mon espace partenaire/i.test(b.textContent||""));
-   if(login)login.style.setProperty("display","none","important");
-  }
  }
  function init(){
   masquerActionsPartenairesEnDouble();
