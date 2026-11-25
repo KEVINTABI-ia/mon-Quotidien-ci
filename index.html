@@ -11761,44 +11761,7 @@ function afficherEspacePartenaire(dossier, uid) {
         <p><strong>Abonnement :</strong> ${eligible ? "Actif" : "À renouveler"} ${dateAffichee ? "— échéance : " + dateAffichee : ""}</p>
       </div>
     </div>
-    ${dossier.type === "livreur_independant" ? `
-    <section class="card" style="padding:15px;margin:14px 0;border:1px solid #dcebdd;border-radius:14px;">
-      <h3>💳 Mon portefeuille de commissions</h3>
-      <p><strong>Solde disponible :</strong> <span id="soldePortefeuilleLivreur">Chargement...</span></p>
-      <p id="alertePortefeuilleLivreur" class="notice" aria-live="polite">Chargement du statut du portefeuille...</p>
-      <label for="montantRechargePortefeuille">Montant à recharger (FCFA)</label>
-      <select id="montantRechargePortefeuille" onchange="afficherMontantPersonnalisePortefeuille()" style="width:100%;padding:12px;">
-        <option value="2000">2 000 FCFA</option><option value="3000">3 000 FCFA</option><option value="4000">4 000 FCFA</option>
-        <option value="5000">5 000 FCFA</option><option value="6000">6 000 FCFA</option><option value="7000">7 000 FCFA</option>
-        <option value="8000">8 000 FCFA</option><option value="9000">9 000 FCFA</option><option value="10000" selected>10 000 FCFA</option>
-        <option value="personnalise">Autre montant</option>
-      </select>
-      <input id="montantRechargePersonnalisePortefeuille" type="number" min="2000" max="10000000" step="1" inputmode="numeric" placeholder="Montant personnalisé (minimum 2 000 FCFA)" aria-label="Montant personnalisé en FCFA" style="display:none;width:100%;padding:12px;margin-top:8px;">
-      <small>Recharge minimum : 2 000 FCFA.</small>
-      <label for="moyenRechargePortefeuille">Moyen de paiement</label>
-      <select id="moyenRechargePortefeuille" style="width:100%;padding:12px;">
-        <option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option>
-      </select>
-      <button id="boutonRechargePortefeuille" type="button" class="primary" onclick="rechargerPortefeuilleLivreur()">Recharger avec Jèko</button>
-      <button type="button" onclick="chargerPortefeuilleLivreur()">Actualiser le portefeuille</button>
-      <h4>Historique financier</h4><div id="historiquePortefeuilleLivreur"><p>Chargement...</p></div>
-      <p class="notice">Alerte à 1 000 FCFA. À zéro, les nouvelles missions sont bloquées. Le crédit est confirmé uniquement après validation sécurisée par Jèko.</p>
-      <p id="statutRechargePortefeuille" aria-live="polite"></p>
-    </section>` : "" }
-    <div class="stop">
-      <strong>Disponibilité</strong>
-      <p id="etatDisponibilitePartenaire">${dossier.enLigne === true ? "🟢 Vous êtes en ligne et pouvez recevoir des commandes." : "⚪ Vous êtes hors ligne."}</p>
-      <button type="button" class="primary" onclick="basculerDisponibilitePartenaire()" ${eligible ? "" : "disabled"}>${dossier.enLigne === true ? "Passer hors ligne" : "Je suis disponible"}</button>
-    </div>
-    <h3>📦 Commandes disponibles</h3>
-    <button type="button" onclick="chargerCommandesPartenaire()">Actualiser</button>
-    <div id="fileCommandesPartenaire"><p>Chargement...</p></div>
-    <h3>🚚 Mes tournées multi-boutiques</h3>
-    <div id="tourneesGroupeesPartenaire"><p>Chargement...</p></div>
-    <h3>🚚 Ma mission en cours</h3>
-    <div id="missionActivePartenaire"><p>Vérification...</p></div>
-    <h3>📋 Mes missions précédentes</h3>
-    <div id="historiquePartenaire"></div>
+
 `;
   chargerCommandesPartenaire();
   if(dossier.type === "livreur_independant") chargerPortefeuilleLivreur();
