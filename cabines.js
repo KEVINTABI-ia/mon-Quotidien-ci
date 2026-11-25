@@ -441,17 +441,24 @@ window.cabAdminEnregistrerReversement=async demandeId=>{
  if(!safeRef){alert("La référence doit contenir des caractères exploitables.");return;}
  const demandRef=db.collection("demandes_cabines").doc(demandeId),entryRef=demandRef.collection("reversements").doc(safeRef);
  try{
+  // Firestore Web transactions ne lisent pas une CollectionReference.
+  // Charger le journal existant hors transaction, puis sérialiser les écritures
+  // avec un cumul sur le document parent pour empêcher les dépassements concurrents.
+  const reversementsExistants=await demandRef.collection("reversements").get();
+  const paidHistorique=reversementsExistants.docs.reduce((sum,p)=>sum+Number(p.data().montantXof||0),0);
+  if(!Number.isSafeInteger(paidHistorique)||paidHistorique<0)throw new Error("Historique des reversements invalide.");
   await db.runTransaction(async tx=>{
-   const snap=await tx.get(demandRef);
+   const [snap,existing]=await Promise.all([tx.get(demandRef),tx.get(entryRef)]);
    if(!snap.exists)throw new Error("Prestation introuvable.");
    const d=snap.data();
    if(d.statut!=="terminee"||!d.cabineUid)throw new Error("Seule une prestation terminée et attribuée peut être réglée.");
-   const existing=await tx.get(entryRef);
    if(existing.exists)throw new Error("Cette référence de reversement existe déjà pour cette prestation.");
-   const reversements=await tx.get(demandRef.collection("reversements"));
-   const paid=reversements.docs.reduce((sum,p)=>sum+Number(p.data().montantXof||0),0);
+   const paid=Number.isSafeInteger(d.reversementsTotalXof)?d.reversementsTotalXof:paidHistorique;
    const earned=Number(d.montantAReverser??d.montantPrestation??0),balance=earned-paid;
-   if(!Number.isSafeInteger(earned)||earned<=0||!Number.isSafeInteger(paid)||amount>balance)throw new Error("Montant supérieur au solde restant ("+Math.max(0,balance)+" FCFA).");
+   if(!Number.isSafeInteger(earned)||earned<=0||!Number.isSafeInteger(paid)||paid<0||amount>balance)throw new Error("Montant supérieur au solde restant ("+Math.max(0,balance)+" FCFA).");
+   // Le document parent sert de compteur atomique : une seconde transaction
+   // concurrente sera relancée et relira le cumul actualisé.
+   tx.update(demandRef,{reversementsTotalXof:paid+amount});
    tx.set(entryRef,{demandeId,cabineUid:d.cabineUid,cabineNom:d.cabineNom||"",montantXof:amount,dateReversement:date,reference,moyenPaiement:method,createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:auth.currentUser.uid});
   });
   alert("Reversement manuel enregistré. Aucun transfert d’argent n’a été déclenché par l’application.");
