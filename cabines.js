@@ -396,9 +396,9 @@ function panneauAdmin(){
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){alert("Accès administrateur requis.");return;}
  let z=document.getElementById("cabAdminPanel");
  if(!z){z=document.createElement("section");z.id="cabAdminPanel";z.className="card";document.getElementById("espaceAdmin").appendChild(z);}
- z.style.display="block";z.innerHTML="<h3>Cabines téléphoniques — administration</h3><h4>Candidatures partenaires</h4><div id='cabAdminCabines'>Chargement…</div><h4>Comptabilité et reversements manuels</h4><p class='cab-muted'>Seules les prestations terminées sont comptabilisées. Les reversements sont saisis manuellement après paiement effectif par MON QUOTIDIEN CI.</p><div id='cabAdminComptabilite'>Chargement…</div><h4>Demandes des clients</h4><div id='cabAdminDemandes'>Chargement…</div>";
- db.collection("cabines_telephoniques").limit(200).get().then(q=>{$("cabAdminCabines").innerHTML=q.empty?"Aucune candidature.":q.docs.map(d=>{const x=d.data();return "<article class='cab-item'><strong>"+esc(x.nom)+"</strong> · "+esc(x.commune)+" · "+esc(x.telephone)+"<p>"+esc(x.adresse)+" · "+esc((x.operateurs||[]).join(", "))+"</p><p>Statut : "+esc(x.statut)+"</p>"+(x.statut==="en_attente"?"<button type='button' onclick=\"window.cabAdminCabine('"+d.id+"','approuve')\">Approuver</button><button type='button' onclick=\"window.cabAdminCabine('"+d.id+"','refuse')\">Refuser</button>":"")+"</article>";}).join("");}).catch(e=>$("cabAdminCabines").textContent="Chargement impossible : "+e.message);
- db.collection("demandes_cabines").limit(200).get().then(q=>{$("cabAdminDemandes").innerHTML=q.empty?"Aucune demande.":q.docs.map(d=>{const x=d.data();return "<article class='cab-item'><strong>"+esc(x.operateur)+" · "+esc(x.typeService)+"</strong><p>"+esc(x.commune)+" · "+esc(x.numeroBeneficiaire)+" · "+money(x.montantPrestation)+"</p><p>"+esc(libelleStatut(x.statut))+" · Cabiniste : "+esc(x.cabineNom||"Non attribuée")+"</p></article>";}).join("");}).catch(e=>$("cabAdminDemandes").textContent="Chargement impossible : "+e.message);
+ z.style.display="block";z.innerHTML="<h3>Cabines téléphoniques — administration</h3><h4>Candidatures partenaires</h4><div id='cabAdminCabines'>Chargement…</div><h4>Opérations et soldes des cabines</h4><p class='cab-muted'>Chaque opération terminée peut être réglée individuellement. Le bouton « Payer » marque le montant restant comme payé et le déduit du solde de la cabine. Aucun transfert Wave, Jèko ou bancaire n’est déclenché automatiquement.</p><div id='cabAdminComptabilite'>Chargement…</div><h4>Demandes des clients</h4><div id='cabAdminDemandes'>Chargement…</div>";
+ partnerDb.collection("cabines_telephoniques").limit(200).get().then(q=>{$("cabAdminCabines").innerHTML=q.empty?"Aucune candidature.":q.docs.map(d=>{const x=d.data();return "<article class='cab-item'><strong>"+esc(x.nom)+"</strong> · "+esc(x.commune)+" · "+esc(x.telephone)+"<p>"+esc(x.adresse)+" · "+esc((x.operateurs||[]).join(", "))+"</p><p>Statut : "+esc(x.statut)+"</p>"+(x.statut==="en_attente"?"<button type='button' onclick=\"window.cabAdminCabine('"+d.id+"','approuve')\">Approuver</button><button type='button' onclick=\"window.cabAdminCabine('"+d.id+"','refuse')\">Refuser</button>":"")+"</article>";}).join("");}).catch(e=>$("cabAdminCabines").textContent="Chargement impossible : "+e.message);
+ partnerDb.collection("demandes_cabines").limit(200).get().then(q=>{$("cabAdminDemandes").innerHTML=q.empty?"Aucune demande.":q.docs.map(d=>{const x=d.data();return "<article class='cab-item'><strong>"+esc(x.operateur)+" · "+esc(x.typeService)+"</strong><p>"+esc(x.commune)+" · "+esc(x.numeroBeneficiaire)+" · "+money(x.montantPrestation)+"</p><p>"+esc(libelleStatut(x.statut))+" · Cabiniste : "+esc(x.cabineNom||"Non attribuée")+"</p></article>";}).join("");}).catch(e=>$("cabAdminDemandes").textContent="Chargement impossible : "+e.message);
  chargerComptabiliteCabines();
 }
 
@@ -406,66 +406,64 @@ async function chargerComptabiliteCabines(){
  const root=$("cabAdminComptabilite");if(!root)return;
  try{
   const [cabines,demandes]=await Promise.all([
-   db.collection("cabines_telephoniques").limit(300).get(),
-   db.collection("demandes_cabines").where("statut","==","terminee").limit(500).get()
+   partnerDb.collection("cabines_telephoniques").limit(300).get(),
+   partnerDb.collection("demandes_cabines").limit(500).get()
   ]);
   const grouped=new Map();
   demandes.docs.forEach(doc=>{const d=doc.data();if(d.cabineUid){if(!grouped.has(d.cabineUid))grouped.set(d.cabineUid,[]);grouped.get(d.cabineUid).push(doc);}});
   const sections=await Promise.all(cabines.docs.map(async cabine=>{
-   const profile=cabine.data(),docs=grouped.get(cabine.id)||[];
+   const profile=cabine.data(),docs=(grouped.get(cabine.id)||[]).sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0));
    const rows=await Promise.all(docs.map(async doc=>{
-    const snap=await doc.ref.collection("reversements").get();
-    const payouts=snap.docs.map(p=>p.data());
+    const snap=await doc.ref.collection("reversements").get(),payouts=snap.docs.map(p=>p.data());
     const paid=payouts.reduce((sum,p)=>sum+Number(p.montantXof||0),0);
     const earned=Number(doc.data().montantAReverser??doc.data().montantPrestation??0);
-    return {doc,data:doc.data(),payouts,paid,earned,balance:Math.max(0,earned-paid)};
+    const balance=Math.max(0,earned-paid);
+    return {doc,data:doc.data(),payouts,paid,earned,balance};
    }));
-   const earned=rows.reduce((sum,r)=>sum+r.earned,0),paid=rows.reduce((sum,r)=>sum+r.paid,0),balance=rows.reduce((sum,r)=>sum+r.balance,0);
+   const eligible=rows.filter(r=>r.data.statut==="terminee");
+   const earned=eligible.reduce((sum,r)=>sum+r.earned,0),paid=eligible.reduce((sum,r)=>sum+r.paid,0),balance=eligible.reduce((sum,r)=>sum+r.balance,0);
    const detail=rows.map(r=>{
     const id=r.doc.id,d=r.data;
-    const history=r.payouts.length?r.payouts.map(p=>"<li>"+money(p.montantXof)+" · "+esc(p.dateReversement||"Date inconnue")+" · Réf. "+esc(p.reference)+" · "+esc(p.moyenPaiement||"—")+"</li>").join(""):"<li>Aucun reversement enregistré</li>";
-    const form=r.balance>0?"<div class='cab-filter'><input id='cabRevAmount_"+esc(id)+"' type='number' min='1' max='"+r.balance+"' step='1' placeholder='Montant à reverser (max "+r.balance+")'><input id='cabRevDate_"+esc(id)+"' type='date'><input id='cabRevRef_"+esc(id)+"' maxlength='80' placeholder='Référence du paiement'><select id='cabRevMethod_"+esc(id)+"'><option>Wave</option><option>Orange Money</option><option>MTN Money</option><option>Virement bancaire</option><option>Espèces</option><option>Autre</option></select></div><button type='button' class='primary' data-cab-reverse='"+esc(id)+"'>Enregistrer le reversement manuel</button>":"<p class='cab-muted'>Solde de cette prestation réglé.</p>";
-    return "<article class='cab-item'><strong>"+esc(d.operateur)+" · "+esc(d.typeService)+" · "+esc(d.numeroBeneficiaire)+"</strong><p>Prestation : "+money(r.earned)+" · Déjà reversé : "+money(r.paid)+" · Solde : <strong>"+money(r.balance)+"</strong></p><p class='cab-muted'>Demande "+esc(id)+" · Terminée le "+esc(dateCabine(d.updatedAt||d.createdAt))+"</p><details><summary>Historique des reversements ("+r.payouts.length+")</summary><ul>"+history+"</ul></details>"+form+"</article>";
+    const settled=r.balance<=0;
+    const action=d.statut!=="terminee"
+      ? "<p class='cab-muted'>Paiement disponible après confirmation de la prestation.</p>"
+      : settled
+        ? "<p class='cab-muted'>Transaction déjà payée.</p>"
+        : "<button type='button' class='primary' data-cab-payer='"+esc(id)+"'>Payer "+money(r.balance)+"</button>";
+    const history=r.payouts.length?r.payouts.map(p=>"<li>"+money(p.montantXof)+" · "+esc(p.dateReversement||"Date inconnue")+" · "+esc(p.reference||"Paiement enregistré")+" · "+esc(p.moyenPaiement||"—")+"</li>").join(""):"<li>Aucun paiement enregistré</li>";
+    return "<article class='cab-item'><strong>"+esc(d.operateur)+" · "+esc(d.typeService)+" · "+esc(d.numeroBeneficiaire)+"</strong><p>Montant de l’opération : "+money(r.earned)+" · Déjà payé : "+money(r.paid)+" · Reste : <strong>"+money(r.balance)+"</strong></p><p>"+esc(libelleStatut(d.statut))+" · Demande "+esc(id)+" · "+esc(dateCabine(d.updatedAt||d.createdAt))+"</p>"+action+"<details><summary>Historique des paiements ("+r.payouts.length+")</summary><ul>"+history+"</ul></details></article>";
    }).join("");
-   return "<section class='cab-item'><div class='cab-request-head'><strong>"+esc(profile.nom||"Cabine sans nom")+"</strong><span class='cab-pill'>"+esc(profile.commune||"")+"</span></div><p>"+esc(profile.telephone||"")+" · "+rows.length+" prestation(s) terminée(s)</p><div class='cab-stats'><div class='cab-stat'><strong>"+money(earned)+"</strong><span>Montant gagné</span></div><div class='cab-stat'><strong>"+money(paid)+"</strong><span>Déjà reversé</span></div><div class='cab-stat'><strong>"+money(balance)+"</strong><span>Solde à payer</span></div></div>"+(detail||"<p class='cab-muted'>Aucune prestation terminée et vérifiée.</p>")+"</section>";
+   return "<section class='cab-item'><div class='cab-request-head'><strong>"+esc(profile.nom||"Cabine sans nom")+"</strong><span class='cab-pill'>"+esc(profile.commune||"")+"</span></div><p>"+esc(profile.telephone||"")+" · "+rows.length+" opération(s)</p><div class='cab-stats'><div class='cab-stat'><strong>"+money(earned)+"</strong><span>Montant des opérations terminées</span></div><div class='cab-stat'><strong>"+money(paid)+"</strong><span>Déjà payé</span></div><div class='cab-stat'><strong>"+money(balance)+"</strong><span>Solde restant</span></div></div>"+(detail||"<p class='cab-muted'>Aucune opération attribuée à cette cabine.</p>")+"</section>";
   }));
   root.innerHTML=sections.join("")||"Aucune cabine partenaire.";
-  root.querySelectorAll("[data-cab-reverse]").forEach(button=>button.onclick=()=>window.cabAdminEnregistrerReversement(button.dataset.cabReverse));
- }catch(error){console.error(error);root.textContent="Comptabilité indisponible : "+(error.message||"erreur de chargement");}
+  root.querySelectorAll("[data-cab-payer]").forEach(button=>button.onclick=()=>window.cabAdminPayerTransaction(button.dataset.cabPayer));
+ }catch(error){console.error(error);root.textContent="Suivi des opérations indisponible : "+(error.message||"erreur de chargement");}
 }
-window.cabAdminEnregistrerReversement=async demandeId=>{
+window.cabAdminPayerTransaction=async demandeId=>{
  if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID){alert("Accès administrateur requis.");return;}
- const amount=Number($("cabRevAmount_"+demandeId)?.value),date=$("cabRevDate_"+demandeId)?.value,reference=$("cabRevRef_"+demandeId)?.value.trim(),method=$("cabRevMethod_"+demandeId)?.value;
- if(!Number.isSafeInteger(amount)||amount<=0||!date||! /^\d{4}-\d{2}-\d{2}$/.test(date)||!reference||reference.length>80||!method){alert("Renseignez un montant valide, la date, la référence et le moyen de paiement.");return;}
- const safeRef=reference.toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9_-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,80);
- if(!safeRef){alert("La référence doit contenir des caractères exploitables.");return;}
- // Utiliser la même instance Firestore que celle déjà utilisée par les transactions cabinistes.
- const reversementDb=partnerDb;
- const demandRef=reversementDb.collection("demandes_cabines").doc(demandeId),entryRef=demandRef.collection("reversements").doc(safeRef);
+ if(!confirm("Confirmer le paiement de cette transaction ? Le montant restant sera déduit du solde de la cabine."))return;
+ const payDb=partnerDb;
+ const demandRef=payDb.collection("demandes_cabines").doc(demandeId);
+ const paymentRef=demandRef.collection("reversements").doc("paiement-administrateur");
  try{
-  // Firestore Web transactions ne lisent pas une CollectionReference.
-  // Charger le journal existant hors transaction, puis sérialiser les écritures
-  // avec un cumul sur le document parent pour empêcher les dépassements concurrents.
-  const reversementsExistants=await demandRef.collection("reversements").get();
-  const paidHistorique=reversementsExistants.docs.reduce((sum,p)=>sum+Number(p.data().montantXof||0),0);
-  if(!Number.isSafeInteger(paidHistorique)||paidHistorique<0)throw new Error("Historique des reversements invalide.");
-  await reversementDb.runTransaction(async tx=>{
-   const [snap,existing]=await Promise.all([tx.get(demandRef),tx.get(entryRef)]);
-   if(!snap.exists)throw new Error("Prestation introuvable.");
+  const history=await demandRef.collection("reversements").get();
+  const paidHistorique=history.docs.reduce((sum,p)=>sum+Number(p.data().montantXof||0),0);
+  if(!Number.isSafeInteger(paidHistorique)||paidHistorique<0)throw new Error("Historique des paiements invalide.");
+  await payDb.runTransaction(async tx=>{
+   const [snap,existing]=await Promise.all([tx.get(demandRef),tx.get(paymentRef)]);
+   if(!snap.exists)throw new Error("Transaction introuvable.");
    const d=snap.data();
-   if(d.statut!=="terminee"||!d.cabineUid)throw new Error("Seule une prestation terminée et attribuée peut être réglée.");
-   if(existing.exists)throw new Error("Cette référence de reversement existe déjà pour cette prestation.");
+   if(d.statut!=="terminee"||!d.cabineUid)throw new Error("Seule une opération terminée et attribuée peut être payée.");
+   if(existing.exists)throw new Error("Cette transaction a déjà été payée.");
    const paid=Number.isSafeInteger(d.reversementsTotalXof)?d.reversementsTotalXof:paidHistorique;
-   const earned=Number(d.montantAReverser??d.montantPrestation??0),balance=earned-paid;
-   if(!Number.isSafeInteger(earned)||earned<=0||!Number.isSafeInteger(paid)||paid<0||amount>balance)throw new Error("Montant supérieur au solde restant ("+Math.max(0,balance)+" FCFA).");
-   // Le document parent sert de compteur atomique : une seconde transaction
-   // concurrente sera relancée et relira le cumul actualisé.
-   tx.update(demandRef,{reversementsTotalXof:paid+amount});
-   tx.set(entryRef,{demandeId,cabineUid:d.cabineUid,cabineNom:d.cabineNom||"",montantXof:amount,dateReversement:date,reference,moyenPaiement:method,createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:auth.currentUser.uid});
+   const earned=Number(d.montantAReverser??d.montantPrestation??0),amount=earned-paid;
+   if(!Number.isSafeInteger(earned)||earned<=0||!Number.isSafeInteger(paid)||paid<0||!Number.isSafeInteger(amount)||amount<=0||paid>earned)throw new Error("Aucun solde valide ne reste à payer.");
+   tx.update(demandRef,{reversementsTotalXof:earned});
+   tx.set(paymentRef,{demandeId,cabineUid:d.cabineUid,cabineNom:d.cabineNom||"",montantXof:amount,dateReversement:new Date().toISOString().slice(0,10),reference:"Paiement administrateur "+demandeId,moyenPaiement:"Paiement marqué par l’administrateur",createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:auth.currentUser.uid,type:"paiement_transaction"});
   });
-  alert("Reversement manuel enregistré. Aucun transfert d’argent n’a été déclenché par l’application.");
+  alert("Paiement enregistré. Le solde restant de cette transaction est maintenant à zéro.");
   await chargerComptabiliteCabines();
- }catch(error){alert("Reversement non enregistré : "+(error.message||"erreur"));}
+ }catch(error){alert("Paiement non enregistré : "+(error.message||"erreur"));}
 };
 window.cabAdminCabine=async(id,s)=>{if(!auth.currentUser||auth.currentUser.uid!==ADMIN_UID||!["approuve","refuse"].includes(s))return;try{await db.collection("cabines_telephoniques").doc(id).update({statut:s,updatedAt:stamp(),validePar:auth.currentUser.uid});panneauAdmin();}catch(e){alert(e.message);}};
 window.cabOuvrirAdmin=panneauAdmin;
