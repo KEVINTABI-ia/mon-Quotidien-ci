@@ -19,3 +19,13 @@ test("Cabinistes: le panneau propose les décisions d'approbation et de refus", 
   assert.match(cabines, /"approuve","refuse"/);
   assert.match(cabines, /Candidatures partenaires/);
 });
+
+test("Reversements cabine: la transaction ne lit que des documents et maintient un cumul atomique", () => {
+  const start = cabines.indexOf("window.cabAdminEnregistrerReversement");
+  const end = cabines.indexOf("window.cabAdminCabine", start);
+  const handler = cabines.slice(start, end);
+  assert.match(handler, /demandRef\.collection\("reversements"\)\.get\(\)/);
+  assert.doesNotMatch(handler, /tx\.get\(demandRef\.collection\("reversements"\)\)/);
+  assert.match(handler, /tx\.update\(demandRef,\{reversementsTotalXof:paid\+amount\}\)/);
+  assert.match(handler, /tx\.get\(demandRef\).*tx\.get\(entryRef\)/s);
+});
