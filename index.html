@@ -13338,7 +13338,7 @@ window.mtcAfficherActeJudiciaire = function(type){
       const toggle=document.getElementById("mqciPartnerDropdownToggle");
       if(panel&&horsAccueil){panel.hidden=true;toggle?.setAttribute("aria-expanded","false");}
       if(launcher&&menu&&toggle){
-        if(horsAccueil){launcher.classList.add("mqci-ai-secondary-dock");document.body.appendChild(launcher);}
+        if(horsAccueil){launcher.classList.add("mqci-ai-secondary-dock");if(launcher.parentElement!==document.body)document.body.appendChild(launcher);}
         else{launcher.classList.remove("mqci-ai-secondary-dock");if(launcher.parentElement!==menu)menu.insertBefore(launcher,toggle);}
       }
     }
