@@ -839,9 +839,6 @@ main > section.card.recherche-trajet button.primary{min-height:47px!important;pa
 .accueil-service{position:relative;isolation:isolate;overflow:hidden;color:#fff!important;border:0!important;background-size:cover!important;background-position:center!important;text-shadow:0 2px 5px #000b}
 .accueil-service::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,#071b18a8,#071b18a8)}
 .accueil-service strong,.accueil-service small{color:#fff!important;text-shadow:0 1px 4px #000}
-.accueil-service{justify-content:flex-end!important}
-.accueil-service strong{width:100%;margin-top:auto!important;position:relative;z-index:1}
-.accueil-service small{display:none!important}
 .accueil-service-illustration{filter:drop-shadow(0 3px 4px #0008)}
 .tuile-gbaka{background-image:url("https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80")!important}
 .tuile-taxi{background-image:url("https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=900&q=80")!important}
@@ -1682,9 +1679,6 @@ header .tagline-anime span{min-width:0!important;padding:0!important;animation:n
 #accueilBottomNav button{min-width:0;min-height:47px;padding:5px 2px;border:0;border-radius:10px;background:transparent;color:#65746a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:9px;font-weight:750}
 #accueilBottomNav button span{font-size:18px;line-height:1}
 #accueilBottomNav button.nav-active{background:#edf6ef;color:#147345}
-body.mqci-outside-home #accueilBottomNav{display:none!important}
-body.mqci-outside-home #mqciPartnerDropdown,body.mqci-outside-home #mqciPartnerDropdownPanel,body.mqci-outside-home #menuDropdown{display:none!important}
-body.mqci-outside-home #mqciAiLauncher.mqci-ai-secondary-dock{position:fixed!important;left:16px!important;right:auto!important;bottom:calc(16px + env(safe-area-inset-bottom))!important;top:auto!important;z-index:2147482000!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:48px!important;min-height:42px!important;padding:0 13px!important;border-radius:999px!important}
 #mainAccueilAncien{display:none}
 @media(min-width:600px){#accueilHomeShell{padding:22px 20px 115px}.home-quick-grid{gap:12px}.home-quick{min-height:100px}.home-quick strong{font-size:12px}.home-welcome{padding:24px}.home-welcome h1{font-size:27px}.home-discovery-grid{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:370px){#accueilHomeShell{padding:12px 10px 105px}.home-welcome{padding:17px 14px}.home-welcome h1{font-size:20px}.home-quick-grid{gap:6px}.home-quick{min-height:82px}.home-quick strong{font-size:9px}#homeDemarches .acces-prioritaires{gap:5px!important}#homeDemarches .acces-prioritaire strong{font-size:9px}}
@@ -13326,25 +13320,6 @@ window.mtcAfficherActeJudiciaire = function(type){
       <button type="button" data-nav="livraison"><span>📦</span>Livraison</button>
       <button type="button" data-nav="compte"><span>👤</span>Compte</button>`;
     document.body.appendChild(nav);
-    /* Navigation hors accueil : cacher le dock du bas et le menu partenaire, tout en gardant l’IA accessible. */
-    function mqciSynchroniserNavigationAccueil(){
-      const shell=document.getElementById("accueilHomeShell");
-      const overlay=document.getElementById("vuePleinEcran");
-      const horsAccueil=!!(overlay?.classList.contains("actif")||shell?.classList.contains("family-view-active"));
-      document.body.classList.toggle("mqci-outside-home",horsAccueil);
-      const menu=document.getElementById("mqciPartnerDropdown");
-      const panel=document.getElementById("mqciPartnerDropdownPanel");
-      const launcher=document.getElementById("mqciAiLauncher");
-      const toggle=document.getElementById("mqciPartnerDropdownToggle");
-      if(panel&&horsAccueil){panel.hidden=true;toggle?.setAttribute("aria-expanded","false");}
-      if(launcher&&menu&&toggle){
-        if(horsAccueil){launcher.classList.add("mqci-ai-secondary-dock");if(launcher.parentElement!==document.body)document.body.appendChild(launcher);}
-        else{launcher.classList.remove("mqci-ai-secondary-dock");if(launcher.parentElement!==menu)menu.insertBefore(launcher,toggle);}
-      }
-    }
-    const mqciNavObserver=new MutationObserver(mqciSynchroniserNavigationAccueil);
-    mqciNavObserver.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["class"]});
-    mqciSynchroniserNavigationAccueil();
     const compte=document.createElement('section');
     compte.id='mqciComptePanel';compte.className='card mqci-compte-panel';compte.style.display='none';
     compte.innerHTML=`
