@@ -15077,7 +15077,7 @@ body.mqci-outside-home #mqciPartnerDropdown #mqciAiLauncher{
 (function(){
  function masquerActionsPartenairesEnDouble(){
   document.querySelectorAll("button").forEach(function(btn){
-   if(btn.closest("#mqciPartnerDropdown"))return;
+   if(btn.closest("#mqciPartnerDropdown") || btn.closest("#mqciPartnerDropdownPanel"))return;
    const texte=(btn.textContent||"").replace(/^[^A-Za-zÀ-ÿ]*/,"").trim().toLowerCase();
    const devenir=/^(devenir partenaire|devenir commerçant partenaire|devenir partenaire dans cette catégorie)/i.test(texte);
    const connexion=/connexion à mon espace partenaire|connexion à l'espace propriétaire|connexion à l’espace propriétaire/i.test(texte);
