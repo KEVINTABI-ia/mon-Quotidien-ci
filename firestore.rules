@@ -1458,6 +1458,12 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       allow update: if estAdmin()
         || (estConnecte()
+          && resource.data.boutiqueUid == request.auth.uid
+          && resource.data.statut == "approuve"
+          && boutiqueActive(resource.data.boutiqueId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["disponible"])
+          && request.resource.data.disponible is bool)
+        || (estConnecte()
           && resource.data.statut == "approuve"
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["vues","derniereVueLe"])
           && request.resource.data.get("vues", 0) == resource.data.get("vues", 0) + 1
@@ -1991,6 +1997,37 @@ service cloud.firestore {
     match /businessInvitations/{invitationId} {
       // Les invitations restent fermées jusqu'à la mise en place d'un jeton sécurisé et expirant.
       allow read, write: if false;
+    }
+
+    match /agenda_boutiques/{eventId} {
+      function boutiqueAgendaActive(boutiqueId) {
+        return estConnecte()
+          && exists(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId))
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.uid == request.auth.uid
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.type == "commerce"
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.statut == "approuve"
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.abonnementFin is timestamp
+          && get(/databases/$(database)/documents/demandes_nouveaux_services/$(boutiqueId)).data.abonnementFin > request.time;
+      }
+      allow read: if estAdmin() || (estConnecte() && resource.data.boutiqueUid == request.auth.uid);
+      allow create: if boutiqueAgendaActive(request.resource.data.boutiqueId)
+        && request.resource.data.boutiqueUid == request.auth.uid
+        && request.resource.data.keys().hasAll(["boutiqueId","boutiqueUid","titre","type","date","heure","description","statut","createdAt","updatedAt"])
+        && request.resource.data.keys().hasOnly(["boutiqueId","boutiqueUid","titre","type","date","heure","description","statut","createdAt","updatedAt"])
+        && request.resource.data.titre is string && request.resource.data.titre.size() > 0 && request.resource.data.titre.size() <= 120
+        && request.resource.data.type in ["rendez_vous","tache","commande","rappel"]
+        && request.resource.data.date is string && request.resource.data.date.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+        && request.resource.data.heure is string && request.resource.data.heure.size() <= 5
+        && request.resource.data.description is string && request.resource.data.description.size() <= 500
+        && request.resource.data.statut == "a_faire"
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if estConnecte()
+        && resource.data.boutiqueUid == request.auth.uid
+        && boutiqueAgendaActive(resource.data.boutiqueId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["statut","updatedAt"])
+        && request.resource.data.statut in ["a_faire","termine"]
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if estConnecte() && resource.data.boutiqueUid == request.auth.uid && boutiqueAgendaActive(resource.data.boutiqueId);
     }
 
     match /{document=**} {
