@@ -1665,6 +1665,10 @@ describe("Mon Transport CI — règles Firestore", function () {
       const admin=testEnv.authenticatedContext(ADMIN_UID).firestore();
       const payoutRef=doc(admin,"demandes_cabines","completed-payout-test","reversements","wave-test-001");
       await assertSucceeds(setDoc(payoutRef,payout));
+      const transactionPaymentRef=doc(admin,"demandes_cabines","completed-payout-test","reversements","paiement-administrateur");
+      await assertSucceeds(setDoc(transactionPaymentRef,{demandeId:"completed-payout-test",cabineUid:CABINE_UID,cabineNom:"Cabine A",
+        montantXof:600,dateReversement:"2026-11-25",reference:"Paiement administrateur completed-payout-test",
+        moyenPaiement:"Paiement marqué par l’administrateur",createdAt:serverTimestamp(),createdBy:ADMIN_UID,type:"paiement_transaction"}));
       const cabin=testEnv.authenticatedContext(CABINE_UID).firestore();
       await assertSucceeds(getDoc(doc(cabin,"demandes_cabines","completed-payout-test","reversements","wave-test-001")));
       await assertFails(updateDoc(doc(cabin,"demandes_cabines","completed-payout-test","reversements","wave-test-001"),{montantXof:900}));
