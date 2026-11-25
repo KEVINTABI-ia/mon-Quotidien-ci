@@ -1317,7 +1317,7 @@ async function createCheckout(request,env) {
        (details.length>180)||
        (typeService!=="transfert_unites"&&details.length<2)||
        !Number.isSafeInteger(amountPrestation)||amountPrestation<200||amountPrestation>500000) return json({error:"invalid_cabine_request"},400);
-    const fraisService=amountPrestation<=999?18:(amountPrestation<=3000?40:75);
+    const fraisService=Math.round(amountPrestation*0.04);
     amountXof=amountPrestation+fraisService;
     initial={uid:user.sub,serviceId,typeService,operateur,numeroBeneficiaire,commune,details,
       amountPrestation,fraisService,provider:"jeko",amountXof,amountCents:amountXof*100,currency:"XOF",
@@ -1629,7 +1629,7 @@ export function validateJekoPaymentPlan(payment) {
   };
   if(payment.serviceId==="cabine") {
     const amount=payment.amountPrestation;
-    const fee=Number.isSafeInteger(amount)?(amount<=999?18:(amount<=3000?40:75)):null;
+    const fee=Number.isSafeInteger(amount)?Math.round(amount*0.04):null;
     return Number.isSafeInteger(amount)&&amount>=200&&amount<=500000&&
       payment.fraisService===fee&&payment.amountXof===amount+fee&&
       ["transfert_unites","forfait_internet","forfait_appels","forfait_mixte"].includes(payment.typeService)&&
