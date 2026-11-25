@@ -1952,14 +1952,14 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
 #nouveauxServices.mqci-marketplace .mqci-market-cart{margin-left:auto;flex:0 0 auto}
 #nouveauxServices.mqci-marketplace .mqci-market-owner{width:42px;height:42px;flex:0 0 42px;border:1px solid #dce5df;border-radius:12px;background:#fff;color:#174b35;font-size:20px;display:grid;place-items:center}
 #nouveauxServices.mqci-marketplace .mqci-market-owner{display:flex;align-items:center;justify-content:center;padding:0!important;line-height:1;text-align:center;font-family:system-ui,sans-serif;font-size:19px}
-#nouveauxServices.mqci-marketplace #resultatsCatalogueBoutiques article img{object-fit:contain!important;object-position:center top!important;background:#fff}
+#nouveauxServices.mqci-marketplace #resultatsCatalogueBoutiques article img{object-fit:cover!important;object-position:center center!important;background:#f7f7f7;transform:scale(1.04);transform-origin:center center}
 #nouveauxServices.mqci-marketplace #resultatsCatalogueBoutiques article{padding:0!important;overflow:hidden}
 #nouveauxServices.mqci-marketplace #resultatsCatalogueBoutiques article img,
 #nouveauxServices.mqci-marketplace #resultatsCatalogueBoutiques article>div{display:block;width:100%;height:160px!important;max-height:none;object-fit:cover;border-radius:0!important}
 #nouveauxServices.mqci-marketplace #resultatsCatalogueBoutiques article>strong,
 #nouveauxServices.mqci-marketplace #resultatsCatalogueBoutiques article>p{display:block;margin:8px 9px!important}
 #nouveauxServices.mqci-marketplace #resultatsCatalogueBoutiques article>button.primary{width:calc(100% - 18px)!important;margin:4px 9px 9px!important}
-#nouveauxServices.mqci-marketplace #resultatsCatalogueBoutiques .mqci-add-cart{position:absolute!important;top:8px!important;right:8px!important;left:auto!important;z-index:3;width:36px;height:36px;border:0;border-radius:50%;background:#173f32;color:#fff;font-size:25px;font-weight:700;line-height:1;display:grid;place-items:center;padding:0;margin:0!important;box-shadow:0 2px 8px #0003}
+#nouveauxServices.mqci-marketplace #resultatsCatalogueBoutiques .mqci-add-cart{position:absolute!important;top:8px!important;right:8px!important;left:auto!important;z-index:3;width:36px;height:36px;border:0;border-radius:50%;background:transparent!important;color:#173f32;font-size:30px;font-weight:800;line-height:1;display:grid;place-items:center;padding:0;margin:0!important;box-shadow:none!important;text-shadow:0 1px 3px #fff,0 0 5px #fff}
 #nouveauxServices.mqci-marketplace .mqci-market-brand{font-weight:900;color:#174b35;font-size:19px;flex:1}
 #nouveauxServices.mqci-marketplace .mqci-market-cart{border:0;border-radius:12px;background:#174b35;color:white;padding:11px;font-weight:800}
 #nouveauxServices.mqci-marketplace .mqci-market-search{display:flex;gap:7px;margin-bottom:10px}
@@ -2107,8 +2107,6 @@ header.mqci-header-premium .mqci-brand-lockup .mqci-brand-promise{
     
   </div>
   <div id="zoneConnexionPartenaire" style="display:none;">
-    <h3>🔐 Connexion à mon espace partenaire</h3>
-    <p>Choisissez d’abord votre catégorie de partenaire, puis saisissez les identifiants utilisés lors de votre inscription.</p>
     <div id="zoneConnexionPartenaireDetails">
       <label for="mqciTypeConnexionPartenaire"><strong>Mon espace partenaire</strong></label>
       <select id="mqciTypeConnexionPartenaire" style="width:100%;padding:14px;border:1px solid #D5E2D9;border-radius:12px;margin:8px 0 14px;">
@@ -7495,6 +7493,7 @@ function ouvrirConnexionPartenaireType(type){
   const retour=document.createElement("button");
   retour.type="button";
   retour.textContent="← Choisir un autre type de compte";
+  retour.style.display=type==="commerce_boutique"?"none":"inline-block";
   retour.onclick=()=>{
     details.replaceChildren();
     if(choix)choix.style.display="block";
