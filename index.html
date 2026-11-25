@@ -11656,17 +11656,22 @@ function partenaireAbonnementValide(p) {
      (p.statutAbonnementPartenaire === "Actif" && abonnement && abonnement > maintenant));
 }
 
-async function definirDisponibilitePartenaire(enLigne) {
+function definirDisponibilitePartenaire(enLigne) {
   activerSonCommandesPartenaire();
   const user=partnerAuth.currentUser;
   if(!user)return alert("Veuillez vous reconnecter.");
-  try {
-    const ref=partnerDb.collection("partenaires").doc(user.uid);
-    const snap=await ref.get();
-    if(!snap.exists||!partenaireAbonnementValide(snap.data()))return alert("Votre dossier doit être approuvé et votre abonnement actif pour modifier votre disponibilité.");
-    await ref.update({enLigne:!!enLigne,derniereActivite:firebase.firestore.FieldValue.serverTimestamp()});
-    await afficherEspacePartenaire({...snap.data(),enLigne:!!enLigne},user.uid);
-  } catch(e) { console.error(e); alert("Impossible de modifier votre disponibilité : "+e.message); }
+  const ref=partnerDb.collection("partenaires").doc(user.uid);
+  ref.get().then(function(snap) {
+    if(!snap.exists||!partenaireAbonnementValide(snap.data())) {
+      alert("Votre dossier doit être approuvé et votre abonnement actif pour modifier votre disponibilité.");
+      return null;
+    }
+    return ref.update({enLigne:!!enLigne,derniereActivite:firebase.firestore.FieldValue.serverTimestamp()})
+      .then(function(){return afficherEspacePartenaire({...snap.data(),enLigne:!!enLigne},user.uid);});
+  }).catch(function(e) {
+    console.error(e);
+    alert("Impossible de modifier votre disponibilité : "+e.message);
+  });
 }
 function basculerDisponibilitePartenaire() {
   activerSonCommandesPartenaire();
