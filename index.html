@@ -11729,6 +11729,7 @@ function afficherEspacePartenaire(dossier, uid) {
       <div class="livreur-grid">
         <div class="livreur-kpi"><small>Portefeuille commissions</small><strong id="kpiSoldeLivreur">Chargement…</strong></div>
         <div class="livreur-kpi"><small>Mission en cours</small><strong id="kpiMissionLivreur">Vérification…</strong></div>
+        <div class="livreur-kpi"><small>Autres missions actives</small><strong id="kpiMissionsAttente">—</strong></div>
         <div class="livreur-kpi"><small>Missions terminées</small><strong id="kpiMissionsTerminees">—</strong></div>
         <div class="livreur-kpi"><small>Statut du compte</small><strong>${eligible ? "Actif" : "À renouveler"}</strong></div>
       </div>
@@ -11817,6 +11818,7 @@ async function chargerCommandesPartenaire() {
       const hs = await partnerDb.collection("commandes_colis").where("partenaireId", "==", user.uid).get();
       const done = hs.docs.filter(d => ["livre","annule"].includes(d.data().statut));
       const kpiDone=document.getElementById("kpiMissionsTerminees");if(kpiDone)kpiDone.textContent=done.filter(d=>d.data().statut==="livre").length.toLocaleString("fr-FR");
+      const kpiPending=document.getElementById("kpiMissionsAttente");if(kpiPending)kpiPending.textContent=hs.docs.filter(d=>!["livre","annule"].includes(d.data().statut)).length.toLocaleString("fr-FR");
       historique.innerHTML = done.length ? "" : "<p>Aucune mission terminée.</p>";
       done.forEach(d => {
         const el = document.createElement("p");
