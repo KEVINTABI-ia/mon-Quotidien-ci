@@ -36,6 +36,10 @@ test("Cabine: valide les frais serveur et le montant total exact", () => {
   assert.equal(validateJekoPaymentPlan(base), true);
   assert.equal(validateJekoPaymentPlan({...base, amountCents: 1040}), false);
   assert.equal(validateJekoPaymentPlan({...base, fraisService: 18}), false);
+  assert.equal(validateJekoPaymentPlan({...base, amountPrestation: 2000, fraisService: 80, amountXof: 2080, amountCents: 208000}), true);
+  assert.equal(validateJekoPaymentPlan({...base, amountPrestation: 2500, fraisService: 100, amountXof: 2600, amountCents: 260000}), true);
+  assert.equal(validateJekoPaymentPlan({...base, amountPrestation: 5000, fraisService: 200, amountXof: 5200, amountCents: 520000}), true);
+  assert.equal(validateJekoPaymentPlan({...base, amountPrestation: 2000, fraisService: 40, amountXof: 2040, amountCents: 204000}), false);
   assert.equal(validateJekoPaymentPlan({...base, amountXof: 1039}), false);
   assert.equal(validateJekoPaymentPlan({...base, amountPrestation: 199}), false);
   const subscriptionWithoutLocation = {...base, commune: "", details: "Forfait internet 2 Go - 30 jours"};
