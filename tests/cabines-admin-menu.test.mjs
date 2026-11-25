@@ -29,3 +29,12 @@ test("Reversements cabine: la transaction ne lit que des documents et maintient 
   assert.match(handler, /tx\.update\(demandRef,\{reversementsTotalXof:paid\+amount\}\)/);
   assert.match(handler, /tx\.get\(demandRef\).*tx\.get\(entryRef\)/s);
 });
+
+
+test("Reversements cabine: utiliser la même instance Firestore que le module cabine", () => {
+  const start = cabines.indexOf("window.cabAdminEnregistrerReversement");
+  const end = cabines.indexOf("window.cabAdminCabine", start);
+  const handler = cabines.slice(start, end);
+  assert.match(handler, /const reversementDb=partnerDb/);
+  assert.ok(handler.includes("await reversementDb.runTransaction("));
+});
