@@ -488,7 +488,7 @@
   $("financeExportCsv").addEventListener("click",()=>exportFinanceCsv("journal"));
   $("financeExportReport").addEventListener("click",()=>exportFinanceCsv("report"));
   function parseReconciliationCsv(text){
-    const firstLine=text.split(/\\r?\\n/,1)[0]||"";
+    const firstLine=text.split(/\r?\n/,1)[0]||"";
     const delimiter=(firstLine.match(/;/g)||[]).length>(firstLine.match(/,/g)||[]).length?";":",";
     const rows=[];let row=[],cell="",quoted=false;
     for(let i=0;i<text.length;i++){
@@ -496,8 +496,8 @@
       if(ch==='"'&&quoted&&text[i+1]==='"'){cell+='"';i++;}
       else if(ch==='"')quoted=!quoted;
       else if(ch===delimiter&&!quoted){row.push(cell);cell="";}
-      else if((ch==="\\n"||ch==="\\r")&&!quoted){
-        if(ch==="\\r"&&text[i+1]==="\\n")i++;
+      else if((ch==="\n"||ch==="\r")&&!quoted){
+        if(ch==="\r"&&text[i+1]==="\n")i++;
         row.push(cell);if(row.some(value=>value.trim()!==""))rows.push(row);
         row=[];cell="";
       }else cell+=ch;
@@ -505,19 +505,19 @@
     if(quoted)throw new Error("CSV invalide : guillemet non fermé.");
     row.push(cell);if(row.some(value=>value.trim()!==""))rows.push(row);
     if(rows.length<2)throw new Error("Le CSV doit contenir un en-tête et au moins une ligne.");
-    const headers=rows.shift().map(value=>value.trim().replace(/^\\uFEFF/,""));
+    const headers=rows.shift().map(value=>value.trim().replace(/^\uFEFF/,""));
     const required=["date","amountXof"];
     if(required.some(name=>!headers.includes(name)))throw new Error("Colonnes obligatoires absentes : date et amountXof.");
     if(rows.length>100)throw new Error("Maximum 100 lignes par import.");
     return rows.map((values,index)=>{
       const record=Object.fromEntries(headers.map((header,i)=>[header,(values[i]||"").trim()]));
-      const amountText=(record.amountXof||"").replace(/[ \\u00a0]/g,"");
-      if(!/^\\d+$/.test(amountText))throw new Error("Montant invalide à la ligne "+(index+2)+". Utilisez un entier en FCFA.");
+      const amountText=(record.amountXof||"").replace(/[ \u00a0]/g,"");
+      if(!/^\d+$/.test(amountText))throw new Error("Montant invalide à la ligne "+(index+2)+". Utilisez un entier en FCFA.");
       return {date:record.date,amountXof:Number(amountText),reference:record.reference||"",paymentMethod:record.paymentMethod||""};
     });
   }
   $("downloadReconciliationTemplate").addEventListener("click",()=>{
-    const csv="\\uFEFFdate;amountXof;reference;paymentMethod\\r\\n2026-11-26;2500;REF-001;wave\\r\\n";
+    const csv="\uFEFFdate;amountXof;reference;paymentMethod\r\n2026-11-26;2500;REF-001;wave\r\n";
     const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
     const link=document.createElement("a");link.href=url;link.download="modele-releve-mon-business.csv";link.click();URL.revokeObjectURL(url);
   });
