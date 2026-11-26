@@ -297,6 +297,47 @@ async function updateMember(request,env,user,body) {
   return json({updated:true,memberUid,role,status});
 }
 
+
+async function requireActivityAccess(env,user,businessId,activityId,permission="view") {
+  const business=await getDoc(env,"businesses/"+businessId);
+  const member=await getDoc(env,"businesses/"+businessId+"/members/"+user.uid);
+  if(!business||!member||member.data.status!=="active") throw new HttpError(403,"business_access_required");
+  if(member.data.role==="owner" && business.data.ownerUid===user.uid) return {business,member:member.data};
+  const m=member.data;
+  if(!Array.isArray(m.activityIds)||!m.activityIds.includes(activityId)||m.permissions?.[permission]!==true) throw new HttpError(403,"activity_permission_required");
+  return {business,member:m};
+}
+async function queryActivityCollection(env,businessId,activityId,collectionId) {
+  const parent="https://firestore.googleapis.com/v1/projects/"+PROJECT_ID+"/databases/(default)/documents/businesses/"+businessId+"/activities/"+activityId;
+  const response=await fetch(parent+":runQuery",{method:"POST",headers:{authorization:"Bearer "+await googleAccessToken(env),"content-type":"application/json"},body:JSON.stringify({structuredQuery:{from:[{collectionId}],limit:200}})});
+  if(!response.ok) throw new Error("firestore_query_failed");
+  const rows=await response.json();
+  return (Array.isArray(rows)?rows:[]).filter(row=>row.document?.name).map(row=>({id:row.document.name.split("/").pop(),...decodeDocument(row.document)}));
+}
+async function createCashRegister(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"), activityId=assertId(body.activityId,"activity_id");
+  await requireActivityAccess(env,user,businessId,activityId,"create");
+  const name=typeof body.name==="string"?body.name.trim():"";
+  const openingBalanceXof=body.openingBalanceXof;
+  if(name.length<2||name.length>100) throw new HttpError(400,"invalid_cash_register_name");
+  if(!Number.isSafeInteger(openingBalanceXof)||openingBalanceXof<0||openingBalanceXof>1000000000000) throw new HttpError(400,"invalid_opening_balance");
+  if(!await getDoc(env,"businesses/"+businessId+"/activities/"+activityId)) throw new HttpError(404,"activity_not_found");
+  const id=crypto.randomUUID(),now=new Date();
+  const record={businessId,activityId,name,currency:"XOF",openingBalanceMinor:openingBalanceXof,createdBy:user.uid,createdAt:now,updatedAt:now,status:"active",schemaVersion:1};
+  const auditId=crypto.randomUUID();
+  await commit(env,[
+    writeDocument("businesses/"+businessId+"/activities/"+activityId+"/cashRegisters/"+id,record,"create"),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"finance.cash_register.created",entityType:"cash_register",entityId:id,details:{activityId,name,openingBalanceXof},occurredAt:now},"create")
+  ]);
+  return json({created:true,cashRegister:{id,...record}});
+}
+async function listCashRegisters(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"), activityId=assertId(body.activityId,"activity_id");
+  await requireActivityAccess(env,user,businessId,activityId,"view");
+  const rows=await queryActivityCollection(env,businessId,activityId,"cashRegisters");
+  return json({cashRegisters:rows.filter(row=>row.businessId===businessId&&row.activityId===activityId&&row.status==="active").map(({id,name,currency,openingBalanceMinor,createdAt})=>({id,name,currency,openingBalanceMinor,createdAt}))});
+}
+
 function corsHeaders(request,env) {
   const origin=request.headers.get("origin");
   if (!origin) return {"vary":"Origin"};
@@ -329,6 +370,8 @@ export default {
       await enforceRateLimit(env.USER_RATE_LIMITER,user.uid);
       let response;
       if (url.pathname==="/v1/invitations") response=await createInvitation(request,env,user,body);
+      else if (url.pathname==="/v1/finance/cash-registers/create") response=await createCashRegister(env,user,body);
+      else if (url.pathname==="/v1/finance/cash-registers/list") response=await listCashRegisters(env,user,body);
       else if (url.pathname==="/v1/invitations/accept") response=await acceptInvitation(request,env,user,body);
       else if (url.pathname==="/v1/invitations/list") response=await listInvitations(env,user,body);
       else if (url.pathname==="/v1/invitations/revoke") response=await revokeInvitation(request,env,user,body);
