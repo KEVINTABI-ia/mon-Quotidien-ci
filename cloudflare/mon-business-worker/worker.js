@@ -395,7 +395,7 @@ async function listCashRegisters(env,user,body) {
   const businessId=assertId(body.businessId,"business_id"), activityId=assertId(body.activityId,"activity_id");
   await requireActivityAccess(env,user,businessId,activityId,"view");
   const rows=await queryActivityCollection(env,businessId,activityId,"cashRegisters");
-  return json({cashRegisters:rows.filter(row=>row.businessId===businessId&&row.activityId===activityId&&row.["active","closed"].includes(status)).map(({id,name,currency,openingBalanceMinor,createdAt,status,closedAt,lastClosureId})=>({id,name,currency,openingBalanceMinor,createdAt,status,closedAt,lastClosureId}))});
+  return json({cashRegisters:rows.filter(row=>row.businessId===businessId&&row.activityId===activityId&&["active","closed"].includes(row.status)).map(({id,name,currency,openingBalanceMinor,createdAt,status,closedAt,lastClosureId})=>({id,name,currency,openingBalanceMinor,createdAt,status,closedAt,lastClosureId}))});
 }
 
 
@@ -652,7 +652,7 @@ async function listFinanceTransactions(env,user,body) {
     queryActivityCollection(env,businessId,activityId,"transactions"),
     queryActivityCollection(env,businessId,activityId,"cashRegisters")
   ]);
-  const active=registers.filter(r=>r.status==="active");
+  const active=registers.filter(r=>["active","closed"].includes(r.status));
   const balances={};
   for(const reg of active){
     let value=reg.openingBalanceMinor||0;
