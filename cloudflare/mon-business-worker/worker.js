@@ -469,7 +469,7 @@ function reconcileStatementLines(statementLines,transactions) {
       used.add(selected[0].id);
       results.push({lineIndex:index,status:"matched",transactionId:selected[0].id});
     }else if(selected.length>1){
-      results.push({lineIndex:index,status:"ambiguous",candidateCount:selected.length});
+      results.push({lineIndex:index,status:"ambiguous",candidateCount:selected.length,candidateTransactionIds:selected.map(tx=>tx.id)});
     }else{
       results.push({lineIndex:index,status:"unmatched"});
     }
@@ -484,6 +484,54 @@ function reconcileStatementLines(statementLines,transactions) {
     }
   };
 }
+
+async function createFinanceReconciliation(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  await requireActivityAccess(env,user,businessId,activityId,"create");
+  const lines=body.lines;
+  if(!Array.isArray(lines)||lines.length<1||lines.length>100)throw new HttpError(400,"invalid_statement_lines");
+  const transactions=await queryActivityCollection(env,businessId,activityId,"transactions");
+  const scoped=transactions.filter(tx=>tx.businessId===businessId&&tx.activityId===activityId);
+  const matching=reconcileStatementLines(lines,scoped);
+  const now=new Date(),id=crypto.randomUUID(),auditId=crypto.randomUUID();
+  const entries=lines.map((line,index)=>({...line,...matching.results[index],reviewStatus:"pending"}));
+  await commit(env,[
+    writeDocument("businesses/"+businessId+"/activities/"+activityId+"/reconciliations/"+id,{
+      businessId,activityId,id,status:"pending",createdByUid:user.uid,createdAt:now,updatedAt:now,summary:matching.summary,lines:entries
+    },"create"),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{
+      businessId,actorUid:user.uid,action:"finance.reconciliation.created",entityType:"reconciliation",entityId:id,
+      details:{activityId,total:matching.summary.total,matched:matching.summary.matched,unmatched:matching.summary.unmatched,ambiguous:matching.summary.ambiguous},occurredAt:now
+    },"create")
+  ]);
+  return json({id,createdAt:now.toISOString(),summary:matching.summary,results:entries});
+}
+async function listFinanceReconciliations(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  await requireActivityAccess(env,user,businessId,activityId,"view");
+  const rows=await queryActivityCollection(env,businessId,activityId,"reconciliations");
+  return json({reconciliations:rows.filter(x=>x.businessId===businessId&&x.activityId===activityId).sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||""))).map(x=>({id:x.id,status:x.status,createdAt:x.createdAt,summary:x.summary,lines:x.lines}))});
+}
+async function resolveFinanceReconciliation(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  const reconciliationId=assertId(body.reconciliationId,"reconciliation_id");
+  await requireActivityAccess(env,user,businessId,activityId,"approve");
+  const path="businesses/"+businessId+"/activities/"+activityId+"/reconciliations/"+reconciliationId;
+  const doc=await getDoc(env,path);
+  if(!doc||doc.data.businessId!==businessId||doc.data.activityId!==activityId)throw new HttpError(404,"reconciliation_not_found");
+  const index=body.lineIndex;
+  if(!Number.isInteger(index)||index<0||index>=doc.data.lines.length)throw new HttpError(400,"invalid_line_index");
+  if(!["confirm","reject"].includes(body.decision))throw new HttpError(400,"invalid_reconciliation_decision");
+  const now=new Date();
+  const lines=doc.data.lines.map((line,i)=>i===index?{...line,reviewStatus:body.decision==="confirm"?"confirmed":"rejected",reviewedByUid:user.uid,reviewedAt:now.toISOString()}:line);
+  const pending=lines.some(line=>line.reviewStatus==="pending"),auditId=crypto.randomUUID();
+  await commit(env,[
+    writeDocument(path,{lines,status:pending?"pending":"reviewed",updatedAt:now},doc.updateTime,true),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"finance.reconciliation.line_reviewed",entityType:"reconciliation",entityId:reconciliationId,details:{activityId,lineIndex:index,decision:body.decision},occurredAt:now},"create")
+  ]);
+  return json({updated:true,lineIndex:index,reviewStatus:body.decision==="confirm"?"confirmed":"rejected",status:pending?"pending":"reviewed"});
+}
+
 async function previewFinanceReconciliation(env,user,body) {
   const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
   await requireActivityAccess(env,user,businessId,activityId,"view");
@@ -582,6 +630,9 @@ export default {
       else if (url.pathname==="/v1/finance/transactions/create") response=await createFinanceTransaction(env,user,body);
       else if (url.pathname==="/v1/finance/transactions/list") response=await listFinanceTransactions(env,user,body);
       else if (url.pathname==="/v1/finance/reconciliation/preview") response=await previewFinanceReconciliation(env,user,body);
+      else if (url.pathname==="/v1/finance/reconciliation/create") response=await createFinanceReconciliation(env,user,body);
+      else if (url.pathname==="/v1/finance/reconciliation/list") response=await listFinanceReconciliations(env,user,body);
+      else if (url.pathname==="/v1/finance/reconciliation/resolve") response=await resolveFinanceReconciliation(env,user,body);
       else if (url.pathname==="/v1/finance/transactions/approve") response=await transitionFinanceTransaction(env,user,body,"approved");
       else if (url.pathname==="/v1/finance/transactions/execute") response=await transitionFinanceTransaction(env,user,body,"executed");
       else if (url.pathname==="/v1/invitations/accept") response=await acceptInvitation(request,env,user,body);
