@@ -438,6 +438,52 @@ async function transitionFinanceTransaction(env,user,body,nextStatus) {
   await commit(env,writes);
   return json({updated:true,status:"executed"});
 }
+function normalizeFinanceMatchText(value) {
+  return typeof value==="string"?value.trim().toLowerCase().replace(/\\s+/g," "):"";
+}
+function reconcileStatementLines(statementLines,transactions) {
+  if(!Array.isArray(statementLines)||statementLines.length>500)throw new HttpError(400,"invalid_statement_lines");
+  const used=new Set(),results=[];
+  for(let index=0;index<statementLines.length;index++){
+    const line=statementLines[index];
+    if(!line||typeof line!=="object"||Array.isArray(line))throw new HttpError(400,"invalid_statement_line");
+    const amountXof=line.amountXof;
+    const date=typeof line.date==="string"?line.date:"";
+    const reference=normalizeFinanceMatchText(line.reference);
+    const paymentMethod=normalizeFinanceMatchText(line.paymentMethod);
+    if(!Number.isSafeInteger(amountXof)||amountXof<1||amountXof>1000000000000||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||Number.isNaN(Date.parse(date+"T00:00:00Z")))throw new HttpError(400,"invalid_statement_line");
+    if(reference.length>100||paymentMethod.length>40)throw new HttpError(400,"invalid_statement_line");
+    const candidates=(transactions||[]).filter(tx=>{
+      if(tx.status!=="executed"||!Number.isSafeInteger(tx.amountMinor)||tx.amountMinor!==amountXof||used.has(tx.id))return false;
+      const txDate=String(tx.executedAt||tx.createdAt||"").slice(0,10);
+      if(txDate!==date)return false;
+      if(paymentMethod&&normalizeFinanceMatchText(tx.paymentMethod)!==paymentMethod)return false;
+      return true;
+    });
+    let selected=candidates;
+    if(reference){
+      const exact=candidates.filter(tx=>normalizeFinanceMatchText(tx.reference)===reference);
+      if(exact.length)selected=exact;
+    }
+    if(selected.length===1){
+      used.add(selected[0].id);
+      results.push({lineIndex:index,status:"matched",transactionId:selected[0].id});
+    }else if(selected.length>1){
+      results.push({lineIndex:index,status:"ambiguous",candidateCount:selected.length});
+    }else{
+      results.push({lineIndex:index,status:"unmatched"});
+    }
+  }
+  return {
+    results,
+    summary:{
+      total:results.length,
+      matched:results.filter(x=>x.status==="matched").length,
+      unmatched:results.filter(x=>x.status==="unmatched").length,
+      ambiguous:results.filter(x=>x.status==="ambiguous").length
+    }
+  };
+}
 function summarizeFinanceTransactions(transactions,balances={}) {
   const summary={incomeMinor:0,expenseMinor:0,transferMinor:0,pendingCount:0,executedCount:0};
   for(const tx of transactions||[]){
@@ -544,4 +590,4 @@ export default {
   }
 };
 
-export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, listInvitations, summarizeFinanceTransactions };
+export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, listInvitations, summarizeFinanceTransactions, reconcileStatementLines };
