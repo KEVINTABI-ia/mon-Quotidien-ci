@@ -98,10 +98,10 @@
     </form>
     <div id="activityTaskStatus" class="status hidden" role="status" aria-live="polite"></div>
 
-    <p class="muted">Les collaborateurs apparaîtront ici après acceptation d'une invitation sécurisée. L'ajout direct par UID est désactivé pour éviter d'accorder l'accès au mauvais compte.</p>
-    <h3>Inviter un collaborateur</h3>
+    <p class="muted">Les nouveaux collaborateurs rejoignent une activité avec un code de rattachement et une demande approuvée. Les anciennes invitations déjà envoyées restent conservées et leurs liens continuent de fonctionner.</p>
+    <h3 class="hidden">Ancien système d’invitation</h3>
     <p class="muted">Créez un lien sécurisé, puis partagez-le manuellement par WhatsApp ou SMS. Aucun abonnement e-mail payant n'est nécessaire.</p>
-    <form id="inviteForm">
+    <form id="inviteForm" class="hidden">
       <label for="inviteEmail">E-mail vérifié du collaborateur</label>
       <input id="inviteEmail" type="email" maxlength="254" required>
       <label for="inviteRole">Rôle</label>
