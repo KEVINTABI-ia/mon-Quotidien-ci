@@ -558,11 +558,14 @@
             const option=document.createElement("option");option.value=value;option.textContent=labelText;state.appendChild(option);
           });
           state.value=m.status;
+          const manageAccessLabel=document.createElement("label");
+          const manageAccess=document.createElement("input");manageAccess.type="checkbox";manageAccess.checked=m.permissions?.manage_access===true;
+          manageAccessLabel.append(manageAccess,document.createTextNode(" Autoriser la gestion des tâches et des accès de l'activité"));
           const save=document.createElement("button");save.type="button";save.textContent="Enregistrer";
           save.addEventListener("click",async()=>{
             save.disabled=true;
             try{
-              await callWorker("/v1/members/update",{businessId:currentBusinessId,memberUid:memberDoc.id,role:role.value,status:state.value,activityIds:m.activityIds||[],permissions:{...(m.permissions||{}),view:true}});
+              await callWorker("/v1/members/update",{businessId:currentBusinessId,memberUid:memberDoc.id,role:role.value,status:state.value,activityIds:m.activityIds||[],permissions:{...(m.permissions||{}),view:true,manage_access:manageAccess.checked}});
               setStatus("memberStatus","Droits du collaborateur mis à jour.");
               await loadMembers();
             }catch(error){
@@ -570,7 +573,7 @@
               setStatus("memberStatus","Modification refusée. Vérifiez les autorisations.",true);
             }finally{save.disabled=false;}
           });
-          controls.append(role,state,save);item.appendChild(controls);
+          controls.append(role,state,manageAccessLabel,save);item.appendChild(controls);
         }
         list.appendChild(item);
       });
