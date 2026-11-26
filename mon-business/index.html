@@ -264,8 +264,8 @@
     currentUser=user||null;
     $("registrationCard").classList.toggle("hidden",!user);
     $("joinActivityCard").classList.toggle("hidden",!user);
-    $("employeeTasksCard").classList.toggle("hidden",!user);
-    $("managerTasksCard").classList.toggle("hidden",!user);
+    $("employeeTasksCard").classList.add("hidden");
+    $("managerTasksCard").classList.add("hidden");
     $("activityCard").classList.toggle("hidden",!user);
     $("authState").textContent=user
       ?"Session connectée. Vous pouvez créer votre espace professionnel."
