@@ -328,7 +328,8 @@
       if(member.role==="owner"||member.permissions?.manage_access===true){
         $("managerTasksCard").classList.remove("hidden");
         const managerSelect=$("managerTaskActivity");managerSelect.replaceChildren();
-        for(const activityId of (member.activityIds||[])){
+        const managerActivityIds=member.role==="owner"?(await db.collection("businesses").doc(currentBusinessId).collection("activities").get()).docs.map(doc=>doc.id):(member.activityIds||[]);
+        for(const activityId of managerActivityIds){
           const activity=await db.collection("businesses").doc(currentBusinessId).collection("activities").doc(activityId).get();
           if(!activity.exists)continue;
           const option=document.createElement("option");option.value=activityId;option.textContent=activity.data().name||activityId;managerSelect.append(option);
