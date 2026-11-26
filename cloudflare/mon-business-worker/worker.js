@@ -484,6 +484,15 @@ function reconcileStatementLines(statementLines,transactions) {
     }
   };
 }
+async function previewFinanceReconciliation(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  await requireActivityAccess(env,user,businessId,activityId,"view");
+  const lines=body.lines;
+  if(!Array.isArray(lines)||lines.length<1||lines.length>100)throw new HttpError(400,"invalid_statement_lines");
+  const transactions=await queryActivityCollection(env,businessId,activityId,"transactions");
+  const scoped=transactions.filter(tx=>tx.businessId===businessId&&tx.activityId===activityId);
+  return json(reconcileStatementLines(lines,scoped));
+}
 function summarizeFinanceTransactions(transactions,balances={}) {
   const summary={incomeMinor:0,expenseMinor:0,transferMinor:0,pendingCount:0,executedCount:0};
   for(const tx of transactions||[]){
@@ -571,7 +580,7 @@ export default {
       else if (url.pathname==="/v1/finance/cash-registers/create") response=await createCashRegister(env,user,body);
       else if (url.pathname==="/v1/finance/cash-registers/list") response=await listCashRegisters(env,user,body);
       else if (url.pathname==="/v1/finance/transactions/create") response=await createFinanceTransaction(env,user,body);
-      else if (url.pathname==="/v1/finance/transactions/list") response=await listFinanceTransactions(env,user,body);
+      else if (url.pathname==="/v1/finance/transactions/list") response=await listFinanceTransactions(env,user,body);\n      else if (url.pathname==="/v1/finance/reconciliation/preview") response=await previewFinanceReconciliation(env,user,body);
       else if (url.pathname==="/v1/finance/transactions/approve") response=await transitionFinanceTransaction(env,user,body,"approved");
       else if (url.pathname==="/v1/finance/transactions/execute") response=await transitionFinanceTransaction(env,user,body,"executed");
       else if (url.pathname==="/v1/invitations/accept") response=await acceptInvitation(request,env,user,body);
