@@ -20,11 +20,21 @@ Le module `mon-business/finance.js` valide les opérations, calcule les soldes p
 - Le navigateur n'écrit jamais directement dans les collections financières ; les règles Firestore existantes refusent ces écritures.
 - Routes Worker : `POST /v1/finance/cash-registers/create` et `POST /v1/finance/cash-registers/list`.
 
-## Hors périmètre de cette première livraison
-- Enregistrement des recettes, dépenses et transferts avec workflow d'approbation.
-- Calcul du solde courant à partir du journal des opérations.
-- Persistance des rapprochements bancaires et exports.
+## Deuxième brique : journal des opérations
+- Routes Worker : `POST /v1/finance/transactions/create`, `/list`, `/approve` et `/execute`.
+- Création des recettes, dépenses et transferts avec montant entier XOF, moyen de paiement, motif et référence obligatoire.
+- Toute nouvelle opération est créée en `pending`. Elle ne modifie aucun solde.
+- Le passage `pending → approved` est réservé aux membres autorisés à approuver.
+- Le passage `approved → executed` est réservé aux membres autorisés à approuver. Il est atomique avec l'événement d'audit et un verrou optimiste sur les caisses concernées.
+- Une exécution est refusée si la caisse source ne dispose pas du montant nécessaire. Aucun découvert n'est autorisé.
+- Les transferts restent dans la même activité pour cette première version ; ils débitent la caisse source et créditent la caisse destinataire, sans entrer dans les recettes/dépenses du compte de résultat.
+- Les soldes affichés sont recalculés à partir du solde initial et du journal des seules opérations exécutées.
+- L'interface présente les caisses, les soldes calculés, le journal et les actions d'approbation/exécution réservées au propriétaire dans cette première interface.
+
+## Hors périmètre restant
+- Transferts entre activités distinctes.
 - Workflow d'approbation paramétrable et multi-étapes.
-- Journal d'audit serveur et pièces jointes.
-- Interface de caisse, rapprochement bancaire et exports.
+- Annulation/correction d'une opération exécutée par écriture compensatoire.
+- Rapprochements bancaires, pièces jointes et exports.
+- Compte de résultat détaillé et tableaux de bord consolidés.
 - Tests de bout en bout sur Firebase Emulator.
