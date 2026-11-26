@@ -576,7 +576,8 @@
       });
     }catch(error){list.textContent="Historique indisponible : "+error.message;}
   }
-\n  async function financeTransition(transactionId,action){
+
+  async function financeTransition(transactionId,action){
     try{await callWorker("/v1/finance/transactions/"+(action==="approve"?"approve":"execute"),{businessId:currentBusinessId,activityId:$("financeActivity").value,transactionId});setStatus("financeTransactionStatus",action==="approve"?"Opération approuvée. Le solde reste inchangé jusqu'à son exécution.":"Opération exécutée. Les soldes ont été recalculés.");await loadFinanceTransactions();}
     catch(error){setStatus("financeTransactionStatus","Action impossible : "+error.message,true);}
   }
