@@ -439,7 +439,7 @@ async function transitionFinanceTransaction(env,user,body,nextStatus) {
   return json({updated:true,status:"executed"});
 }
 function normalizeFinanceMatchText(value) {
-  return typeof value==="string"?value.trim().toLowerCase().replace(/\\s+/g," "):"";
+  return typeof value==="string"?value.trim().toLowerCase().replace(/\s+/g," "):"";
 }
 function reconcileStatementLines(statementLines,transactions) {
   if(!Array.isArray(statementLines)||statementLines.length>500)throw new HttpError(400,"invalid_statement_lines");
@@ -451,7 +451,7 @@ function reconcileStatementLines(statementLines,transactions) {
     const date=typeof line.date==="string"?line.date:"";
     const reference=normalizeFinanceMatchText(line.reference);
     const paymentMethod=normalizeFinanceMatchText(line.paymentMethod);
-    if(!Number.isSafeInteger(amountXof)||amountXof<1||amountXof>1000000000000||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||Number.isNaN(Date.parse(date+"T00:00:00Z")))throw new HttpError(400,"invalid_statement_line");
+    if(!Number.isSafeInteger(amountXof)||amountXof<1||amountXof>1000000000000||!/^\d{4}-\d{2}-\d{2}$/.test(date)||Number.isNaN(Date.parse(date+"T00:00:00Z")))throw new HttpError(400,"invalid_statement_line");
     if(reference.length>100||paymentMethod.length>40)throw new HttpError(400,"invalid_statement_line");
     const candidates=(transactions||[]).filter(tx=>{
       if(tx.status!=="executed"||!Number.isSafeInteger(tx.amountMinor)||tx.amountMinor!==amountXof||used.has(tx.id))return false;
