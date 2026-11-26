@@ -560,8 +560,8 @@
           const row=document.createElement("div");row.style.marginTop="8px";
           row.textContent="Ligne "+(index+2)+" · "+line.date+" · "+line.amountXof+" FCFA · "+line.status+" · "+line.reviewStatus;
           card.append(row);
-          if(line.reviewStatus==="pending"&&(line.status==="matched"||line.status==="unmatched")){
-            for(const decision of ["confirm","reject"]){
+          if(line.reviewStatus==="pending"){
+            for(const decision of (line.status==="ambiguous"?["reject"]:["confirm","reject"])){
               const action=document.createElement("button");action.type="button";action.className="secondary";
               action.textContent=decision==="confirm"?(line.status==="matched"?"Confirmer la correspondance":"Marquer comme vérifiée"):"Rejeter";
               action.addEventListener("click",async()=>{
