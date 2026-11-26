@@ -421,6 +421,21 @@ async function transitionFinanceTransaction(env,user,body,nextStatus) {
   await commit(env,writes);
   return json({updated:true,status:"executed"});
 }
+function summarizeFinanceTransactions(transactions,balances={}) {
+  const summary={incomeMinor:0,expenseMinor:0,transferMinor:0,pendingCount:0,executedCount:0};
+  for(const tx of transactions||[]){
+    if(tx.status==="pending"||tx.status==="approved")summary.pendingCount++;
+    if(tx.status!=="executed")continue;
+    summary.executedCount++;
+    if(tx.type==="income")summary.incomeMinor+=tx.amountMinor;
+    else if(tx.type==="expense")summary.expenseMinor+=tx.amountMinor;
+    else if(tx.type==="transfer")summary.transferMinor+=tx.amountMinor;
+  }
+  summary.resultMinor=summary.incomeMinor-summary.expenseMinor;
+  summary.totalBalanceMinor=Object.values(balances).reduce((sum,value)=>sum+value,0);
+  if(!Object.values(summary).every(Number.isSafeInteger))throw new RangeError("finance_report_overflow");
+  return summary;
+}
 async function listFinanceTransactions(env,user,body) {
   const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
   await requireActivityAccess(env,user,businessId,activityId,"view");
@@ -439,7 +454,23 @@ async function listFinanceTransactions(env,user,body) {
     }
     balances[reg.id]=value;
   }
-  return json({transactions:transactions.filter(t=>t.businessId===businessId&&t.activityId===activityId).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(t=>({id:t.id,...t})),balances});
+  const all=transactions.filter(t=>t.businessId===businessId&&t.activityId===activityId);
+  const dateFrom=body.dateFrom==null?"":String(body.dateFrom),dateTo=body.dateTo==null?"":String(body.dateTo);
+  const type=body.type==null?"all":String(body.type),cashRegisterId=body.cashRegisterId==null?"all":String(body.cashRegisterId);
+  if((dateFrom&&!/^\d{4}-\d{2}-\d{2}$/.test(dateFrom))||(dateTo&&!/^\d{4}-\d{2}-\d{2}$/.test(dateTo)))throw new HttpError(400,"invalid_date_filter");
+  if(dateFrom&&dateTo&&dateFrom>dateTo)throw new HttpError(400,"invalid_date_range");
+  if(!["all","income","expense","transfer"].includes(type))throw new HttpError(400,"invalid_transaction_type_filter");
+  if(cashRegisterId!=="all"&&!active.some(r=>r.id===cashRegisterId))throw new HttpError(400,"invalid_cash_register_filter");
+  const filtered=all.filter(t=>{
+    const day=String(t.createdAt||"").slice(0,10);
+    return (!dateFrom||day>=dateFrom)&&(!dateTo||day<=dateTo)
+      &&(type==="all"||t.type===type)
+      &&(cashRegisterId==="all"||t.cashRegisterId===cashRegisterId||t.destinationCashRegisterId===cashRegisterId);
+  }).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  let summary;
+  try{summary=summarizeFinanceTransactions(filtered,balances);}
+  catch{throw new HttpError(422,"finance_report_overflow");}
+  return json({transactions:filtered.map(t=>({id:t.id,...t})),balances,summary,returnedCount:filtered.length,sourceCount:all.length,limited:all.length>=200});
 }
 
 function corsHeaders(request,env) {
@@ -496,4 +527,4 @@ export default {
   }
 };
 
-export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, listInvitations };
+export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, listInvitations, summarizeFinanceTransactions };
