@@ -126,3 +126,12 @@ test("le rapprochement ignore les opérations en attente et valide les montants"
   assert.equal(result.results[0].status,"unmatched");
   assert.throws(()=>reconcileStatementLines([{date:"25/11/2026",amountXof:1000}],[]),/invalid_statement_line/);
 });
+
+\ntest("le prévisualiseur de rapprochement retourne les statuts sans écrire de transaction",()=>{
+  const lines=[{date:"2026-11-26",amountXof:2500,reference:"REF-1",paymentMethod:"wave"}];
+  const transactions=[{id:"tx-1",status:"executed",amountMinor:2500,createdAt:"2026-11-26T10:00:00.000Z",reference:"REF-1",paymentMethod:"wave"}];
+  const result=reconcileStatementLines(lines,transactions);
+  assert.equal(result.summary.matched,1);
+  assert.equal(transactions.length,1);
+  assert.equal(transactions[0].status,"executed");
+});
