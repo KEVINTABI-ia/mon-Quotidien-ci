@@ -144,15 +144,27 @@ async function authenticate(request,env) {
     const rawFirebaseMessage=typeof data.error?.message==="string"?data.error.message.split(" :")[0]:"";
     const firebaseCode=/^[A-Z0-9_]{1,64}$/.test(rawFirebaseMessage)?rawFirebaseMessage:"";
     const firebaseStatus=typeof data.error?.status==="string" && /^[A-Z0-9_]{1,64}$/.test(data.error.status)?data.error.status:"";
+    // Google may put the actionable cause in ErrorInfo details rather than error.message.
+    // Keep only bounded identifier-like values; never log the raw response or metadata.
+    const firebaseReasons=[...new Set((Array.isArray(data.error?.details)?data.error.details:[])
+      .map(detail=>detail?.reason)
+      .filter(value=>typeof value==="string" && /^[A-Z0-9_]{1,64}$/.test(value)))].slice(0,5);
+    const firebaseServices=[...new Set((Array.isArray(data.error?.details)?data.error.details:[])
+      .map(detail=>detail?.metadata?.service)
+      .filter(value=>typeof value==="string" && /^[a-zA-Z0-9.-]{1,120}$/.test(value)))].slice(0,3);
     let diagnostic="firebase_auth_rejected";
-    if (firebaseCode==="API_KEY_INVALID") diagnostic="firebase_api_key_invalid";
+    if (firebaseCode==="API_KEY_INVALID" || firebaseReasons.includes("API_KEY_INVALID")) diagnostic="firebase_api_key_invalid";
+    else if (firebaseReasons.includes("API_KEY_SERVICE_BLOCKED")) diagnostic="firebase_api_key_service_blocked";
+    else if (firebaseReasons.includes("API_KEY_IP_ADDRESS_BLOCKED")) diagnostic="firebase_api_key_ip_blocked";
+    else if (firebaseReasons.includes("API_KEY_HTTP_REFERRER_BLOCKED")) diagnostic="firebase_api_key_referrer_blocked";
     else if (firebaseCode==="INVALID_ID_TOKEN" || firebaseCode==="TOKEN_EXPIRED" || firebaseCode==="INVALID_ID_TOKEN_AUD") diagnostic="firebase_token_invalid_or_expired";
     else if (firebaseCode==="USER_DISABLED" || user?.disabled===true) diagnostic="firebase_user_disabled";
     else if (response.status>=500) diagnostic="firebase_auth_unavailable";
     else if (firebaseCode) diagnostic="firebase_auth_rejected_"+firebaseCode.toLowerCase();
     console.warn("Mon Business Firebase authentication rejected", {
       status:response.status,code:diagnostic,firebaseCode:firebaseCode||"unavailable",
-      firebaseStatus:firebaseStatus||"unavailable",responseContentType:responseContentType.slice(0,80),
+      firebaseStatus:firebaseStatus||"unavailable",firebaseReasons,
+      firebaseServices,responseContentType:responseContentType.slice(0,80),
       userReturned:Boolean(user?.localId)
     });
     throw new HttpError(response.status>=500?503:401,diagnostic);
