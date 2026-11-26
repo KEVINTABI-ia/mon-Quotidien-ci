@@ -321,7 +321,7 @@ async function updateMember(request,env,user,body) {
 
 
 function makeJoinCode() {
-  const bytes=crypto.getRandomValues(new Uint8Array(6));
+  const bytes=crypto.getRandomValues(new Uint8Array(8));
   return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("").toUpperCase();
 }
 async function createActivityJoinCode(env,user,body) {
@@ -339,7 +339,7 @@ async function createActivityJoinCode(env,user,body) {
 }
 async function submitActivityJoinRequest(env,user,body) {
   const code=typeof body.code==="string"?body.code.trim().replace(/\\s/g,"").toUpperCase():"";
-  if(!/^[A-F0-9]{12}$/.test(code))throw new HttpError(400,"invalid_join_code");
+  if(!/^[A-F0-9]{16}$/.test(code))throw new HttpError(400,"invalid_join_code");
   const codeHash=await digest(code);
   const businesses=await queryJoinCodeCandidates(env,codeHash);
   if(businesses.length!==1)throw new HttpError(404,"join_code_unavailable");
@@ -350,7 +350,11 @@ async function submitActivityJoinRequest(env,user,body) {
   if(existing.some(r=>r.requesterUid===user.uid&&r.status==="pending"))throw new HttpError(409,"join_request_pending");
   const requestId=crypto.randomUUID(),now=new Date();
   const requestRecord={businessId,activityId,activityName:activity.data.name||"",requesterUid:user.uid,requesterEmail:user.email,status:"pending",createdAt:now,updatedAt:now,schemaVersion:1};
-  await commit(env,[writeDocument("businesses/"+businessId+"/activities/"+activityId+"/joinRequests/"+requestId,requestRecord,"create")]);
+  const auditId=crypto.randomUUID();
+  await commit(env,[
+    writeDocument("businesses/"+businessId+"/activities/"+activityId+"/joinRequests/"+requestId,requestRecord,"create"),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"activity.join_request.created",entityType:"activity_join_request",entityId:requestId,details:{activityId},occurredAt:now},"create")
+  ]);
   return json({submitted:true,requestId,businessName:(await getDoc(env,"businesses/"+businessId))?.data.name||"",activityName:requestRecord.activityName});
 }
 async function queryJoinCodeCandidates(env,codeHash) {
@@ -385,6 +389,7 @@ async function reviewActivityJoinRequest(env,user,body) {
     const memberPath="businesses/"+businessId+"/members/"+uid;
     const member=await getDoc(env,memberPath);
     const current=member?.data;
+    if(current&&current.status!=="active")throw new HttpError(409,"membership_inactive_requires_owner_review");
     if(current?.status==="active"&&current.activityIds?.includes(activityId))throw new HttpError(409,"already_has_activity_access");
     if(current){
       const activityIds=validateActivityIds([...(current.activityIds||[]),activityId]);
@@ -437,7 +442,7 @@ async function listActivityTasks(env,user,body) {
   const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
   const access=await requireActivityAccess(env,user,businessId,activityId,"view");
   const rows=await queryActivityCollection(env,businessId,activityId,"tasks");
-  const isManager=access.member.role==="owner"||access.member.role==="general_director"||access.member.role==="activity_manager"||access.member.permissions?.manage_access===true;
+  const isManager=access.member.role==="owner"||access.member.permissions?.manage_access===true;
   const tasks=rows.filter(t=>t.businessId===businessId&&t.activityId===activityId&&(isManager||t.assignedToUid===user.uid))
     .sort((a,b)=>String(a.dueDate||"").localeCompare(String(b.dueDate||"")))
     .map(t=>({id:t.id,title:t.title,description:t.description,dueDate:t.dueDate,status:t.status,assignedToUid:t.assignedToUid,assignedToEmail:t.assignedToEmail}));
