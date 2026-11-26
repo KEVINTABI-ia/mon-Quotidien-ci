@@ -580,7 +580,8 @@ export default {
       else if (url.pathname==="/v1/finance/cash-registers/create") response=await createCashRegister(env,user,body);
       else if (url.pathname==="/v1/finance/cash-registers/list") response=await listCashRegisters(env,user,body);
       else if (url.pathname==="/v1/finance/transactions/create") response=await createFinanceTransaction(env,user,body);
-      else if (url.pathname==="/v1/finance/transactions/list") response=await listFinanceTransactions(env,user,body);\n      else if (url.pathname==="/v1/finance/reconciliation/preview") response=await previewFinanceReconciliation(env,user,body);
+      else if (url.pathname==="/v1/finance/transactions/list") response=await listFinanceTransactions(env,user,body);
+      else if (url.pathname==="/v1/finance/reconciliation/preview") response=await previewFinanceReconciliation(env,user,body);
       else if (url.pathname==="/v1/finance/transactions/approve") response=await transitionFinanceTransaction(env,user,body,"approved");
       else if (url.pathname==="/v1/finance/transactions/execute") response=await transitionFinanceTransaction(env,user,body,"executed");
       else if (url.pathname==="/v1/invitations/accept") response=await acceptInvitation(request,env,user,body);
