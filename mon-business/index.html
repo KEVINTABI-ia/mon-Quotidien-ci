@@ -100,17 +100,6 @@
     <h3>Demandes de rattachement</h3>
     <label for="joinRequestsActivity">Activité</label><select id="joinRequestsActivity"><option value="">Sélectionner une activité</option></select>
     <div id="activityJoinRequestsList" class="muted">Sélectionnez une activité.</div>
-    <h3>Attribuer une tâche</h3>
-    <form id="activityTaskForm">
-      <label for="taskActivity">Activité</label><select id="taskActivity" required><option value="">Sélectionner une activité</option></select>
-      <label for="taskAssignee">Employé</label><select id="taskAssignee" required><option value="">Sélectionner un employé</option></select>
-      <label for="taskTitle">Intitulé</label><input id="taskTitle" minlength="3" maxlength="120" required>
-      <label for="taskDescription">Consignes (facultatif)</label><textarea id="taskDescription" maxlength="1000" rows="3"></textarea>
-      <label for="taskDueDate">Date limite</label><input id="taskDueDate" type="date" required>
-      <button id="createActivityTask" type="submit">Attribuer la tâche</button>
-    </form>
-    <div id="activityTaskStatus" class="status hidden" role="status" aria-live="polite"></div>
-
     <p class="muted">Les nouveaux collaborateurs rejoignent une activité avec un code de rattachement et une demande approuvée. Les anciennes invitations déjà envoyées restent conservées et leurs liens continuent de fonctionner.</p>
     <h3 class="hidden">Ancien système d’invitation</h3>
     <p class="muted">Créez un lien sécurisé, puis partagez-le manuellement par WhatsApp ou SMS. Aucun abonnement e-mail payant n'est nécessaire.</p>
@@ -335,7 +324,7 @@
       const memberDoc=await db.collection("businesses").doc(currentBusinessId).collection("members").doc(currentUser.uid).get();
       if(!memberDoc.exists||memberDoc.data().status!=="active")return;
       const member=memberDoc.data(),select=$("employeeTasksActivity");
-      if(member.permissions?.manage_access===true){
+      if(member.role==="owner"||member.permissions?.manage_access===true){
         $("managerTasksCard").classList.remove("hidden");
         const managerSelect=$("managerTaskActivity");managerSelect.replaceChildren();
         for(const activityId of (member.activityIds||[])){
@@ -438,16 +427,7 @@
     }catch(error){list.textContent="Demandes indisponibles : "+error.message;}
   }
   $("joinRequestsActivity").addEventListener("change",loadActivityJoinRequests);
-  $("activityTaskForm").addEventListener("submit",async event=>{
-    event.preventDefault();
-    const button=$("createActivityTask");button.disabled=true;
-    try{
-      await callWorker("/v1/activities/tasks/create",{businessId:currentBusinessId,activityId:$("taskActivity").value,assignedToUid:$("taskAssignee").value,title:$("taskTitle").value.trim(),description:$("taskDescription").value.trim(),dueDate:$("taskDueDate").value});
-      $("taskTitle").value="";$("taskDescription").value="";
-      setStatus("activityTaskStatus","Tâche attribuée avec succès.");
-    }catch(error){setStatus("activityTaskStatus","Attribution impossible : "+error.message,true);}
-    finally{button.disabled=false;}
-  });
+
 
   $("businessForm").addEventListener("submit",async event=>{
     event.preventDefault();
@@ -880,7 +860,7 @@
         else if(snap.size)financeSelect.value=snap.docs[0].id;
         if(financeSelect.value)await loadCashRegisters();
       }
-      for(const id of ["joinCodeActivity","joinRequestsActivity","taskActivity"]){
+      for(const id of ["joinCodeActivity","joinRequestsActivity"]){
         const select=$(id),previous=select.value;select.replaceChildren();
         const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent="Sélectionner une activité";select.append(placeholder);
         snap.forEach(doc=>{const option=document.createElement("option");option.value=doc.id;option.textContent=doc.data().name;select.append(option);});
