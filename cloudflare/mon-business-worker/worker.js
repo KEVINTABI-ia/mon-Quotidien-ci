@@ -430,12 +430,15 @@ async function createActivityTask(env,user,body) {
   const dueDate=typeof body.dueDate==="string"?body.dueDate:"";
   if(title.length<3||title.length>120)throw new HttpError(400,"invalid_task_title");
   if(description.length>1000)throw new HttpError(400,"invalid_task_description");
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate))throw new HttpError(400,"invalid_task_due_date");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)||Number.isNaN(Date.parse(dueDate+"T00:00:00.000Z"))||new Date(dueDate+"T00:00:00.000Z").toISOString().slice(0,10)!==dueDate)throw new HttpError(400,"invalid_task_due_date");
   const member=await getDoc(env,"businesses/"+businessId+"/members/"+assignedToUid);
   if(!member||member.data.status!=="active"||!member.data.activityIds?.includes(activityId))throw new HttpError(400,"assignee_not_active_in_activity");
-  const id=crypto.randomUUID(),now=new Date();
+  const id=crypto.randomUUID(),now=new Date(),auditId=crypto.randomUUID();
   const task={businessId,activityId,title,description,dueDate,assignedToUid,assignedToEmail:member.data.email||"",status:"assigned",createdByUid:user.uid,createdAt:now,updatedAt:now,schemaVersion:1};
-  await commit(env,[writeDocument("businesses/"+businessId+"/activities/"+activityId+"/tasks/"+id,task,"create")]);
+  await commit(env,[
+    writeDocument("businesses/"+businessId+"/activities/"+activityId+"/tasks/"+id,task,"create"),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"activity.task.assigned",entityType:"activity_task",entityId:id,details:{activityId,assignedToUid,dueDate},occurredAt:now},"create")
+  ]);
   return json({created:true,task:{id,...task}});
 }
 async function listActivityTasks(env,user,body) {
@@ -457,8 +460,11 @@ async function updateActivityTaskStatus(env,user,body) {
   if(!task||task.data.businessId!==businessId||task.data.activityId!==activityId)throw new HttpError(404,"task_not_found");
   if(task.data.assignedToUid!==user.uid)throw new HttpError(403,"task_assignee_required");
   if(task.data.status==="completed")throw new HttpError(409,"task_already_completed");
-  const now=new Date();
-  await commit(env,[writeDocument(path,{status:body.status,updatedAt:now},task.updateTime,true)]);
+  const now=new Date(),auditId=crypto.randomUUID();
+  await commit(env,[
+    writeDocument(path,{status:body.status,updatedAt:now},task.updateTime,true),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"activity.task.status_updated",entityType:"activity_task",entityId:taskId,details:{activityId,status:body.status},occurredAt:now},"create")
+  ]);
   return json({updated:true,status:body.status});
 }
 
