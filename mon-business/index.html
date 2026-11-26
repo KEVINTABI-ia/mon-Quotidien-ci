@@ -96,6 +96,24 @@
     <div id="membersList"></div>
   </section>
 
+  <section id="financeCard" class="card hidden">
+    <span class="pill">Module Finance · Caisses</span>
+    <h2 style="margin-top:12px">Gestion des caisses</h2>
+    <p class="muted">Créez une caisse par activité et indiquez le montant réellement disponible au démarrage. Ce solde initial est conservé dans l'historique et ne peut pas être modifié par une opération ordinaire.</p>
+    <form id="cashRegisterForm">
+      <label for="financeActivity">Activité concernée</label>
+      <select id="financeActivity" required><option value="">Sélectionner une activité</option></select>
+      <label for="cashRegisterName">Nom de la caisse</label>
+      <input id="cashRegisterName" minlength="2" maxlength="100" required placeholder="Ex. Caisse principale">
+      <label for="openingBalance">Solde initial disponible (FCFA)</label>
+      <input id="openingBalance" type="number" min="0" max="1000000000000" step="1" value="0" required inputmode="numeric">
+      <button id="createCashRegisterButton" type="submit">Créer la caisse</button>
+    </form>
+    <div id="financeStatus" class="status hidden" role="status" aria-live="polite"></div>
+    <h3>Caisses de l'activité</h3>
+    <div id="cashRegistersList" class="muted">Sélectionnez une activité pour afficher ses caisses.</div>
+  </section>
+
   <section id="activityCard" class="card hidden">
     <h2>Ajouter un secteur d'activité</h2>
     <p class="muted">Chaque activité aura ses propres données et ses propres droits d'accès. Le tableau de bord global pourra ensuite consolider les résultats.</p>
@@ -166,6 +184,7 @@
     $("userInfo").textContent=user?"Compte Firebase authentifié · "+user.uid:"";
     if(!user){currentBusinessId=null;return;}
     currentBusinessId=localStorage.getItem("mqci_mon_business_id")||null;
+    $("financeCard").classList.toggle("hidden",!currentBusinessId);
     if(currentBusinessId){loadActivities();loadMembers();}
     acceptInvitationFromLink();
     });
@@ -227,6 +246,7 @@
       localStorage.setItem("mqci_mon_business_id",currentBusinessId);
       setStatus("businessStatus","Entreprise créée. Votre compte en est le propriétaire.");
       $("activityCard").classList.remove("hidden");
+      $("financeCard").classList.remove("hidden");
       await loadActivities();
       await loadMembers();
     }catch(error){
@@ -346,6 +366,46 @@
     }
   }
 
+
+  $("financeActivity").addEventListener("change",loadCashRegisters);
+  $("cashRegisterForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(!currentUser||!currentBusinessId)return setStatus("financeStatus","Connectez-vous et sélectionnez votre entreprise.",true);
+    const activityId=$("financeActivity").value;
+    const name=$("cashRegisterName").value.trim();
+    const openingBalanceXof=Number($("openingBalance").value);
+    if(!activityId)return setStatus("financeStatus","Sélectionnez une activité.",true);
+    if(!Number.isSafeInteger(openingBalanceXof)||openingBalanceXof<0)return setStatus("financeStatus","Le solde initial doit être un nombre entier positif ou nul.",true);
+    const button=$("createCashRegisterButton");button.disabled=true;
+    try{
+      const result=await callWorker("/v1/finance/cash-registers/create",{businessId:currentBusinessId,activityId,name,openingBalanceXof});
+      $("cashRegisterName").value="";
+      $("openingBalance").value="0";
+      setStatus("financeStatus","Caisse créée. Solde initial enregistré : "+openingBalanceXof.toLocaleString("fr-FR")+" FCFA.");
+      await loadCashRegisters();
+    }catch(error){setStatus("financeStatus","Création de la caisse impossible : "+error.message,true);}
+    finally{button.disabled=false;}
+  });
+  async function loadCashRegisters(){
+    const activityId=$("financeActivity")?.value;
+    if(!currentUser||!currentBusinessId||!activityId)return;
+    const list=$("cashRegistersList");list.textContent="Chargement des caisses…";
+    try{
+      const result=await callWorker("/v1/finance/cash-registers/list",{businessId:currentBusinessId,activityId});
+      list.replaceChildren();
+      const rows=Array.isArray(result.cashRegisters)?result.cashRegisters:[];
+      if(!rows.length){list.textContent="Aucune caisse pour cette activité.";return;}
+      rows.forEach(register=>{
+        const item=document.createElement("div");item.className="status";
+        const title=document.createElement("strong");
+        title.textContent=register.name;
+        const balance=document.createElement("p");
+        balance.textContent="Solde initial : "+Number(register.openingBalanceMinor||0).toLocaleString("fr-FR")+" FCFA";
+        item.append(title,balance);list.append(item);
+      });
+    }catch(error){list.textContent="Chargement impossible : "+error.message;}
+  }
+
   async function loadActivities(){
     if(!currentBusinessId||!currentUser)return;
     try{
@@ -356,6 +416,16 @@
         return;
       }
       const snap=await businessRef.collection("activities").get();
+      const financeSelect=$("financeActivity");
+      if(financeSelect){
+        const previous=financeSelect.value;
+        financeSelect.replaceChildren();
+        const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent="Sélectionner une activité";financeSelect.appendChild(placeholder);
+        snap.forEach(doc=>{const option=document.createElement("option");option.value=doc.id;option.textContent=doc.data().name;financeSelect.appendChild(option);});
+        if(previous&&Array.from(financeSelect.options).some(option=>option.value===previous))financeSelect.value=previous;
+        else if(snap.size)financeSelect.value=snap.docs[0].id;
+        if(financeSelect.value)await loadCashRegisters();
+      }
       const inviteSelect=$("inviteActivities");
       if(inviteSelect){inviteSelect.replaceChildren();snap.forEach(doc=>{const option=document.createElement("option");option.value=doc.id;option.textContent=doc.data().name;inviteSelect.appendChild(option);});}
       const list=$("activitiesList");list.replaceChildren();
