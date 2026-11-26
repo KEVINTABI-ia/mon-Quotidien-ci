@@ -117,6 +117,7 @@ test("le rapprochement signale les correspondances multiples comme ambiguës",()
   const tx=[1,2].map(n=>({id:"tx-"+n,status:"executed",amountMinor:1000,createdAt:"2026-11-25T09:00:00.000Z"}));
   const result=reconcileStatementLines([{date:"2026-11-25",amountXof:1000}],tx);
   assert.equal(result.results[0].status,"ambiguous");
+  assert.deepEqual(result.results[0].candidateTransactionIds,["tx-1","tx-2"]);
   assert.equal(result.summary.ambiguous,1);
 });
 
