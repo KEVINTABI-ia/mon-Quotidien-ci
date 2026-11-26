@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, calculateCashRegisterBalance } from "../cloudflare/mon-business-worker/worker.js";
+import { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, calculateCashRegisterBalance, makeJoinCode } from "../cloudflare/mon-business-worker/worker.js";
 
 test("normalise les e-mails et refuse les formats invalides",()=>{
   assert.equal(cleanEmail("  COLLABORATEUR@EXAMPLE.CI "), "collaborateur@example.ci");
@@ -75,4 +75,9 @@ test("le solde de clôture prend en compte les transferts entrants et sortants",
 test("le calcul de clôture refuse un solde initial invalide ou un dépassement numérique",()=>{
   assert.throws(()=>calculateCashRegisterBalance([],"cash-a",-1),/invalid_opening_balance/);
   assert.throws(()=>calculateCashRegisterBalance([{status:"executed",type:"income",cashRegisterId:"cash-a",amountMinor:Number.MAX_SAFE_INTEGER}],"cash-a",1),/invalid_cash_register_balance/);
+});
+
+test("les codes de rattachement ont 64 bits d'entropie en hexadécimal",()=>{
+  const code=makeJoinCode();
+  assert.match(code,/^[A-F0-9]{16}$/);
 });
