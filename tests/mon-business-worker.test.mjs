@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit } from "../cloudflare/mon-business-worker/worker.js";
+import { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, calculateCashRegisterBalance } from "../cloudflare/mon-business-worker/worker.js";
 
 test("normalise les e-mails et refuse les formats invalides",()=>{
   assert.equal(cleanEmail("  COLLABORATEUR@EXAMPLE.CI "), "collaborateur@example.ci");
