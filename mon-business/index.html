@@ -149,6 +149,16 @@
     <div class="grid" style="margin:12px 0"><button type="button" id="financeExportCsv" class="secondary">Exporter le journal CSV</button><button type="button" id="financeExportReport">Exporter le rapport CSV</button></div>
     <div id="financeReportStatus" class="status hidden" role="status" aria-live="polite"></div>
     <h3>Soldes des caisses</h3><div id="financeBalances" class="muted"></div>
+    <hr>
+    <h3>Rapprochement d'un relevé CSV</h3>
+    <p class="muted">Importez un relevé contenant les colonnes date, amountXof, reference et paymentMethod. La prévisualisation compare uniquement les opérations exécutées. Aucun solde ni aucune transaction ne sera modifié.</p>
+    <p class="muted">Format attendu : date (AAAA-MM-JJ), amountXof (montant entier en FCFA), reference (facultatif), paymentMethod (facultatif : cash, bank, wave, orange_money, mtn_money, electronic). Maximum 100 lignes et 12 Ko.</p>
+    <button type="button" id="downloadReconciliationTemplate" class="secondary">Télécharger le modèle CSV</button>
+    <label for="reconciliationFile">Fichier de relevé CSV</label>
+    <input id="reconciliationFile" type="file" accept=".csv,text/csv">
+    <button type="button" id="previewReconciliation">Analyser le relevé</button>
+    <div id="reconciliationSummary" class="status hidden" role="status" aria-live="polite"></div>
+    <div id="reconciliationResults" class="muted"></div>
     <h3>Journal financier</h3><div id="financeTransactionsList" class="muted">Sélectionnez une activité.</div>
   </section>
 
@@ -477,6 +487,60 @@
   $("financeResetFilters").addEventListener("click",()=>{$("financeDateFrom").value="";$("financeDateTo").value="";$("financeFilterType").value="all";$("financeFilterRegister").value="all";loadFinanceTransactions();});
   $("financeExportCsv").addEventListener("click",()=>exportFinanceCsv("journal"));
   $("financeExportReport").addEventListener("click",()=>exportFinanceCsv("report"));
+  function parseReconciliationCsv(text){
+    const firstLine=text.split(/\\r?\\n/,1)[0]||"";
+    const delimiter=(firstLine.match(/;/g)||[]).length>(firstLine.match(/,/g)||[]).length?";":",";
+    const rows=[];let row=[],cell="",quoted=false;
+    for(let i=0;i<text.length;i++){
+      const ch=text[i];
+      if(ch==='"'&&quoted&&text[i+1]==='"'){cell+='"';i++;}
+      else if(ch==='"')quoted=!quoted;
+      else if(ch===delimiter&&!quoted){row.push(cell);cell="";}
+      else if((ch==="\\n"||ch==="\\r")&&!quoted){
+        if(ch==="\\r"&&text[i+1]==="\\n")i++;
+        row.push(cell);if(row.some(value=>value.trim()!==""))rows.push(row);
+        row=[];cell="";
+      }else cell+=ch;
+    }
+    if(quoted)throw new Error("CSV invalide : guillemet non fermé.");
+    row.push(cell);if(row.some(value=>value.trim()!==""))rows.push(row);
+    if(rows.length<2)throw new Error("Le CSV doit contenir un en-tête et au moins une ligne.");
+    const headers=rows.shift().map(value=>value.trim().replace(/^\\uFEFF/,""));
+    const required=["date","amountXof"];
+    if(required.some(name=>!headers.includes(name)))throw new Error("Colonnes obligatoires absentes : date et amountXof.");
+    if(rows.length>100)throw new Error("Maximum 100 lignes par import.");
+    return rows.map((values,index)=>{
+      const record=Object.fromEntries(headers.map((header,i)=>[header,(values[i]||"").trim()]));
+      const amountText=(record.amountXof||"").replace(/[ \\u00a0]/g,"");
+      if(!/^\\d+$/.test(amountText))throw new Error("Montant invalide à la ligne "+(index+2)+". Utilisez un entier en FCFA.");
+      return {date:record.date,amountXof:Number(amountText),reference:record.reference||"",paymentMethod:record.paymentMethod||""};
+    });
+  }
+  $("downloadReconciliationTemplate").addEventListener("click",()=>{
+    const csv="\\uFEFFdate;amountXof;reference;paymentMethod\\r\\n2026-11-26;2500;REF-001;wave\\r\\n";
+    const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+    const link=document.createElement("a");link.href=url;link.download="modele-releve-mon-business.csv";link.click();URL.revokeObjectURL(url);
+  });
+  $("previewReconciliation").addEventListener("click",async()=>{
+    const file=$("reconciliationFile").files?.[0],activityId=$("financeActivity").value;
+    if(!file)return setStatus("reconciliationSummary","Sélectionnez un fichier CSV.",true);
+    if(!activityId||!currentUser||!currentBusinessId)return setStatus("reconciliationSummary","Connectez-vous et sélectionnez une activité.",true);
+    if(file.size>12*1024)return setStatus("reconciliationSummary","Le fichier dépasse 12 Ko.",true);
+    const button=$("previewReconciliation");button.disabled=true;
+    try{
+      const lines=parseReconciliationCsv(await file.text());
+      const result=await callWorker("/v1/finance/reconciliation/preview",{businessId:currentBusinessId,activityId,lines});
+      const s=result.summary||{};
+      setStatus("reconciliationSummary","Résultat : "+(s.matched||0)+" rapprochée(s), "+(s.unmatched||0)+" sans correspondance, "+(s.ambiguous||0)+" ambiguë(s). Prévisualisation uniquement : aucune écriture n'a été effectuée.");
+      const list=$("reconciliationResults");list.replaceChildren();
+      (result.results||[]).forEach(item=>{
+        const line=document.createElement("p");line.className="status";
+        line.textContent="Ligne "+(item.lineIndex+2)+" : "+(item.status==="matched"?"Rapprochée · "+item.transactionId:item.status==="ambiguous"?"À vérifier · "+item.candidateCount+" opérations possibles":"Aucune correspondance");
+        list.append(line);
+      });
+    }catch(error){setStatus("reconciliationSummary","Analyse impossible : "+error.message,true);}
+    finally{button.disabled=false;}
+  });
   async function financeTransition(transactionId,action){
     try{await callWorker("/v1/finance/transactions/"+(action==="approve"?"approve":"execute"),{businessId:currentBusinessId,activityId:$("financeActivity").value,transactionId});setStatus("financeTransactionStatus",action==="approve"?"Opération approuvée. Le solde reste inchangé jusqu'à son exécution.":"Opération exécutée. Les soldes ont été recalculés.");await loadFinanceTransactions();}
     catch(error){setStatus("financeTransactionStatus","Action impossible : "+error.message,true);}
