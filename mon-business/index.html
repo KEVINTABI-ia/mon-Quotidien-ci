@@ -65,7 +65,7 @@
     <p class="muted">Saisissez le code communiqué par le directeur. Votre demande devra être approuvée avant tout accès.</p>
     <form id="joinActivityForm">
       <label for="activityJoinCode">Code de rattachement</label>
-      <input id="activityJoinCode" minlength="12" maxlength="12" pattern="[A-Fa-f0-9]{12}" required autocomplete="off" placeholder="Ex. 4A8F12BC90DE">
+      <input id="activityJoinCode" minlength="16" maxlength="16" pattern="[A-Fa-f0-9]{16}" required autocomplete="off" placeholder="Ex. 4A8F12BC90DE5678">
       <button id="submitJoinActivity" type="submit">Envoyer ma demande</button>
     </form>
     <div id="joinActivityStatus" class="status hidden" role="status" aria-live="polite"></div>
@@ -300,6 +300,7 @@
       setStatus("authState","Invitation acceptée. Votre accès collaborateur est maintenant actif.");
       await loadMembers();
       await loadActivities();
+      await loadEmployeeWorkspace();
     }catch(error){
       setStatus("authState","Invitation non acceptée : "+error.message,true);
     }
