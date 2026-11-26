@@ -27,3 +27,14 @@ test("les scripts intégrés de la page sont syntaxiquement valides",()=>{
   assert.equal(scripts.length,1);
   for(const script of scripts) assert.doesNotThrow(()=>new vm.Script(script,{filename:"mon-business/index.html"}));
 });
+
+test("le nouvel onboarding expose le code de rattachement et l'espace de tâches",()=>{
+  for(const id of ["joinActivityForm","activityJoinCode","managerTaskForm","employeeTasksCard","activityJoinRequestsList"]) assert.match(html,new RegExp('id="'+id+'"'));
+  for(const route of ["/v1/activities/join-code/create","/v1/activities/join-requests/create","/v1/activities/join-requests/list","/v1/activities/join-requests/review","/v1/activities/members/list","/v1/activities/tasks/create","/v1/activities/tasks/list","/v1/activities/tasks/update-status"]) assert.ok(html.includes(route)||worker.includes(route));
+  assert.match(html,/Demande envoyée/);
+});
+test("les nouveaux parcours de rattachement et de tâches sont routés côté Worker",()=>{
+  for(const route of ["/v1/activities/join-code/create","/v1/activities/join-requests/create","/v1/activities/join-requests/list","/v1/activities/join-requests/review","/v1/activities/members/list","/v1/activities/tasks/create","/v1/activities/tasks/list","/v1/activities/tasks/update-status"]) assert.ok(worker.includes(route));
+  assert.match(worker,/allDescendants:true/);
+  assert.match(worker,/manage_access/);
+});

@@ -60,12 +60,50 @@
     <div id="businessStatus" class="status hidden" role="status" aria-live="polite"></div>
   </section>
 
+  <section id="joinActivityCard" class="card hidden">
+    <h2>Rejoindre une activité</h2>
+    <p class="muted">Saisissez le code communiqué par le directeur. Votre demande devra être approuvée avant tout accès.</p>
+    <form id="joinActivityForm">
+      <label for="activityJoinCode">Code de rattachement</label>
+      <input id="activityJoinCode" minlength="16" maxlength="16" pattern="[A-Fa-f0-9]{16}" required autocomplete="off" placeholder="Ex. 4A8F12BC90DE5678">
+      <button id="submitJoinActivity" type="submit">Envoyer ma demande</button>
+    </form>
+    <div id="joinActivityStatus" class="status hidden" role="status" aria-live="polite"></div>
+  </section>
+  <section id="employeeTasksCard" class="card hidden">
+    <h2>Mes tâches</h2>
+    <label for="employeeTasksActivity">Activité</label>
+    <select id="employeeTasksActivity"><option value="">Sélectionner une activité</option></select>
+    <div id="employeeTasksList" class="muted">Sélectionnez une activité pour afficher vos tâches.</div>
+    <div id="employeeTasksStatus" class="status hidden" role="status" aria-live="polite"></div>
+  </section>
+  <section id="managerTasksCard" class="card hidden">
+    <h2>Gestion des tâches de l'activité</h2>
+    <p class="muted">Attribuez une tâche à un collaborateur actif de l'activité.</p>
+    <form id="managerTaskForm">
+      <label for="managerTaskActivity">Activité</label><select id="managerTaskActivity" required><option value="">Sélectionner une activité</option></select>
+      <label for="managerTaskAssignee">Collaborateur</label><select id="managerTaskAssignee" required><option value="">Sélectionner un collaborateur</option></select>
+      <label for="managerTaskTitle">Intitulé</label><input id="managerTaskTitle" minlength="3" maxlength="120" required>
+      <label for="managerTaskDescription">Consignes (facultatif)</label><textarea id="managerTaskDescription" maxlength="1000" rows="3"></textarea>
+      <label for="managerTaskDueDate">Date limite</label><input id="managerTaskDueDate" type="date" required>
+      <button id="managerTaskSubmit" type="submit">Attribuer la tâche</button>
+    </form>
+    <div id="managerTaskStatus" class="status hidden" role="status" aria-live="polite"></div>
+  </section>
   <section id="membersCard" class="card hidden">
     <h2>Collaborateurs et autorisations</h2>
-    <p class="muted">Les collaborateurs apparaîtront ici après acceptation d'une invitation sécurisée. L'ajout direct par UID est désactivé pour éviter d'accorder l'accès au mauvais compte.</p>
-    <h3>Inviter un collaborateur</h3>
+    <h3>Rattachement des employés par code</h3>
+    <p class="muted">Générez un code propre à une activité. L'employé envoie sa demande avec ce code et vous décidez de l'accepter ou de la refuser.</p>
+    <label for="joinCodeActivity">Activité</label><select id="joinCodeActivity"><option value="">Sélectionner une activité</option></select>
+    <button type="button" id="createActivityJoinCode">Générer un code</button>
+    <div id="activityJoinCodeResult" class="status hidden" role="status" aria-live="polite"></div>
+    <h3>Demandes de rattachement</h3>
+    <label for="joinRequestsActivity">Activité</label><select id="joinRequestsActivity"><option value="">Sélectionner une activité</option></select>
+    <div id="activityJoinRequestsList" class="muted">Sélectionnez une activité.</div>
+    <p class="muted">Les nouveaux collaborateurs rejoignent une activité avec un code de rattachement et une demande approuvée. Les anciennes invitations déjà envoyées restent conservées et leurs liens continuent de fonctionner.</p>
+    <h3 class="hidden">Ancien système d’invitation</h3>
     <p class="muted">Créez un lien sécurisé, puis partagez-le manuellement par WhatsApp ou SMS. Aucun abonnement e-mail payant n'est nécessaire.</p>
-    <form id="inviteForm">
+    <form id="inviteForm" class="hidden">
       <label for="inviteEmail">E-mail vérifié du collaborateur</label>
       <input id="inviteEmail" type="email" maxlength="254" required>
       <label for="inviteRole">Rôle</label>
@@ -225,6 +263,9 @@
     auth.onAuthStateChanged(user=>{
     currentUser=user||null;
     $("registrationCard").classList.toggle("hidden",!user);
+    $("joinActivityCard").classList.toggle("hidden",!user);
+    $("employeeTasksCard").classList.add("hidden");
+    $("managerTasksCard").classList.add("hidden");
     $("activityCard").classList.toggle("hidden",!user);
     $("authState").textContent=user
       ?"Session connectée. Vous pouvez créer votre espace professionnel."
@@ -234,7 +275,7 @@
     if(!user){currentBusinessId=null;return;}
     currentBusinessId=localStorage.getItem("mqci_mon_business_id")||null;
     $("financeCard").classList.toggle("hidden",!currentBusinessId);
-    if(currentBusinessId){loadActivities();loadMembers();}
+    if(currentBusinessId){loadActivities();loadMembers();loadEmployeeWorkspace();}
     acceptInvitationFromLink();
     });
   }).catch(error=>{
@@ -259,10 +300,136 @@
       setStatus("authState","Invitation acceptée. Votre accès collaborateur est maintenant actif.");
       await loadMembers();
       await loadActivities();
+      await loadEmployeeWorkspace();
     }catch(error){
       setStatus("authState","Invitation non acceptée : "+error.message,true);
     }
   }
+
+
+  $("joinActivityForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(!currentUser)return setStatus("joinActivityStatus","Connectez-vous à votre compte avant de continuer.",true);
+    const code=$("activityJoinCode").value.trim().toUpperCase(),button=$("submitJoinActivity");button.disabled=true;
+    try{
+      const result=await callWorker("/v1/activities/join-requests/create",{code});
+      currentBusinessId=result.businessId;localStorage.setItem("mqci_mon_business_id",currentBusinessId);
+      setStatus("joinActivityStatus","Demande envoyée pour "+result.activityName+". Le directeur doit l'approuver avant l'activation de votre accès.");
+      $("activityJoinCode").value="";
+    }catch(error){setStatus("joinActivityStatus","Envoi impossible : "+error.message,true);}
+    finally{button.disabled=false;}
+  });
+  async function loadEmployeeWorkspace(){
+    if(!currentUser||!currentBusinessId)return;
+    try{
+      const memberDoc=await db.collection("businesses").doc(currentBusinessId).collection("members").doc(currentUser.uid).get();
+      if(!memberDoc.exists||memberDoc.data().status!=="active")return;
+      const member=memberDoc.data(),select=$("employeeTasksActivity");
+      if(member.role==="owner"||member.permissions?.manage_access===true){
+        $("managerTasksCard").classList.remove("hidden");
+        const managerSelect=$("managerTaskActivity");managerSelect.replaceChildren();
+        const managerActivityIds=member.role==="owner"?(await db.collection("businesses").doc(currentBusinessId).collection("activities").get()).docs.map(doc=>doc.id):(member.activityIds||[]);
+        for(const activityId of managerActivityIds){
+          const activity=await db.collection("businesses").doc(currentBusinessId).collection("activities").doc(activityId).get();
+          if(!activity.exists)continue;
+          const option=document.createElement("option");option.value=activityId;option.textContent=activity.data().name||activityId;managerSelect.append(option);
+        }
+        if(managerSelect.options.length)await loadManagerTaskAssignees();
+      }
+
+      select.replaceChildren();
+      for(const activityId of (member.activityIds||[])){
+        const activity=await db.collection("businesses").doc(currentBusinessId).collection("activities").doc(activityId).get();
+        if(!activity.exists)continue;
+        const option=document.createElement("option");option.value=activityId;option.textContent=activity.data().name||activityId;select.append(option);
+      }
+      if(select.options.length){$("employeeTasksCard").classList.remove("hidden");await loadEmployeeTasks();}
+    }catch(error){setStatus("employeeTasksStatus","Impossible de charger vos activités : "+error.message,true);}
+  }
+  async function loadEmployeeTasks(){
+    const activityId=$("employeeTasksActivity").value,list=$("employeeTasksList");
+    if(!activityId||!currentBusinessId){list.textContent="Sélectionnez une activité.";return;}
+    try{
+      const result=await callWorker("/v1/activities/tasks/list",{businessId:currentBusinessId,activityId});
+      list.replaceChildren();
+      if(!result.tasks?.length){list.textContent="Aucune tâche attribuée pour le moment.";return;}
+      result.tasks.forEach(task=>{
+        const item=document.createElement("div");item.className="status";
+        const heading=document.createElement("strong");heading.textContent=task.title+" · "+(task.status==="completed"?"Terminée":task.status==="in_progress"?"En cours":"À faire");
+        const detail=document.createElement("p");detail.textContent=(task.description||"Aucune consigne")+" · Échéance : "+task.dueDate;
+        item.append(heading,detail);
+        if(task.status!=="completed"){
+          const action=document.createElement("button");action.type="button";action.className="secondary";
+          action.textContent=task.status==="in_progress"?"Marquer comme terminée":"Commencer la tâche";
+          action.addEventListener("click",async()=>{
+            action.disabled=true;
+            try{await callWorker("/v1/activities/tasks/update-status",{businessId:currentBusinessId,activityId,taskId:task.id,status:task.status==="in_progress"?"completed":"in_progress"});await loadEmployeeTasks();}
+            catch(error){setStatus("employeeTasksStatus","Mise à jour impossible : "+error.message,true);action.disabled=false;}
+          });
+          item.append(action);
+        }
+        list.append(item);
+      });
+    }catch(error){list.textContent="Chargement des tâches impossible : "+error.message;}
+  }
+  $("employeeTasksActivity").addEventListener("change",loadEmployeeTasks);
+
+  async function loadManagerTaskAssignees(){
+    const activityId=$("managerTaskActivity").value,select=$("managerTaskAssignee");
+    select.replaceChildren();
+    if(!activityId)return;
+    try{
+      const result=await callWorker("/v1/activities/members/list",{businessId:currentBusinessId,activityId});
+      const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent="Sélectionner un collaborateur";select.append(placeholder);
+      (result.members||[]).filter(member=>member.uid!==currentUser.uid).forEach(member=>{
+        const option=document.createElement("option");option.value=member.uid;option.textContent=(member.email||member.uid)+" · "+member.role;select.append(option);
+      });
+    }catch(error){setStatus("managerTaskStatus","Liste des collaborateurs indisponible : "+error.message,true);}
+  }
+  $("managerTaskActivity").addEventListener("change",loadManagerTaskAssignees);
+  $("managerTaskForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    const button=$("managerTaskSubmit");button.disabled=true;
+    try{
+      await callWorker("/v1/activities/tasks/create",{businessId:currentBusinessId,activityId:$("managerTaskActivity").value,assignedToUid:$("managerTaskAssignee").value,title:$("managerTaskTitle").value.trim(),description:$("managerTaskDescription").value.trim(),dueDate:$("managerTaskDueDate").value});
+      $("managerTaskTitle").value="";$("managerTaskDescription").value="";
+      setStatus("managerTaskStatus","Tâche attribuée avec succès.");
+    }catch(error){setStatus("managerTaskStatus","Attribution impossible : "+error.message,true);}
+    finally{button.disabled=false;}
+  });
+
+  $("createActivityJoinCode").addEventListener("click",async()=>{
+    const activityId=$("joinCodeActivity").value;if(!activityId)return setStatus("activityJoinCodeResult","Sélectionnez une activité.",true);
+    const button=$("createActivityJoinCode");button.disabled=true;
+    try{const result=await callWorker("/v1/activities/join-code/create",{businessId:currentBusinessId,activityId});setStatus("activityJoinCodeResult","Code à partager : "+result.code+" · Activité : "+activityId+". Conservez-le en lieu sûr.");}
+    catch(error){setStatus("activityJoinCodeResult","Création du code impossible : "+error.message,true);}
+    finally{button.disabled=false;}
+  });
+  async function loadActivityJoinRequests(){
+    const activityId=$("joinRequestsActivity").value,list=$("activityJoinRequestsList");
+    if(!activityId){list.textContent="Sélectionnez une activité.";return;}
+    try{
+      const result=await callWorker("/v1/activities/join-requests/list",{businessId:currentBusinessId,activityId});
+      list.replaceChildren();
+      if(!result.requests?.length){list.textContent="Aucune demande en attente.";return;}
+      result.requests.forEach(request=>{
+        const item=document.createElement("div");item.className="status";
+        const label=document.createElement("strong");label.textContent=request.requesterEmail+" · "+new Date(request.createdAt).toLocaleString("fr-FR");
+        item.append(label);
+        for(const decision of ["approve","reject"]){
+          const button=document.createElement("button");button.type="button";button.className="secondary";button.textContent=decision==="approve"?"Accepter":"Refuser";
+          button.addEventListener("click",async()=>{
+            button.disabled=true;
+            try{await callWorker("/v1/activities/join-requests/review",{businessId:currentBusinessId,activityId,requestId:request.requestId,decision});setStatus("memberStatus",decision==="approve"?"Demande acceptée.":"Demande refusée.");await loadActivityJoinRequests();await loadMembers();}
+            catch(error){setStatus("memberStatus","Décision impossible : "+error.message,true);button.disabled=false;}
+          });item.append(button);
+        }
+        list.append(item);
+      });
+    }catch(error){list.textContent="Demandes indisponibles : "+error.message;}
+  }
+  $("joinRequestsActivity").addEventListener("change",loadActivityJoinRequests);
+
 
   $("businessForm").addEventListener("submit",async event=>{
     event.preventDefault();
@@ -298,6 +465,7 @@
       $("financeCard").classList.remove("hidden");
       await loadActivities();
       await loadMembers();
+      await loadEmployeeWorkspace();
     }catch(error){
       console.error("Mon Business registration error",error);
       setStatus("businessStatus","Impossible de créer l'entreprise. Vérifiez votre connexion et vos autorisations, puis réessayez.",true);
@@ -392,11 +560,14 @@
             const option=document.createElement("option");option.value=value;option.textContent=labelText;state.appendChild(option);
           });
           state.value=m.status;
+          const manageAccessLabel=document.createElement("label");
+          const manageAccess=document.createElement("input");manageAccess.type="checkbox";manageAccess.checked=m.permissions?.manage_access===true;
+          manageAccessLabel.append(manageAccess,document.createTextNode(" Autoriser la gestion des tâches et des accès de l'activité"));
           const save=document.createElement("button");save.type="button";save.textContent="Enregistrer";
           save.addEventListener("click",async()=>{
             save.disabled=true;
             try{
-              await callWorker("/v1/members/update",{businessId:currentBusinessId,memberUid:memberDoc.id,role:role.value,status:state.value,activityIds:m.activityIds||[],permissions:{...(m.permissions||{}),view:true}});
+              await callWorker("/v1/members/update",{businessId:currentBusinessId,memberUid:memberDoc.id,role:role.value,status:state.value,activityIds:m.activityIds||[],permissions:{...(m.permissions||{}),view:true,manage_access:manageAccess.checked}});
               setStatus("memberStatus","Droits du collaborateur mis à jour.");
               await loadMembers();
             }catch(error){
@@ -404,7 +575,7 @@
               setStatus("memberStatus","Modification refusée. Vérifiez les autorisations.",true);
             }finally{save.disabled=false;}
           });
-          controls.append(role,state,save);item.appendChild(controls);
+          controls.append(role,state,manageAccessLabel,save);item.appendChild(controls);
         }
         list.appendChild(item);
       });
@@ -695,7 +866,20 @@
         else if(snap.size)financeSelect.value=snap.docs[0].id;
         if(financeSelect.value)await loadCashRegisters();
       }
-      const inviteSelect=$("inviteActivities");
+      for(const id of ["joinCodeActivity","joinRequestsActivity"]){
+        const select=$(id),previous=select.value;select.replaceChildren();
+        const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent="Sélectionner une activité";select.append(placeholder);
+        snap.forEach(doc=>{const option=document.createElement("option");option.value=doc.id;option.textContent=doc.data().name;select.append(option);});
+        if(previous&&Array.from(select.options).some(option=>option.value===previous))select.value=previous;
+        else if(snap.size)select.value=snap.docs[0].id;
+      }
+      const taskAssignee=$("taskAssignee");taskAssignee.replaceChildren();
+      const assigneePlaceholder=document.createElement("option");assigneePlaceholder.value="";assigneePlaceholder.textContent="Sélectionner un employé";taskAssignee.append(assigneePlaceholder);
+      const memberSnap=await businessRef.collection("members").get();
+      memberSnap.forEach(doc=>{if(doc.id===currentUser.uid||doc.data().status!=="active")return;const option=document.createElement("option");option.value=doc.id;option.textContent=(doc.data().email||doc.id)+" · "+doc.data().role;taskAssignee.append(option);});
+      if($("joinRequestsActivity").value)await loadActivityJoinRequests();
+
+            const inviteSelect=$("inviteActivities");
       if(inviteSelect){inviteSelect.replaceChildren();snap.forEach(doc=>{const option=document.createElement("option");option.value=doc.id;option.textContent=doc.data().name;inviteSelect.appendChild(option);});}
       const list=$("activitiesList");list.replaceChildren();
       snap.forEach(doc=>{
@@ -731,6 +915,7 @@
       $("activityName").value="";$("activityType").value="";
       setStatus("activityStatus","Activité ajoutée avec succès.");
       await loadActivities();
+      await loadEmployeeWorkspace();
     }catch(error){
       console.error("Mon Business activity create error",error);
       setStatus("activityStatus","Impossible d'ajouter cette activité. Vérifiez les droits de votre compte.",true);

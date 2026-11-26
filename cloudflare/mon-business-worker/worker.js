@@ -319,6 +319,155 @@ async function updateMember(request,env,user,body) {
 }
 
 
+
+function makeJoinCode() {
+  const bytes=crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("").toUpperCase();
+}
+async function createActivityJoinCode(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  await requireOwner(env,user,businessId);
+  const activityPath="businesses/"+businessId+"/activities/"+activityId;
+  const activity=await getDoc(env,activityPath);
+  if(!activity)throw new HttpError(404,"activity_not_found");
+  const code=makeJoinCode(),codeHash=await digest(code),now=new Date(),auditId=crypto.randomUUID();
+  await commit(env,[
+    writeDocument(activityPath,{joinCodeHash:codeHash,joinCodeUpdatedAt:now,updatedAt:now},activity.updateTime,true),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"activity.join_code.rotated",entityType:"activity",entityId:activityId,details:{activityId},occurredAt:now},"create")
+  ]);
+  return json({created:true,code,activityId});
+}
+async function submitActivityJoinRequest(env,user,body) {
+  const code=typeof body.code==="string"?body.code.trim().replace(/\\s/g,"").toUpperCase():"";
+  if(!/^[A-F0-9]{16}$/.test(code))throw new HttpError(400,"invalid_join_code");
+  const codeHash=await digest(code);
+  const businesses=await queryJoinCodeCandidates(env,codeHash);
+  if(businesses.length!==1)throw new HttpError(404,"join_code_unavailable");
+  const {businessId,activityId,activity}=businesses[0];
+  const member=await getDoc(env,"businesses/"+businessId+"/members/"+user.uid);
+  if(member?.data.status==="active" && member.data.activityIds?.includes(activityId))throw new HttpError(409,"already_has_activity_access");
+  const existing=await queryActivityCollection(env,businessId,activityId,"joinRequests");
+  if(existing.some(r=>r.requesterUid===user.uid&&r.status==="pending"))throw new HttpError(409,"join_request_pending");
+  const requestId=crypto.randomUUID(),now=new Date();
+  const requestRecord={businessId,activityId,activityName:activity.data.name||"",requesterUid:user.uid,requesterEmail:user.email,status:"pending",createdAt:now,updatedAt:now,schemaVersion:1};
+  const auditId=crypto.randomUUID();
+  await commit(env,[
+    writeDocument("businesses/"+businessId+"/activities/"+activityId+"/joinRequests/"+requestId,requestRecord,"create"),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"activity.join_request.created",entityType:"activity_join_request",entityId:requestId,details:{activityId},occurredAt:now},"create")
+  ]);
+  return json({submitted:true,requestId,businessName:(await getDoc(env,"businesses/"+businessId))?.data.name||"",activityName:requestRecord.activityName});
+}
+async function queryJoinCodeCandidates(env,codeHash) {
+  const token=await googleAccessToken(env);
+  const response=await fetch("https://firestore.googleapis.com/v1/projects/"+PROJECT_ID+"/databases/(default)/documents:runQuery",{
+    method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},
+    body:JSON.stringify({structuredQuery:{from:[{collectionId:"activities",allDescendants:true}],where:{fieldFilter:{field:{fieldPath:"joinCodeHash"},op:"EQUAL",value:{stringValue:codeHash}}},limit:2}})
+  });
+  if(!response.ok)throw new Error("firestore_query_failed");
+  const rows=await response.json();
+  return (Array.isArray(rows)?rows:[]).filter(row=>row.document?.name).map(row=>{
+    const parts=row.document.name.split("/");
+    return {businessId:parts[parts.indexOf("businesses")+1],activityId:parts[parts.indexOf("activities")+1],activity:decodeDocument(row.document)};
+  }).filter(row=>row.businessId&&row.activityId);
+}
+async function listActivityJoinRequests(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  await requireOwner(env,user,businessId);
+  const rows=await queryActivityCollection(env,businessId,activityId,"joinRequests");
+  return json({requests:rows.filter(r=>r.businessId===businessId&&r.activityId===activityId&&r.status==="pending").sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(r=>({requestId:r.id,requesterEmail:r.requesterEmail,createdAt:r.createdAt,activityName:r.activityName}))});
+}
+async function reviewActivityJoinRequest(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id"),requestId=assertId(body.requestId,"request_id");
+  await requireOwner(env,user,businessId);
+  if(!["approve","reject"].includes(body.decision))throw new HttpError(400,"invalid_join_decision");
+  const path="businesses/"+businessId+"/activities/"+activityId+"/joinRequests/"+requestId;
+  const request=await getDoc(env,path);
+  if(!request||request.data.businessId!==businessId||request.data.activityId!==activityId||request.data.status!=="pending")throw new HttpError(404,"join_request_unavailable");
+  const now=new Date(),auditId=crypto.randomUUID(),writes=[];
+  if(body.decision==="approve"){
+    const uid=assertId(request.data.requesterUid,"requester_uid");
+    const memberPath="businesses/"+businessId+"/members/"+uid;
+    const member=await getDoc(env,memberPath);
+    const current=member?.data;
+    if(current&&current.status!=="active")throw new HttpError(409,"membership_inactive_requires_owner_review");
+    if(current?.status==="active"&&current.activityIds?.includes(activityId))throw new HttpError(409,"already_has_activity_access");
+    if(current){
+      const activityIds=validateActivityIds([...(current.activityIds||[]),activityId]);
+      writes.push(writeDocument(memberPath,{activityIds,permissions:{...(current.permissions||{}),view:true},updatedAt:now},member.updateTime,true));
+    }else{
+      writes.push(writeDocument(memberPath,{uid,email:request.data.requesterEmail,role:"employee",status:"active",activityIds:[activityId],permissions:{view:true},createdAt:now,joinRequestId:requestId}, "create"));
+    }
+  }
+  writes.push(
+    writeDocument(path,{status:body.decision==="approve"?"approved":"rejected",reviewedByUid:user.uid,reviewedAt:now,updatedAt:now},request.updateTime,true),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"activity.join_request."+body.decision,entityType:"activity_join_request",entityId:requestId,details:{activityId,requesterUid:request.data.requesterUid},occurredAt:now},"create")
+  );
+  await commit(env,writes);
+  return json({reviewed:true,decision:body.decision});
+}
+
+
+
+async function listActivityMembers(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  await requireActivityAccess(env,user,businessId,activityId,"manage_access");
+  const parent="https://firestore.googleapis.com/v1/projects/"+PROJECT_ID+"/databases/(default)/documents/businesses/"+businessId;
+  const response=await fetch(parent+":runQuery",{method:"POST",headers:{authorization:"Bearer "+await googleAccessToken(env),"content-type":"application/json"},body:JSON.stringify({structuredQuery:{from:[{collectionId:"members"}],limit:200}})});
+  if(!response.ok)throw new Error("firestore_query_failed");
+  const rows=await response.json();
+  const members=(Array.isArray(rows)?rows:[]).filter(row=>row.document?.name).map(row=>({uid:row.document.name.split("/").pop(),...decodeDocument(row.document)}))
+    .filter(member=>member.status==="active"&&Array.isArray(member.activityIds)&&member.activityIds.includes(activityId))
+    .map(member=>({uid:member.uid,email:member.email||"",role:member.role}));
+  return json({members});
+}
+
+async function createActivityTask(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  await requireActivityAccess(env,user,businessId,activityId,"manage_access");
+  const title=typeof body.title==="string"?body.title.trim():"";
+  const description=typeof body.description==="string"?body.description.trim():"";
+  const assignedToUid=assertId(body.assignedToUid,"assigned_to_uid");
+  const dueDate=typeof body.dueDate==="string"?body.dueDate:"";
+  if(title.length<3||title.length>120)throw new HttpError(400,"invalid_task_title");
+  if(description.length>1000)throw new HttpError(400,"invalid_task_description");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)||Number.isNaN(Date.parse(dueDate+"T00:00:00.000Z"))||new Date(dueDate+"T00:00:00.000Z").toISOString().slice(0,10)!==dueDate)throw new HttpError(400,"invalid_task_due_date");
+  const member=await getDoc(env,"businesses/"+businessId+"/members/"+assignedToUid);
+  if(!member||member.data.status!=="active"||!member.data.activityIds?.includes(activityId))throw new HttpError(400,"assignee_not_active_in_activity");
+  const id=crypto.randomUUID(),now=new Date(),auditId=crypto.randomUUID();
+  const task={businessId,activityId,title,description,dueDate,assignedToUid,assignedToEmail:member.data.email||"",status:"assigned",createdByUid:user.uid,createdAt:now,updatedAt:now,schemaVersion:1};
+  await commit(env,[
+    writeDocument("businesses/"+businessId+"/activities/"+activityId+"/tasks/"+id,task,"create"),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"activity.task.assigned",entityType:"activity_task",entityId:id,details:{activityId,assignedToUid,dueDate},occurredAt:now},"create")
+  ]);
+  return json({created:true,task:{id,...task}});
+}
+async function listActivityTasks(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  const access=await requireActivityAccess(env,user,businessId,activityId,"view");
+  const rows=await queryActivityCollection(env,businessId,activityId,"tasks");
+  const isManager=access.member.role==="owner"||access.member.permissions?.manage_access===true;
+  const tasks=rows.filter(t=>t.businessId===businessId&&t.activityId===activityId&&(isManager||t.assignedToUid===user.uid))
+    .sort((a,b)=>String(a.dueDate||"").localeCompare(String(b.dueDate||"")))
+    .map(t=>({id:t.id,title:t.title,description:t.description,dueDate:t.dueDate,status:t.status,assignedToUid:t.assignedToUid,assignedToEmail:t.assignedToEmail}));
+  return json({tasks});
+}
+async function updateActivityTaskStatus(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id"),taskId=assertId(body.taskId,"task_id");
+  if(!["in_progress","completed"].includes(body.status))throw new HttpError(400,"invalid_task_status");
+  await requireActivityAccess(env,user,businessId,activityId,"view");
+  const path="businesses/"+businessId+"/activities/"+activityId+"/tasks/"+taskId;
+  const task=await getDoc(env,path);
+  if(!task||task.data.businessId!==businessId||task.data.activityId!==activityId)throw new HttpError(404,"task_not_found");
+  if(task.data.assignedToUid!==user.uid)throw new HttpError(403,"task_assignee_required");
+  if(task.data.status==="completed")throw new HttpError(409,"task_already_completed");
+  const now=new Date(),auditId=crypto.randomUUID();
+  await commit(env,[
+    writeDocument(path,{status:body.status,updatedAt:now},task.updateTime,true),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"activity.task.status_updated",entityType:"activity_task",entityId:taskId,details:{activityId,status:body.status},occurredAt:now},"create")
+  ]);
+  return json({updated:true,status:body.status});
+}
+
 async function requireActivityAccess(env,user,businessId,activityId,permission="view") {
   const business=await getDoc(env,"businesses/"+businessId);
   const member=await getDoc(env,"businesses/"+businessId+"/members/"+user.uid);
@@ -743,7 +892,15 @@ export default {
       const user=await authenticate(request,env);
       await enforceRateLimit(env.USER_RATE_LIMITER,user.uid);
       let response;
-      if (url.pathname==="/v1/invitations") response=await createInvitation(request,env,user,body);
+      if (url.pathname==="/v1/activities/members/list") response=await listActivityMembers(env,user,body);
+      else if (url.pathname==="/v1/activities/tasks/create") response=await createActivityTask(env,user,body);
+      else if (url.pathname==="/v1/activities/tasks/list") response=await listActivityTasks(env,user,body);
+      else if (url.pathname==="/v1/activities/tasks/update-status") response=await updateActivityTaskStatus(env,user,body);
+      else if (url.pathname==="/v1/activities/join-code/create") response=await createActivityJoinCode(env,user,body);
+      else if (url.pathname==="/v1/activities/join-requests/create") response=await submitActivityJoinRequest(env,user,body);
+      else if (url.pathname==="/v1/activities/join-requests/list") response=await listActivityJoinRequests(env,user,body);
+      else if (url.pathname==="/v1/activities/join-requests/review") response=await reviewActivityJoinRequest(env,user,body);
+      else if (url.pathname==="/v1/invitations") response=await createInvitation(request,env,user,body);
       else if (url.pathname==="/v1/finance/cash-registers/create") response=await createCashRegister(env,user,body);
       else if (url.pathname==="/v1/finance/cash-registers/list") response=await listCashRegisters(env,user,body);
       else if (url.pathname==="/v1/finance/cash-registers/close") response=await closeCashRegister(env,user,body);
@@ -772,4 +929,4 @@ export default {
   }
 };
 
-export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, listInvitations, summarizeFinanceTransactions, collectQueryPages, reconcileStatementLines, calculateCashRegisterBalance };
+export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, listInvitations, summarizeFinanceTransactions, collectQueryPages, reconcileStatementLines, calculateCashRegisterBalance, makeJoinCode };
