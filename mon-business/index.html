@@ -561,14 +561,33 @@
           row.textContent="Ligne "+(index+2)+" · "+line.date+" · "+line.amountXof+" FCFA · "+line.status+" · "+line.reviewStatus;
           card.append(row);
           if(line.reviewStatus==="pending"){
-            for(const decision of (line.status==="ambiguous"?["reject"]:["confirm","reject"])){
-              const action=document.createElement("button");action.type="button";action.className="secondary";
-              action.textContent=decision==="confirm"?(line.status==="matched"?"Confirmer la correspondance":"Marquer comme vérifiée"):"Rejeter";
-              action.addEventListener("click",async()=>{
-                try{await callWorker("/v1/finance/reconciliation/resolve",{businessId:currentBusinessId,activityId,reconciliationId:record.id,lineIndex:index,decision});await loadReconciliationHistory();}
-                catch(error){setStatus("reconciliationSummary","Validation impossible : "+error.message,true);}
+            if(line.status==="ambiguous"){
+              const candidates=document.createElement("select");candidates.setAttribute("aria-label","Choisir l'opération correspondant à cette ligne");
+              const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent="Sélectionner la bonne opération";candidates.append(placeholder);
+              (line.candidates||[]).forEach(candidate=>{
+                const option=document.createElement("option");option.value=candidate.id;
+                option.textContent=candidate.date+" · "+Number(candidate.amountXof).toLocaleString("fr-FR")+" FCFA · "+(candidate.reference||"Sans référence")+" · "+(candidate.paymentMethod||"Moyen inconnu")+" · "+candidate.type;
+                candidates.append(option);
               });
-              row.append(action);
+              const assign=document.createElement("button");assign.type="button";assign.className="secondary";assign.textContent="Associer cette opération";
+              assign.disabled=!(line.candidates||[]).length;
+              assign.addEventListener("click",async()=>{
+                if(!candidates.value)return setStatus("reconciliationSummary","Choisissez une opération avant de confirmer.",true);
+                assign.disabled=true;
+                try{await callWorker("/v1/finance/reconciliation/resolve",{businessId:currentBusinessId,activityId,reconciliationId:record.id,lineIndex:index,decision:"assign",transactionId:candidates.value});await loadReconciliationHistory();}
+                catch(error){setStatus("reconciliationSummary","Association impossible : "+error.message,true);assign.disabled=false;}
+              });
+              row.append(candidates,assign);
+            }else{
+              for(const decision of ["confirm","reject"]){
+                const action=document.createElement("button");action.type="button";action.className="secondary";
+                action.textContent=decision==="confirm"?"Confirmer la correspondance":"Rejeter";
+                action.addEventListener("click",async()=>{
+                  try{await callWorker("/v1/finance/reconciliation/resolve",{businessId:currentBusinessId,activityId,reconciliationId:record.id,lineIndex:index,decision});await loadReconciliationHistory();}
+                  catch(error){setStatus("reconciliationSummary","Validation impossible : "+error.message,true);}
+                });
+                row.append(action);
+              }
             }
           }
         });

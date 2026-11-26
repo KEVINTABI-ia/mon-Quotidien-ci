@@ -509,8 +509,18 @@ async function createFinanceReconciliation(env,user,body) {
 async function listFinanceReconciliations(env,user,body) {
   const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
   await requireActivityAccess(env,user,businessId,activityId,"view");
-  const rows=await queryActivityCollection(env,businessId,activityId,"reconciliations");
-  return json({reconciliations:rows.filter(x=>x.businessId===businessId&&x.activityId===activityId).sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||""))).map(x=>({id:x.id,status:x.status,createdAt:x.createdAt,summary:x.summary,lines:x.lines}))});
+  const [rows,transactions]=await Promise.all([
+    queryActivityCollection(env,businessId,activityId,"reconciliations"),
+    queryActivityCollection(env,businessId,activityId,"transactions")
+  ]);
+  const byId=new Map(transactions.filter(tx=>tx.businessId===businessId&&tx.activityId===activityId).map(tx=>[tx.id,tx]));
+  return json({reconciliations:rows.filter(x=>x.businessId===businessId&&x.activityId===activityId).sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||""))).map(x=>({
+    id:x.id,status:x.status,createdAt:x.createdAt,summary:x.summary,
+    lines:(x.lines||[]).map(line=>({...line,candidates:(line.status==="ambiguous"?(line.candidateTransactionIds||[]).map(id=>byId.get(id)).filter(Boolean):[]).map(tx=>({
+      id:tx.id,date:String(tx.executedAt||tx.createdAt||"").slice(0,10),amountXof:tx.amountMinor,
+      reference:tx.reference||"",paymentMethod:tx.paymentMethod||"",type:tx.type||""
+    }))}))
+  }))});
 }
 async function resolveFinanceReconciliation(env,user,body) {
   const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
@@ -521,15 +531,51 @@ async function resolveFinanceReconciliation(env,user,body) {
   if(!doc||doc.data.businessId!==businessId||doc.data.activityId!==activityId)throw new HttpError(404,"reconciliation_not_found");
   const index=body.lineIndex;
   if(!Number.isInteger(index)||index<0||index>=doc.data.lines.length)throw new HttpError(400,"invalid_line_index");
-  if(!["confirm","reject"].includes(body.decision))throw new HttpError(400,"invalid_reconciliation_decision");
-  const now=new Date();
-  const lines=doc.data.lines.map((line,i)=>i===index?{...line,reviewStatus:body.decision==="confirm"?"confirmed":"rejected",reviewedByUid:user.uid,reviewedAt:now.toISOString()}:line);
-  const pending=lines.some(line=>line.reviewStatus==="pending"),auditId=crypto.randomUUID();
-  await commit(env,[
-    writeDocument(path,{lines,status:pending?"pending":"reviewed",updatedAt:now},doc.updateTime,true),
-    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"finance.reconciliation.line_reviewed",entityType:"reconciliation",entityId:reconciliationId,details:{activityId,lineIndex:index,decision:body.decision},occurredAt:now},"create")
-  ]);
-  return json({updated:true,lineIndex:index,reviewStatus:body.decision==="confirm"?"confirmed":"rejected",status:pending?"pending":"reviewed"});
+  if(!["confirm","reject","assign"].includes(body.decision))throw new HttpError(400,"invalid_reconciliation_decision");
+  const target=doc.data.lines[index];
+  if(target.reviewStatus!=="pending")throw new HttpError(409,"line_already_reviewed");
+  const now=new Date(),auditId=crypto.randomUUID(),writes=[];
+  let selectedTransactionId=null;
+  if(body.decision==="assign"){
+    selectedTransactionId=assertId(body.transactionId,"transaction_id");
+    if(target.status!=="ambiguous"||!Array.isArray(target.candidateTransactionIds)||!target.candidateTransactionIds.includes(selectedTransactionId))throw new HttpError(400,"transaction_not_a_candidate");
+    if((doc.data.lines||[]).some((line,i)=>i!==index&&line.transactionId===selectedTransactionId&&line.reviewStatus!=="rejected"))throw new HttpError(409,"transaction_already_used_in_reconciliation");
+    const txPath="businesses/"+businessId+"/activities/"+activityId+"/transactions/"+selectedTransactionId;
+    const txDoc=await getDoc(env,txPath);
+    if(!txDoc||txDoc.data.businessId!==businessId||txDoc.data.activityId!==activityId||txDoc.data.status!=="executed")throw new HttpError(409,"transaction_not_eligible");
+    if(txDoc.data.amountMinor!==target.amountXof||String(txDoc.data.executedAt||txDoc.data.createdAt||"").slice(0,10)!==target.date)throw new HttpError(409,"transaction_no_longer_matches");
+    if(target.paymentMethod&&normalizeFinanceMatchText(txDoc.data.paymentMethod)!==normalizeFinanceMatchText(target.paymentMethod))throw new HttpError(409,"transaction_no_longer_matches");
+    if(target.reference&&normalizeFinanceMatchText(txDoc.data.reference)!==normalizeFinanceMatchText(target.reference)){
+      // A reference is used as a disambiguator when supplied; do not permit an incompatible candidate.
+      throw new HttpError(409,"transaction_no_longer_matches");
+    }
+    if(txDoc.data.reconciliationClaim && txDoc.data.reconciliationClaim.reconciliationId!==reconciliationId)throw new HttpError(409,"transaction_already_reconciled");
+    const allReconciliations=await queryActivityCollection(env,businessId,activityId,"reconciliations");
+    const usedElsewhere=allReconciliations.some(record=>(record.lines||[]).some((line,lineNo)=>(
+      !(record.id===reconciliationId&&lineNo===index)&&line.transactionId===selectedTransactionId&&line.reviewStatus!=="rejected"
+    )));
+    if(usedElsewhere)throw new HttpError(409,"transaction_already_reconciled");
+    // This conditional update is the concurrency guard: two simultaneous claims on the same transaction cannot both commit.
+    writes.push(writeDocument(txPath,{reconciliationClaim:{reconciliationId,lineIndex:index,claimedByUid:user.uid,claimedAt:now}},txDoc.updateTime,true));
+  }
+  const lines=doc.data.lines.map((line,i)=>i===index?{
+    ...line,
+    ...(body.decision==="assign"?{status:"matched",transactionId:selectedTransactionId,manuallyMatched:true}:{}),
+    reviewStatus:body.decision==="reject"?"rejected":"confirmed",reviewedByUid:user.uid,reviewedAt:now.toISOString()
+  }:line);
+  const pending=lines.some(line=>line.reviewStatus==="pending");
+  const summary={
+    total:lines.length,
+    matched:lines.filter(line=>line.status==="matched").length,
+    unmatched:lines.filter(line=>line.status==="unmatched").length,
+    ambiguous:lines.filter(line=>line.status==="ambiguous").length
+  };
+  writes.push(
+    writeDocument(path,{lines,summary,status:pending?"pending":"reviewed",updatedAt:now},doc.updateTime,true),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:body.decision==="assign"?"finance.reconciliation.ambiguous_assigned":"finance.reconciliation.line_reviewed",entityType:"reconciliation",entityId:reconciliationId,details:{activityId,lineIndex:index,decision:body.decision,transactionId:selectedTransactionId},occurredAt:now},"create")
+  );
+  await commit(env,writes);
+  return json({updated:true,lineIndex:index,transactionId:selectedTransactionId,reviewStatus:body.decision==="reject"?"rejected":"confirmed",status:pending?"pending":"reviewed",summary});
 }
 
 async function previewFinanceReconciliation(env,user,body) {
