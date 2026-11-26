@@ -128,7 +128,28 @@
       <button id="financeSubmit" type="submit">Enregistrer en attente</button>
     </form>
     <div id="financeTransactionStatus" class="status hidden" role="status" aria-live="polite"></div>
-    <h3>Journal financier</h3><div id="financeBalances" class="muted"></div><div id="financeTransactionsList" class="muted">Sélectionnez une activité.</div>
+    <hr>
+    <h3>Tableau de bord financier</h3>
+    <p class="muted">Les indicateurs comptabilisent uniquement les opérations exécutées. Les transferts ne sont pas des recettes ni des dépenses.</p>
+    <div class="grid" id="financeKpis">
+      <div class="status"><span class="muted">Solde total des caisses</span><h2 id="kpiBalance">— FCFA</h2></div>
+      <div class="status"><span class="muted">Recettes exécutées</span><h2 id="kpiIncome">— FCFA</h2></div>
+      <div class="status"><span class="muted">Dépenses exécutées</span><h2 id="kpiExpense">— FCFA</h2></div>
+      <div class="status"><span class="muted">Résultat net</span><h2 id="kpiResult">— FCFA</h2></div>
+    </div>
+    <div class="grid">
+      <div><label for="financeDateFrom">Du</label><input id="financeDateFrom" type="date"></div>
+      <div><label for="financeDateTo">Au</label><input id="financeDateTo" type="date"></div>
+      <div><label for="financeFilterType">Type d'opération</label><select id="financeFilterType"><option value="all">Tous les types</option><option value="income">Recettes</option><option value="expense">Dépenses</option><option value="transfer">Transferts</option></select></div>
+      <div><label for="financeFilterRegister">Caisse</label><select id="financeFilterRegister"><option value="all">Toutes les caisses</option></select></div>
+    </div>
+    <div class="grid" style="margin:12px 0"><button type="button" id="financeApplyFilters">Appliquer les filtres</button><button type="button" id="financeResetFilters" class="secondary">Réinitialiser</button></div>
+    <div class="status"><strong>Évolution recettes / dépenses</strong><div id="financeChart" style="display:grid;gap:10px;margin-top:12px">Les données apparaîtront après sélection d'une activité.</div></div>
+    <div class="grid"><div class="status"><span class="muted">Opérations en attente</span><h3 id="kpiPending">—</h3></div><div class="status"><span class="muted">Opérations exécutées</span><h3 id="kpiExecuted">—</h3></div></div>
+    <div class="grid" style="margin:12px 0"><button type="button" id="financeExportCsv" class="secondary">Exporter le journal CSV</button><button type="button" id="financeExportReport">Exporter le rapport CSV</button></div>
+    <div id="financeReportStatus" class="status hidden" role="status" aria-live="polite"></div>
+    <h3>Soldes des caisses</h3><div id="financeBalances" class="muted"></div>
+    <h3>Journal financier</h3><div id="financeTransactionsList" class="muted">Sélectionnez une activité.</div>
   </section>
 
   <section id="activityCard" class="card hidden">
@@ -397,25 +418,65 @@
     try{await callWorker("/v1/finance/transactions/create",payload);$("financeAmount").value="";$("financeReason").value="";$("financeReference").value="";setStatus("financeTransactionStatus","Opération enregistrée en attente d'approbation. Aucun solde n'a été modifié.");await loadFinanceTransactions();}
     catch(error){setStatus("financeTransactionStatus","Enregistrement impossible : "+error.message,true);}finally{button.disabled=false;}
   });
+  let financeReportRows=[];
+  const fcfa=value=>Number(value||0).toLocaleString("fr-FR")+" FCFA";
+  const csvCell=value=>'"'+String(value??"").replace(/"/g,'""')+'"';
+  function exportFinanceCsv(kind){
+    if(!financeReportRows.length)return setStatus("financeReportStatus","Aucune opération à exporter.",true);
+    const rows=kind==="report"?[
+      ["Indicateur","Montant FCFA"],
+      ["Solde total des caisses",$("kpiBalance").dataset.value||0],
+      ["Recettes exécutées",$("kpiIncome").dataset.value||0],
+      ["Dépenses exécutées",$("kpiExpense").dataset.value||0],
+      ["Résultat net",$("kpiResult").dataset.value||0]
+    ]:[["Date","Type","Montant FCFA","Statut","Caisse","Motif","Référence","Moyen de paiement"],
+      ...financeReportRows.map(tx=>[tx.createdAt,tx.type,tx.amountMinor,tx.status,financeRegisters.find(r=>r.id===tx.cashRegisterId)?.name||tx.cashRegisterId,tx.reason,tx.reference,tx.paymentMethod])];
+    const csv="\\uFEFF"+rows.map(row=>row.map(csvCell).join(";")).join("\\r\\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download=kind==="report"?"rapport-financier.csv":"journal-financier.csv";a.click();URL.revokeObjectURL(url);
+    setStatus("financeReportStatus","Export CSV généré.");
+  }
   async function loadFinanceTransactions(){
     const activityId=$("financeActivity").value;if(!currentUser||!currentBusinessId||!activityId)return;
     const list=$("financeTransactionsList");list.textContent="Chargement du journal…";
     try{
-      const result=await callWorker("/v1/finance/transactions/list",{businessId:currentBusinessId,activityId});
+      const payload={businessId:currentBusinessId,activityId,dateFrom:$("financeDateFrom").value||null,dateTo:$("financeDateTo").value||null,type:$("financeFilterType").value,cashRegisterId:$("financeFilterRegister").value||"all"};
+      const result=await callWorker("/v1/finance/transactions/list",payload);
+      const rows=Array.isArray(result.transactions)?result.transactions:[];
+      financeReportRows=rows;
+      const summary=result.summary||{};
+      [["kpiBalance",summary.totalBalanceMinor],["kpiIncome",summary.incomeMinor],["kpiExpense",summary.expenseMinor],["kpiResult",summary.resultMinor]].forEach(([id,value])=>{$(id).textContent=fcfa(value);$(id).dataset.value=String(value||0);});
+      $("kpiPending").textContent=String(summary.pendingCount||0);
+      $("kpiExecuted").textContent=String(summary.executedCount||0);
       $("financeBalances").replaceChildren();
-      financeRegisters.forEach(register=>{const p=document.createElement("p");p.textContent=register.name+" : "+Number(result.balances?.[register.id]??register.openingBalanceMinor??0).toLocaleString("fr-FR")+" FCFA";$("financeBalances").append(p);});
-      list.replaceChildren();const rows=Array.isArray(result.transactions)?result.transactions:[];
-      if(!rows.length){list.textContent="Aucune opération enregistrée.";return;}
+      financeRegisters.forEach(register=>{const p=document.createElement("p");p.textContent=register.name+" : "+fcfa(result.balances?.[register.id]??register.openingBalanceMinor??0);$("financeBalances").append(p);});
+      const chart=$("financeChart");chart.replaceChildren();
+      const max=Math.max(1,summary.incomeMinor||0,summary.expenseMinor||0);
+      [["Recettes",summary.incomeMinor||0],["Dépenses",summary.expenseMinor||0]].forEach(([label,value])=>{
+        const wrap=document.createElement("div"),line=document.createElement("div"),fill=document.createElement("div"),caption=document.createElement("div");
+        caption.textContent=label+" · "+fcfa(value);line.style.cssText="height:12px;background:#e8eee9;border-radius:20px;overflow:hidden";
+        fill.style.cssText="height:12px;width:"+Math.max(0,Math.min(100,value/max*100))+"%;background:"+(label==="Recettes"?"#16865b":"#d97735")+";border-radius:20px";
+        line.append(fill);wrap.append(caption,line);chart.append(wrap);
+      });
+      list.replaceChildren();
+      if(!rows.length)list.textContent="Aucune opération pour ces filtres.";
       rows.forEach(tx=>{
         const item=document.createElement("div");item.className="status";
-        const label=document.createElement("strong");label.textContent=(tx.type==="income"?"Recette":tx.type==="expense"?"Dépense":"Transfert")+" · "+Number(tx.amountMinor).toLocaleString("fr-FR")+" FCFA · "+tx.status;
-        const detail=document.createElement("p");detail.textContent=(tx.reason||"")+" · Réf. "+(tx.reference||"");item.append(label,detail);
+        const label=document.createElement("strong");label.textContent=(tx.type==="income"?"Recette":tx.type==="expense"?"Dépense":"Transfert")+" · "+fcfa(tx.amountMinor)+" · "+tx.status;
+        const detail=document.createElement("p");detail.textContent=(tx.reason||"")+" · Réf. "+(tx.reference||"")+" · "+(tx.createdAt?new Date(tx.createdAt).toLocaleString("fr-FR"):"");
+        item.append(label,detail);
         if(tx.status==="pending"&&currentBusinessOwner){const b=document.createElement("button");b.type="button";b.className="secondary";b.textContent="Approuver";b.addEventListener("click",()=>financeTransition(tx.id,"approve"));item.append(b);}
         if(tx.status==="approved"&&currentBusinessOwner){const b=document.createElement("button");b.type="button";b.className="secondary";b.textContent="Exécuter";b.addEventListener("click",()=>financeTransition(tx.id,"execute"));item.append(b);}
         list.append(item);
       });
+      if(result.limited)setStatus("financeReportStatus","Attention : les 200 opérations les plus récentes sont prises en compte. Affinez la période pour un rapport plus précis.");
     }catch(error){list.textContent="Journal indisponible : "+error.message;}
   }
+  $("financeApplyFilters").addEventListener("click",loadFinanceTransactions);
+  $("financeResetFilters").addEventListener("click",()=>{$("financeDateFrom").value="";$("financeDateTo").value="";$("financeFilterType").value="all";$("financeFilterRegister").value="all";loadFinanceTransactions();});
+  $("financeExportCsv").addEventListener("click",()=>exportFinanceCsv("journal"));
+  $("financeExportReport").addEventListener("click",()=>exportFinanceCsv("report"));
   async function financeTransition(transactionId,action){
     try{await callWorker("/v1/finance/transactions/"+(action==="approve"?"approve":"execute"),{businessId:currentBusinessId,activityId:$("financeActivity").value,transactionId});setStatus("financeTransactionStatus",action==="approve"?"Opération approuvée. Le solde reste inchangé jusqu'à son exécution.":"Opération exécutée. Les soldes ont été recalculés.");await loadFinanceTransactions();}
     catch(error){setStatus("financeTransactionStatus","Action impossible : "+error.message,true);}
@@ -450,8 +511,10 @@
       const rows=Array.isArray(result.cashRegisters)?result.cashRegisters:[];
       if(!rows.length){list.textContent="Aucune caisse pour cette activité.";return;}
       financeRegisters=rows;
-      const sourceSelect=$("financeCashRegister"),destinationSelect=$("financeDestination");
+      const sourceSelect=$("financeCashRegister"),destinationSelect=$("financeDestination"),filterSelect=$("financeFilterRegister");
       [sourceSelect,destinationSelect].forEach(select=>{select.replaceChildren();rows.forEach(register=>{const option=document.createElement("option");option.value=register.id;option.textContent=register.name;select.append(option);});});
+      const selectedFilter=filterSelect.value||"all";filterSelect.replaceChildren();const allOption=document.createElement("option");allOption.value="all";allOption.textContent="Toutes les caisses";filterSelect.append(allOption);
+      rows.forEach(register=>{const option=document.createElement("option");option.value=register.id;option.textContent=register.name;filterSelect.append(option);});filterSelect.value=rows.some(r=>r.id===selectedFilter)?selectedFilter:"all";
       if(rows.length>1)destinationSelect.value=rows.find(register=>register.id!==sourceSelect.value)?.id||"";
       rows.forEach(register=>{
         const item=document.createElement("div");item.className="status";
