@@ -631,10 +631,11 @@
       if(!rows.length){list.textContent="Aucune caisse pour cette activité.";return;}
       financeRegisters=rows;
       const sourceSelect=$("financeCashRegister"),destinationSelect=$("financeDestination"),filterSelect=$("financeFilterRegister");
-      [sourceSelect,destinationSelect].forEach(select=>{select.replaceChildren();rows.forEach(register=>{const option=document.createElement("option");option.value=register.id;option.textContent=register.name;select.append(option);});});
+      const openRows=rows.filter(register=>register.status!=="closed");
+      [sourceSelect,destinationSelect].forEach(select=>{select.replaceChildren();openRows.forEach(register=>{const option=document.createElement("option");option.value=register.id;option.textContent=register.name;select.append(option);});});
       const selectedFilter=filterSelect.value||"all";filterSelect.replaceChildren();const allOption=document.createElement("option");allOption.value="all";allOption.textContent="Toutes les caisses";filterSelect.append(allOption);
       rows.forEach(register=>{const option=document.createElement("option");option.value=register.id;option.textContent=register.name;filterSelect.append(option);});filterSelect.value=rows.some(r=>r.id===selectedFilter)?selectedFilter:"all";
-      if(rows.length>1)destinationSelect.value=rows.find(register=>register.id!==sourceSelect.value)?.id||"";
+      if(openRows.length>1)destinationSelect.value=openRows.find(register=>register.id!==sourceSelect.value)?.id||"";
       rows.forEach(register=>{
         const item=document.createElement("div");item.className="status";
         const title=document.createElement("strong");
