@@ -1794,6 +1794,47 @@ describe("Mon Transport CI — règles Firestore", function () {
       }));
     });
   });
+
+  describe("MON BUSINESS — secrets et données d’abonnement", () => {
+    const COMPANY_ID = "a".repeat(64);
+    const OWNER_UID = "mon-business-owner-security-test";
+
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        await context.firestore().doc("mon_business_companies/" + COMPANY_ID).set({
+          uid: OWNER_UID,
+          companyName: "Entreprise test",
+          passwordSalt: "salt-test",
+          passwordHash: "hash-test",
+          status: "trial",
+          trialUsed: true
+        });
+        await context.firestore().doc("mon_business_trial_claims/" + "b".repeat(64)).set({
+          uid: OWNER_UID,
+          companyId: COMPANY_ID
+        });
+      });
+    });
+
+    it("interdit même au propriétaire la lecture directe du document entreprise contenant le hachage", async () => {
+      const { doc, getDoc } = require("firebase/firestore");
+      const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+      const outsiderDb = testEnv.authenticatedContext("mon-business-outsider-security-test").firestore();
+      await assertFails(getDoc(doc(ownerDb, "mon_business_companies", COMPANY_ID)));
+      await assertFails(getDoc(doc(outsiderDb, "mon_business_companies", COMPANY_ID)));
+    });
+
+    it("interdit toute lecture et écriture directe des réservations d’essai", async () => {
+      const { doc, getDoc, setDoc } = require("firebase/firestore");
+      const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+      const claimId = "b".repeat(64);
+      await assertFails(getDoc(doc(ownerDb, "mon_business_trial_claims", claimId)));
+      await assertFails(setDoc(doc(ownerDb, "mon_business_trial_claims", "c".repeat(64)), {
+        uid: OWNER_UID, companyId: COMPANY_ID
+      }));
+    });
+  });
+
   });
 
 });

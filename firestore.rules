@@ -121,8 +121,9 @@ service cloud.firestore {
 
     // MON BUSINESS : les données commerciales et les droits d'abonnement sont gérés exclusivement par le Worker authentifié.
     match /mon_business_companies/{companyId} {
-      allow read: if estConnecte() && resource.data.uid == request.auth.uid;
-      allow create, update, delete: if false;
+      // Toutes les lectures et écritures passent par le Worker de confiance :
+      // les documents contiennent notamment le sel et le hachage du mot de passe.
+      allow read, create, update, delete: if false;
     }
     match /mon_business_trial_claims/{claimId} {
       allow read, write: if false;
