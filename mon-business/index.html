@@ -431,7 +431,7 @@
       ["Résultat net",$("kpiResult").dataset.value||0]
     ]:[["Date","Type","Montant FCFA","Statut","Caisse","Motif","Référence","Moyen de paiement"],
       ...financeReportRows.map(tx=>[tx.createdAt,tx.type,tx.amountMinor,tx.status,financeRegisters.find(r=>r.id===tx.cashRegisterId)?.name||tx.cashRegisterId,tx.reason,tx.reference,tx.paymentMethod])];
-    const csv="\\uFEFF"+rows.map(row=>row.map(csvCell).join(";")).join("\\r\\n");
+    const csv="\uFEFF"+rows.map(row=>row.map(csvCell).join(";")).join("\r\n");
     const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
     const url=URL.createObjectURL(blob),a=document.createElement("a");
     a.href=url;a.download=kind==="report"?"rapport-financier.csv":"journal-financier.csv";a.click();URL.revokeObjectURL(url);
