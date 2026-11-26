@@ -97,7 +97,8 @@ test("la lecture paginée accepte exactement le plafond sans marquer le rapport 
   assert.equal(rows.length,5000);
 });
 
-\ntest("le rapprochement associe une ligne à une opération exécutée avec date, montant et référence",()=>{
+
+test("le rapprochement associe une ligne à une opération exécutée avec date, montant et référence",()=>{
   const result=reconcileStatementLines([{date:"2026-11-25",amountXof:2500,reference:"REC-01",paymentMethod:"wave"}],[
     {id:"tx-1",status:"executed",amountMinor:2500,createdAt:"2026-11-25T09:00:00.000Z",reference:"REC-01",paymentMethod:"wave"}
   ]);
@@ -127,7 +128,8 @@ test("le rapprochement ignore les opérations en attente et valide les montants"
   assert.throws(()=>reconcileStatementLines([{date:"25/11/2026",amountXof:1000}],[]),/invalid_statement_line/);
 });
 
-\ntest("le prévisualiseur de rapprochement retourne les statuts sans écrire de transaction",()=>{
+
+test("le prévisualiseur de rapprochement retourne les statuts sans écrire de transaction",()=>{
   const lines=[{date:"2026-11-26",amountXof:2500,reference:"REF-1",paymentMethod:"wave"}];
   const transactions=[{id:"tx-1",status:"executed",amountMinor:2500,createdAt:"2026-11-26T10:00:00.000Z",reference:"REF-1",paymentMethod:"wave"}];
   const result=reconcileStatementLines(lines,transactions);
