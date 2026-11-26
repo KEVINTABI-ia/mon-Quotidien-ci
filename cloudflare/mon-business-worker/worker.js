@@ -332,6 +332,18 @@ async function queryActivityCollection(env,businessId,activityId,collectionId) {
   return rows.filter(row=>row.document?.name).map(row=>({id:row.document.name.split("/").pop(),...decodeDocument(row.document)}));
 }
 
+function calculateCashRegisterBalance(transactions,cashRegisterId,openingBalanceMinor=0) {
+  if(!Number.isSafeInteger(openingBalanceMinor)||openingBalanceMinor<0)throw new TypeError("invalid_opening_balance");
+  let balance=openingBalanceMinor;
+  for(const tx of transactions||[]){
+    if(tx.status!=="executed")continue;
+    if(tx.cashRegisterId===cashRegisterId)balance+=tx.type==="income"?tx.amountMinor:-tx.amountMinor;
+    if(tx.type==="transfer"&&tx.destinationCashRegisterId===cashRegisterId)balance+=tx.amountMinor;
+  }
+  if(!Number.isSafeInteger(balance))throw new TypeError("invalid_cash_register_balance");
+  return balance;
+}
+
 async function closeCashRegister(env,user,body) {
   const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id"),cashRegisterId=assertId(body.cashRegisterId,"cash_register_id");
   await requireActivityAccess(env,user,businessId,activityId,"approve");
@@ -342,12 +354,7 @@ async function closeCashRegister(env,user,body) {
   if(!doc||doc.data.businessId!==businessId||doc.data.activityId!==activityId)throw new HttpError(404,"cash_register_not_found");
   if(doc.data.status!=="active")throw new HttpError(409,"cash_register_not_open");
   const transactions=await queryActivityCollection(env,businessId,activityId,"transactions");
-  let theoreticalBalance=doc.data.openingBalanceMinor||0;
-  for(const tx of transactions){
-    if(tx.status!=="executed")continue;
-    if(tx.cashRegisterId===cashRegisterId)theoreticalBalance+=tx.type==="income"?tx.amountMinor:-tx.amountMinor;
-    if(tx.type==="transfer"&&tx.destinationCashRegisterId===cashRegisterId)theoreticalBalance+=tx.amountMinor;
-  }
+  const theoreticalBalance=calculateCashRegisterBalance(transactions,cashRegisterId,doc.data.openingBalanceMinor||0);
   if(!Number.isSafeInteger(theoreticalBalance)||theoreticalBalance<0)throw new HttpError(409,"invalid_theoretical_balance");
   const now=new Date(),closureId=crypto.randomUUID(),auditId=crypto.randomUUID();
   const differenceXof=countedBalanceXof-theoreticalBalance;
@@ -429,10 +436,18 @@ async function createFinanceTransaction(env,user,body) {
   const id=crypto.randomUUID(),now=new Date();
   const record={...tx,currency:"XOF",status:"pending",createdAt:now,updatedAt:now,approvedByUid:null,approvedAt:null,executedByUid:null,executedAt:null};
   const auditId=crypto.randomUUID();
-  await commit(env,[
+  const writes=[
     writeDocument("businesses/"+tx.businessId+"/activities/"+tx.activityId+"/transactions/"+id,record,"create"),
+    // Version-fence the register(s): a concurrent close/reopen must conflict
+    // with any operation being created against that register.
+    writeDocument(sourcePath,{updatedAt:now},source.updateTime,true),
     writeDocument("businesses/"+tx.businessId+"/auditLogs/"+auditId,{businessId:tx.businessId,actorUid:user.uid,action:"finance.transaction.created",entityType:"transaction",entityId:id,details:{activityId:tx.activityId,type:tx.type,amountMinor:tx.amountMinor,status:"pending"},occurredAt:now},"create")
-  ]);
+  ];
+  if(destination){
+    const destinationPath="businesses/"+tx.businessId+"/activities/"+tx.activityId+"/cashRegisters/"+tx.destinationCashRegisterId;
+    writes.push(writeDocument(destinationPath,{updatedAt:now},destination.updateTime,true));
+  }
+  await commit(env,writes);
   return json({created:true,transaction:{id,...record}});
 }
 async function transitionFinanceTransaction(env,user,body,nextStatus) {
@@ -655,13 +670,7 @@ async function listFinanceTransactions(env,user,body) {
   const active=registers.filter(r=>["active","closed"].includes(r.status));
   const balances={};
   for(const reg of active){
-    let value=reg.openingBalanceMinor||0;
-    for(const tx of transactions){
-      if(tx.status!=="executed")continue;
-      if(tx.cashRegisterId===reg.id)value+=tx.type==="income"?tx.amountMinor:-tx.amountMinor;
-      if(tx.type==="transfer"&&tx.destinationCashRegisterId===reg.id)value+=tx.amountMinor;
-    }
-    balances[reg.id]=value;
+    balances[reg.id]=calculateCashRegisterBalance(transactions,reg.id,reg.openingBalanceMinor||0);
   }
   const all=transactions.filter(t=>t.businessId===businessId&&t.activityId===activityId);
   const dateFrom=body.dateFrom==null?"":String(body.dateFrom),dateTo=body.dateTo==null?"":String(body.dateTo);
@@ -742,4 +751,4 @@ export default {
   }
 };
 
-export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, listInvitations, summarizeFinanceTransactions, collectQueryPages, reconcileStatementLines };
+export { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, listInvitations, summarizeFinanceTransactions, collectQueryPages, reconcileStatementLines, calculateCashRegisterBalance };
