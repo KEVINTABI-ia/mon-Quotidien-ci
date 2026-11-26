@@ -135,17 +135,26 @@ async function authenticate(request,env) {
     console.warn("Mon Business Firebase authentication service unreachable");
     throw new HttpError(503,"firebase_auth_unavailable");
   }
-  const data=await response.json().catch(()=>({}));
+  const responseContentType=response.headers.get("content-type")||"";
+  const responseText=await response.text();
+  let data={};
+  try { data=JSON.parse(responseText); } catch { /* Never log raw Firebase responses. */ }
   const user=data.users?.[0];
   if (!response.ok || !user?.localId || user.disabled===true) {
-    const firebaseCode=typeof data.error?.message==="string"?data.error.message.split(" :")[0]:"";
+    const rawFirebaseMessage=typeof data.error?.message==="string"?data.error.message.split(" :")[0]:"";
+    const firebaseCode=/^[A-Z0-9_]{1,64}$/.test(rawFirebaseMessage)?rawFirebaseMessage:"";
+    const firebaseStatus=typeof data.error?.status==="string" && /^[A-Z0-9_]{1,64}$/.test(data.error.status)?data.error.status:"";
     let diagnostic="firebase_auth_rejected";
     if (firebaseCode==="API_KEY_INVALID") diagnostic="firebase_api_key_invalid";
     else if (firebaseCode==="INVALID_ID_TOKEN" || firebaseCode==="TOKEN_EXPIRED" || firebaseCode==="INVALID_ID_TOKEN_AUD") diagnostic="firebase_token_invalid_or_expired";
     else if (firebaseCode==="USER_DISABLED" || user?.disabled===true) diagnostic="firebase_user_disabled";
     else if (response.status>=500) diagnostic="firebase_auth_unavailable";
-    else if (/^[A-Z0-9_]{1,64}$/.test(firebaseCode)) diagnostic="firebase_auth_rejected_"+firebaseCode.toLowerCase();
-    console.warn("Mon Business Firebase authentication rejected", {status:response.status,code:diagnostic});
+    else if (firebaseCode) diagnostic="firebase_auth_rejected_"+firebaseCode.toLowerCase();
+    console.warn("Mon Business Firebase authentication rejected", {
+      status:response.status,code:diagnostic,firebaseCode:firebaseCode||"unavailable",
+      firebaseStatus:firebaseStatus||"unavailable",responseContentType:responseContentType.slice(0,80),
+      userReturned:Boolean(user?.localId)
+    });
     throw new HttpError(response.status>=500?503:401,diagnostic);
   }
   if (!user.email || user.emailVerified!==true) throw new HttpError(403,"verified_email_required");
