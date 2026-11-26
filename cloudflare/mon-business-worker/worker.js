@@ -338,6 +338,110 @@ async function listCashRegisters(env,user,body) {
   return json({cashRegisters:rows.filter(row=>row.businessId===businessId&&row.activityId===activityId&&row.status==="active").map(({id,name,currency,openingBalanceMinor,createdAt})=>({id,name,currency,openingBalanceMinor,createdAt}))});
 }
 
+
+const FINANCE_TYPES=new Set(["income","expense","transfer"]);
+const FINANCE_METHODS=new Set(["cash","bank","wave","orange_money","mtn_money","electronic"]);
+function financeInput(body,user) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  const cashRegisterId=assertId(body.cashRegisterId,"cash_register_id");
+  if(!FINANCE_TYPES.has(body.type))throw new HttpError(400,"invalid_transaction_type");
+  if(!Number.isSafeInteger(body.amountXof)||body.amountXof<1||body.amountXof>1000000000000)throw new HttpError(400,"invalid_amount");
+  if(!FINANCE_METHODS.has(body.paymentMethod))throw new HttpError(400,"invalid_payment_method");
+  const reason=typeof body.reason==="string"?body.reason.trim():"";
+  const reference=typeof body.reference==="string"?body.reference.trim():"";
+  if(reason.length<2||reason.length>500)throw new HttpError(400,"invalid_reason");
+  if(reference.length<1||reference.length>80)throw new HttpError(400,"invalid_reference");
+  const destinationCashRegisterId=body.type==="transfer"?assertId(body.destinationCashRegisterId,"destination_cash_register_id"):null;
+  if(destinationCashRegisterId===cashRegisterId)throw new HttpError(400,"same_cash_register");
+  return {businessId,activityId,cashRegisterId,type:body.type,amountMinor:body.amountXof,paymentMethod:body.paymentMethod,reason,reference,destinationCashRegisterId,authorUid:user.uid};
+}
+async function createFinanceTransaction(env,user,body) {
+  const tx=financeInput(body,user);
+  await requireActivityAccess(env,user,tx.businessId,tx.activityId,"create");
+  const sourcePath="businesses/"+tx.businessId+"/activities/"+tx.activityId+"/cashRegisters/"+tx.cashRegisterId;
+  const source=await getDoc(env,sourcePath);
+  if(!source||source.data.status!=="active")throw new HttpError(404,"cash_register_not_found");
+  let destination=null;
+  if(tx.type==="transfer"){
+    destination=await getDoc(env,"businesses/"+tx.businessId+"/activities/"+tx.activityId+"/cashRegisters/"+tx.destinationCashRegisterId);
+    if(!destination||destination.data.status!=="active")throw new HttpError(404,"destination_cash_register_not_found");
+  }
+  const id=crypto.randomUUID(),now=new Date();
+  const record={...tx,currency:"XOF",status:"pending",createdAt:now,updatedAt:now,approvedByUid:null,approvedAt:null,executedByUid:null,executedAt:null};
+  const auditId=crypto.randomUUID();
+  await commit(env,[
+    writeDocument("businesses/"+tx.businessId+"/activities/"+tx.activityId+"/transactions/"+id,record,"create"),
+    writeDocument("businesses/"+tx.businessId+"/auditLogs/"+auditId,{businessId:tx.businessId,actorUid:user.uid,action:"finance.transaction.created",entityType:"transaction",entityId:id,details:{activityId:tx.activityId,type:tx.type,amountMinor:tx.amountMinor,status:"pending"},occurredAt:now},"create")
+  ]);
+  return json({created:true,transaction:{id,...record}});
+}
+async function transitionFinanceTransaction(env,user,body,nextStatus) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id"),transactionId=assertId(body.transactionId,"transaction_id");
+  const permission=nextStatus==="approved"?"approve":"edit";
+  await requireActivityAccess(env,user,businessId,activityId,permission);
+  const path="businesses/"+businessId+"/activities/"+activityId+"/transactions/"+transactionId;
+  const doc=await getDoc(env,path);
+  if(!doc||doc.data.businessId!==businessId||doc.data.activityId!==activityId)throw new HttpError(404,"transaction_not_found");
+  const tx=doc.data,now=new Date();
+  if(nextStatus==="approved"){
+    if(tx.status!=="pending")throw new HttpError(409,"invalid_status_transition");
+    const auditId=crypto.randomUUID();
+    await commit(env,[
+      writeDocument(path,{status:"approved",approvedByUid:user.uid,approvedAt:now,updatedAt:now},doc.updateTime,true),
+      writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"finance.transaction.approved",entityType:"transaction",entityId:transactionId,details:{activityId},occurredAt:now},"create")
+    ]);
+    return json({updated:true,status:"approved"});
+  }
+  if(tx.status!=="approved")throw new HttpError(409,"approval_required");
+  const registerPath="businesses/"+businessId+"/activities/"+activityId+"/cashRegisters/"+tx.cashRegisterId;
+  const source=await getDoc(env,registerPath);
+  if(!source||source.data.status!=="active")throw new HttpError(404,"cash_register_not_found");
+  const rows=await queryActivityCollection(env,businessId,activityId,"transactions");
+  let balance=source.data.openingBalanceMinor||0;
+  for(const row of rows){
+    if(row.id===transactionId||row.status!=="executed")continue;
+    if(row.cashRegisterId===tx.cashRegisterId)balance+=row.type==="income"?row.amountMinor:-row.amountMinor;
+    if(row.type==="transfer"&&row.destinationCashRegisterId===tx.cashRegisterId)balance+=row.amountMinor;
+  }
+  if(tx.type==="income")balance+=tx.amountMinor;
+  else balance-=tx.amountMinor;
+  if(!Number.isSafeInteger(balance)||balance<0)throw new HttpError(409,"insufficient_funds");
+  const writes=[
+    writeDocument(path,{status:"executed",executedByUid:user.uid,executedAt:now,updatedAt:now},doc.updateTime,true),
+    writeDocument(registerPath,{updatedAt:now},source.updateTime,true)
+  ];
+  if(tx.type==="transfer"){
+    const destPath="businesses/"+businessId+"/activities/"+activityId+"/cashRegisters/"+tx.destinationCashRegisterId;
+    const dest=await getDoc(env,destPath);
+    if(!dest||dest.data.status!=="active")throw new HttpError(404,"destination_cash_register_not_found");
+    writes.push(writeDocument(destPath,{updatedAt:now},dest.updateTime,true));
+  }
+  const auditId=crypto.randomUUID();
+  writes.push(writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"finance.transaction.executed",entityType:"transaction",entityId:transactionId,details:{activityId,type:tx.type,amountMinor:tx.amountMinor},occurredAt:now},"create"));
+  await commit(env,writes);
+  return json({updated:true,status:"executed"});
+}
+async function listFinanceTransactions(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  await requireActivityAccess(env,user,businessId,activityId,"view");
+  const [transactions,registers]=await Promise.all([
+    queryActivityCollection(env,businessId,activityId,"transactions"),
+    queryActivityCollection(env,businessId,activityId,"cashRegisters")
+  ]);
+  const active=registers.filter(r=>r.status==="active");
+  const balances={};
+  for(const reg of active){
+    let value=reg.openingBalanceMinor||0;
+    for(const tx of transactions){
+      if(tx.status!=="executed")continue;
+      if(tx.cashRegisterId===reg.id)value+=tx.type==="income"?tx.amountMinor:-tx.amountMinor;
+      if(tx.type==="transfer"&&tx.destinationCashRegisterId===reg.id)value+=tx.amountMinor;
+    }
+    balances[reg.id]=value;
+  }
+  return json({transactions:transactions.filter(t=>t.businessId===businessId&&t.activityId===activityId).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(t=>({id:t.id,...t})),balances});
+}
+
 function corsHeaders(request,env) {
   const origin=request.headers.get("origin");
   if (!origin) return {"vary":"Origin"};
@@ -372,6 +476,10 @@ export default {
       if (url.pathname==="/v1/invitations") response=await createInvitation(request,env,user,body);
       else if (url.pathname==="/v1/finance/cash-registers/create") response=await createCashRegister(env,user,body);
       else if (url.pathname==="/v1/finance/cash-registers/list") response=await listCashRegisters(env,user,body);
+      else if (url.pathname==="/v1/finance/transactions/create") response=await createFinanceTransaction(env,user,body);
+      else if (url.pathname==="/v1/finance/transactions/list") response=await listFinanceTransactions(env,user,body);
+      else if (url.pathname==="/v1/finance/transactions/approve") response=await transitionFinanceTransaction(env,user,body,"approved");
+      else if (url.pathname==="/v1/finance/transactions/execute") response=await transitionFinanceTransaction(env,user,body,"executed");
       else if (url.pathname==="/v1/invitations/accept") response=await acceptInvitation(request,env,user,body);
       else if (url.pathname==="/v1/invitations/list") response=await listInvitations(env,user,body);
       else if (url.pathname==="/v1/invitations/revoke") response=await revokeInvitation(request,env,user,body);
