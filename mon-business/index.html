@@ -159,6 +159,7 @@
     <button type="button" id="previewReconciliation">Analyser le relevé</button>
     <div id="reconciliationSummary" class="status hidden" role="status" aria-live="polite"></div>
     <div id="reconciliationResults" class="muted"></div>
+    <h3>Historique des rapprochements</h3><div id="reconciliationHistory" class="muted">Sélectionnez une activité.</div>
     <h3>Journal financier</h3><div id="financeTransactionsList" class="muted">Sélectionnez une activité.</div>
   </section>
 
@@ -529,24 +530,58 @@
     const button=$("previewReconciliation");button.disabled=true;
     try{
       const lines=parseReconciliationCsv(await file.text());
-      const result=await callWorker("/v1/finance/reconciliation/preview",{businessId:currentBusinessId,activityId,lines});
+      const result=await callWorker("/v1/finance/reconciliation/create",{businessId:currentBusinessId,activityId,lines});
       const s=result.summary||{};
-      setStatus("reconciliationSummary","Résultat : "+(s.matched||0)+" rapprochée(s), "+(s.unmatched||0)+" sans correspondance, "+(s.ambiguous||0)+" ambiguë(s). Prévisualisation uniquement : aucune écriture n'a été effectuée.");
+      setStatus("reconciliationSummary","Résultat : "+(s.matched||0)+" rapprochée(s), "+(s.unmatched||0)+" sans correspondance, "+(s.ambiguous||0)+" ambiguë(s). Relevé enregistré dans l’historique. Aucun solde ni aucune transaction n’a été modifié.");
       const list=$("reconciliationResults");list.replaceChildren();
       (result.results||[]).forEach(item=>{
         const line=document.createElement("p");line.className="status";
         line.textContent="Ligne "+(item.lineIndex+2)+" : "+(item.status==="matched"?"Rapprochée · "+item.transactionId:item.status==="ambiguous"?"À vérifier · "+item.candidateCount+" opérations possibles":"Aucune correspondance");
         list.append(line);
       });
-    }catch(error){setStatus("reconciliationSummary","Analyse impossible : "+error.message,true);}
+      await loadReconciliationHistory();
+    }catch(error){setStatus("reconciliationSummary","Enregistrement impossible : "+error.message,true);}
     finally{button.disabled=false;}
   });
-  async function financeTransition(transactionId,action){
+
+  async function loadReconciliationHistory(){
+    const list=$("reconciliationHistory"),activityId=$("financeActivity").value;
+    if(!activityId||!currentUser||!currentBusinessId){list.textContent="Sélectionnez une activité.";return;}
+    try{
+      const data=await callWorker("/v1/finance/reconciliation/list",{businessId:currentBusinessId,activityId});
+      list.replaceChildren();
+      if(!data.reconciliations?.length){list.textContent="Aucun relevé enregistré.";return;}
+      data.reconciliations.forEach(record=>{
+        const card=document.createElement("div");card.className="status";
+        const heading=document.createElement("strong");
+        heading.textContent=new Date(record.createdAt).toLocaleString("fr-FR")+" · "+record.status+" · "+record.summary.total+" ligne(s)";
+        card.append(heading);
+        (record.lines||[]).forEach((line,index)=>{
+          const row=document.createElement("div");row.style.marginTop="8px";
+          row.textContent="Ligne "+(index+2)+" · "+line.date+" · "+line.amountXof+" FCFA · "+line.status+" · "+line.reviewStatus;
+          card.append(row);
+          if(line.reviewStatus==="pending"&&(line.status==="matched"||line.status==="unmatched")){
+            for(const decision of ["confirm","reject"]){
+              const action=document.createElement("button");action.type="button";action.className="secondary";
+              action.textContent=decision==="confirm"?(line.status==="matched"?"Confirmer la correspondance":"Marquer comme vérifiée"):"Rejeter";
+              action.addEventListener("click",async()=>{
+                try{await callWorker("/v1/finance/reconciliation/resolve",{businessId:currentBusinessId,activityId,reconciliationId:record.id,lineIndex:index,decision});await loadReconciliationHistory();}
+                catch(error){setStatus("reconciliationSummary","Validation impossible : "+error.message,true);}
+              });
+              row.append(action);
+            }
+          }
+        });
+        list.append(card);
+      });
+    }catch(error){list.textContent="Historique indisponible : "+error.message;}
+  }
+\n  async function financeTransition(transactionId,action){
     try{await callWorker("/v1/finance/transactions/"+(action==="approve"?"approve":"execute"),{businessId:currentBusinessId,activityId:$("financeActivity").value,transactionId});setStatus("financeTransactionStatus",action==="approve"?"Opération approuvée. Le solde reste inchangé jusqu'à son exécution.":"Opération exécutée. Les soldes ont été recalculés.");await loadFinanceTransactions();}
     catch(error){setStatus("financeTransactionStatus","Action impossible : "+error.message,true);}
   }
 
-  $("financeActivity").addEventListener("change",loadCashRegisters);
+  $("financeActivity").addEventListener("change",()=>{loadCashRegisters();loadReconciliationHistory();});
   $("cashRegisterForm").addEventListener("submit",async event=>{
     event.preventDefault();
     if(!currentUser||!currentBusinessId)return setStatus("financeStatus","Connectez-vous et sélectionnez votre entreprise.",true);
