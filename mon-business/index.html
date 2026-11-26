@@ -112,6 +112,23 @@
     <div id="financeStatus" class="status hidden" role="status" aria-live="polite"></div>
     <h3>Caisses de l'activité</h3>
     <div id="cashRegistersList" class="muted">Sélectionnez une activité pour afficher ses caisses.</div>
+
+    <hr>
+    <h3>Enregistrer une opération</h3>
+    <form id="financeTransactionForm">
+      <label for="financeType">Type d'opération</label>
+      <select id="financeType" required><option value="income">Recette</option><option value="expense">Dépense</option><option value="transfer">Transfert entre caisses</option></select>
+      <label for="financeCashRegister">Caisse concernée</label><select id="financeCashRegister" required></select>
+      <div id="financeDestinationWrap" class="hidden"><label for="financeDestination">Caisse destinataire</label><select id="financeDestination"></select></div>
+      <label for="financeAmount">Montant (FCFA)</label><input id="financeAmount" type="number" min="1" max="1000000000000" step="1" required inputmode="numeric">
+      <label for="financeMethod">Moyen de paiement</label>
+      <select id="financeMethod" required><option value="cash">Espèces</option><option value="bank">Banque</option><option value="wave">Wave</option><option value="orange_money">Orange Money</option><option value="mtn_money">MTN Money</option><option value="electronic">Autre paiement électronique</option></select>
+      <label for="financeReason">Motif</label><input id="financeReason" maxlength="500" minlength="2" required>
+      <label for="financeReference">Référence</label><input id="financeReference" maxlength="80" required placeholder="Ex. REC-001">
+      <button id="financeSubmit" type="submit">Enregistrer en attente</button>
+    </form>
+    <div id="financeTransactionStatus" class="status hidden" role="status" aria-live="polite"></div>
+    <h3>Journal financier</h3><div id="financeBalances" class="muted"></div><div id="financeTransactionsList" class="muted">Sélectionnez une activité.</div>
   </section>
 
   <section id="activityCard" class="card hidden">
@@ -367,6 +384,43 @@
   }
 
 
+
+  let financeRegisters=[];
+  $("financeType").addEventListener("change",()=>{$("financeDestinationWrap").classList.toggle("hidden",$("financeType").value!=="transfer");});
+  $("financeTransactionForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    const activityId=$("financeActivity").value,amountXof=Number($("financeAmount").value);
+    if(!activityId||!Number.isSafeInteger(amountXof)||amountXof<1)return setStatus("financeTransactionStatus","Vérifiez l'activité et le montant entier.",true);
+    const payload={businessId:currentBusinessId,activityId,cashRegisterId:$("financeCashRegister").value,type:$("financeType").value,amountXof,paymentMethod:$("financeMethod").value,reason:$("financeReason").value.trim(),reference:$("financeReference").value.trim()};
+    if(payload.type==="transfer")payload.destinationCashRegisterId=$("financeDestination").value;
+    const button=$("financeSubmit");button.disabled=true;
+    try{await callWorker("/v1/finance/transactions/create",payload);$("financeAmount").value="";$("financeReason").value="";$("financeReference").value="";setStatus("financeTransactionStatus","Opération enregistrée en attente d'approbation. Aucun solde n'a été modifié.");await loadFinanceTransactions();}
+    catch(error){setStatus("financeTransactionStatus","Enregistrement impossible : "+error.message,true);}finally{button.disabled=false;}
+  });
+  async function loadFinanceTransactions(){
+    const activityId=$("financeActivity").value;if(!currentUser||!currentBusinessId||!activityId)return;
+    const list=$("financeTransactionsList");list.textContent="Chargement du journal…";
+    try{
+      const result=await callWorker("/v1/finance/transactions/list",{businessId:currentBusinessId,activityId});
+      $("financeBalances").replaceChildren();
+      financeRegisters.forEach(register=>{const p=document.createElement("p");p.textContent=register.name+" : "+Number(result.balances?.[register.id]??register.openingBalanceMinor??0).toLocaleString("fr-FR")+" FCFA";$("financeBalances").append(p);});
+      list.replaceChildren();const rows=Array.isArray(result.transactions)?result.transactions:[];
+      if(!rows.length){list.textContent="Aucune opération enregistrée.";return;}
+      rows.forEach(tx=>{
+        const item=document.createElement("div");item.className="status";
+        const label=document.createElement("strong");label.textContent=(tx.type==="income"?"Recette":tx.type==="expense"?"Dépense":"Transfert")+" · "+Number(tx.amountMinor).toLocaleString("fr-FR")+" FCFA · "+tx.status;
+        const detail=document.createElement("p");detail.textContent=(tx.reason||"")+" · Réf. "+(tx.reference||"");item.append(label,detail);
+        if(tx.status==="pending"&&currentBusinessOwner){const b=document.createElement("button");b.type="button";b.className="secondary";b.textContent="Approuver";b.addEventListener("click",()=>financeTransition(tx.id,"approve"));item.append(b);}
+        if(tx.status==="approved"&&currentBusinessOwner){const b=document.createElement("button");b.type="button";b.className="secondary";b.textContent="Exécuter";b.addEventListener("click",()=>financeTransition(tx.id,"execute"));item.append(b);}
+        list.append(item);
+      });
+    }catch(error){list.textContent="Journal indisponible : "+error.message;}
+  }
+  async function financeTransition(transactionId,action){
+    try{await callWorker("/v1/finance/transactions/"+(action==="approve"?"approve":"execute"),{businessId:currentBusinessId,activityId:$("financeActivity").value,transactionId});setStatus("financeTransactionStatus",action==="approve"?"Opération approuvée. Le solde reste inchangé jusqu'à son exécution.":"Opération exécutée. Les soldes ont été recalculés.");await loadFinanceTransactions();}
+    catch(error){setStatus("financeTransactionStatus","Action impossible : "+error.message,true);}
+  }
+
   $("financeActivity").addEventListener("change",loadCashRegisters);
   $("cashRegisterForm").addEventListener("submit",async event=>{
     event.preventDefault();
@@ -395,6 +449,8 @@
       list.replaceChildren();
       const rows=Array.isArray(result.cashRegisters)?result.cashRegisters:[];
       if(!rows.length){list.textContent="Aucune caisse pour cette activité.";return;}
+      financeRegisters=rows;
+      [ $("financeCashRegister"), $("financeDestination") ].forEach(select=>{select.replaceChildren();rows.forEach(register=>{const option=document.createElement("option");option.value=register.id;option.textContent=register.name;select.append(option);});});
       rows.forEach(register=>{
         const item=document.createElement("div");item.className="status";
         const title=document.createElement("strong");
@@ -403,6 +459,7 @@
         balance.textContent="Solde initial : "+Number(register.openingBalanceMinor||0).toLocaleString("fr-FR")+" FCFA";
         item.append(title,balance);list.append(item);
       });
+      await loadFinanceTransactions();
     }catch(error){list.textContent="Chargement impossible : "+error.message;}
   }
 
