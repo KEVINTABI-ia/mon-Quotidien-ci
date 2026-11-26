@@ -442,7 +442,7 @@ async function listFinanceTransactions(env,user,body) {
   const all=transactions.filter(t=>t.businessId===businessId&&t.activityId===activityId);
   const dateFrom=body.dateFrom==null?"":String(body.dateFrom),dateTo=body.dateTo==null?"":String(body.dateTo);
   const type=body.type==null?"all":String(body.type),cashRegisterId=body.cashRegisterId==null?"all":String(body.cashRegisterId);
-  if((dateFrom&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(dateFrom))||(dateTo&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(dateTo)))throw new HttpError(400,"invalid_date_filter");
+  if((dateFrom&&!/^\d{4}-\d{2}-\d{2}$/.test(dateFrom))||(dateTo&&!/^\d{4}-\d{2}-\d{2}$/.test(dateTo)))throw new HttpError(400,"invalid_date_filter");
   if(dateFrom&&dateTo&&dateFrom>dateTo)throw new HttpError(400,"invalid_date_range");
   if(!["all","income","expense","transfer"].includes(type))throw new HttpError(400,"invalid_transaction_type_filter");
   if(cashRegisterId!=="all"&&!active.some(r=>r.id===cashRegisterId))throw new HttpError(400,"invalid_cash_register_filter");
