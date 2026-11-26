@@ -450,7 +450,9 @@
       const rows=Array.isArray(result.cashRegisters)?result.cashRegisters:[];
       if(!rows.length){list.textContent="Aucune caisse pour cette activité.";return;}
       financeRegisters=rows;
-      [ $("financeCashRegister"), $("financeDestination") ].forEach(select=>{select.replaceChildren();rows.forEach(register=>{const option=document.createElement("option");option.value=register.id;option.textContent=register.name;select.append(option);});});
+      const sourceSelect=$("financeCashRegister"),destinationSelect=$("financeDestination");
+      [sourceSelect,destinationSelect].forEach(select=>{select.replaceChildren();rows.forEach(register=>{const option=document.createElement("option");option.value=register.id;option.textContent=register.name;select.append(option);});});
+      if(rows.length>1)destinationSelect.value=rows.find(register=>register.id!==sourceSelect.value)?.id||"";
       rows.forEach(register=>{
         const item=document.createElement("div");item.className="status";
         const title=document.createElement("strong");
