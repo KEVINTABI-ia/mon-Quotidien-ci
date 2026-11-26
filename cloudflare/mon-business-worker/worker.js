@@ -388,7 +388,7 @@ async function reviewActivityJoinRequest(env,user,body) {
     if(current?.status==="active"&&current.activityIds?.includes(activityId))throw new HttpError(409,"already_has_activity_access");
     if(current){
       const activityIds=validateActivityIds([...(current.activityIds||[]),activityId]);
-      writes.push(writeDocument(memberPath,{activityIds,updatedAt:now},member.updateTime,true));
+      writes.push(writeDocument(memberPath,{activityIds,permissions:{...(current.permissions||{}),view:true},updatedAt:now},member.updateTime,true));
     }else{
       writes.push(writeDocument(memberPath,{uid,email:request.data.requesterEmail,role:"employee",status:"active",activityIds:[activityId],permissions:{view:true},createdAt:now,joinRequestId:requestId}, "create"));
     }
