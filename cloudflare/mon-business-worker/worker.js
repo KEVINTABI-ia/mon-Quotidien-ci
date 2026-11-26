@@ -307,12 +307,29 @@ async function requireActivityAccess(env,user,businessId,activityId,permission="
   if(!Array.isArray(m.activityIds)||!m.activityIds.includes(activityId)||m.permissions?.[permission]!==true) throw new HttpError(403,"activity_permission_required");
   return {business,member:m};
 }
+const FINANCE_QUERY_PAGE_SIZE=200;
+const FINANCE_QUERY_MAX_DOCUMENTS=5000;
+async function collectQueryPages(fetchPage,pageSize=FINANCE_QUERY_PAGE_SIZE,maxDocuments=FINANCE_QUERY_MAX_DOCUMENTS) {
+  const collected=[];
+  for(let offset=0;offset<maxDocuments;offset+=pageSize){
+    const rows=await fetchPage(offset,pageSize);
+    const page=Array.isArray(rows)?rows:[];
+    collected.push(...page);
+    if(page.length<pageSize)return collected;
+  }
+  const overflow=await fetchPage(maxDocuments,1);
+  if(Array.isArray(overflow)&&overflow.length)throw new HttpError(503,"finance_collection_too_large");
+  return collected;
+}
 async function queryActivityCollection(env,businessId,activityId,collectionId) {
   const parent="https://firestore.googleapis.com/v1/projects/"+PROJECT_ID+"/databases/(default)/documents/businesses/"+businessId+"/activities/"+activityId;
-  const response=await fetch(parent+":runQuery",{method:"POST",headers:{authorization:"Bearer "+await googleAccessToken(env),"content-type":"application/json"},body:JSON.stringify({structuredQuery:{from:[{collectionId}],limit:200}})});
-  if(!response.ok) throw new Error("firestore_query_failed");
-  const rows=await response.json();
-  return (Array.isArray(rows)?rows:[]).filter(row=>row.document?.name).map(row=>({id:row.document.name.split("/").pop(),...decodeDocument(row.document)}));
+  const token=await googleAccessToken(env);
+  const rows=await collectQueryPages(async(offset,limit)=>{
+    const response=await fetch(parent+":runQuery",{method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({structuredQuery:{from:[{collectionId}],orderBy:[{field:{fieldPath:"__name__"},direction:"ASCENDING"}],offset,limit}})});
+    if(!response.ok)throw new Error("firestore_query_failed");
+    return response.json();
+  });
+  return rows.filter(row=>row.document?.name).map(row=>({id:row.document.name.split("/").pop(),...decodeDocument(row.document)}));
 }
 async function createCashRegister(env,user,body) {
   const businessId=assertId(body.businessId,"business_id"), activityId=assertId(body.activityId,"activity_id");
@@ -470,7 +487,7 @@ async function listFinanceTransactions(env,user,body) {
   let summary;
   try{summary=summarizeFinanceTransactions(filtered,balances);}
   catch{throw new HttpError(422,"finance_report_overflow");}
-  return json({transactions:filtered.map(t=>({id:t.id,...t})),balances,summary,returnedCount:filtered.length,sourceCount:all.length,limited:all.length>=200});
+  return json({transactions:filtered.map(t=>({id:t.id,...t})),balances,summary,returnedCount:filtered.length,sourceCount:all.length,limited:false});
 }
 
 function corsHeaders(request,env) {

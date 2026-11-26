@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, summarizeFinanceTransactions } from "../cloudflare/mon-business-worker/worker.js";
+import { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, summarizeFinanceTransactions, collectQueryPages } from "../cloudflare/mon-business-worker/worker.js";
 
 test("normalise les e-mails et refuse les formats invalides",()=>{
   assert.equal(cleanEmail("  COLLABORATEUR@EXAMPLE.CI "), "collaborateur@example.ci");
@@ -72,4 +72,27 @@ test("le rapport financier refuse les totaux hors capacité entière sûre",()=>
     {type:"income",amountMinor:Number.MAX_SAFE_INTEGER,status:"executed"},
     {type:"income",amountMinor:1,status:"executed"}
   ]),/finance_report_overflow/);
+});
+
+
+test("la lecture paginée récupère toutes les pages, au-delà de 200 documents",async()=>{
+  const source=Array.from({length:437},(_,i)=>({id:i}));
+  const offsets=[];
+  const rows=await collectQueryPages(async(offset,limit)=>{
+    offsets.push({offset,limit});
+    return source.slice(offset,offset+limit);
+  });
+  assert.equal(rows.length,437);
+  assert.deepEqual(offsets.map(x=>x.offset),[0,200,400]);
+});
+
+test("la lecture paginée détecte explicitement un volume supérieur au plafond",async()=>{
+  const source=Array.from({length:5001},(_,i)=>({id:i}));
+  await assert.rejects(()=>collectQueryPages(async(offset,limit)=>source.slice(offset,offset+limit)),/finance_collection_too_large/);
+});
+
+test("la lecture paginée accepte exactement le plafond sans marquer le rapport incomplet",async()=>{
+  const source=Array.from({length:5000},(_,i)=>({id:i}));
+  const rows=await collectQueryPages(async(offset,limit)=>source.slice(offset,offset+limit));
+  assert.equal(rows.length,5000);
 });
