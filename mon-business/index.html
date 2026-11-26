@@ -422,7 +422,7 @@
   const fcfa=value=>Number(value||0).toLocaleString("fr-FR")+" FCFA";
   const csvCell=value=>'"'+String(value??"").replace(/"/g,'""')+'"';
   function exportFinanceCsv(kind){
-    if(!financeReportRows.length)return setStatus("financeReportStatus","Aucune opération à exporter.",true);
+    if(kind!=="report"&&!financeReportRows.length)return setStatus("financeReportStatus","Aucune opération à exporter.",true);
     const rows=kind==="report"?[
       ["Indicateur","Montant FCFA"],
       ["Solde total des caisses",$("kpiBalance").dataset.value||0],
@@ -470,7 +470,7 @@
         if(tx.status==="approved"&&currentBusinessOwner){const b=document.createElement("button");b.type="button";b.className="secondary";b.textContent="Exécuter";b.addEventListener("click",()=>financeTransition(tx.id,"execute"));item.append(b);}
         list.append(item);
       });
-      if(result.limited)setStatus("financeReportStatus","Attention : les 200 opérations les plus récentes sont prises en compte. Affinez la période pour un rapport plus précis.");
+      if(result.limited)setStatus("financeReportStatus","Attention : la lecture est limitée à 200 opérations retournées par Firestore. Affinez la période pour réduire le volume et éviter un rapport incomplet.");
     }catch(error){list.textContent="Journal indisponible : "+error.message;}
   }
   $("financeApplyFilters").addEventListener("click",loadFinanceTransactions);
