@@ -402,6 +402,20 @@ async function reviewActivityJoinRequest(env,user,body) {
 }
 
 
+
+async function listActivityMembers(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  await requireActivityAccess(env,user,businessId,activityId,"manage_access");
+  const parent="https://firestore.googleapis.com/v1/projects/"+PROJECT_ID+"/databases/(default)/documents/businesses/"+businessId;
+  const response=await fetch(parent+":runQuery",{method:"POST",headers:{authorization:"Bearer "+await googleAccessToken(env),"content-type":"application/json"},body:JSON.stringify({structuredQuery:{from:[{collectionId:"members"}],limit:200}})});
+  if(!response.ok)throw new Error("firestore_query_failed");
+  const rows=await response.json();
+  const members=(Array.isArray(rows)?rows:[]).filter(row=>row.document?.name).map(row=>({uid:row.document.name.split("/").pop(),...decodeDocument(row.document)}))
+    .filter(member=>member.status==="active"&&Array.isArray(member.activityIds)&&member.activityIds.includes(activityId))
+    .map(member=>({uid:member.uid,email:member.email||"",role:member.role}));
+  return json({members});
+}
+
 async function createActivityTask(env,user,body) {
   const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
   await requireActivityAccess(env,user,businessId,activityId,"manage_access");
@@ -867,7 +881,8 @@ export default {
       const user=await authenticate(request,env);
       await enforceRateLimit(env.USER_RATE_LIMITER,user.uid);
       let response;
-      if (url.pathname==="/v1/activities/tasks/create") response=await createActivityTask(env,user,body);
+      if (url.pathname==="/v1/activities/members/list") response=await listActivityMembers(env,user,body);
+      else if (url.pathname==="/v1/activities/tasks/create") response=await createActivityTask(env,user,body);
       else if (url.pathname==="/v1/activities/tasks/list") response=await listActivityTasks(env,user,body);
       else if (url.pathname==="/v1/activities/tasks/update-status") response=await updateActivityTaskStatus(env,user,body);
       else if (url.pathname==="/v1/activities/join-code/create") response=await createActivityJoinCode(env,user,body);
