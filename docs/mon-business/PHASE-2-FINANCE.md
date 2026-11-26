@@ -12,8 +12,18 @@
 ## Couverture du moteur pur
 Le module `mon-business/finance.js` valide les opérations, calcule les soldes par caisse, produit un compte de résultat en excluant les transferts et contrôle les transitions de statut.
 
-## Hors périmètre avant activation réelle
-- Persistance Firestore et règles d'accès financières.
+## Première brique persistante : caisses
+- Les caisses sont stockées sous `businesses/{businessId}/activities/{activityId}/cashRegisters/{cashRegisterId}`.
+- Le propriétaire ou un collaborateur disposant du droit `create` peut créer une caisse ; la consultation exige le droit `view` sur l'activité.
+- Le solde initial est saisi en FCFA entiers, stocké dans `openingBalanceMinor` (XOF sans sous-unité utilisée) et ne peut pas être modifié par l'API de création.
+- La création de la caisse et son événement d'audit sont enregistrés dans un même commit Firestore via le Worker de confiance.
+- Le navigateur n'écrit jamais directement dans les collections financières ; les règles Firestore existantes refusent ces écritures.
+- Routes Worker : `POST /v1/finance/cash-registers/create` et `POST /v1/finance/cash-registers/list`.
+
+## Hors périmètre de cette première livraison
+- Enregistrement des recettes, dépenses et transferts avec workflow d'approbation.
+- Calcul du solde courant à partir du journal des opérations.
+- Persistance des rapprochements bancaires et exports.
 - Workflow d'approbation paramétrable et multi-étapes.
 - Journal d'audit serveur et pièces jointes.
 - Interface de caisse, rapprochement bancaire et exports.
