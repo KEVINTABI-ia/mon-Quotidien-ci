@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, summarizeFinanceTransactions, collectQueryPages } from "../cloudflare/mon-business-worker/worker.js";
+import { cleanEmail, validatePermissions, validateActivityIds, toValue, fromValue, decodeDocument, inviteLink, enforceRateLimit, summarizeFinanceTransactions, collectQueryPages, reconcileStatementLines } from "../cloudflare/mon-business-worker/worker.js";
 
 test("normalise les e-mails et refuse les formats invalides",()=>{
   assert.equal(cleanEmail("  COLLABORATEUR@EXAMPLE.CI "), "collaborateur@example.ci");
@@ -95,4 +95,34 @@ test("la lecture paginée accepte exactement le plafond sans marquer le rapport 
   const source=Array.from({length:5000},(_,i)=>({id:i}));
   const rows=await collectQueryPages(async(offset,limit)=>source.slice(offset,offset+limit));
   assert.equal(rows.length,5000);
+});
+
+\ntest("le rapprochement associe une ligne à une opération exécutée avec date, montant et référence",()=>{
+  const result=reconcileStatementLines([{date:"2026-11-25",amountXof:2500,reference:"REC-01",paymentMethod:"wave"}],[
+    {id:"tx-1",status:"executed",amountMinor:2500,createdAt:"2026-11-25T09:00:00.000Z",reference:"REC-01",paymentMethod:"wave"}
+  ]);
+  assert.deepEqual(result,{results:[{lineIndex:0,status:"matched",transactionId:"tx-1"}],summary:{total:1,matched:1,unmatched:0,ambiguous:0}});
+});
+
+test("le rapprochement ne réutilise pas deux fois la même opération",()=>{
+  const result=reconcileStatementLines([
+    {date:"2026-11-25",amountXof:2500,reference:"REC-01"},
+    {date:"2026-11-25",amountXof:2500,reference:"REC-01"}
+  ],[{id:"tx-1",status:"executed",amountMinor:2500,createdAt:"2026-11-25T09:00:00.000Z",reference:"REC-01"}]);
+  assert.deepEqual(result.summary,{total:2,matched:1,unmatched:1,ambiguous:0});
+});
+
+test("le rapprochement signale les correspondances multiples comme ambiguës",()=>{
+  const tx=[1,2].map(n=>({id:"tx-"+n,status:"executed",amountMinor:1000,createdAt:"2026-11-25T09:00:00.000Z"}));
+  const result=reconcileStatementLines([{date:"2026-11-25",amountXof:1000}],tx);
+  assert.equal(result.results[0].status,"ambiguous");
+  assert.equal(result.summary.ambiguous,1);
+});
+
+test("le rapprochement ignore les opérations en attente et valide les montants",()=>{
+  const result=reconcileStatementLines([{date:"2026-11-25",amountXof:1000}],[
+    {id:"pending",status:"pending",amountMinor:1000,createdAt:"2026-11-25T09:00:00.000Z"}
+  ]);
+  assert.equal(result.results[0].status,"unmatched");
+  assert.throws(()=>reconcileStatementLines([{date:"25/11/2026",amountXof:1000}],[]),/invalid_statement_line/);
 });
