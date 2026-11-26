@@ -641,7 +641,34 @@
         title.textContent=register.name;
         const balance=document.createElement("p");
         balance.textContent="Solde initial : "+Number(register.openingBalanceMinor||0).toLocaleString("fr-FR")+" FCFA";
-        item.append(title,balance);list.append(item);
+        const state=document.createElement("p");state.textContent=register.status==="closed"?"État : clôturée":"État : ouverte";
+        item.append(title,balance,state);
+        const action=document.createElement("button");action.type="button";action.className="secondary";
+        action.textContent=register.status==="closed"?"Rouvrir la caisse":"Clôturer la caisse";
+        action.addEventListener("click",async()=>{
+          if(register.status==="closed"){
+            if(!window.confirm("Rouvrir cette caisse ? Les nouvelles opérations pourront à nouveau y être enregistrées."))return;
+            action.disabled=true;
+            try{await callWorker("/v1/finance/cash-registers/reopen",{businessId:currentBusinessId,activityId,cashRegisterId:register.id});setStatus("financeStatus","Caisse rouverte.");await loadCashRegisters();}
+            catch(error){setStatus("financeStatus","Réouverture impossible : "+error.message,true);}
+            finally{action.disabled=false;}
+            return;
+          }
+          const raw=window.prompt("Saisissez le montant réellement compté dans cette caisse (FCFA).");
+          if(raw===null)return;
+          const countedBalanceXof=Number(raw.trim());
+          if(!Number.isSafeInteger(countedBalanceXof)||countedBalanceXof<0){setStatus("financeStatus","Montant compté invalide. Saisissez un nombre entier positif ou nul.",true);return;}
+          if(!window.confirm("Confirmer la clôture manuelle ? La caisse sera bloquée jusqu'à sa réouverture."))return;
+          action.disabled=true;
+          try{
+            const result=await callWorker("/v1/finance/cash-registers/close",{businessId:currentBusinessId,activityId,cashRegisterId:register.id,countedBalanceXof});
+            const closure=result.closure;
+            setStatus("financeStatus","Caisse clôturée. Solde théorique : "+closure.theoreticalBalanceXof.toLocaleString("fr-FR")+" FCFA · Compté : "+closure.countedBalanceXof.toLocaleString("fr-FR")+" FCFA · Écart : "+closure.differenceXof.toLocaleString("fr-FR")+" FCFA.");
+            await loadCashRegisters();
+          }catch(error){setStatus("financeStatus","Clôture impossible : "+error.message,true);}
+          finally{action.disabled=false;}
+        });
+        item.append(action);list.append(item);
       });
       await loadFinanceTransactions();
     }catch(error){list.textContent="Chargement impossible : "+error.message;}
