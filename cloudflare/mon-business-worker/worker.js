@@ -377,7 +377,7 @@ async function createFinanceTransaction(env,user,body) {
 }
 async function transitionFinanceTransaction(env,user,body,nextStatus) {
   const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id"),transactionId=assertId(body.transactionId,"transaction_id");
-  const permission=nextStatus==="approved"?"approve":"edit";
+  const permission="approve";
   await requireActivityAccess(env,user,businessId,activityId,permission);
   const path="businesses/"+businessId+"/activities/"+activityId+"/transactions/"+transactionId;
   const doc=await getDoc(env,path);
