@@ -429,10 +429,18 @@ async function createFinanceTransaction(env,user,body) {
   const id=crypto.randomUUID(),now=new Date();
   const record={...tx,currency:"XOF",status:"pending",createdAt:now,updatedAt:now,approvedByUid:null,approvedAt:null,executedByUid:null,executedAt:null};
   const auditId=crypto.randomUUID();
-  await commit(env,[
+  const writes=[
     writeDocument("businesses/"+tx.businessId+"/activities/"+tx.activityId+"/transactions/"+id,record,"create"),
+    // Version-fence the register(s): a concurrent close/reopen must conflict
+    // with any operation being created against that register.
+    writeDocument(sourcePath,{updatedAt:now},source.updateTime,true),
     writeDocument("businesses/"+tx.businessId+"/auditLogs/"+auditId,{businessId:tx.businessId,actorUid:user.uid,action:"finance.transaction.created",entityType:"transaction",entityId:id,details:{activityId:tx.activityId,type:tx.type,amountMinor:tx.amountMinor,status:"pending"},occurredAt:now},"create")
-  ]);
+  ];
+  if(destination){
+    const destinationPath="businesses/"+tx.businessId+"/activities/"+tx.activityId+"/cashRegisters/"+tx.destinationCashRegisterId;
+    writes.push(writeDocument(destinationPath,{updatedAt:now},destination.updateTime,true));
+  }
+  await commit(env,writes);
   return json({created:true,transaction:{id,...record}});
 }
 async function transitionFinanceTransaction(env,user,body,nextStatus) {
