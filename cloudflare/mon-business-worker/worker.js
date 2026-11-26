@@ -531,7 +531,8 @@ async function resolveFinanceReconciliation(env,user,body) {
   ]);
   return json({updated:true,lineIndex:index,reviewStatus:body.decision==="confirm"?"confirmed":"rejected",status:pending?"pending":"reviewed"});
 }
-\nasync function previewFinanceReconciliation(env,user,body) {
+
+async function previewFinanceReconciliation(env,user,body) {
   const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
   await requireActivityAccess(env,user,businessId,activityId,"view");
   const lines=body.lines;
@@ -628,7 +629,10 @@ export default {
       else if (url.pathname==="/v1/finance/cash-registers/list") response=await listCashRegisters(env,user,body);
       else if (url.pathname==="/v1/finance/transactions/create") response=await createFinanceTransaction(env,user,body);
       else if (url.pathname==="/v1/finance/transactions/list") response=await listFinanceTransactions(env,user,body);
-      else if (url.pathname==="/v1/finance/reconciliation/preview") response=await previewFinanceReconciliation(env,user,body);\n      else if (url.pathname==="/v1/finance/reconciliation/create") response=await createFinanceReconciliation(env,user,body);\n      else if (url.pathname==="/v1/finance/reconciliation/list") response=await listFinanceReconciliations(env,user,body);\n      else if (url.pathname==="/v1/finance/reconciliation/resolve") response=await resolveFinanceReconciliation(env,user,body);
+      else if (url.pathname==="/v1/finance/reconciliation/preview") response=await previewFinanceReconciliation(env,user,body);
+      else if (url.pathname==="/v1/finance/reconciliation/create") response=await createFinanceReconciliation(env,user,body);
+      else if (url.pathname==="/v1/finance/reconciliation/list") response=await listFinanceReconciliations(env,user,body);
+      else if (url.pathname==="/v1/finance/reconciliation/resolve") response=await resolveFinanceReconciliation(env,user,body);
       else if (url.pathname==="/v1/finance/transactions/approve") response=await transitionFinanceTransaction(env,user,body,"approved");
       else if (url.pathname==="/v1/finance/transactions/execute") response=await transitionFinanceTransaction(env,user,body,"executed");
       else if (url.pathname==="/v1/invitations/accept") response=await acceptInvitation(request,env,user,body);
