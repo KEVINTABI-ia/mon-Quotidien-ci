@@ -77,6 +77,19 @@
     <div id="employeeTasksList" class="muted">Sélectionnez une activité pour afficher vos tâches.</div>
     <div id="employeeTasksStatus" class="status hidden" role="status" aria-live="polite"></div>
   </section>
+  <section id="managerTasksCard" class="card hidden">
+    <h2>Gestion des tâches de l'activité</h2>
+    <p class="muted">Attribuez une tâche à un collaborateur actif de l'activité.</p>
+    <form id="managerTaskForm">
+      <label for="managerTaskActivity">Activité</label><select id="managerTaskActivity" required><option value="">Sélectionner une activité</option></select>
+      <label for="managerTaskAssignee">Collaborateur</label><select id="managerTaskAssignee" required><option value="">Sélectionner un collaborateur</option></select>
+      <label for="managerTaskTitle">Intitulé</label><input id="managerTaskTitle" minlength="3" maxlength="120" required>
+      <label for="managerTaskDescription">Consignes (facultatif)</label><textarea id="managerTaskDescription" maxlength="1000" rows="3"></textarea>
+      <label for="managerTaskDueDate">Date limite</label><input id="managerTaskDueDate" type="date" required>
+      <button id="managerTaskSubmit" type="submit">Attribuer la tâche</button>
+    </form>
+    <div id="managerTaskStatus" class="status hidden" role="status" aria-live="polite"></div>
+  </section>
   <section id="membersCard" class="card hidden">
     <h2>Collaborateurs et autorisations</h2>
     <h3>Rattachement des employés par code</h3>
@@ -263,6 +276,7 @@
     $("registrationCard").classList.toggle("hidden",!user);
     $("joinActivityCard").classList.toggle("hidden",!user);
     $("employeeTasksCard").classList.toggle("hidden",!user);
+    $("managerTasksCard").classList.toggle("hidden",!user);
     $("activityCard").classList.toggle("hidden",!user);
     $("authState").textContent=user
       ?"Session connectée. Vous pouvez créer votre espace professionnel."
@@ -321,6 +335,17 @@
       const memberDoc=await db.collection("businesses").doc(currentBusinessId).collection("members").doc(currentUser.uid).get();
       if(!memberDoc.exists||memberDoc.data().status!=="active")return;
       const member=memberDoc.data(),select=$("employeeTasksActivity");
+      if(member.permissions?.manage_access===true){
+        $("managerTasksCard").classList.remove("hidden");
+        const managerSelect=$("managerTaskActivity");managerSelect.replaceChildren();
+        for(const activityId of (member.activityIds||[])){
+          const activity=await db.collection("businesses").doc(currentBusinessId).collection("activities").doc(activityId).get();
+          if(!activity.exists)continue;
+          const option=document.createElement("option");option.value=activityId;option.textContent=activity.data().name||activityId;managerSelect.append(option);
+        }
+        if(managerSelect.options.length)await loadManagerTaskAssignees();
+      }
+
       select.replaceChildren();
       for(const activityId of (member.activityIds||[])){
         const activity=await db.collection("businesses").doc(currentBusinessId).collection("activities").doc(activityId).get();
@@ -357,6 +382,31 @@
     }catch(error){list.textContent="Chargement des tâches impossible : "+error.message;}
   }
   $("employeeTasksActivity").addEventListener("change",loadEmployeeTasks);
+
+  async function loadManagerTaskAssignees(){
+    const activityId=$("managerTaskActivity").value,select=$("managerTaskAssignee");
+    select.replaceChildren();
+    if(!activityId)return;
+    try{
+      const result=await callWorker("/v1/activities/members/list",{businessId:currentBusinessId,activityId});
+      const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent="Sélectionner un collaborateur";select.append(placeholder);
+      (result.members||[]).filter(member=>member.uid!==currentUser.uid).forEach(member=>{
+        const option=document.createElement("option");option.value=member.uid;option.textContent=(member.email||member.uid)+" · "+member.role;select.append(option);
+      });
+    }catch(error){setStatus("managerTaskStatus","Liste des collaborateurs indisponible : "+error.message,true);}
+  }
+  $("managerTaskActivity").addEventListener("change",loadManagerTaskAssignees);
+  $("managerTaskForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    const button=$("managerTaskSubmit");button.disabled=true;
+    try{
+      await callWorker("/v1/activities/tasks/create",{businessId:currentBusinessId,activityId:$("managerTaskActivity").value,assignedToUid:$("managerTaskAssignee").value,title:$("managerTaskTitle").value.trim(),description:$("managerTaskDescription").value.trim(),dueDate:$("managerTaskDueDate").value});
+      $("managerTaskTitle").value="";$("managerTaskDescription").value="";
+      setStatus("managerTaskStatus","Tâche attribuée avec succès.");
+    }catch(error){setStatus("managerTaskStatus","Attribution impossible : "+error.message,true);}
+    finally{button.disabled=false;}
+  });
+
   $("createActivityJoinCode").addEventListener("click",async()=>{
     const activityId=$("joinCodeActivity").value;if(!activityId)return setStatus("activityJoinCodeResult","Sélectionnez une activité.",true);
     const button=$("createActivityJoinCode");button.disabled=true;
