@@ -331,6 +331,49 @@ async function queryActivityCollection(env,businessId,activityId,collectionId) {
   });
   return rows.filter(row=>row.document?.name).map(row=>({id:row.document.name.split("/").pop(),...decodeDocument(row.document)}));
 }
+
+async function closeCashRegister(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id"),cashRegisterId=assertId(body.cashRegisterId,"cash_register_id");
+  await requireActivityAccess(env,user,businessId,activityId,"approve");
+  const countedBalanceXof=body.countedBalanceXof;
+  if(!Number.isSafeInteger(countedBalanceXof)||countedBalanceXof<0||countedBalanceXof>1000000000000)throw new HttpError(400,"invalid_counted_balance");
+  const path="businesses/"+businessId+"/activities/"+activityId+"/cashRegisters/"+cashRegisterId;
+  const doc=await getDoc(env,path);
+  if(!doc||doc.data.businessId!==businessId||doc.data.activityId!==activityId)throw new HttpError(404,"cash_register_not_found");
+  if(doc.data.status!=="active")throw new HttpError(409,"cash_register_not_open");
+  const transactions=await queryActivityCollection(env,businessId,activityId,"transactions");
+  let theoreticalBalance=doc.data.openingBalanceMinor||0;
+  for(const tx of transactions){
+    if(tx.status!=="executed")continue;
+    if(tx.cashRegisterId===cashRegisterId)theoreticalBalance+=tx.type==="income"?tx.amountMinor:-tx.amountMinor;
+    if(tx.type==="transfer"&&tx.destinationCashRegisterId===cashRegisterId)theoreticalBalance+=tx.amountMinor;
+  }
+  if(!Number.isSafeInteger(theoreticalBalance)||theoreticalBalance<0)throw new HttpError(409,"invalid_theoretical_balance");
+  const now=new Date(),closureId=crypto.randomUUID(),auditId=crypto.randomUUID();
+  const differenceXof=countedBalanceXof-theoreticalBalance;
+  const closure={closureId,businessId,activityId,cashRegisterId,currency:"XOF",theoreticalBalanceXof:theoreticalBalance,countedBalanceXof,differenceXof,closedByUid:user.uid,closedAt:now,schemaVersion:1};
+  await commit(env,[
+    writeDocument(path,{status:"closed",closedAt:now,closedByUid:user.uid,lastClosureId:closureId,updatedAt:now},doc.updateTime,true),
+    writeDocument("businesses/"+businessId+"/activities/"+activityId+"/cashRegisters/"+cashRegisterId+"/closures/"+closureId,closure,"create"),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"finance.cash_register.closed",entityType:"cash_register",entityId:cashRegisterId,details:{activityId,closureId,theoreticalBalanceXof:theoreticalBalance,countedBalanceXof,differenceXof},occurredAt:now},"create")
+  ]);
+  return json({closed:true,closure});
+}
+async function reopenCashRegister(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id"),cashRegisterId=assertId(body.cashRegisterId,"cash_register_id");
+  await requireActivityAccess(env,user,businessId,activityId,"approve");
+  const path="businesses/"+businessId+"/activities/"+activityId+"/cashRegisters/"+cashRegisterId;
+  const doc=await getDoc(env,path);
+  if(!doc||doc.data.businessId!==businessId||doc.data.activityId!==activityId)throw new HttpError(404,"cash_register_not_found");
+  if(doc.data.status!=="closed")throw new HttpError(409,"cash_register_not_closed");
+  const now=new Date(),auditId=crypto.randomUUID();
+  await commit(env,[
+    writeDocument(path,{status:"active",reopenedAt:now,reopenedByUid:user.uid,updatedAt:now},doc.updateTime,true),
+    writeDocument("businesses/"+businessId+"/auditLogs/"+auditId,{businessId,actorUid:user.uid,action:"finance.cash_register.reopened",entityType:"cash_register",entityId:cashRegisterId,details:{activityId,lastClosureId:doc.data.lastClosureId||null},occurredAt:now},"create")
+  ]);
+  return json({reopened:true,status:"active"});
+}
+
 async function createCashRegister(env,user,body) {
   const businessId=assertId(body.businessId,"business_id"), activityId=assertId(body.activityId,"activity_id");
   await requireActivityAccess(env,user,businessId,activityId,"create");
@@ -352,7 +395,7 @@ async function listCashRegisters(env,user,body) {
   const businessId=assertId(body.businessId,"business_id"), activityId=assertId(body.activityId,"activity_id");
   await requireActivityAccess(env,user,businessId,activityId,"view");
   const rows=await queryActivityCollection(env,businessId,activityId,"cashRegisters");
-  return json({cashRegisters:rows.filter(row=>row.businessId===businessId&&row.activityId===activityId&&row.status==="active").map(({id,name,currency,openingBalanceMinor,createdAt})=>({id,name,currency,openingBalanceMinor,createdAt}))});
+  return json({cashRegisters:rows.filter(row=>row.businessId===businessId&&row.activityId===activityId&&["active","closed"].includes(row.status)).map(({id,name,currency,openingBalanceMinor,createdAt,status,closedAt,lastClosureId})=>({id,name,currency,openingBalanceMinor,createdAt,status,closedAt,lastClosureId}))});
 }
 
 
@@ -609,7 +652,7 @@ async function listFinanceTransactions(env,user,body) {
     queryActivityCollection(env,businessId,activityId,"transactions"),
     queryActivityCollection(env,businessId,activityId,"cashRegisters")
   ]);
-  const active=registers.filter(r=>r.status==="active");
+  const active=registers.filter(r=>["active","closed"].includes(r.status));
   const balances={};
   for(const reg of active){
     let value=reg.openingBalanceMinor||0;
@@ -673,6 +716,8 @@ export default {
       if (url.pathname==="/v1/invitations") response=await createInvitation(request,env,user,body);
       else if (url.pathname==="/v1/finance/cash-registers/create") response=await createCashRegister(env,user,body);
       else if (url.pathname==="/v1/finance/cash-registers/list") response=await listCashRegisters(env,user,body);
+      else if (url.pathname==="/v1/finance/cash-registers/close") response=await closeCashRegister(env,user,body);
+      else if (url.pathname==="/v1/finance/cash-registers/reopen") response=await reopenCashRegister(env,user,body);
       else if (url.pathname==="/v1/finance/transactions/create") response=await createFinanceTransaction(env,user,body);
       else if (url.pathname==="/v1/finance/transactions/list") response=await listFinanceTransactions(env,user,body);
       else if (url.pathname==="/v1/finance/reconciliation/preview") response=await previewFinanceReconciliation(env,user,body);
