@@ -357,7 +357,7 @@ async function queryJoinCodeCandidates(env,codeHash) {
   const token=await googleAccessToken(env);
   const response=await fetch("https://firestore.googleapis.com/v1/projects/"+PROJECT_ID+"/databases/(default)/documents:runQuery",{
     method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},
-    body:JSON.stringify({structuredQuery:{from:[{collectionId:"activities"}],where:{fieldFilter:{field:{fieldPath:"joinCodeHash"},op:"EQUAL",value:{stringValue:codeHash}}},limit:2}})
+    body:JSON.stringify({structuredQuery:{from:[{collectionId:"activities",allDescendants:true}],where:{fieldFilter:{field:{fieldPath:"joinCodeHash"},op:"EQUAL",value:{stringValue:codeHash}}},limit:2}})
   });
   if(!response.ok)throw new Error("firestore_query_failed");
   const rows=await response.json();
@@ -399,6 +399,48 @@ async function reviewActivityJoinRequest(env,user,body) {
   );
   await commit(env,writes);
   return json({reviewed:true,decision:body.decision});
+}
+
+
+async function createActivityTask(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  await requireActivityAccess(env,user,businessId,activityId,"manage_access");
+  const title=typeof body.title==="string"?body.title.trim():"";
+  const description=typeof body.description==="string"?body.description.trim():"";
+  const assignedToUid=assertId(body.assignedToUid,"assigned_to_uid");
+  const dueDate=typeof body.dueDate==="string"?body.dueDate:"";
+  if(title.length<3||title.length>120)throw new HttpError(400,"invalid_task_title");
+  if(description.length>1000)throw new HttpError(400,"invalid_task_description");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate))throw new HttpError(400,"invalid_task_due_date");
+  const member=await getDoc(env,"businesses/"+businessId+"/members/"+assignedToUid);
+  if(!member||member.data.status!=="active"||!member.data.activityIds?.includes(activityId))throw new HttpError(400,"assignee_not_active_in_activity");
+  const id=crypto.randomUUID(),now=new Date();
+  const task={businessId,activityId,title,description,dueDate,assignedToUid,assignedToEmail:member.data.email||"",status:"assigned",createdByUid:user.uid,createdAt:now,updatedAt:now,schemaVersion:1};
+  await commit(env,[writeDocument("businesses/"+businessId+"/activities/"+activityId+"/tasks/"+id,task,"create")]);
+  return json({created:true,task:{id,...task}});
+}
+async function listActivityTasks(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id");
+  const access=await requireActivityAccess(env,user,businessId,activityId,"view");
+  const rows=await queryActivityCollection(env,businessId,activityId,"tasks");
+  const isManager=access.member.role==="owner"||access.member.role==="general_director"||access.member.role==="activity_manager"||access.member.permissions?.manage_access===true;
+  const tasks=rows.filter(t=>t.businessId===businessId&&t.activityId===activityId&&(isManager||t.assignedToUid===user.uid))
+    .sort((a,b)=>String(a.dueDate||"").localeCompare(String(b.dueDate||"")))
+    .map(t=>({id:t.id,title:t.title,description:t.description,dueDate:t.dueDate,status:t.status,assignedToUid:t.assignedToUid,assignedToEmail:t.assignedToEmail}));
+  return json({tasks});
+}
+async function updateActivityTaskStatus(env,user,body) {
+  const businessId=assertId(body.businessId,"business_id"),activityId=assertId(body.activityId,"activity_id"),taskId=assertId(body.taskId,"task_id");
+  if(!["in_progress","completed"].includes(body.status))throw new HttpError(400,"invalid_task_status");
+  await requireActivityAccess(env,user,businessId,activityId,"view");
+  const path="businesses/"+businessId+"/activities/"+activityId+"/tasks/"+taskId;
+  const task=await getDoc(env,path);
+  if(!task||task.data.businessId!==businessId||task.data.activityId!==activityId)throw new HttpError(404,"task_not_found");
+  if(task.data.assignedToUid!==user.uid)throw new HttpError(403,"task_assignee_required");
+  if(task.data.status==="completed")throw new HttpError(409,"task_already_completed");
+  const now=new Date();
+  await commit(env,[writeDocument(path,{status:body.status,updatedAt:now},task.updateTime,true)]);
+  return json({updated:true,status:body.status});
 }
 
 async function requireActivityAccess(env,user,businessId,activityId,permission="view") {
@@ -825,7 +867,10 @@ export default {
       const user=await authenticate(request,env);
       await enforceRateLimit(env.USER_RATE_LIMITER,user.uid);
       let response;
-      if (url.pathname==="/v1/activities/join-code/create") response=await createActivityJoinCode(env,user,body);
+      if (url.pathname==="/v1/activities/tasks/create") response=await createActivityTask(env,user,body);
+      else if (url.pathname==="/v1/activities/tasks/list") response=await listActivityTasks(env,user,body);
+      else if (url.pathname==="/v1/activities/tasks/update-status") response=await updateActivityTaskStatus(env,user,body);
+      else if (url.pathname==="/v1/activities/join-code/create") response=await createActivityJoinCode(env,user,body);
       else if (url.pathname==="/v1/activities/join-requests/create") response=await submitActivityJoinRequest(env,user,body);
       else if (url.pathname==="/v1/activities/join-requests/list") response=await listActivityJoinRequests(env,user,body);
       else if (url.pathname==="/v1/activities/join-requests/review") response=await reviewActivityJoinRequest(env,user,body);
