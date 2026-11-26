@@ -244,7 +244,12 @@
   let currentUser=null, currentBusinessId=null, currentBusinessOwner=false, lastInviteUrl="";
   async function callWorker(path,payload){
     if(!MON_BUSINESS_API)throw new Error("worker_not_configured");
-    const idToken=await currentUser.getIdToken();
+    const user=currentUser;
+    if(!user)throw new Error("authentication_required");
+    // Recharger le profil Firebase puis renouveler le jeton pour transmettre
+    // au Worker l'état actuel de vérification de l'adresse e-mail.
+    await user.reload();
+    const idToken=await user.getIdToken(true);
     const response=await fetch(MON_BUSINESS_API.replace(/\/$/,"")+path,{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+idToken},body:JSON.stringify(payload)});
     const result=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(result.error||"worker_request_failed");
