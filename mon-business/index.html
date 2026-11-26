@@ -465,6 +465,7 @@
       $("financeCard").classList.remove("hidden");
       await loadActivities();
       await loadMembers();
+      await loadEmployeeWorkspace();
     }catch(error){
       console.error("Mon Business registration error",error);
       setStatus("businessStatus","Impossible de créer l'entreprise. Vérifiez votre connexion et vos autorisations, puis réessayez.",true);
@@ -914,6 +915,7 @@
       $("activityName").value="";$("activityType").value="";
       setStatus("activityStatus","Activité ajoutée avec succès.");
       await loadActivities();
+      await loadEmployeeWorkspace();
     }catch(error){
       console.error("Mon Business activity create error",error);
       setStatus("activityStatus","Impossible d'ajouter cette activité. Vérifiez les droits de votre compte.",true);
