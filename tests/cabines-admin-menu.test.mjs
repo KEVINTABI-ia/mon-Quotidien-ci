@@ -88,7 +88,7 @@ test("Catalogue Moov CI: les offres visibles dans les vidéos sont intégrées",
   const start = cabines.indexOf(' {op:"Moov Africa"');
   const end = cabines.indexOf(' {op:"MTN"', start);
   const moov = cabines.slice(start, end);
-  assert.equal((moov.match(/op:"Moov Africa"/g) || []).length, 54);
+  assert.equal((moov.match(/op:"Moov Africa"/g) || []).length, 61);
   assert.match(moov, /name:"Appel \+ Internet 20 min \+ 150 Mo",price:200/);
   assert.match(moov, /name:"Appels 100 min \+ 500 SMS \+ 1 024 Mo \+ illimité vers 5 numéros préférés",price:1000/);
   assert.match(moov, /name:"Internet illimité 6 heures",price:1300,data:"Illimité".*validity:"6 heures"/);
@@ -98,6 +98,9 @@ test("Catalogue Moov CI: les offres visibles dans les vidéos sont intégrées",
   assert.match(moov, /name:"400 Go",price:39000,data:"400 Go".*validity:"30 jours"/);
   assert.match(moov, /name:"Moov Folie 10 Go",price:2500,data:"10 Go".*validity:"15 jours"/);
   assert.match(moov, /name:"Pass nuit 30 min TRS \+ 2 Go",price:200,data:"2 Go".*validity:"22h–7h"/);
+  assert.match(moov, /type:"forfait_appels",group:"Moov Folie",name:"Moov Folie Appels Jour",price:200/);
+  assert.match(moov, /name:"Moov Folie 140 min",price:1000.*minutes:"140 min".*validity:"10 jours"/);
+  assert.match(moov, /name:"Moov Folie 700 min",price:5000.*minutes:"700 min".*validity:"30 jours"/);
 });
 
 test("Catalogue Moov CI: les offres mixtes restent distinctes des offres Internet et appels", () => {
