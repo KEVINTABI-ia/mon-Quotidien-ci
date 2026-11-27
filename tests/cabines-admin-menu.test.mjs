@@ -59,3 +59,26 @@ test("Catalogue Orange CI: les catalogues MTN et Moov restent présents", () => 
   assert.match(cabines, /op:"Moov Africa"/);
   assert.match(cabines, /op:"MTN"/);
 });
+
+
+test("Catalogue MTN CI: les offres visibles dans les captures sont intégrées sans doublon", () => {
+  const start = cabines.indexOf(' {op:"MTN"');
+  const end = cabines.indexOf('];', start);
+  const mtn = cabines.slice(start, end);
+  assert.equal((mtn.match(/op:"MTN"/g) || []).length, 30);
+  assert.match(mtn, /name:"Pass c'chic 650Mo",price:200,data:"650 Mo".*validity:"1 jour"/);
+  assert.match(mtn, /name:"Pass c'chic 7,5Go",price:2500,data:"7,5 Go".*validity:"10 jours"/);
+  assert.equal((mtn.match(/name:"Pass c'chic 7,5Go"/g) || []).length, 1);
+  assert.match(mtn, /name:"Pass c'chic 1,5 Go \+ 60min",price:700/);
+  assert.match(mtn, /name:"Appels 27 min \+ Internet 50 Mo",price:300/);
+  assert.match(mtn, /name:"Internet Mois Medium",price:5000/);
+  assert.match(mtn, /name:"Appels Premium",price:10000/);
+});
+
+test("Catalogue MTN CI: les offres mixtes restent classées dans leur propre catégorie", () => {
+  const start = cabines.indexOf(' {op:"MTN"');
+  const end = cabines.indexOf('];', start);
+  const mtn = cabines.slice(start, end);
+  assert.match(mtn, /type:"forfait_mixte",group:"Pass C'Chic",name:"Pass c'chic 1,5 Go \+ 60min"/);
+  assert.match(mtn, /type:"forfait_mixte",group:"Pass 1 à 3 jours",name:"Appels 27 min \+ Internet 50 Mo"/);
+});
