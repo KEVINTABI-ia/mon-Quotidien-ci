@@ -82,3 +82,28 @@ test("Catalogue MTN CI: les offres mixtes restent classées dans leur propre cat
   assert.match(mtn, /type:"forfait_mixte",group:"Pass C'Chic",name:"Pass c'chic 1,5 Go \+ 60min"/);
   assert.match(mtn, /type:"forfait_mixte",group:"Pass 1 à 3 jours",name:"Appels 27 min \+ Internet 50 Mo"/);
 });
+
+
+test("Catalogue Moov CI: les offres visibles dans les vidéos sont intégrées", () => {
+  const start = cabines.indexOf(' {op:"Moov Africa"');
+  const end = cabines.indexOf(' {op:"MTN"', start);
+  const moov = cabines.slice(start, end);
+  assert.equal((moov.match(/op:"Moov Africa"/g) || []).length, 54);
+  assert.match(moov, /name:"Appel \+ Internet 20 min \+ 150 Mo",price:200/);
+  assert.match(moov, /name:"Appels 100 min \+ 500 SMS \+ 1 024 Mo \+ illimité vers 5 numéros préférés",price:1000/);
+  assert.match(moov, /name:"Internet illimité 6 heures",price:1300,data:"Illimité".*validity:"6 heures"/);
+  assert.match(moov, /name:"Réseaux sociaux 500 Mo",price:200,data:"500 Mo".*validity:"1 jour"/);
+  assert.match(moov, /name:"1,5 Go",price:1000,data:"1,5 Go".*validity:"7 jours"/);
+  assert.match(moov, /name:"Internet 5 Go",price:2000,data:"5 Go".*validity:"10 jours"/);
+  assert.match(moov, /name:"400 Go",price:39000,data:"400 Go".*validity:"30 jours"/);
+  assert.match(moov, /name:"Moov Folie 10 Go",price:2500,data:"10 Go".*validity:"15 jours"/);
+  assert.match(moov, /name:"Pass nuit 30 min TRS \+ 2 Go",price:200,data:"2 Go".*validity:"22h–7h"/);
+});
+
+test("Catalogue Moov CI: les offres mixtes restent distinctes des offres Internet et appels", () => {
+  const start = cabines.indexOf(' {op:"Moov Africa"');
+  const end = cabines.indexOf(' {op:"MTN"', start);
+  const moov = cabines.slice(start, end);
+  assert.match(moov, /type:"forfait_mixte",group:"Appel \+ Internet"/);
+  assert.match(moov, /type:"forfait_mixte",group:"Pass nuit"/);
+});
