@@ -174,11 +174,30 @@ function rendreCatalogueCabine(){
  const root=$("cabCatalogue");if(!root)return;
  const op=$("cabOperateur").value,kind=$("cabService").value;
  const matching=cabForfaits.filter(x=>x.op===op&&x.type===kind);
- const card=x=>'<article class="cab-item cab-offer"><div class="cab-request-head"><strong>'+esc(x.name)+'</strong><span class="cab-pill">'+esc(x.validity)+'</span></div>'+(x.group?'<p class="cab-muted">'+esc(x.group)+'</p>':'')+'<p class="cab-price">'+x.price.toLocaleString("fr-FR")+' FCFA</p><p><strong>Internet :</strong> '+esc(x.data)+'</p><p><strong>Appels / SMS :</strong> '+esc(x.minutes)+'</p>'+(x.notes?'<p class="cab-muted">'+esc(x.notes)+'</p>':'')+'<button type="button" class="primary" data-cab-offer="'+cabForfaits.indexOf(x)+'">Sélectionner ce forfait</button><a href="'+esc(x.source)+'" target="_blank" rel="noopener noreferrer">Voir les informations opérateur</a></article>';
- let html='<div class="cab-catalog-head"><h3>Annuaire des offres — '+esc(op)+'</h3></div>';
- if(matching.length)html+='<div class="cab-offers">'+matching.map(card).join("")+'</div>';
- else html+='<div class="cab-item">Aucune offre répertoriée pour cet opérateur et cette catégorie. Choisissez une autre catégorie ou un autre opérateur.</div>';
- root.innerHTML=html+'<p class="cab-muted">Le prix affiché est le prix de la prestation, hors frais de service MON QUOTIDIEN CI. Le paiement est confirmé par Jèko avant transmission à une cabine.</p>';
+ const periodeForfait=x=>{
+  const validity=String(x.validity||"").toLowerCase().trim();
+  const group=String(x.group||"").toLowerCase();
+  if(/nuit|22h/.test(validity+" "+group))return "nuit";
+  const hours=validity.match(/^(\\d+)\\s*heures?$/);
+  if(hours)return "heures";
+  const days=validity.match(/^(\\d+)\\s*jours?$/);
+  if(days){const n=Number(days[1]);if(n<=3)return "jour";if(n<=7)return "semaine";if(n<30)return "intermediaire";if(n===30)return "mois";}
+  return "autres";
+ };
+ const periodes=[
+  ["jour","Pass Jour"],["semaine","Pass Semaine"],["intermediaire","Pass 10 à 21 jours"],
+  ["mois","Pass Mois"],["heures","Pass Heures"],["nuit","Pass Nuit"],["autres","Autres durées"]
+ ];
+ const card=x=>'<button type="button" class="cab-offer-choice" data-cab-offer="'+cabForfaits.indexOf(x)+'" aria-label="'+esc(x.name)+', '+x.price.toLocaleString("fr-FR")+' FCFA, '+esc(x.validity)+'"><span class="cab-offer-choice-name">'+esc(x.name)+'</span><span class="cab-offer-choice-meta"><strong>'+x.price.toLocaleString("fr-FR")+' FCFA</strong><span>⏱ '+esc(x.validity)+'</span></span></button>';
+ let html='<div class="cab-catalog-head"><h3>Forfaits — '+esc(op)+'</h3></div>';
+ if(matching.length){
+  for(const [key,label] of periodes){
+   const offers=matching.filter(x=>periodeForfait(x)===key);
+   if(!offers.length)continue;
+   html+='<section class="cab-offer-period" data-cab-period="'+key+'"><h4>'+label+' <span>('+offers.length+')</span></h4><div class="cab-offer-choice-list">'+offers.map(card).join("")+'</div></section>';
+  }
+ }else html+='<div class="cab-item">Aucune offre répertoriée pour cet opérateur et cette catégorie. Choisissez une autre catégorie ou un autre opérateur.</div>';
+ root.innerHTML=html+'<p class="cab-muted">Sélectionnez un forfait pour afficher le récapitulatif et poursuivre le paiement.</p>';
  root.querySelectorAll("[data-cab-offer]").forEach(b=>b.onclick=()=>selectionnerForfaitCabine(cabForfaits[Number(b.dataset.cabOffer)]));
  const generic=()=>{ $("cabMontant").value="";$("cabDetails").value="Forfait "+(cabTypeLabels[kind]||"")+" à préciser avec le cabiniste."; $("cabCommuneClient").focus(); document.getElementById("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});};
  $("cabMtnChoose")?.addEventListener("click",generic);$("cabOrangeChoose")?.addEventListener("click",generic);
@@ -197,6 +216,15 @@ $("cabService").addEventListener("change",rendreCatalogueCabine);
 rendreCatalogueCabine();
 const css=document.createElement("style");css.textContent=`
 #cabinesTelephoniques{max-width:760px;margin:0 auto}
+#cabinesTelephoniques .cab-offer-period{margin:18px 0 24px}
+#cabinesTelephoniques .cab-offer-period>h4{display:flex;align-items:center;gap:8px;margin:18px 2px 12px;color:#68786e;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+#cabinesTelephoniques .cab-offer-period>h4 span{font-size:12px;font-weight:600;color:#87918a}
+#cabinesTelephoniques .cab-offer-choice-list{display:grid;grid-template-columns:1fr;gap:10px}
+#cabinesTelephoniques .cab-offer-choice{display:flex;flex-direction:column;align-items:flex-start;gap:9px;width:100%;box-sizing:border-box;padding:15px 17px;border:2px solid #e1e5e9;border-radius:22px;background:#fff;color:#17191d;text-align:left;cursor:pointer;transition:border-color .15s,background .15s}
+#cabinesTelephoniques .cab-offer-choice:active,#cabinesTelephoniques .cab-offer-choice:focus-visible{outline:none;border-color:#16834a;background:#f1faf4}
+#cabinesTelephoniques .cab-offer-choice-name{font-size:18px;font-weight:800;line-height:1.25}
+#cabinesTelephoniques .cab-offer-choice-meta{display:flex;flex-wrap:wrap;align-items:center;gap:9px;color:#5e6873;font-size:15px}
+#cabinesTelephoniques .cab-offer-choice-meta strong{color:#17663d;font-size:16px}
 #cabinesTelephoniques .cab-item{border:1px solid #e1eae2;border-radius:16px;padding:14px;margin:10px 0;background:#fff;box-shadow:0 4px 14px #173b2b0b}
 #cabinesTelephoniques label{display:block;margin-top:10px}
 #cabinesTelephoniques input,#cabinesTelephoniques select,#cabinesTelephoniques textarea{box-sizing:border-box;width:100%;padding:12px;border:1px solid #dce7de;border-radius:10px}
