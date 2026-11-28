@@ -50,9 +50,15 @@ test("Catalogue Orange CI: les forfaits appels et internet fournis sont présent
   assert.match(orange, /Accès WaW Muzik/);
 });
 
-test("Catalogue Orange CI: les cartes affichent le groupe et les précisions de chaque offre", () => {
-  assert.match(cabines, /esc\(x\.group\)/);
-  assert.match(cabines, /esc\(x\.notes\)/);
+test("Catalogue cabine: les offres sont regroupées par durée et les cartes affichent le nom, le prix et la validité", () => {
+  assert.match(cabines, /const periodeForfait=x=>/);
+  assert.match(cabines, /\["jour","Pass Jour"\]/);
+  assert.match(cabines, /\["semaine","Pass Semaine"\]/);
+  assert.match(cabines, /\["mois","Pass Mois"\]/);
+  assert.match(cabines, /cab-offer-choice-name/);
+  assert.match(cabines, /x\.name\).*cab-offer-choice-meta/);
+  assert.match(cabines, /x\.price\.toLocaleString\("fr-FR"\)/);
+  assert.match(cabines, /esc\(x\.validity\)/);
 });
 
 test("Catalogue Orange CI: les catalogues MTN et Moov restent présents", () => {
@@ -121,5 +127,9 @@ test("Cabine téléphonique: les cinq logos de paiement ont des fichiers dédié
     assert.match(cabines, new RegExp('data-payment="' + method + '"'));
   }
   assert.match(cabines, /id="cabPaymentMethod"/);
-  assert.match(cabines, /Valider et payer avec Jèko/);
+  assert.match(cabines, /Confirmer le paiement avec Jèko/);
+  assert.match(cabines, /id="cabSubscriptionRecap"/);
+  assert.match(cabines, /id="cabPaymentWrap" hidden/);
+  assert.match(cabines, /Sélectionnez un forfait pour afficher le récapitulatif/);
+  assert.match(cabines, /Vérifiez le récapitulatif, choisissez votre moyen de paiement, puis confirmez/);
 });
