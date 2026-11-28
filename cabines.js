@@ -35,7 +35,8 @@ section.innerHTML=`<h2>📞 Cabine téléphonique</h2>
 <div id="cabAmountWrap"><label>Montant du transfert souhaité auprès de la cabine (FCFA)</label><input id="cabMontant" type="number" min="200" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000"></div>
 <div id="cabCommuneWrap" hidden><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"></div>
 <div id="cabDetailsWrap" hidden><label>Précisions</label><textarea id="cabDetails" maxlength="180" placeholder="Précisions"></textarea></div>
-<div id="cabSubscriptionRecap" class="cab-item" hidden><h3>Récapitulatif de la souscription</h3><p><strong>Opérateur :</strong> <span id="cabRecapOperator">—</span></p><p><strong>Numéro du bénéficiaire :</strong> <span id="cabRecapPhone">—</span></p><p><strong>Forfait :</strong> <span id="cabRecapOffer">—</span></p><p><strong>Prix du forfait :</strong> <span id="cabRecapPrice">—</span></p><p><strong>Frais de service (4 %) :</strong> <span id="cabRecapFee">—</span></p><p><strong>Total à payer :</strong> <strong id="cabRecapTotal">—</strong></p></div>\n<div id="cabPaymentWrap" hidden><label>Choix du moyen de paiement Jèko</label><div class="cab-choice-row cab-payment-choices" id="cabPaymentChoices">
+<div id="cabSubscriptionRecap" class="cab-item" hidden><h3>Récapitulatif de la souscription</h3><p><strong>Opérateur :</strong> <span id="cabRecapOperator">—</span></p><p><strong>Numéro du bénéficiaire :</strong> <span id="cabRecapPhone">—</span></p><p><strong>Forfait :</strong> <span id="cabRecapOffer">—</span></p><p><strong>Prix du forfait :</strong> <span id="cabRecapPrice">—</span></p><p><strong>Frais de service (4 %) :</strong> <span id="cabRecapFee">—</span></p><p><strong>Total à payer :</strong> <strong id="cabRecapTotal">—</strong></p></div>
+<div id="cabPaymentWrap" hidden><label>Choix du moyen de paiement Jèko</label><div class="cab-choice-row cab-payment-choices" id="cabPaymentChoices">
 <button type="button" class="cab-logo-choice selected" data-payment="wave" aria-label="Wave"><img class="cab-payment-logo" src="${cabPaymentLogo('wave')}" alt="Wave" loading="eager" decoding="async"></button>
 <button type="button" class="cab-logo-choice" data-payment="orange" aria-label="Orange Money"><img class="cab-payment-logo" src="${cabPaymentLogo('orange')}" alt="Orange Money" loading="eager" decoding="async"></button>
 <button type="button" class="cab-logo-choice" data-payment="mtn" aria-label="MTN MoMo"><img class="cab-payment-logo" src="${cabPaymentLogo('mtn')}" alt="MTN MoMo" loading="eager" decoding="async"></button>
@@ -187,7 +188,7 @@ function rendreCatalogueCabine(){
   return "autres";
  };
  const periodes=[
-  ["jour","Pass Jour"],["semaine","Pass Semaine"],["intermediaire","Pass 10 à 21 jours"],
+  ["jour","Pass Jour"],["semaine","Pass Semaine"],["intermediaire","Autres durées"],
   ["mois","Pass Mois"],["heures","Pass Heures"],["nuit","Pass Nuit"],["autres","Autres durées"]
  ];
  const card=x=>'<button type="button" class="cab-offer-choice" data-cab-offer="'+cabForfaits.indexOf(x)+'" aria-label="'+esc(x.name)+', '+x.price.toLocaleString("fr-FR")+' FCFA, '+esc(x.validity)+'"><span class="cab-offer-choice-name">'+esc(x.name)+'</span><span class="cab-offer-choice-meta"><strong>'+x.price.toLocaleString("fr-FR")+' FCFA</strong><span>⏱ '+esc(x.validity)+'</span></span></button>';
