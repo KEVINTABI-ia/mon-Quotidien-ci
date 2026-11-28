@@ -2,6 +2,9 @@
 (function(){
 "use strict";
 const $=id=>document.getElementById(id);
+const CABINES_SCRIPT_URL=document.currentScript?.src||document.baseURI;
+const CAB_PAYMENT_ASSETS={wave:"assets/payments/wave.svg",orange:"assets/payments/orange-money.svg",mtn:"assets/payments/mtn-momo.svg",moov:"assets/payments/moov-money.svg",djamo:"assets/payments/djamo.svg"};
+const cabPaymentLogo=name=>new URL(CAB_PAYMENT_ASSETS[name],CABINES_SCRIPT_URL).href;
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const stamp=()=>firebase.firestore.FieldValue.serverTimestamp();
 const money=n=>Number(n||0).toLocaleString("fr-FR")+" FCFA";
@@ -31,11 +34,11 @@ section.innerHTML=`<h2>📞 Cabine téléphonique</h2>
 <div id="cabCommuneWrap" hidden><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"></div>
 <div id="cabDetailsWrap" hidden><label>Précisions</label><textarea id="cabDetails" maxlength="180" placeholder="Précisions"></textarea></div>
 <div id="cabPaymentWrap"><label>Moyen de paiement Jèko</label><div class="cab-choice-row cab-payment-choices" id="cabPaymentChoices">
-<button type="button" class="cab-logo-choice selected" data-payment="wave" aria-label="Wave"><img class="cab-payment-logo" src="assets/payments/wave.svg" alt="Wave" loading="eager" decoding="async"></button>
-<button type="button" class="cab-logo-choice" data-payment="orange" aria-label="Orange Money"><img class="cab-payment-logo" src="assets/payments/orange-money.svg" alt="Orange Money" loading="eager" decoding="async"></button>
-<button type="button" class="cab-logo-choice" data-payment="mtn" aria-label="MTN MoMo"><img class="cab-payment-logo" src="assets/payments/mtn-momo.svg" alt="MTN MoMo" loading="eager" decoding="async"></button>
-<button type="button" class="cab-logo-choice" data-payment="moov" aria-label="Moov Money"><img class="cab-payment-logo" src="assets/payments/moov-money.svg" alt="Moov Money" loading="eager" decoding="async"></button>
-<button type="button" class="cab-logo-choice" data-payment="djamo" aria-label="Djamo"><img class="cab-payment-logo" src="assets/payments/djamo.svg" alt="Djamo" loading="eager" decoding="async"></button></div>
+<button type="button" class="cab-logo-choice selected" data-payment="wave" aria-label="Wave"><img class="cab-payment-logo" src="${cabPaymentLogo('wave')}" alt="Wave" loading="eager" decoding="async"></button>
+<button type="button" class="cab-logo-choice" data-payment="orange" aria-label="Orange Money"><img class="cab-payment-logo" src="${cabPaymentLogo('orange')}" alt="Orange Money" loading="eager" decoding="async"></button>
+<button type="button" class="cab-logo-choice" data-payment="mtn" aria-label="MTN MoMo"><img class="cab-payment-logo" src="${cabPaymentLogo('mtn')}" alt="MTN MoMo" loading="eager" decoding="async"></button>
+<button type="button" class="cab-logo-choice" data-payment="moov" aria-label="Moov Money"><img class="cab-payment-logo" src="${cabPaymentLogo('moov')}" alt="Moov Money" loading="eager" decoding="async"></button>
+<button type="button" class="cab-logo-choice" data-payment="djamo" aria-label="Djamo"><img class="cab-payment-logo" src="${cabPaymentLogo('djamo')}" alt="Djamo" loading="eager" decoding="async"></button></div>
 <select id="cabPaymentMethod" class="cab-hidden-select" aria-hidden="true" tabindex="-1"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select></div>
 <p id="cabFeePreview" class="cab-muted">Frais de service : —</p><div class="cab-actions"><button id="cabEnvoyer" class="primary" type="button">Valider et payer avec Jèko</button><button id="cabCancelForm" type="button">Annuler</button></div><p id="cabMessage" aria-live="polite"></p></div>
 </div>
