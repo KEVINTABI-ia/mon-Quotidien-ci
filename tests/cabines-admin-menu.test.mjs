@@ -112,12 +112,14 @@ test("Catalogue Moov CI: les offres mixtes restent distinctes des offres Interne
 });
 
 
-test("Cabine téléphonique: les cinq logos de paiement fournis sont affichés et Jèko reste le checkout", () => {
+test("Cabine téléphonique: les cinq logos de paiement ont des fichiers dédiés et Jèko reste le checkout", () => {
+  const assets = ["wave.svg", "orange-money.svg", "mtn-momo.svg", "moov-money.svg", "djamo.svg"];
+  for (const file of assets) {
+    assert.ok(cabines.includes('assets/payments/' + file), "Logo absent : " + file);
+  }
   for (const method of ["wave", "orange", "mtn", "moov", "djamo"]) {
     assert.match(cabines, new RegExp('data-payment="' + method + '"'));
-    assert.match(cabines, new RegExp('class="cab-payment-logo logo-' + method + '"'));
   }
-  assert.match(cabines, /data:image\/jpeg;base64,/);
-  assert.match(cabines, /assets\\/payments\\/orange-money\\.svg/);\n  assert.match(cabines, /assets\\/payments\\/mtn-momo\\.svg/);\n  assert.match(cabines, /assets\\/payments\\/moov-money\\.svg/);\n  assert.match(cabines, /assets\\/payments\\/djamo\\.svg/);\n  assert.match(cabines, /id="cabPaymentMethod"/);
+  assert.match(cabines, /id="cabPaymentMethod"/);
   assert.match(cabines, /Valider et payer avec Jèko/);
 });
