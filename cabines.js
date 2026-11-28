@@ -35,14 +35,14 @@ section.innerHTML=`<h2>📞 Cabine téléphonique</h2>
 <div id="cabAmountWrap"><label>Montant du transfert souhaité auprès de la cabine (FCFA)</label><input id="cabMontant" type="number" min="200" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000"></div>
 <div id="cabCommuneWrap" hidden><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"></div>
 <div id="cabDetailsWrap" hidden><label>Précisions</label><textarea id="cabDetails" maxlength="180" placeholder="Précisions"></textarea></div>
-<div id="cabPaymentWrap"><label>Moyen de paiement Jèko</label><div class="cab-choice-row cab-payment-choices" id="cabPaymentChoices">
+<div id="cabSubscriptionRecap" class="cab-item" hidden><h3>Récapitulatif de la souscription</h3><p><strong>Opérateur :</strong> <span id="cabRecapOperator">—</span></p><p><strong>Numéro du bénéficiaire :</strong> <span id="cabRecapPhone">—</span></p><p><strong>Forfait :</strong> <span id="cabRecapOffer">—</span></p><p><strong>Prix du forfait :</strong> <span id="cabRecapPrice">—</span></p><p><strong>Frais de service (4 %) :</strong> <span id="cabRecapFee">—</span></p><p><strong>Total à payer :</strong> <strong id="cabRecapTotal">—</strong></p></div>\n<div id="cabPaymentWrap" hidden><label>Choix du moyen de paiement Jèko</label><div class="cab-choice-row cab-payment-choices" id="cabPaymentChoices">
 <button type="button" class="cab-logo-choice selected" data-payment="wave" aria-label="Wave"><img class="cab-payment-logo" src="${cabPaymentLogo('wave')}" alt="Wave" loading="eager" decoding="async"></button>
 <button type="button" class="cab-logo-choice" data-payment="orange" aria-label="Orange Money"><img class="cab-payment-logo" src="${cabPaymentLogo('orange')}" alt="Orange Money" loading="eager" decoding="async"></button>
 <button type="button" class="cab-logo-choice" data-payment="mtn" aria-label="MTN MoMo"><img class="cab-payment-logo" src="${cabPaymentLogo('mtn')}" alt="MTN MoMo" loading="eager" decoding="async"></button>
 <button type="button" class="cab-logo-choice" data-payment="moov" aria-label="Moov Money"><img class="cab-payment-logo" src="${cabPaymentLogo('moov')}" alt="Moov Money" loading="eager" decoding="async"></button>
 <button type="button" class="cab-logo-choice" data-payment="djamo" aria-label="Djamo"><img class="cab-payment-logo" src="${cabPaymentLogo('djamo')}" alt="Djamo" loading="eager" decoding="async"></button></div>
 <select id="cabPaymentMethod" class="cab-hidden-select" aria-hidden="true" tabindex="-1"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select></div>
-<p id="cabFeePreview" class="cab-muted">Frais de service : —</p><div class="cab-actions"><button id="cabEnvoyer" class="primary" type="button">Valider et payer avec Jèko</button><button id="cabCancelForm" type="button">Annuler</button></div><p id="cabMessage" aria-live="polite"></p></div>
+<p id="cabFeePreview" class="cab-muted">Frais de service : —</p><div class="cab-actions"><button id="cabEnvoyer" class="primary" type="button">Confirmer le paiement avec Jèko</button><button id="cabCancelForm" type="button">Annuler</button></div><p id="cabMessage" aria-live="polite"></p></div>
 </div>
 <div id="cabHistoryView" hidden><div class="cab-history-heading"><h3>Historique de mes transactions</h3><button id="cabBackFromHistory" class="cab-back" type="button">← Retour</button></div><div id="cabHistorique">Connectez-vous pour consulter vos demandes.</div><button id="cabRefreshHistory" type="button">Actualiser l’historique</button></div>
 <hr><div id="cabPartner" hidden><h3>Espace cabiniste partenaire</h3><div id="cabAuth"></div><div id="cabPanel" hidden></div></div>`;
@@ -176,29 +176,69 @@ function rendreCatalogueCabine(){
  const root=$("cabCatalogue");if(!root)return;
  const op=$("cabOperateur").value,kind=$("cabService").value;
  const matching=cabForfaits.filter(x=>x.op===op&&x.type===kind);
- const card=x=>'<article class="cab-item cab-offer"><div class="cab-request-head"><strong>'+esc(x.name)+'</strong><span class="cab-pill">'+esc(x.validity)+'</span></div>'+(x.group?'<p class="cab-muted">'+esc(x.group)+'</p>':'')+'<p class="cab-price">'+x.price.toLocaleString("fr-FR")+' FCFA</p><p><strong>Internet :</strong> '+esc(x.data)+'</p><p><strong>Appels / SMS :</strong> '+esc(x.minutes)+'</p>'+(x.notes?'<p class="cab-muted">'+esc(x.notes)+'</p>':'')+'<button type="button" class="primary" data-cab-offer="'+cabForfaits.indexOf(x)+'">Sélectionner ce forfait</button><a href="'+esc(x.source)+'" target="_blank" rel="noopener noreferrer">Voir les informations opérateur</a></article>';
- let html='<div class="cab-catalog-head"><h3>Annuaire des offres — '+esc(op)+'</h3></div>';
- if(matching.length)html+='<div class="cab-offers">'+matching.map(card).join("")+'</div>';
- else html+='<div class="cab-item">Aucune offre répertoriée pour cet opérateur et cette catégorie. Choisissez une autre catégorie ou un autre opérateur.</div>';
- root.innerHTML=html+'<p class="cab-muted">Le prix affiché est le prix de la prestation, hors frais de service MON QUOTIDIEN CI. Le paiement est confirmé par Jèko avant transmission à une cabine.</p>';
+ const periodeForfait=x=>{
+  const validity=String(x.validity||"").toLowerCase().trim();
+  const group=String(x.group||"").toLowerCase();
+  if(/nuit|22h/.test(validity+" "+group))return "nuit";
+  const hours=validity.match(/^(\d+)\s*heures?$/);
+  if(hours)return "heures";
+  const days=validity.match(/^(\d+)\s*jours?$/);
+  if(days){const n=Number(days[1]);if(n<=4)return "jour";if(n<=21)return "semaine";if(n===30)return "mois";if(n>21&&n<30)return "intermediaire";}
+  return "autres";
+ };
+ const periodes=[
+  ["jour","Pass Jour"],["semaine","Pass Semaine"],["intermediaire","Pass 10 à 21 jours"],
+  ["mois","Pass Mois"],["heures","Pass Heures"],["nuit","Pass Nuit"],["autres","Autres durées"]
+ ];
+ const card=x=>'<button type="button" class="cab-offer-choice" data-cab-offer="'+cabForfaits.indexOf(x)+'" aria-label="'+esc(x.name)+', '+x.price.toLocaleString("fr-FR")+' FCFA, '+esc(x.validity)+'"><span class="cab-offer-choice-name">'+esc(x.name)+'</span><span class="cab-offer-choice-meta"><strong>'+x.price.toLocaleString("fr-FR")+' FCFA</strong><span>⏱ '+esc(x.validity)+'</span></span></button>';
+ let html='<div class="cab-catalog-head"><h3>Forfaits — '+esc(op)+'</h3></div>';
+ if(matching.length){
+  for(const [key,label] of periodes){
+   const offers=matching.filter(x=>periodeForfait(x)===key);
+   if(!offers.length)continue;
+   html+='<section class="cab-offer-period" data-cab-period="'+key+'"><h4>'+label+' <span>('+offers.length+')</span></h4><div class="cab-offer-choice-list">'+offers.map(card).join("")+'</div></section>';
+  }
+ }else html+='<div class="cab-item">Aucune offre répertoriée pour cet opérateur et cette catégorie. Choisissez une autre catégorie ou un autre opérateur.</div>';
+ root.innerHTML=html+'<p class="cab-muted">Sélectionnez un forfait pour afficher le récapitulatif et poursuivre le paiement.</p>';
  root.querySelectorAll("[data-cab-offer]").forEach(b=>b.onclick=()=>selectionnerForfaitCabine(cabForfaits[Number(b.dataset.cabOffer)]));
  const generic=()=>{ $("cabMontant").value="";$("cabDetails").value="Forfait "+(cabTypeLabels[kind]||"")+" à préciser avec le cabiniste."; $("cabCommuneClient").focus(); document.getElementById("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});};
  $("cabMtnChoose")?.addEventListener("click",generic);$("cabOrangeChoose")?.addEventListener("click",generic);
 }
 function selectionnerForfaitCabine(x){
+ const phone=$("cabNumero").value.trim();
+ if(phone.length<8||phone.length>20){$("cabMessage").textContent="Saisissez d’abord un numéro de bénéficiaire valide."; $("cabNumero").focus();$("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});return;}
  cabSelectedOffer=x;
  $("cabOperateur").value=x.op;$("cabService").value=x.type;
- $("cabFeePreview").hidden=false;$("cabAmountWrap").hidden=true;
- afficherRecapitulatifFraisCabine(x.price);
- const phone=$("cabNumero").value.trim();
- if(phone.length<8||phone.length>20){$("cabMessage").textContent="Saisissez d’abord le numéro du bénéficiaire, puis appuyez sur Souscrire."; $("cabNumero").focus();$("cabNumero").scrollIntoView({behavior:"smooth",block:"center"});return;}
- $("cabMessage").textContent="Offre sélectionnée. Préparation du paiement…";$("cabEnvoyer").click();
+ $("cabAmountWrap").hidden=true;
+ const fee=fraisCabine(x.price),total=x.price+fee;
+ $("cabRecapOperator").textContent=x.op;
+ $("cabRecapPhone").textContent=phone;
+ $("cabRecapOffer").textContent=x.name+" · "+x.validity;
+ $("cabRecapPrice").textContent=money(x.price);
+ $("cabRecapFee").textContent=money(fee);
+ $("cabRecapTotal").textContent=money(total);
+ $("cabSubscriptionRecap").hidden=false;
+ $("cabPaymentWrap").hidden=false;
+ $("cabFeePreview").hidden=true;
+ $("cabEnvoyer").hidden=false;
+ $("cabMessage").textContent="Vérifiez le récapitulatif, choisissez votre moyen de paiement, puis confirmez.";
+ $("cabSubscriptionRecap").scrollIntoView({behavior:"smooth",block:"center"});
 }
-$("cabOperateur").addEventListener("change",()=>{cabSelectedOffer=null;rendreCatalogueCabine();});
+$("cabOperateur").addEventListener("change",()=>{cabSelectedOffer=null;$("cabSubscriptionRecap").hidden=true;$("cabPaymentWrap").hidden=true;rendreCatalogueCabine();});
+$("cabNumero").addEventListener("input",()=>{if(cabSelectedOffer){cabSelectedOffer=null;$("cabSubscriptionRecap").hidden=true;$("cabPaymentWrap").hidden=true;$("cabMessage").textContent="Le numéro a changé. Sélectionnez à nouveau le forfait pour actualiser le récapitulatif.";}});
 $("cabService").addEventListener("change",rendreCatalogueCabine);
 rendreCatalogueCabine();
 const css=document.createElement("style");css.textContent=`
 #cabinesTelephoniques{max-width:760px;margin:0 auto}
+#cabinesTelephoniques .cab-offer-period{margin:18px 0 24px}
+#cabinesTelephoniques .cab-offer-period>h4{display:flex;align-items:center;gap:8px;margin:18px 2px 12px;color:#68786e;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+#cabinesTelephoniques .cab-offer-period>h4 span{font-size:12px;font-weight:600;color:#87918a}
+#cabinesTelephoniques .cab-offer-choice-list{display:grid;grid-template-columns:1fr;gap:10px}
+#cabinesTelephoniques .cab-offer-choice{display:flex;flex-direction:column;align-items:flex-start;gap:9px;width:100%;box-sizing:border-box;padding:15px 17px;border:2px solid #e1e5e9;border-radius:22px;background:#fff;color:#17191d;text-align:left;cursor:pointer;transition:border-color .15s,background .15s}
+#cabinesTelephoniques .cab-offer-choice:active,#cabinesTelephoniques .cab-offer-choice:focus-visible{outline:none;border-color:#16834a;background:#f1faf4}
+#cabinesTelephoniques .cab-offer-choice-name{font-size:18px;font-weight:800;line-height:1.25}
+#cabinesTelephoniques .cab-offer-choice-meta{display:flex;flex-wrap:wrap;align-items:center;gap:9px;color:#5e6873;font-size:15px}
+#cabinesTelephoniques .cab-offer-choice-meta strong{color:#17663d;font-size:16px}
 #cabinesTelephoniques .cab-item{border:1px solid #e1eae2;border-radius:16px;padding:14px;margin:10px 0;background:#fff;box-shadow:0 4px 14px #173b2b0b}
 #cabinesTelephoniques label{display:block;margin-top:10px}
 #cabinesTelephoniques input,#cabinesTelephoniques select,#cabinesTelephoniques textarea{box-sizing:border-box;width:100%;padding:12px;border:1px solid #dce7de;border-radius:10px}
