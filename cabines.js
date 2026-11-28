@@ -178,9 +178,9 @@ function rendreCatalogueCabine(){
   const validity=String(x.validity||"").toLowerCase().trim();
   const group=String(x.group||"").toLowerCase();
   if(/nuit|22h/.test(validity+" "+group))return "nuit";
-  const hours=validity.match(/^(\\d+)\\s*heures?$/);
+  const hours=validity.match(/^(\d+)\s*heures?$/);
   if(hours)return "heures";
-  const days=validity.match(/^(\\d+)\\s*jours?$/);
+  const days=validity.match(/^(\d+)\s*jours?$/);
   if(days){const n=Number(days[1]);if(n<=3)return "jour";if(n<=7)return "semaine";if(n<30)return "intermediaire";if(n===30)return "mois";}
   return "autres";
  };
