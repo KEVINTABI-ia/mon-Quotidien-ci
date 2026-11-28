@@ -24,8 +24,8 @@ messaging.onBackgroundMessage(payload => {
   return self.registration.showNotification(title, options);
 });
 
-const CACHE_NAME = "mon-quotidien-ci-shell-v30";
-const APP_SHELL = "./index.html?release=20261124-378";
+const CACHE_NAME = "mon-quotidien-ci-shell-v31";
+const APP_SHELL = "./index.html?release=20261128-payment-logos-inline-2";
 
 self.addEventListener("install", event => {
   event.waitUntil(
