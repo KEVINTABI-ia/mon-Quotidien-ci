@@ -133,3 +133,9 @@ test("Cabine téléphonique: les cinq logos de paiement ont des fichiers dédié
   assert.match(cabines, /Sélectionnez un forfait pour afficher le récapitulatif/);
   assert.match(cabines, /Vérifiez le récapitulatif, choisissez votre moyen de paiement, puis confirmez/);
 });
+
+test("Catalogue cabine: normaliser opérateur et catégorie, et respecter les champs masqués", () => {
+  assert.match(cabines, /normaliserCle=v=>String\(v\?\?""\)\.normalize\("NFD"\)/);
+  assert.match(cabines, /normaliserType\(x\.type\)===kind/);
+  assert.match(cabines, /#cabinesTelephoniques \\[hidden\\]\\{display:none!important\\}/);
+});

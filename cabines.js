@@ -175,8 +175,10 @@ let cabSelectedOffer=null;
 function rendreCatalogueCabine(){
  cabSelectedOffer=null;
  const root=$("cabCatalogue");if(!root)return;
- const op=$("cabOperateur").value,kind=$("cabService").value;
- const matching=cabForfaits.filter(x=>x.op===op&&x.type===kind);
+ const normaliserCle=v=>String(v??"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").trim().toLowerCase().replace(/\\s+/g," ");
+ const normaliserType=v=>({appel:"forfait_appels",appels:"forfait_appels",internet:"forfait_internet",mixte:"forfait_mixte"}[normaliserCle(v)]||normaliserCle(v));
+ const op=normaliserCle($("cabOperateur").value),kind=normaliserType($("cabService").value);
+ const matching=cabForfaits.filter(x=>normaliserCle(x.op)===op&&normaliserType(x.type)===kind);
  const periodeForfait=x=>{
   const validity=String(x.validity||"").toLowerCase().trim();
   const group=String(x.group||"").toLowerCase();
@@ -290,7 +292,7 @@ const css=document.createElement("style");css.textContent=`
 #cabinesTelephoniques .cab-brand.wave{color:#0879e8;font-size:19px}
 #cabinesTelephoniques .cab-brand.djamo{color:#141414;font-size:18px}
 #cabinesTelephoniques .cab-hidden-select{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}
-#cabinesTelephoniques #cabCommuneWrap,#cabinesTelephoniques #cabDetailsWrap{display:block}
+#cabinesTelephoniques [hidden]{display:none!important}
 
 @media(max-width:380px){#cabinesTelephoniques .cab-menu-card{min-height:132px;padding:10px 4px}#cabinesTelephoniques .cab-menu-card strong{font-size:13px}#cabinesTelephoniques .cab-menu-icon{width:56px;height:56px}}
 `;document.head.appendChild(css);
