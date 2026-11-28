@@ -110,3 +110,14 @@ test("Catalogue Moov CI: les offres mixtes restent distinctes des offres Interne
   assert.match(moov, /type:"forfait_mixte",group:"Appel \+ Internet"/);
   assert.match(moov, /type:"forfait_mixte",group:"Pass nuit"/);
 });
+
+
+test("Cabine téléphonique: les cinq logos de paiement fournis sont affichés et Jèko reste le checkout", () => {
+  for (const method of ["wave", "orange", "mtn", "moov", "djamo"]) {
+    assert.match(cabines, new RegExp('data-payment="' + method + '"'));
+    assert.match(cabines, new RegExp('class="cab-payment-logo logo-' + method + '"'));
+  }
+  assert.match(cabines, /data:image\/jpeg;base64,/);
+  assert.match(cabines, /id="cabPaymentMethod"/);
+  assert.match(cabines, /Valider et payer avec Jèko/);
+});
