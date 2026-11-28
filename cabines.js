@@ -35,14 +35,15 @@ section.innerHTML=`<h2>📞 Cabine téléphonique</h2>
 <div id="cabAmountWrap"><label>Montant du transfert souhaité auprès de la cabine (FCFA)</label><input id="cabMontant" type="number" min="200" max="500000" step="1" inputmode="numeric" placeholder="Ex. 1 000"></div>
 <div id="cabCommuneWrap" hidden><label>Commune / ville</label><input id="cabCommuneClient" maxlength="60" placeholder="Ex. Yopougon"></div>
 <div id="cabDetailsWrap" hidden><label>Précisions</label><textarea id="cabDetails" maxlength="180" placeholder="Précisions"></textarea></div>
-<div id="cabSubscriptionRecap" class="cab-item" hidden><h3>Récapitulatif de la souscription</h3><p><strong>Opérateur :</strong> <span id="cabRecapOperator">—</span></p><p><strong>Numéro du bénéficiaire :</strong> <span id="cabRecapPhone">—</span></p><p><strong>Forfait :</strong> <span id="cabRecapOffer">—</span></p><p><strong>Prix du forfait :</strong> <span id="cabRecapPrice">—</span></p><p><strong>Frais de service (4 %) :</strong> <span id="cabRecapFee">—</span></p><p><strong>Total à payer :</strong> <strong id="cabRecapTotal">—</strong></p></div>\n<div id="cabPaymentWrap" hidden><label>Choix du moyen de paiement Jèko</label><div class="cab-choice-row cab-payment-choices" id="cabPaymentChoices">
+<div id="cabSubscriptionRecap" class="cab-item" hidden><h3>Récapitulatif de la souscription</h3><p><strong>Opérateur :</strong> <span id="cabRecapOperator">—</span></p><p><strong>Numéro du bénéficiaire :</strong> <span id="cabRecapPhone">—</span></p><p><strong>Forfait :</strong> <span id="cabRecapOffer">—</span></p><p><strong>Prix du forfait :</strong> <span id="cabRecapPrice">—</span></p><p><strong>Frais de service (4 %) :</strong> <span id="cabRecapFee">—</span></p><p><strong>Total à payer :</strong> <strong id="cabRecapTotal">—</strong></p></div>
+<div id="cabPaymentWrap" hidden><label>Choix du moyen de paiement Jèko</label><div class="cab-choice-row cab-payment-choices" id="cabPaymentChoices">
 <button type="button" class="cab-logo-choice selected" data-payment="wave" aria-label="Wave"><img class="cab-payment-logo" src="${cabPaymentLogo('wave')}" alt="Wave" loading="eager" decoding="async"></button>
 <button type="button" class="cab-logo-choice" data-payment="orange" aria-label="Orange Money"><img class="cab-payment-logo" src="${cabPaymentLogo('orange')}" alt="Orange Money" loading="eager" decoding="async"></button>
 <button type="button" class="cab-logo-choice" data-payment="mtn" aria-label="MTN MoMo"><img class="cab-payment-logo" src="${cabPaymentLogo('mtn')}" alt="MTN MoMo" loading="eager" decoding="async"></button>
 <button type="button" class="cab-logo-choice" data-payment="moov" aria-label="Moov Money"><img class="cab-payment-logo" src="${cabPaymentLogo('moov')}" alt="Moov Money" loading="eager" decoding="async"></button>
 <button type="button" class="cab-logo-choice" data-payment="djamo" aria-label="Djamo"><img class="cab-payment-logo" src="${cabPaymentLogo('djamo')}" alt="Djamo" loading="eager" decoding="async"></button></div>
 <select id="cabPaymentMethod" class="cab-hidden-select" aria-hidden="true" tabindex="-1"><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN Money</option><option value="moov">Moov Money</option><option value="djamo">Djamo</option></select></div>
-<p id="cabFeePreview" class="cab-muted">Frais de service : —</p><div class="cab-actions"><button id="cabEnvoyer" class="primary" type="button">Confirmer le paiement avec Jèko</button><button id="cabCancelForm" type="button">Annuler</button></div><p id="cabMessage" aria-live="polite"></p></div>
+<div id="cabConfirmWrap" hidden><div class="cab-actions"><button id="cabEnvoyer" class="primary" type="button">Confirmer le paiement avec Jèko</button></div></div><button id="cabCancelForm" type="button">Annuler</button><p id="cabMessage" aria-live="polite"></p></div>
 </div>
 <div id="cabHistoryView" hidden><div class="cab-history-heading"><h3>Historique de mes transactions</h3><button id="cabBackFromHistory" class="cab-back" type="button">← Retour</button></div><div id="cabHistorique">Connectez-vous pour consulter vos demandes.</div><button id="cabRefreshHistory" type="button">Actualiser l’historique</button></div>
 <hr><div id="cabPartner" hidden><h3>Espace cabiniste partenaire</h3><div id="cabAuth"></div><div id="cabPanel" hidden></div></div>`;
@@ -187,7 +188,7 @@ function rendreCatalogueCabine(){
   return "autres";
  };
  const periodes=[
-  ["jour","Pass Jour"],["semaine","Pass Semaine"],["intermediaire","Pass 10 à 21 jours"],
+  ["jour","Pass Jour"],["semaine","Pass Semaine"],["intermediaire","Autres durées"],
   ["mois","Pass Mois"],["heures","Pass Heures"],["nuit","Pass Nuit"],["autres","Autres durées"]
  ];
  const card=x=>'<button type="button" class="cab-offer-choice" data-cab-offer="'+cabForfaits.indexOf(x)+'" aria-label="'+esc(x.name)+', '+x.price.toLocaleString("fr-FR")+' FCFA, '+esc(x.validity)+'"><span class="cab-offer-choice-name">'+esc(x.name)+'</span><span class="cab-offer-choice-meta"><strong>'+x.price.toLocaleString("fr-FR")+' FCFA</strong><span>⏱ '+esc(x.validity)+'</span></span></button>';
@@ -219,13 +220,14 @@ function selectionnerForfaitCabine(x){
  $("cabRecapTotal").textContent=money(total);
  $("cabSubscriptionRecap").hidden=false;
  $("cabPaymentWrap").hidden=false;
+ $("cabConfirmWrap").hidden=false;
  $("cabFeePreview").hidden=true;
  $("cabEnvoyer").hidden=false;
  $("cabMessage").textContent="Vérifiez le récapitulatif, choisissez votre moyen de paiement, puis confirmez.";
  $("cabSubscriptionRecap").scrollIntoView({behavior:"smooth",block:"center"});
 }
-$("cabOperateur").addEventListener("change",()=>{cabSelectedOffer=null;$("cabSubscriptionRecap").hidden=true;$("cabPaymentWrap").hidden=true;rendreCatalogueCabine();});
-$("cabNumero").addEventListener("input",()=>{if(cabSelectedOffer){cabSelectedOffer=null;$("cabSubscriptionRecap").hidden=true;$("cabPaymentWrap").hidden=true;$("cabMessage").textContent="Le numéro a changé. Sélectionnez à nouveau le forfait pour actualiser le récapitulatif.";}});
+$("cabOperateur").addEventListener("change",()=>{cabSelectedOffer=null;$("cabSubscriptionRecap").hidden=true;$("cabPaymentWrap").hidden=true;$("cabConfirmWrap").hidden=true;rendreCatalogueCabine();});
+$("cabNumero").addEventListener("input",()=>{if(cabSelectedOffer){cabSelectedOffer=null;$("cabSubscriptionRecap").hidden=true;$("cabPaymentWrap").hidden=true;$("cabConfirmWrap").hidden=true;$("cabMessage").textContent="Le numéro a changé. Sélectionnez à nouveau le forfait pour actualiser le récapitulatif.";}});
 $("cabService").addEventListener("change",rendreCatalogueCabine);
 rendreCatalogueCabine();
 const css=document.createElement("style");css.textContent=`
