@@ -223,6 +223,7 @@ function selectionnerForfaitCabine(x){
  $("cabSubscriptionRecap").scrollIntoView({behavior:"smooth",block:"center"});
 }
 $("cabOperateur").addEventListener("change",()=>{cabSelectedOffer=null;$("cabSubscriptionRecap").hidden=true;$("cabPaymentWrap").hidden=true;rendreCatalogueCabine();});
+$("cabNumero").addEventListener("input",()=>{if(cabSelectedOffer){cabSelectedOffer=null;$("cabSubscriptionRecap").hidden=true;$("cabPaymentWrap").hidden=true;$("cabMessage").textContent="Le numéro a changé. Sélectionnez à nouveau le forfait pour actualiser le récapitulatif.";}});
 $("cabService").addEventListener("change",rendreCatalogueCabine);
 rendreCatalogueCabine();
 const css=document.createElement("style");css.textContent=`
